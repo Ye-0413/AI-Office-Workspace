@@ -4,6 +4,7 @@
   const Scene = window.OfficeScene;
   const Attendance = window.OfficeAttendance;
   const Director = window.OfficeAnimationDirector;
+  const performanceClocks = window.OfficeAvatarPerformanceModel.createClockRegistry({ limit: 2048 });
   const Family = window.OfficeFamily;
   const Clones = window.OfficeClones;
   const Traffic = window.OfficeSceneTraffic;
@@ -106,7 +107,7 @@
   function quietSprites() { return reduced() || settings.lowPower || document.hidden; }
   function assetURL(name, replay) { return '../assets/avatars/' + name + (replay ? '?_t=' + (++spriteNonce) : ''); }
   function setPose(actor, name, replay = false) {
-    const performance = actor.performance && actor.performance.update(actor.session, { now: Date.now(), reducedMotion: reduced(), lowPower: settings.lowPower, hidden: document.hidden, walking: Boolean(actor.motion) || actor.node.dataset.walking === 'true', reaction: actor.completing || actor.node.dataset.reaction === 'true' || Boolean(actor.performanceSuspended) || cloneBusy(actor) || actor.holdingFamily, departing: actor.departing, stale: actor.spec.stale });
+    const performance = actor.performance && actor.performance.update(actor.session, { now: Date.now(), reducedMotion: reduced(), lowPower: settings.lowPower, hidden: document.hidden || actor.entryPending, walking: Boolean(actor.motion) || actor.node.dataset.walking === 'true', reaction: actor.completing || actor.node.dataset.reaction === 'true' || Boolean(actor.performanceSuspended) || cloneBusy(actor) || actor.holdingFamily, departing: actor.departing, stale: actor.spec.stale });
     const asset = quietSprites() ? 'clawd-static-base.svg' : performance && performance.active ? performance.asset : name;
     actor.wantedAsset = name;
     if (actor.currentAsset === asset && !replay) return;
@@ -696,7 +697,7 @@
     const actor = { id: session.id, session, spec: Scene.activitySpec(session), node, button, body, image, title, relation, provider, state, bubble, carry, arrival, position: { x: seat.x, y: seat.y }, target: seat, helper, serial: 0, delays: new Set(), cloneEffects: new Set(), clonePhase: helper ? 'working' : '', motion: null, lastTurnAt: Scene.timestamp(session.turnCompletedAt), arrivedAt: -10000, lastZone: restored ? seat.zone : '', currentAsset: '', wantedAsset: '', bubbleTimer: 0, defer: 0, justEntered: !restored, completing: false, departing: false, holdingFamily: false, retireRequested: null, entryPending: true, restoreEntry: restored };
     node.style.visibility = 'hidden';
     node.dataset.clonePhase = actor.clonePhase;
-    actor.performance = window.OfficeAvatarPerformance.create({ actorNode: node, body, image, session });
+    actor.performance = window.OfficeAvatarPerformance.create({ actorNode: node, body, image, session, clockRegistry: performanceClocks });
     actor.appearance = window.OfficeFamilyAppearance.create({ actorNode: node, body, image });
     node.style.transform = actorTransform(actor.position, actor.helper);
     node.style.zIndex = '860';
@@ -769,7 +770,7 @@
     if (!actor) return;
     cancelAction(actor);
     clearTimeout(actor.bubbleTimer);
-    if (actor.performance) actor.performance.destroy();
+    if (actor.performance) { actor.performance.update(actor.session, { now: Date.now(), hidden: true }); actor.performance.destroy(); }
     if (actor.appearance) actor.appearance.destroy();
     actor.node.remove();
     actors.delete(id);
@@ -1342,6 +1343,7 @@
     clearTimeout(trafficTimer);
     clearTimeout(doorTimer);
     clearActors();
+    performanceClocks.clear();
     observer.disconnect();
     if (typeof unsubscribe === 'function') unsubscribe();
   });

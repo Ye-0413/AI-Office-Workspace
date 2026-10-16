@@ -498,3 +498,896 @@
 .avatar-performance[data-program="error-review"] .ap-arm-right{transform:translate(5px,12px) rotate(8deg)}
 .avatar-performance[data-program="error-review"] .ap-eyes{transform:translate(0,1px) scaleY(.85)}
 .avatar-performance[data-program="error-review"] .ap-upper{transform:rotate(0)}
+
+/* 0.8: authored observation stories. Each held object shares its hand track. */
+.ap-held-left{transform-origin:49px 89px}.ap-held-right{transform-origin:106px 89px}
+.ap-scene-a,.ap-scene-b,.ap-scene-c{transform-origin:77.5px 105px}
+.avatar-performance[data-animate="true"] :is(.ap-held-left,.ap-held-right,.ap-scene-a,.ap-scene-b,.ap-scene-c){animation-duration:var(--ap-cycle);animation-timing-function:var(--ease-in-out);animation-iteration-count:infinite;animation-delay:var(--ap-offset)}
+:is(.avatar-performance[data-program="read-scroll"],.avatar-performance[data-program="read-outline"],.avatar-performance[data-program="read-footnote"],.avatar-performance[data-program="read-bookmark"],.avatar-performance[data-program="read-diagram"],.avatar-performance[data-program="search-catalogue"],.avatar-performance[data-program="search-map"],.avatar-performance[data-program="search-clues"],.avatar-performance[data-program="search-shelves"],.avatar-performance[data-program="search-query"],.avatar-performance[data-program="plan-decompose"],.avatar-performance[data-program="plan-sequence"],.avatar-performance[data-program="plan-branches"],.avatar-performance[data-program="plan-trace"],.avatar-performance[data-program="code-debug"],.avatar-performance[data-program="code-refactor"],.avatar-performance[data-program="code-terminal"],.avatar-performance[data-program="code-patch"],.avatar-performance[data-program="code-document"],.avatar-performance[data-program="design-layout"],.avatar-performance[data-program="design-compass"],.avatar-performance[data-program="design-type"],.avatar-performance[data-program="design-trace"],.avatar-performance[data-program="design-palette"],.avatar-performance[data-program="test-cases"],.avatar-performance[data-program="test-boundary"],.avatar-performance[data-program="test-calibrate"],.avatar-performance[data-program="test-reproduce"],.avatar-performance[data-program="test-compare"],.avatar-performance[data-program="build-fit"],.avatar-performance[data-program="build-sort"],.avatar-performance[data-program="build-wire"],.avatar-performance[data-program="build-rotate"],.avatar-performance[data-program="build-stack"],.avatar-performance[data-program="run-log"],.avatar-performance[data-program="run-scroll"],.avatar-performance[data-program="run-monitor"],.avatar-performance[data-program="run-reference"],.avatar-performance[data-program="run-trace"],.avatar-performance[data-program="wait-console"],.avatar-performance[data-program="wait-tray"],.avatar-performance[data-program="wait-headset"],.avatar-performance[data-program="wait-bookmark"],.avatar-performance[data-program="wait-pencil-roll"],.avatar-performance[data-program="wait-wrist"],.avatar-performance[data-program="ask-present"],.avatar-performance[data-program="ask-point-line"],.avatar-performance[data-program="ask-tilt-card"],.avatar-performance[data-program="ask-pencil-rest"],.avatar-performance[data-program="ask-open-folder"],.avatar-performance[data-program="ask-hand-to-heart"],.avatar-performance[data-program="error-magnify"],.avatar-performance[data-program="error-trace"],.avatar-performance[data-program="error-overlay"],.avatar-performance[data-program="error-reference"],.avatar-performance[data-program="error-mark-place"],.avatar-performance[data-program="error-set-down"]) :is(.ap-arm-left,.ap-held-left){transform-origin:49px 89px}
+:is(.avatar-performance[data-program="read-scroll"],.avatar-performance[data-program="read-outline"],.avatar-performance[data-program="read-footnote"],.avatar-performance[data-program="read-bookmark"],.avatar-performance[data-program="read-diagram"],.avatar-performance[data-program="search-catalogue"],.avatar-performance[data-program="search-map"],.avatar-performance[data-program="search-clues"],.avatar-performance[data-program="search-shelves"],.avatar-performance[data-program="search-query"],.avatar-performance[data-program="plan-decompose"],.avatar-performance[data-program="plan-sequence"],.avatar-performance[data-program="plan-branches"],.avatar-performance[data-program="plan-trace"],.avatar-performance[data-program="code-debug"],.avatar-performance[data-program="code-refactor"],.avatar-performance[data-program="code-terminal"],.avatar-performance[data-program="code-patch"],.avatar-performance[data-program="code-document"],.avatar-performance[data-program="design-layout"],.avatar-performance[data-program="design-compass"],.avatar-performance[data-program="design-type"],.avatar-performance[data-program="design-trace"],.avatar-performance[data-program="design-palette"],.avatar-performance[data-program="test-cases"],.avatar-performance[data-program="test-boundary"],.avatar-performance[data-program="test-calibrate"],.avatar-performance[data-program="test-reproduce"],.avatar-performance[data-program="test-compare"],.avatar-performance[data-program="build-fit"],.avatar-performance[data-program="build-sort"],.avatar-performance[data-program="build-wire"],.avatar-performance[data-program="build-rotate"],.avatar-performance[data-program="build-stack"],.avatar-performance[data-program="run-log"],.avatar-performance[data-program="run-scroll"],.avatar-performance[data-program="run-monitor"],.avatar-performance[data-program="run-reference"],.avatar-performance[data-program="run-trace"],.avatar-performance[data-program="wait-console"],.avatar-performance[data-program="wait-tray"],.avatar-performance[data-program="wait-headset"],.avatar-performance[data-program="wait-bookmark"],.avatar-performance[data-program="wait-pencil-roll"],.avatar-performance[data-program="wait-wrist"],.avatar-performance[data-program="ask-present"],.avatar-performance[data-program="ask-point-line"],.avatar-performance[data-program="ask-tilt-card"],.avatar-performance[data-program="ask-pencil-rest"],.avatar-performance[data-program="ask-open-folder"],.avatar-performance[data-program="ask-hand-to-heart"],.avatar-performance[data-program="error-magnify"],.avatar-performance[data-program="error-trace"],.avatar-performance[data-program="error-overlay"],.avatar-performance[data-program="error-reference"],.avatar-performance[data-program="error-mark-place"],.avatar-performance[data-program="error-set-down"]) :is(.ap-arm-right,.ap-held-right){transform-origin:106px 89px}
+:is(.avatar-performance[data-program="read-scroll"],.avatar-performance[data-program="read-outline"],.avatar-performance[data-program="read-footnote"],.avatar-performance[data-program="read-bookmark"],.avatar-performance[data-program="read-diagram"],.avatar-performance[data-program="search-catalogue"],.avatar-performance[data-program="search-map"],.avatar-performance[data-program="search-clues"],.avatar-performance[data-program="search-shelves"],.avatar-performance[data-program="search-query"],.avatar-performance[data-program="plan-decompose"],.avatar-performance[data-program="plan-sequence"],.avatar-performance[data-program="plan-branches"],.avatar-performance[data-program="plan-trace"],.avatar-performance[data-program="code-debug"],.avatar-performance[data-program="code-refactor"],.avatar-performance[data-program="code-terminal"],.avatar-performance[data-program="code-patch"],.avatar-performance[data-program="code-document"],.avatar-performance[data-program="design-layout"],.avatar-performance[data-program="design-compass"],.avatar-performance[data-program="design-type"],.avatar-performance[data-program="design-trace"],.avatar-performance[data-program="design-palette"],.avatar-performance[data-program="test-cases"],.avatar-performance[data-program="test-boundary"],.avatar-performance[data-program="test-calibrate"],.avatar-performance[data-program="test-reproduce"],.avatar-performance[data-program="test-compare"],.avatar-performance[data-program="build-fit"],.avatar-performance[data-program="build-sort"],.avatar-performance[data-program="build-wire"],.avatar-performance[data-program="build-rotate"],.avatar-performance[data-program="build-stack"],.avatar-performance[data-program="run-log"],.avatar-performance[data-program="run-scroll"],.avatar-performance[data-program="run-monitor"],.avatar-performance[data-program="run-reference"],.avatar-performance[data-program="run-trace"],.avatar-performance[data-program="wait-console"],.avatar-performance[data-program="wait-tray"],.avatar-performance[data-program="wait-headset"],.avatar-performance[data-program="wait-bookmark"],.avatar-performance[data-program="wait-pencil-roll"],.avatar-performance[data-program="wait-wrist"],.avatar-performance[data-program="ask-present"],.avatar-performance[data-program="ask-point-line"],.avatar-performance[data-program="ask-tilt-card"],.avatar-performance[data-program="ask-pencil-rest"],.avatar-performance[data-program="ask-open-folder"],.avatar-performance[data-program="ask-hand-to-heart"],.avatar-performance[data-program="error-magnify"],.avatar-performance[data-program="error-trace"],.avatar-performance[data-program="error-overlay"],.avatar-performance[data-program="error-reference"],.avatar-performance[data-program="error-mark-place"],.avatar-performance[data-program="error-set-down"]) :is(.ap-upper,.ap-eyes,.ap-arm,.ap-foot,.ap-page,.ap-folio,.ap-lens,.ap-reference,.ap-notebook,.ap-pencil,.ap-laptop,.ap-key-left,.ap-key-right,.ap-brush,.ap-draft,.ap-instrument,.ap-probe,.ap-component,.ap-bracket,.ap-wrench,.ap-console-note,.ap-clock-hand,.ap-question-card,.ap-problem-sheet,.ap-question,.ap-cursor,.ap-console-cursor){animation-name:none}
+
+/* read-scroll: Unroll a horizontal folio, scan left to right, loosen one roller and steady the page. */
+.avatar-performance[data-program="read-scroll"] .ap-upper{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="read-scroll"][data-animate="true"] .ap-upper{animation-name:ap-read-scroll-u}
+@keyframes ap-read-scroll-u{0%,10%{transform:translate(0px,0px) rotate(0deg)}24%,42%{transform:translate(-1px,1px) rotate(-1.4deg)}58%{transform:translate(1px,1px) rotate(0.8deg)}76%{transform:translate(1px,0px) rotate(0.8deg)}90%,100%{transform:translate(0px,0px) rotate(0deg)}}
+.avatar-performance[data-program="read-scroll"] .ap-eyes{transform:translate(0px,2px)}
+.avatar-performance[data-program="read-scroll"][data-animate="true"] .ap-eyes{animation-name:ap-read-scroll-e}
+@keyframes ap-read-scroll-e{0%{transform:translate(0px,2px)}10%,24%{transform:translate(-3px,2px)}42%{transform:translate(0px,3px)}58%,76%{transform:translate(3px,2px)}90%{transform:translate(0px,1px)}100%{transform:translate(0px,2px)}}
+.avatar-performance[data-program="read-scroll"] .ap-arm-left,.avatar-performance[data-program="read-scroll"] .ap-held-left{transform:translate(10px,15px) rotate(-4deg)}
+.avatar-performance[data-program="read-scroll"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="read-scroll"][data-animate="true"] .ap-held-left{animation-name:ap-read-scroll-l}
+@keyframes ap-read-scroll-l{0%,10%{transform:translate(10px,15px) rotate(-4deg)}24%,42%{transform:translate(5px,15px) rotate(-7deg)}58%,76%{transform:translate(8px,13px) rotate(-3deg)}90%,100%{transform:translate(10px,15px) rotate(-4deg)}}
+.avatar-performance[data-program="read-scroll"] .ap-arm-right,.avatar-performance[data-program="read-scroll"] .ap-held-right{transform:translate(-10px,15px) rotate(4deg)}
+.avatar-performance[data-program="read-scroll"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="read-scroll"][data-animate="true"] .ap-held-right{animation-name:ap-read-scroll-r}
+@keyframes ap-read-scroll-r{0%,10%{transform:translate(-10px,15px) rotate(4deg)}24%,42%{transform:translate(-5px,15px) rotate(7deg)}58%,76%{transform:translate(-8px,17px) rotate(3deg)}90%,100%{transform:translate(-10px,15px) rotate(4deg)}}
+.avatar-performance[data-program="read-scroll"] .ap-foot-1{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="read-scroll"][data-animate="true"] .ap-foot-1{animation-name:ap-read-scroll-ap-foot-1}
+@keyframes ap-read-scroll-ap-foot-1{0%,10%{transform:translate(0px,0px) rotate(0deg)}24%,42%{transform:translate(-1px,0px) rotate(0deg)}58%,76%,90%,100%{transform:translate(0px,0px) rotate(0deg)}}
+.avatar-performance[data-program="read-scroll"] .ap-foot-4{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="read-scroll"][data-animate="true"] .ap-foot-4{animation-name:ap-read-scroll-ap-foot-4}
+@keyframes ap-read-scroll-ap-foot-4{0%,10%{transform:translate(0px,0px) rotate(0deg)}24%,42%{transform:translate(1px,0px) rotate(0deg)}58%,76%,90%,100%{transform:translate(0px,0px) rotate(0deg)}}
+.avatar-performance[data-program="read-scroll"] .ap-scene-a{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="read-scroll"][data-animate="true"] .ap-scene-a{animation-name:ap-read-scroll-ap-scene-a}
+@keyframes ap-read-scroll-ap-scene-a{0%,10%,24%,42%{transform:translate(0px,0px) rotate(0deg)}58%,76%{transform:translate(0px,1px) rotate(0deg)}90%,100%{transform:translate(0px,0px) rotate(0deg)}}
+
+/* read-outline: Hold a tabbed outline upright, follow its section edge with a finger, then look back to the top. */
+.avatar-performance[data-program="read-outline"] .ap-upper{transform:translate(0px,0px) rotate(-0.6deg)}
+.avatar-performance[data-program="read-outline"][data-animate="true"] .ap-upper{animation-name:ap-read-outline-u}
+@keyframes ap-read-outline-u{0%,13%{transform:translate(0px,0px) rotate(-0.6deg)}27%,39%{transform:translate(-1px,0px) rotate(-1.8deg)}55%,71%{transform:translate(0px,1px) rotate(-0.3deg)}86%,100%{transform:translate(0px,0px) rotate(-0.6deg)}}
+.avatar-performance[data-program="read-outline"] .ap-eyes{transform:translate(-2px,0px)}
+.avatar-performance[data-program="read-outline"][data-animate="true"] .ap-eyes{animation-name:ap-read-outline-e}
+@keyframes ap-read-outline-e{0%{transform:translate(-2px,0px)}13%,27%{transform:translate(-2px,-2px)}39%{transform:translate(-1px,0px)}55%,71%{transform:translate(-1px,2px)}86%{transform:translate(0px,-1px)}100%{transform:translate(-2px,0px)}}
+.avatar-performance[data-program="read-outline"] .ap-arm-left,.avatar-performance[data-program="read-outline"] .ap-held-left{transform:translate(5px,4px) rotate(-8deg)}
+.avatar-performance[data-program="read-outline"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="read-outline"][data-animate="true"] .ap-held-left{animation-name:ap-read-outline-l}
+@keyframes ap-read-outline-l{0%,13%{transform:translate(5px,4px) rotate(-8deg)}27%,39%{transform:translate(5px,2px) rotate(-10deg)}55%,71%{transform:translate(6px,4px) rotate(-6deg)}86%,100%{transform:translate(5px,4px) rotate(-8deg)}}
+.avatar-performance[data-program="read-outline"] .ap-arm-right{transform:translate(-24px,3px) rotate(-3deg)}
+.avatar-performance[data-program="read-outline"][data-animate="true"] .ap-arm-right{animation-name:ap-read-outline-r}
+@keyframes ap-read-outline-r{0%,13%{transform:translate(-24px,3px) rotate(-3deg)}27%,39%{transform:translate(-28px,-2px) rotate(-8deg)}55%,71%{transform:translate(-26px,11px) rotate(4deg)}86%,100%{transform:translate(-24px,3px) rotate(-3deg)}}
+.avatar-performance[data-program="read-outline"] .ap-foot-2{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="read-outline"][data-animate="true"] .ap-foot-2{animation-name:ap-read-outline-ap-foot-2}
+@keyframes ap-read-outline-ap-foot-2{0%,13%{transform:translate(0px,0px) rotate(0deg)}27%,39%{transform:translate(0px,-1px) rotate(0deg)}55%,71%,86%,100%{transform:translate(0px,0px) rotate(0deg)}}
+
+/* read-footnote: Keep the main sheet high while raising a small footnote card; gaze descends, compares, and returns. */
+.avatar-performance[data-program="read-footnote"] .ap-upper{transform:translate(0px,0px) rotate(-1deg)}
+.avatar-performance[data-program="read-footnote"][data-animate="true"] .ap-upper{animation-name:ap-read-footnote-u}
+@keyframes ap-read-footnote-u{0%,16%{transform:translate(0px,0px) rotate(-1deg)}31%,46%{transform:translate(1px,1px) rotate(1.3deg)}62%,79%{transform:translate(-1px,1px) rotate(-0.7deg)}91%,100%{transform:translate(0px,0px) rotate(-1deg)}}
+.avatar-performance[data-program="read-footnote"] .ap-eyes{transform:translate(-3px,-1px)}
+.avatar-performance[data-program="read-footnote"][data-animate="true"] .ap-eyes{animation-name:ap-read-footnote-e}
+@keyframes ap-read-footnote-e{0%,16%{transform:translate(-3px,-1px)}31%,46%{transform:translate(3px,2px)}62%,79%{transform:translate(-3px,1px)}91%{transform:translate(0px,-1px)}100%{transform:translate(-3px,-1px)}}
+.avatar-performance[data-program="read-footnote"] .ap-arm-left,.avatar-performance[data-program="read-footnote"] .ap-held-left{transform:translate(3px,-2px) rotate(-7deg)}
+.avatar-performance[data-program="read-footnote"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="read-footnote"][data-animate="true"] .ap-held-left{animation-name:ap-read-footnote-l}
+@keyframes ap-read-footnote-l{0%,16%{transform:translate(3px,-2px) rotate(-7deg)}31%,46%{transform:translate(3px,-1px) rotate(-7deg)}62%,79%{transform:translate(4px,-3px) rotate(-10deg)}91%,100%{transform:translate(3px,-2px) rotate(-7deg)}}
+.avatar-performance[data-program="read-footnote"] .ap-arm-right,.avatar-performance[data-program="read-footnote"] .ap-held-right{transform:translate(5px,17px) rotate(6deg)}
+.avatar-performance[data-program="read-footnote"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="read-footnote"][data-animate="true"] .ap-held-right{animation-name:ap-read-footnote-r}
+@keyframes ap-read-footnote-r{0%,16%{transform:translate(5px,17px) rotate(6deg)}31%,46%{transform:translate(2px,8px) rotate(-4deg)}62%,79%{transform:translate(4px,13px) rotate(3deg)}91%,100%{transform:translate(5px,17px) rotate(6deg)}}
+.avatar-performance[data-program="read-footnote"] .ap-foot-4{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="read-footnote"][data-animate="true"] .ap-foot-4{animation-name:ap-read-footnote-ap-foot-4}
+@keyframes ap-read-footnote-ap-foot-4{0%,16%{transform:translate(0px,0px) rotate(0deg)}31%,46%{transform:translate(1px,-1px) rotate(0deg)}62%,79%,91%,100%{transform:translate(0px,0px) rotate(0deg)}}
+
+/* read-bookmark: Steady the binding and draw an existing ribbon to the page edge, pause on the place, then lay it back. */
+.avatar-performance[data-program="read-bookmark"] .ap-upper{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="read-bookmark"][data-animate="true"] .ap-upper{animation-name:ap-read-bookmark-u}
+@keyframes ap-read-bookmark-u{0%,12%{transform:translate(0px,0px) rotate(0deg)}25%,34%{transform:translate(1px,1px) rotate(0.8deg)}52%,69%{transform:translate(0px,1px) rotate(-0.8deg)}84%,100%{transform:translate(0px,0px) rotate(0deg)}}
+.avatar-performance[data-program="read-bookmark"] .ap-eyes{transform:translate(0px,2px)}
+.avatar-performance[data-program="read-bookmark"][data-animate="true"] .ap-eyes{animation-name:ap-read-bookmark-e}
+@keyframes ap-read-bookmark-e{0%{transform:translate(0px,2px)}12%{transform:translate(2px,2px)}25%,34%{transform:translate(3px,1px)}52%,69%{transform:translate(1px,2px)}84%,100%{transform:translate(0px,2px)}}
+.avatar-performance[data-program="read-bookmark"] .ap-arm-left{transform:translate(9px,17px) rotate(-9deg)}
+.avatar-performance[data-program="read-bookmark"][data-animate="true"] .ap-arm-left{animation-name:ap-read-bookmark-l}
+@keyframes ap-read-bookmark-l{0%,12%{transform:translate(9px,17px) rotate(-9deg)}25%,34%{transform:translate(11px,16px) rotate(-12deg)}52%,69%{transform:translate(10px,18px) rotate(-7deg)}84%,100%{transform:translate(9px,17px) rotate(-9deg)}}
+.avatar-performance[data-program="read-bookmark"] .ap-arm-right,.avatar-performance[data-program="read-bookmark"] .ap-held-right{transform:translate(-9px,15px) rotate(10deg)}
+.avatar-performance[data-program="read-bookmark"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="read-bookmark"][data-animate="true"] .ap-held-right{animation-name:ap-read-bookmark-r}
+@keyframes ap-read-bookmark-r{0%,12%{transform:translate(-9px,15px) rotate(10deg)}25%{transform:translate(-7px,5px) rotate(-8deg)}34%,52%{transform:translate(-3px,3px) rotate(-15deg)}69%{transform:translate(-8px,12px) rotate(7deg)}84%,100%{transform:translate(-9px,15px) rotate(10deg)}}
+
+/* read-diagram: Open a folded diagram across the lap, trace a branch with the right hand, then check the left legend. */
+.avatar-performance[data-program="read-diagram"] .ap-upper{transform:translate(0px,0px) rotate(0.4deg)}
+.avatar-performance[data-program="read-diagram"][data-animate="true"] .ap-upper{animation-name:ap-read-diagram-u}
+@keyframes ap-read-diagram-u{0%,9%{transform:translate(0px,0px) rotate(0.4deg)}23%,41%{transform:translate(1px,1px) rotate(1.5deg)}57%,73%{transform:translate(-1px,0px) rotate(-1.4deg)}89%,100%{transform:translate(0px,0px) rotate(0.4deg)}}
+.avatar-performance[data-program="read-diagram"] .ap-eyes{transform:translate(0px,2px)}
+.avatar-performance[data-program="read-diagram"][data-animate="true"] .ap-eyes{animation-name:ap-read-diagram-e}
+@keyframes ap-read-diagram-e{0%{transform:translate(0px,2px)}9%{transform:translate(2px,2px)}23%,41%{transform:translate(3px,2px)}57%,73%{transform:translate(-3px,1px)}89%,100%{transform:translate(0px,2px)}}
+.avatar-performance[data-program="read-diagram"] .ap-arm-left{transform:translate(7px,10px) rotate(-8deg)}
+.avatar-performance[data-program="read-diagram"][data-animate="true"] .ap-arm-left{animation-name:ap-read-diagram-l}
+@keyframes ap-read-diagram-l{0%,9%{transform:translate(7px,10px) rotate(-8deg)}23%,41%{transform:translate(8px,10px) rotate(-8deg)}57%,73%{transform:translate(6px,6px) rotate(-13deg)}89%,100%{transform:translate(7px,10px) rotate(-8deg)}}
+.avatar-performance[data-program="read-diagram"] .ap-arm-right{transform:translate(-12px,15px) rotate(5deg)}
+.avatar-performance[data-program="read-diagram"][data-animate="true"] .ap-arm-right{animation-name:ap-read-diagram-r}
+@keyframes ap-read-diagram-r{0%,9%{transform:translate(-12px,15px) rotate(5deg)}23%{transform:translate(-15px,10px) rotate(-4deg)}41%,57%{transform:translate(-27px,14px) rotate(-10deg)}73%{transform:translate(-17px,16px) rotate(6deg)}89%,100%{transform:translate(-12px,15px) rotate(5deg)}}
+
+/* search-catalogue: Slide one catalogue card out of its open drawer, inspect its edge, and return it to the same slot. */
+.avatar-performance[data-program="search-catalogue"] .ap-upper{transform:translate(0px,0px) rotate(0.4deg)}
+.avatar-performance[data-program="search-catalogue"][data-animate="true"] .ap-upper{animation-name:ap-search-catalogue-u}
+@keyframes ap-search-catalogue-u{0%,11%{transform:translate(0px,0px) rotate(0.4deg)}25%,40%{transform:translate(1px,0px) rotate(1.6deg)}58%,72%{transform:translate(0px,-1px) rotate(0.7deg)}88%,100%{transform:translate(0px,0px) rotate(0.4deg)}}
+.avatar-performance[data-program="search-catalogue"] .ap-eyes{transform:translate(2px,2px)}
+.avatar-performance[data-program="search-catalogue"][data-animate="true"] .ap-eyes{animation-name:ap-search-catalogue-e}
+@keyframes ap-search-catalogue-e{0%{transform:translate(2px,2px)}11%{transform:translate(3px,2px)}25%,40%{transform:translate(3px,0px)}58%,72%{transform:translate(1px,-1px)}88%,100%{transform:translate(2px,2px)}}
+.avatar-performance[data-program="search-catalogue"] .ap-arm-left{transform:translate(7px,15px) rotate(-5deg)}
+.avatar-performance[data-program="search-catalogue"][data-animate="true"] .ap-arm-left{animation-name:ap-search-catalogue-l}
+@keyframes ap-search-catalogue-l{0%,11%{transform:translate(7px,15px) rotate(-5deg)}25%,40%{transform:translate(8px,15px) rotate(-6deg)}58%,72%{transform:translate(7px,14px) rotate(-8deg)}88%,100%{transform:translate(7px,15px) rotate(-5deg)}}
+.avatar-performance[data-program="search-catalogue"] .ap-arm-right,.avatar-performance[data-program="search-catalogue"] .ap-held-right{transform:translate(7px,16px) rotate(4deg)}
+.avatar-performance[data-program="search-catalogue"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="search-catalogue"][data-animate="true"] .ap-held-right{animation-name:ap-search-catalogue-r}
+@keyframes ap-search-catalogue-r{0%,11%{transform:translate(7px,16px) rotate(4deg)}25%,40%{transform:translate(5px,3px) rotate(-4deg)}58%,72%{transform:translate(2px,0px) rotate(-10deg)}88%,100%{transform:translate(7px,16px) rotate(4deg)}}
+.avatar-performance[data-program="search-catalogue"] .ap-foot-3{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="search-catalogue"][data-animate="true"] .ap-foot-3{animation-name:ap-search-catalogue-ap-foot-3}
+@keyframes ap-search-catalogue-ap-foot-3{0%,11%,25%,40%{transform:translate(0px,0px) rotate(0deg)}58%,72%{transform:translate(0px,-1px) rotate(0deg)}88%,100%{transform:translate(0px,0px) rotate(0deg)}}
+
+/* search-map: Hold an index map flat, sweep a lens along two branches, and glance back to the origin. */
+.avatar-performance[data-program="search-map"] .ap-upper{transform:translate(0px,0px) rotate(-0.3deg)}
+.avatar-performance[data-program="search-map"][data-animate="true"] .ap-upper{animation-name:ap-search-map-u}
+@keyframes ap-search-map-u{0%,8%{transform:translate(0px,0px) rotate(-0.3deg)}22%,37%{transform:translate(-1px,1px) rotate(-1.5deg)}52%,66%{transform:translate(1px,1px) rotate(0.9deg)}84%,100%{transform:translate(0px,0px) rotate(-0.3deg)}}
+.avatar-performance[data-program="search-map"] .ap-eyes{transform:translate(0px,2px)}
+.avatar-performance[data-program="search-map"][data-animate="true"] .ap-eyes{animation-name:ap-search-map-e}
+@keyframes ap-search-map-e{0%{transform:translate(0px,2px)}8%{transform:translate(-2px,2px)}22%,37%{transform:translate(-3px,2px)}52%,66%{transform:translate(2px,2px)}84%{transform:translate(-1px,1px)}100%{transform:translate(0px,2px)}}
+.avatar-performance[data-program="search-map"] .ap-arm-left{transform:translate(9px,16px) rotate(-6deg)}
+.avatar-performance[data-program="search-map"][data-animate="true"] .ap-arm-left{animation-name:ap-search-map-l}
+@keyframes ap-search-map-l{0%,8%,22%,37%{transform:translate(9px,16px) rotate(-6deg)}52%,66%{transform:translate(11px,15px) rotate(-9deg)}84%,100%{transform:translate(9px,16px) rotate(-6deg)}}
+.avatar-performance[data-program="search-map"] .ap-arm-right,.avatar-performance[data-program="search-map"] .ap-held-right{transform:translate(-6px,11px) rotate(-6deg)}
+.avatar-performance[data-program="search-map"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="search-map"][data-animate="true"] .ap-held-right{animation-name:ap-search-map-r}
+@keyframes ap-search-map-r{0%,8%{transform:translate(-6px,11px) rotate(-6deg)}22%,37%{transform:translate(-22px,10px) rotate(-13deg)}52%,66%{transform:translate(-5px,16px) rotate(5deg)}84%,100%{transform:translate(-6px,11px) rotate(-6deg)}}
+
+/* search-clues: Lay two index fragments apart, hold the third at eye level, and compare their abstract marks in sequence. */
+.avatar-performance[data-program="search-clues"] .ap-upper{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="search-clues"][data-animate="true"] .ap-upper{animation-name:ap-search-clues-u}
+@keyframes ap-search-clues-u{0%,14%{transform:translate(0px,0px) rotate(0deg)}29%{transform:translate(-1px,0px) rotate(-1.2deg)}43%,60%{transform:translate(1px,0px) rotate(1.2deg)}75%,90%,100%{transform:translate(0px,0px) rotate(0deg)}}
+.avatar-performance[data-program="search-clues"] .ap-eyes{transform:translate(-2px,2px)}
+.avatar-performance[data-program="search-clues"][data-animate="true"] .ap-eyes{animation-name:ap-search-clues-e}
+@keyframes ap-search-clues-e{0%,14%{transform:translate(-2px,2px)}29%{transform:translate(-3px,2px)}43%{transform:translate(2px,2px)}60%,75%{transform:translate(3px,-1px)}90%{transform:translate(0px,1px)}100%{transform:translate(-2px,2px)}}
+.avatar-performance[data-program="search-clues"] .ap-arm-left{transform:translate(11px,16px) rotate(-8deg)}
+.avatar-performance[data-program="search-clues"][data-animate="true"] .ap-arm-left{animation-name:ap-search-clues-l}
+@keyframes ap-search-clues-l{0%,14%{transform:translate(11px,16px) rotate(-8deg)}29%,43%{transform:translate(7px,14px) rotate(-10deg)}60%,75%{transform:translate(13px,17px) rotate(-5deg)}90%,100%{transform:translate(11px,16px) rotate(-8deg)}}
+.avatar-performance[data-program="search-clues"] .ap-arm-right,.avatar-performance[data-program="search-clues"] .ap-held-right{transform:translate(0px,1px) rotate(-5deg)}
+.avatar-performance[data-program="search-clues"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="search-clues"][data-animate="true"] .ap-held-right{animation-name:ap-search-clues-r}
+@keyframes ap-search-clues-r{0%,14%,29%{transform:translate(0px,1px) rotate(-5deg)}43%,60%{transform:translate(0px,-2px) rotate(-9deg)}75%,90%{transform:translate(2px,3px) rotate(-2deg)}100%{transform:translate(0px,1px) rotate(-5deg)}}
+
+/* search-shelves: Steady a short row of references, draw one spine toward the body, inspect it, then ease it back. */
+.avatar-performance[data-program="search-shelves"] .ap-upper{transform:translate(0px,0px) rotate(-0.8deg)}
+.avatar-performance[data-program="search-shelves"][data-animate="true"] .ap-upper{animation-name:ap-search-shelves-u}
+@keyframes ap-search-shelves-u{0%,12%{transform:translate(0px,0px) rotate(-0.8deg)}26%,39%{transform:translate(-2px,0px) rotate(-2deg)}56%,74%{transform:translate(-1px,0px) rotate(-0.4deg)}89%,100%{transform:translate(0px,0px) rotate(-0.8deg)}}
+.avatar-performance[data-program="search-shelves"] .ap-eyes{transform:translate(-3px,1px)}
+.avatar-performance[data-program="search-shelves"][data-animate="true"] .ap-eyes{animation-name:ap-search-shelves-e}
+@keyframes ap-search-shelves-e{0%,12%{transform:translate(-3px,1px)}26%,39%{transform:translate(-3px,0px)}56%,74%{transform:translate(-1px,1px)}89%,100%{transform:translate(-3px,1px)}}
+.avatar-performance[data-program="search-shelves"] .ap-arm-left,.avatar-performance[data-program="search-shelves"] .ap-held-left{transform:translate(-3px,10px) rotate(-5deg)}
+.avatar-performance[data-program="search-shelves"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="search-shelves"][data-animate="true"] .ap-held-left{animation-name:ap-search-shelves-l}
+@keyframes ap-search-shelves-l{0%,12%{transform:translate(-3px,10px) rotate(-5deg)}26%,39%{transform:translate(4px,3px) rotate(-11deg)}56%,74%{transform:translate(8px,2px) rotate(-4deg)}89%,100%{transform:translate(-3px,10px) rotate(-5deg)}}
+.avatar-performance[data-program="search-shelves"] .ap-arm-right{transform:translate(-17px,13px) rotate(7deg)}
+.avatar-performance[data-program="search-shelves"][data-animate="true"] .ap-arm-right{animation-name:ap-search-shelves-r}
+@keyframes ap-search-shelves-r{0%,12%{transform:translate(-17px,13px) rotate(7deg)}26%,39%{transform:translate(-17px,12px) rotate(5deg)}56%,74%{transform:translate(-21px,10px) rotate(-3deg)}89%,100%{transform:translate(-17px,13px) rotate(7deg)}}
+.avatar-performance[data-program="search-shelves"] .ap-foot-1{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="search-shelves"][data-animate="true"] .ap-foot-1{animation-name:ap-search-shelves-ap-foot-1}
+@keyframes ap-search-shelves-ap-foot-1{0%,12%{transform:translate(0px,0px) rotate(0deg)}26%,39%{transform:translate(-2px,-1px) rotate(0deg)}56%,74%,89%,100%{transform:translate(0px,0px) rotate(0deg)}}
+
+/* search-query: Hover a pencil over a query slip, point to its margin, compare with the reference screen, then pause. */
+.avatar-performance[data-program="search-query"] .ap-upper{transform:translate(0px,0px) rotate(-0.5deg)}
+.avatar-performance[data-program="search-query"][data-animate="true"] .ap-upper{animation-name:ap-search-query-u}
+@keyframes ap-search-query-u{0%,10%{transform:translate(0px,0px) rotate(-0.5deg)}24%,38%{transform:translate(-1px,1px) rotate(-1.3deg)}53%,68%{transform:translate(1px,0px) rotate(1.5deg)}85%,100%{transform:translate(0px,0px) rotate(-0.5deg)}}
+.avatar-performance[data-program="search-query"] .ap-eyes{transform:translate(-1px,2px)}
+.avatar-performance[data-program="search-query"][data-animate="true"] .ap-eyes{animation-name:ap-search-query-e}
+@keyframes ap-search-query-e{0%{transform:translate(-1px,2px)}10%,24%,38%{transform:translate(-2px,2px)}53%,68%{transform:translate(3px,-1px)}85%{transform:translate(0px,1px)}100%{transform:translate(-1px,2px)}}
+.avatar-performance[data-program="search-query"] .ap-arm-left{transform:translate(8px,16px) rotate(-7deg)}
+.avatar-performance[data-program="search-query"][data-animate="true"] .ap-arm-left{animation-name:ap-search-query-l}
+@keyframes ap-search-query-l{0%,10%{transform:translate(8px,16px) rotate(-7deg)}24%,38%{transform:translate(10px,14px) rotate(-11deg)}53%,68%,85%,100%{transform:translate(8px,16px) rotate(-7deg)}}
+.avatar-performance[data-program="search-query"] .ap-arm-right,.avatar-performance[data-program="search-query"] .ap-held-right{transform:translate(-15px,7px) rotate(-12deg)}
+.avatar-performance[data-program="search-query"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="search-query"][data-animate="true"] .ap-held-right{animation-name:ap-search-query-r}
+@keyframes ap-search-query-r{0%,10%{transform:translate(-15px,7px) rotate(-12deg)}24%,38%{transform:translate(-24px,10px) rotate(-18deg)}53%,68%{transform:translate(-5px,-3px) rotate(-29deg)}85%,100%{transform:translate(-15px,7px) rotate(-12deg)}}
+
+/* plan-decompose: Spread two loose planning tiles apart, compare their connection, draw them back without completing the map. */
+.avatar-performance[data-program="plan-decompose"] .ap-upper{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="plan-decompose"][data-animate="true"] .ap-upper{animation-name:ap-plan-decompose-u}
+@keyframes ap-plan-decompose-u{0%,9%{transform:translate(0px,0px) rotate(0deg)}22%,36%{transform:translate(-1px,1px) rotate(-0.9deg)}51%,67%{transform:translate(1px,1px) rotate(0.9deg)}85%,100%{transform:translate(0px,0px) rotate(0deg)}}
+.avatar-performance[data-program="plan-decompose"] .ap-eyes{transform:translate(0px,2px)}
+.avatar-performance[data-program="plan-decompose"][data-animate="true"] .ap-eyes{animation-name:ap-plan-decompose-e}
+@keyframes ap-plan-decompose-e{0%{transform:translate(0px,2px)}9%{transform:translate(-2px,2px)}22%,36%{transform:translate(-3px,2px)}51%,67%{transform:translate(3px,2px)}85%{transform:translate(0px,1px)}100%{transform:translate(0px,2px)}}
+.avatar-performance[data-program="plan-decompose"] .ap-arm-left,.avatar-performance[data-program="plan-decompose"] .ap-held-left{transform:translate(16px,15px) rotate(-5deg)}
+.avatar-performance[data-program="plan-decompose"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="plan-decompose"][data-animate="true"] .ap-held-left{animation-name:ap-plan-decompose-l}
+@keyframes ap-plan-decompose-l{0%,9%{transform:translate(16px,15px) rotate(-5deg)}22%,36%{transform:translate(6px,13px) rotate(-13deg)}51%,67%{transform:translate(10px,16px) rotate(-7deg)}85%,100%{transform:translate(16px,15px) rotate(-5deg)}}
+.avatar-performance[data-program="plan-decompose"] .ap-arm-right,.avatar-performance[data-program="plan-decompose"] .ap-held-right{transform:translate(-16px,15px) rotate(5deg)}
+.avatar-performance[data-program="plan-decompose"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="plan-decompose"][data-animate="true"] .ap-held-right{animation-name:ap-plan-decompose-r}
+@keyframes ap-plan-decompose-r{0%,9%{transform:translate(-16px,15px) rotate(5deg)}22%,36%{transform:translate(-7px,13px) rotate(13deg)}51%,67%{transform:translate(-11px,16px) rotate(7deg)}85%,100%{transform:translate(-16px,15px) rotate(5deg)}}
+.avatar-performance[data-program="plan-decompose"] .ap-foot-1{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="plan-decompose"][data-animate="true"] .ap-foot-1{animation-name:ap-plan-decompose-ap-foot-1}
+@keyframes ap-plan-decompose-ap-foot-1{0%,9%{transform:translate(0px,0px) rotate(0deg)}22%,36%{transform:translate(-1px,0px) rotate(0deg)}51%,67%,85%,100%{transform:translate(0px,0px) rotate(0deg)}}
+.avatar-performance[data-program="plan-decompose"] .ap-foot-4{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="plan-decompose"][data-animate="true"] .ap-foot-4{animation-name:ap-plan-decompose-ap-foot-4}
+@keyframes ap-plan-decompose-ap-foot-4{0%,9%{transform:translate(0px,0px) rotate(0deg)}22%,36%{transform:translate(1px,0px) rotate(0deg)}51%,67%,85%,100%{transform:translate(0px,0px) rotate(0deg)}}
+
+/* plan-sequence: Pin a sequence strip with the left hand, trace its route with the pencil, then rehearse the route in the air. */
+.avatar-performance[data-program="plan-sequence"] .ap-upper{transform:translate(0px,0px) rotate(-0.4deg)}
+.avatar-performance[data-program="plan-sequence"][data-animate="true"] .ap-upper{animation-name:ap-plan-sequence-u}
+@keyframes ap-plan-sequence-u{0%,8%{transform:translate(0px,0px) rotate(-0.4deg)}19%,31%{transform:translate(-1px,1px) rotate(-1.4deg)}44%{transform:translate(0px,1px) rotate(0deg)}58%,73%{transform:translate(1px,0px) rotate(1.1deg)}88%,100%{transform:translate(0px,0px) rotate(-0.4deg)}}
+.avatar-performance[data-program="plan-sequence"] .ap-eyes{transform:translate(-2px,2px)}
+.avatar-performance[data-program="plan-sequence"][data-animate="true"] .ap-eyes{animation-name:ap-plan-sequence-e}
+@keyframes ap-plan-sequence-e{0%,8%{transform:translate(-2px,2px)}19%{transform:translate(-3px,2px)}31%{transform:translate(-1px,2px)}44%{transform:translate(2px,2px)}58%,73%{transform:translate(3px,-2px)}88%{transform:translate(0px,1px)}100%{transform:translate(-2px,2px)}}
+.avatar-performance[data-program="plan-sequence"] .ap-arm-left{transform:translate(9px,18px) rotate(-7deg)}
+.avatar-performance[data-program="plan-sequence"][data-animate="true"] .ap-arm-left{animation-name:ap-plan-sequence-l}
+@keyframes ap-plan-sequence-l{0%,8%{transform:translate(9px,18px) rotate(-7deg)}19%,31%,44%{transform:translate(9px,17px) rotate(-9deg)}58%,73%{transform:translate(10px,19px) rotate(-5deg)}88%,100%{transform:translate(9px,18px) rotate(-7deg)}}
+.avatar-performance[data-program="plan-sequence"] .ap-arm-right,.avatar-performance[data-program="plan-sequence"] .ap-held-right{transform:translate(-25px,9px) rotate(-6deg)}
+.avatar-performance[data-program="plan-sequence"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="plan-sequence"][data-animate="true"] .ap-held-right{animation-name:ap-plan-sequence-r}
+@keyframes ap-plan-sequence-r{0%,8%{transform:translate(-25px,9px) rotate(-6deg)}19%{transform:translate(-28px,11px) rotate(-11deg)}31%{transform:translate(-17px,12px) rotate(-7deg)}44%{transform:translate(-7px,10px) rotate(0deg)}58%,73%{transform:translate(2px,-10px) rotate(-31deg)}88%,100%{transform:translate(-25px,9px) rotate(-6deg)}}
+
+/* plan-branches: Fan three option cards at the shoulder, consider each branch, and use the free hand to trace a fork. */
+.avatar-performance[data-program="plan-branches"] .ap-upper{transform:translate(0px,0px) rotate(0.6deg)}
+.avatar-performance[data-program="plan-branches"][data-animate="true"] .ap-upper{animation-name:ap-plan-branches-u}
+@keyframes ap-plan-branches-u{0%,12%{transform:translate(0px,0px) rotate(0.6deg)}28%,42%{transform:translate(1px,0px) rotate(1.8deg)}55%,70%{transform:translate(-1px,0px) rotate(-1.2deg)}87%,100%{transform:translate(0px,0px) rotate(0.6deg)}}
+.avatar-performance[data-program="plan-branches"] .ap-eyes{transform:translate(2px,-1px)}
+.avatar-performance[data-program="plan-branches"][data-animate="true"] .ap-eyes{animation-name:ap-plan-branches-e}
+@keyframes ap-plan-branches-e{0%{transform:translate(2px,-1px)}12%,28%{transform:translate(3px,-2px)}42%{transform:translate(1px,-3px)}55%,70%{transform:translate(-2px,0px)}87%,100%{transform:translate(2px,-1px)}}
+.avatar-performance[data-program="plan-branches"] .ap-arm-left{transform:translate(13px,8px) rotate(-28deg)}
+.avatar-performance[data-program="plan-branches"][data-animate="true"] .ap-arm-left{animation-name:ap-plan-branches-l}
+@keyframes ap-plan-branches-l{0%,12%{transform:translate(13px,8px) rotate(-28deg)}28%,42%{transform:translate(30px,-2px) rotate(-17deg)}55%,70%{transform:translate(27px,8px) rotate(-2deg)}87%,100%{transform:translate(13px,8px) rotate(-28deg)}}
+.avatar-performance[data-program="plan-branches"] .ap-arm-right,.avatar-performance[data-program="plan-branches"] .ap-held-right{transform:translate(4px,-5px) rotate(-11deg)}
+.avatar-performance[data-program="plan-branches"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="plan-branches"][data-animate="true"] .ap-held-right{animation-name:ap-plan-branches-r}
+@keyframes ap-plan-branches-r{0%,12%{transform:translate(4px,-5px) rotate(-11deg)}28%,42%{transform:translate(4px,-8px) rotate(-17deg)}55%,70%{transform:translate(2px,-3px) rotate(-5deg)}87%,100%{transform:translate(4px,-5px) rotate(-11deg)}}
+.avatar-performance[data-program="plan-branches"] .ap-foot-3{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="plan-branches"][data-animate="true"] .ap-foot-3{animation-name:ap-plan-branches-ap-foot-3}
+@keyframes ap-plan-branches-ap-foot-3{0%,12%{transform:translate(0px,0px) rotate(0deg)}28%,42%{transform:translate(-1px,-1px) rotate(0deg)}55%,70%,87%,100%{transform:translate(0px,0px) rotate(0deg)}}
+
+/* plan-trace: Hold a folded route map at the left, follow one connection with the pencil, then pause with eyes lifted in thought. */
+.avatar-performance[data-program="plan-trace"] .ap-upper{transform:translate(0px,0px) rotate(-0.6deg)}
+.avatar-performance[data-program="plan-trace"][data-animate="true"] .ap-upper{animation-name:ap-plan-trace-u}
+@keyframes ap-plan-trace-u{0%,15%{transform:translate(0px,0px) rotate(-0.6deg)}29%,41%{transform:translate(-1px,1px) rotate(-1.7deg)}56%,72%{transform:translate(0px,-1px) rotate(0deg)}88%,100%{transform:translate(0px,0px) rotate(-0.6deg)}}
+.avatar-performance[data-program="plan-trace"] .ap-eyes{transform:translate(-2px,1px)}
+.avatar-performance[data-program="plan-trace"][data-animate="true"] .ap-eyes{animation-name:ap-plan-trace-e}
+@keyframes ap-plan-trace-e{0%,15%{transform:translate(-2px,1px)}29%,41%{transform:translate(-3px,2px)}56%,72%{transform:translate(1px,-3px)}88%{transform:translate(-1px,0px)}100%{transform:translate(-2px,1px)}}
+.avatar-performance[data-program="plan-trace"] .ap-arm-left,.avatar-performance[data-program="plan-trace"] .ap-held-left{transform:translate(5px,7px) rotate(-9deg)}
+.avatar-performance[data-program="plan-trace"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="plan-trace"][data-animate="true"] .ap-held-left{animation-name:ap-plan-trace-l}
+@keyframes ap-plan-trace-l{0%,15%{transform:translate(5px,7px) rotate(-9deg)}29%,41%{transform:translate(6px,5px) rotate(-12deg)}56%,72%,88%,100%{transform:translate(5px,7px) rotate(-9deg)}}
+.avatar-performance[data-program="plan-trace"] .ap-arm-right,.avatar-performance[data-program="plan-trace"] .ap-held-right{transform:translate(-25px,3px) rotate(-12deg)}
+.avatar-performance[data-program="plan-trace"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="plan-trace"][data-animate="true"] .ap-held-right{animation-name:ap-plan-trace-r}
+@keyframes ap-plan-trace-r{0%,15%{transform:translate(-25px,3px) rotate(-12deg)}29%{transform:translate(-36px,5px) rotate(-17deg)}41%{transform:translate(-30px,9px) rotate(-7deg)}56%,72%{transform:translate(-16px,-6px) rotate(-36deg)}88%,100%{transform:translate(-25px,3px) rotate(-12deg)}}
+
+/* code-debug: Lean close to one screen region, point to it, rest the pointing hand, then return to a short asymmetric typing burst. */
+.avatar-performance[data-program="code-debug"] .ap-upper{transform:translate(0px,0px) rotate(0.5deg)}
+.avatar-performance[data-program="code-debug"][data-animate="true"] .ap-upper{animation-name:ap-code-debug-u}
+@keyframes ap-code-debug-u{0%,8%{transform:translate(0px,0px) rotate(0.5deg)}19%,32%{transform:translate(1px,2px) rotate(2.2deg)}46%{transform:translate(1px,1px) rotate(1deg)}59%{transform:translate(0px,0px) rotate(0deg)}67%,74%,81%{transform:translate(0px,1px) rotate(0deg)}89%,100%{transform:translate(0px,0px) rotate(0.5deg)}}
+.avatar-performance[data-program="code-debug"] .ap-eyes{transform:translate(1px,1px)}
+.avatar-performance[data-program="code-debug"][data-animate="true"] .ap-eyes{animation-name:ap-code-debug-e}
+@keyframes ap-code-debug-e{0%{transform:translate(1px,1px)}8%{transform:translate(2px,0px)}19%,32%{transform:translate(3px,-1px)}46%{transform:translate(1px,0px)}59%,67%,74%,81%{transform:translate(0px,2px)}89%,100%{transform:translate(1px,1px)}}
+.avatar-performance[data-program="code-debug"] .ap-arm-left{transform:translate(16px,23px) rotate(-8deg)}
+.avatar-performance[data-program="code-debug"][data-animate="true"] .ap-arm-left{animation-name:ap-code-debug-l}
+@keyframes ap-code-debug-l{0%,8%{transform:translate(16px,23px) rotate(-8deg)}19%,32%{transform:translate(15px,24px) rotate(-5deg)}46%,59%{transform:translate(15px,8px) rotate(-35deg)}67%{transform:translate(17px,25px) rotate(-13deg)}74%{transform:translate(17px,21px) rotate(-4deg)}81%{transform:translate(17px,25px) rotate(-13deg)}89%,100%{transform:translate(16px,23px) rotate(-8deg)}}
+.avatar-performance[data-program="code-debug"] .ap-arm-right{transform:translate(-16px,23px) rotate(8deg)}
+.avatar-performance[data-program="code-debug"][data-animate="true"] .ap-arm-right{animation-name:ap-code-debug-r}
+@keyframes ap-code-debug-r{0%,8%{transform:translate(-16px,23px) rotate(8deg)}19%,32%{transform:translate(-9px,7px) rotate(-11deg)}46%,59%{transform:translate(-12px,21px) rotate(5deg)}67%{transform:translate(-17px,21px) rotate(4deg)}74%{transform:translate(-17px,25px) rotate(14deg)}81%{transform:translate(-17px,21px) rotate(4deg)}89%,100%{transform:translate(-16px,23px) rotate(8deg)}}
+.avatar-performance[data-program="code-debug"] .ap-foot-4{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="code-debug"][data-animate="true"] .ap-foot-4{animation-name:ap-code-debug-ap-foot-4}
+@keyframes ap-code-debug-ap-foot-4{0%,8%{transform:translate(0px,0px) rotate(0deg)}19%,32%{transform:translate(1px,-1px) rotate(0deg)}46%,59%,67%,74%,81%,89%,100%{transform:translate(0px,0px) rotate(0deg)}}
+
+/* code-refactor: Compare two abstract code panes, move a loose strip between their margins, then settle both hands at the keyboard. */
+.avatar-performance[data-program="code-refactor"] .ap-upper{transform:translate(0px,0px) rotate(-0.7deg)}
+.avatar-performance[data-program="code-refactor"][data-animate="true"] .ap-upper{animation-name:ap-code-refactor-u}
+@keyframes ap-code-refactor-u{0%,10%{transform:translate(0px,0px) rotate(-0.7deg)}23%{transform:translate(-1px,1px) rotate(-1.3deg)}39%,52%{transform:translate(1px,1px) rotate(1.3deg)}68%{transform:translate(0px,0px) rotate(0deg)}84%,100%{transform:translate(0px,0px) rotate(-0.7deg)}}
+.avatar-performance[data-program="code-refactor"] .ap-eyes{transform:translate(-2px,1px)}
+.avatar-performance[data-program="code-refactor"][data-animate="true"] .ap-eyes{animation-name:ap-code-refactor-e}
+@keyframes ap-code-refactor-e{0%,10%{transform:translate(-2px,1px)}23%{transform:translate(-3px,1px)}39%,52%{transform:translate(3px,1px)}68%{transform:translate(0px,2px)}84%,100%{transform:translate(-2px,1px)}}
+.avatar-performance[data-program="code-refactor"] .ap-arm-left,.avatar-performance[data-program="code-refactor"] .ap-held-left{transform:translate(14px,23px) rotate(-7deg)}
+.avatar-performance[data-program="code-refactor"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="code-refactor"][data-animate="true"] .ap-held-left{animation-name:ap-code-refactor-l}
+@keyframes ap-code-refactor-l{0%,10%{transform:translate(14px,23px) rotate(-7deg)}23%,39%{transform:translate(7px,13px) rotate(-12deg)}52%,68%{transform:translate(17px,15px) rotate(-4deg)}84%,100%{transform:translate(14px,23px) rotate(-7deg)}}
+.avatar-performance[data-program="code-refactor"] .ap-arm-right{transform:translate(-14px,23px) rotate(7deg)}
+.avatar-performance[data-program="code-refactor"][data-animate="true"] .ap-arm-right{animation-name:ap-code-refactor-r}
+@keyframes ap-code-refactor-r{0%,10%{transform:translate(-14px,23px) rotate(7deg)}23%{transform:translate(-20px,16px) rotate(4deg)}39%,52%{transform:translate(-7px,15px) rotate(-5deg)}68%,84%,100%{transform:translate(-14px,23px) rotate(7deg)}}
+
+/* code-terminal: Use a side terminal key cluster, pause with one hand hovering over a key, inspect the prompt, then resume a measured chord. */
+.avatar-performance[data-program="code-terminal"] .ap-upper{transform:translate(0px,0px) rotate(0.8deg)}
+.avatar-performance[data-program="code-terminal"][data-animate="true"] .ap-upper{animation-name:ap-code-terminal-u}
+@keyframes ap-code-terminal-u{0%{transform:translate(0px,0px) rotate(0.8deg)}7%{transform:translate(0px,1px) rotate(0.8deg)}14%{transform:translate(0px,0px) rotate(0.8deg)}21%{transform:translate(0px,1px) rotate(0.8deg)}29%{transform:translate(0px,0px) rotate(0.8deg)}41%,58%{transform:translate(1px,0px) rotate(1.8deg)}69%{transform:translate(0px,0px) rotate(0.8deg)}77%{transform:translate(0px,1px) rotate(0.8deg)}86%,100%{transform:translate(0px,0px) rotate(0.8deg)}}
+.avatar-performance[data-program="code-terminal"] .ap-eyes{transform:translate(2px,1px)}
+.avatar-performance[data-program="code-terminal"][data-animate="true"] .ap-eyes{animation-name:ap-code-terminal-e}
+@keyframes ap-code-terminal-e{0%,7%,14%,21%,29%{transform:translate(2px,1px)}41%,58%{transform:translate(3px,-2px)}69%,77%{transform:translate(1px,2px)}86%,100%{transform:translate(2px,1px)}}
+.avatar-performance[data-program="code-terminal"] .ap-arm-left{transform:translate(17px,24px) rotate(-8deg)}
+.avatar-performance[data-program="code-terminal"][data-animate="true"] .ap-arm-left{animation-name:ap-code-terminal-l}
+@keyframes ap-code-terminal-l{0%{transform:translate(17px,24px) rotate(-8deg)}7%{transform:translate(17px,20px) rotate(-3deg)}14%{transform:translate(17px,25px) rotate(-13deg)}21%{transform:translate(17px,20px) rotate(-3deg)}29%{transform:translate(17px,24px) rotate(-8deg)}41%,58%{transform:translate(14px,18px) rotate(-4deg)}69%{transform:translate(17px,25px) rotate(-13deg)}77%{transform:translate(17px,20px) rotate(-3deg)}86%,100%{transform:translate(17px,24px) rotate(-8deg)}}
+.avatar-performance[data-program="code-terminal"] .ap-arm-right{transform:translate(-9px,24px) rotate(9deg)}
+.avatar-performance[data-program="code-terminal"][data-animate="true"] .ap-arm-right{animation-name:ap-code-terminal-r}
+@keyframes ap-code-terminal-r{0%{transform:translate(-9px,24px) rotate(9deg)}7%{transform:translate(-9px,25px) rotate(14deg)}14%{transform:translate(-9px,20px) rotate(3deg)}21%{transform:translate(-9px,25px) rotate(14deg)}29%{transform:translate(-9px,24px) rotate(9deg)}41%,58%{transform:translate(4px,4px) rotate(-18deg)}69%{transform:translate(-9px,20px) rotate(3deg)}77%{transform:translate(-9px,25px) rotate(14deg)}86%,100%{transform:translate(-9px,24px) rotate(9deg)}}
+.avatar-performance[data-program="code-terminal"] .ap-foot-2{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="code-terminal"][data-animate="true"] .ap-foot-2{animation-name:ap-code-terminal-ap-foot-2}
+@keyframes ap-code-terminal-ap-foot-2{0%,7%,14%,21%,29%{transform:translate(0px,0px) rotate(0deg)}41%,58%{transform:translate(0px,-1px) rotate(0deg)}69%,77%,86%,100%{transform:translate(0px,0px) rotate(0deg)}}
+
+/* code-patch: Keep a small patch note at the left, point between its margin and the screen, then type with only the free hand. */
+.avatar-performance[data-program="code-patch"] .ap-upper{transform:translate(0px,0px) rotate(-0.4deg)}
+.avatar-performance[data-program="code-patch"][data-animate="true"] .ap-upper{animation-name:ap-code-patch-u}
+@keyframes ap-code-patch-u{0%,11%{transform:translate(0px,0px) rotate(-0.4deg)}25%{transform:translate(-1px,0px) rotate(-1.3deg)}39%,53%{transform:translate(1px,1px) rotate(1deg)}65%,73%,82%{transform:translate(0px,1px) rotate(0deg)}91%,100%{transform:translate(0px,0px) rotate(-0.4deg)}}
+.avatar-performance[data-program="code-patch"] .ap-eyes{transform:translate(-2px,1px)}
+.avatar-performance[data-program="code-patch"][data-animate="true"] .ap-eyes{animation-name:ap-code-patch-e}
+@keyframes ap-code-patch-e{0%,11%{transform:translate(-2px,1px)}25%{transform:translate(-3px,0px)}39%,53%{transform:translate(2px,1px)}65%,73%,82%{transform:translate(0px,2px)}91%,100%{transform:translate(-2px,1px)}}
+.avatar-performance[data-program="code-patch"] .ap-arm-left,.avatar-performance[data-program="code-patch"] .ap-held-left{transform:translate(2px,4px) rotate(-9deg)}
+.avatar-performance[data-program="code-patch"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="code-patch"][data-animate="true"] .ap-held-left{animation-name:ap-code-patch-l}
+@keyframes ap-code-patch-l{0%,11%{transform:translate(2px,4px) rotate(-9deg)}25%,39%{transform:translate(1px,1px) rotate(-14deg)}53%,65%,73%,82%{transform:translate(3px,5px) rotate(-6deg)}91%,100%{transform:translate(2px,4px) rotate(-9deg)}}
+.avatar-performance[data-program="code-patch"] .ap-arm-right{transform:translate(-16px,22px) rotate(8deg)}
+.avatar-performance[data-program="code-patch"][data-animate="true"] .ap-arm-right{animation-name:ap-code-patch-r}
+@keyframes ap-code-patch-r{0%,11%{transform:translate(-16px,22px) rotate(8deg)}25%{transform:translate(-27px,6px) rotate(-12deg)}39%,53%{transform:translate(-5px,9px) rotate(-7deg)}65%{transform:translate(-16px,21px) rotate(4deg)}73%{transform:translate(-16px,26px) rotate(14deg)}82%{transform:translate(-16px,21px) rotate(4deg)}91%,100%{transform:translate(-16px,22px) rotate(8deg)}}
+
+/* code-document: Rest a reference booklet beside the laptop; glance left, lift its edge, then keep the place with a finger while the right hand types. */
+.avatar-performance[data-program="code-document"] .ap-upper{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="code-document"][data-animate="true"] .ap-upper{animation-name:ap-code-document-u}
+@keyframes ap-code-document-u{0%,12%{transform:translate(0px,0px) rotate(0deg)}27%,43%{transform:translate(-2px,0px) rotate(-1.6deg)}56%,65%,74%{transform:translate(0px,1px) rotate(-0.4deg)}84%,93%,100%{transform:translate(0px,0px) rotate(0deg)}}
+.avatar-performance[data-program="code-document"] .ap-eyes{transform:translate(0px,2px)}
+.avatar-performance[data-program="code-document"][data-animate="true"] .ap-eyes{animation-name:ap-code-document-e}
+@keyframes ap-code-document-e{0%{transform:translate(0px,2px)}12%,27%,43%{transform:translate(-3px,2px)}56%,65%,74%{transform:translate(0px,2px)}84%{transform:translate(-1px,1px)}93%,100%{transform:translate(0px,2px)}}
+.avatar-performance[data-program="code-document"] .ap-arm-left,.avatar-performance[data-program="code-document"] .ap-held-left{transform:translate(7px,15px) rotate(-8deg)}
+.avatar-performance[data-program="code-document"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="code-document"][data-animate="true"] .ap-held-left{animation-name:ap-code-document-l}
+@keyframes ap-code-document-l{0%,12%{transform:translate(7px,15px) rotate(-8deg)}27%,43%{transform:translate(4px,8px) rotate(-15deg)}56%,65%,74%{transform:translate(11px,12px) rotate(-6deg)}84%,93%,100%{transform:translate(7px,15px) rotate(-8deg)}}
+.avatar-performance[data-program="code-document"] .ap-arm-right{transform:translate(-15px,23px) rotate(7deg)}
+.avatar-performance[data-program="code-document"][data-animate="true"] .ap-arm-right{animation-name:ap-code-document-r}
+@keyframes ap-code-document-r{0%,12%{transform:translate(-15px,23px) rotate(7deg)}27%,43%{transform:translate(-12px,20px) rotate(3deg)}56%{transform:translate(-15px,21px) rotate(4deg)}65%{transform:translate(-15px,25px) rotate(14deg)}74%{transform:translate(-15px,21px) rotate(4deg)}84%{transform:translate(-15px,25px) rotate(14deg)}93%,100%{transform:translate(-15px,23px) rotate(7deg)}}
+
+/* design-layout: Reposition two loose layout blocks on a sketch mat; compare the gap, square the edges, then release both hands. */
+.avatar-performance[data-program="design-layout"] .ap-upper{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="design-layout"][data-animate="true"] .ap-upper{animation-name:ap-design-layout-u}
+@keyframes ap-design-layout-u{0%,10%{transform:translate(0px,0px) rotate(0deg)}24%,38%{transform:translate(-1px,1px) rotate(-1.2deg)}54%,69%{transform:translate(1px,1px) rotate(1.2deg)}85%,100%{transform:translate(0px,0px) rotate(0deg)}}
+.avatar-performance[data-program="design-layout"] .ap-eyes{transform:translate(0px,2px)}
+.avatar-performance[data-program="design-layout"][data-animate="true"] .ap-eyes{animation-name:ap-design-layout-e}
+@keyframes ap-design-layout-e{0%{transform:translate(0px,2px)}10%{transform:translate(-2px,2px)}24%,38%{transform:translate(-3px,2px)}54%,69%{transform:translate(3px,2px)}85%{transform:translate(0px,1px)}100%{transform:translate(0px,2px)}}
+.avatar-performance[data-program="design-layout"] .ap-arm-left,.avatar-performance[data-program="design-layout"] .ap-held-left{transform:translate(15px,16px) rotate(-5deg)}
+.avatar-performance[data-program="design-layout"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="design-layout"][data-animate="true"] .ap-held-left{animation-name:ap-design-layout-l}
+@keyframes ap-design-layout-l{0%,10%{transform:translate(15px,16px) rotate(-5deg)}24%,38%{transform:translate(8px,13px) rotate(-11deg)}54%,69%{transform:translate(13px,15px) rotate(-4deg)}85%,100%{transform:translate(15px,16px) rotate(-5deg)}}
+.avatar-performance[data-program="design-layout"] .ap-arm-right,.avatar-performance[data-program="design-layout"] .ap-held-right{transform:translate(-14px,16px) rotate(5deg)}
+.avatar-performance[data-program="design-layout"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="design-layout"][data-animate="true"] .ap-held-right{animation-name:ap-design-layout-r}
+@keyframes ap-design-layout-r{0%,10%{transform:translate(-14px,16px) rotate(5deg)}24%,38%{transform:translate(-9px,19px) rotate(12deg)}54%,69%{transform:translate(-12px,12px) rotate(2deg)}85%,100%{transform:translate(-14px,16px) rotate(5deg)}}
+.avatar-performance[data-program="design-layout"] .ap-foot-1{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="design-layout"][data-animate="true"] .ap-foot-1{animation-name:ap-design-layout-ap-foot-1}
+@keyframes ap-design-layout-ap-foot-1{0%,10%{transform:translate(0px,0px) rotate(0deg)}24%,38%{transform:translate(-1px,0px) rotate(0deg)}54%,69%,85%,100%{transform:translate(0px,0px) rotate(0deg)}}
+.avatar-performance[data-program="design-layout"] .ap-foot-4{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="design-layout"][data-animate="true"] .ap-foot-4{animation-name:ap-design-layout-ap-foot-4}
+@keyframes ap-design-layout-ap-foot-4{0%,10%,24%,38%{transform:translate(0px,0px) rotate(0deg)}54%,69%{transform:translate(1px,0px) rotate(0deg)}85%,100%{transform:translate(0px,0px) rotate(0deg)}}
+
+/* design-compass: Anchor drafting paper with the left hand, turn a small compass through a partial arc, lift it clear, and inspect the guide. */
+.avatar-performance[data-program="design-compass"] .ap-upper{transform:translate(0px,0px) rotate(-0.4deg)}
+.avatar-performance[data-program="design-compass"][data-animate="true"] .ap-upper{animation-name:ap-design-compass-u}
+@keyframes ap-design-compass-u{0%,13%{transform:translate(0px,0px) rotate(-0.4deg)}27%,39%{transform:translate(-1px,1px) rotate(-1.3deg)}53%,67%{transform:translate(1px,0px) rotate(0.9deg)}83%,100%{transform:translate(0px,0px) rotate(-0.4deg)}}
+.avatar-performance[data-program="design-compass"] .ap-eyes{transform:translate(0px,2px)}
+.avatar-performance[data-program="design-compass"][data-animate="true"] .ap-eyes{animation-name:ap-design-compass-e}
+@keyframes ap-design-compass-e{0%{transform:translate(0px,2px)}13%{transform:translate(-1px,2px)}27%{transform:translate(-2px,2px)}39%{transform:translate(1px,2px)}53%,67%{transform:translate(2px,0px)}83%,100%{transform:translate(0px,2px)}}
+.avatar-performance[data-program="design-compass"] .ap-arm-left{transform:translate(7px,20px) rotate(-8deg)}
+.avatar-performance[data-program="design-compass"][data-animate="true"] .ap-arm-left{animation-name:ap-design-compass-l}
+@keyframes ap-design-compass-l{0%,13%{transform:translate(7px,20px) rotate(-8deg)}27%,39%{transform:translate(8px,19px) rotate(-10deg)}53%,67%,83%,100%{transform:translate(7px,20px) rotate(-8deg)}}
+.avatar-performance[data-program="design-compass"] .ap-arm-right,.avatar-performance[data-program="design-compass"] .ap-held-right{transform:translate(-12px,5px) rotate(-7deg)}
+.avatar-performance[data-program="design-compass"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="design-compass"][data-animate="true"] .ap-held-right{animation-name:ap-design-compass-r}
+@keyframes ap-design-compass-r{0%,13%{transform:translate(-12px,5px) rotate(-7deg)}27%{transform:translate(-16px,7px) rotate(-23deg)}39%{transform:translate(-8px,8px) rotate(8deg)}53%,67%{transform:translate(-5px,-3px) rotate(18deg)}83%,100%{transform:translate(-12px,5px) rotate(-7deg)}}
+.avatar-performance[data-program="design-compass"] .ap-foot-2{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="design-compass"][data-animate="true"] .ap-foot-2{animation-name:ap-design-compass-ap-foot-2}
+@keyframes ap-design-compass-ap-foot-2{0%,13%{transform:translate(0px,0px) rotate(0deg)}27%,39%{transform:translate(-1px,-1px) rotate(0deg)}53%,67%,83%,100%{transform:translate(0px,0px) rotate(0deg)}}
+
+/* design-type: Raise a letterform sample at the left, align a short type ruler beneath it, then compare the empty space above the line. */
+.avatar-performance[data-program="design-type"] .ap-upper{transform:translate(0px,0px) rotate(-0.7deg)}
+.avatar-performance[data-program="design-type"][data-animate="true"] .ap-upper{animation-name:ap-design-type-u}
+@keyframes ap-design-type-u{0%,12%{transform:translate(0px,0px) rotate(-0.7deg)}29%,43%{transform:translate(-1px,0px) rotate(-1.7deg)}58%,73%{transform:translate(0px,-1px) rotate(0.2deg)}89%,100%{transform:translate(0px,0px) rotate(-0.7deg)}}
+.avatar-performance[data-program="design-type"] .ap-eyes{transform:translate(-2px,0px)}
+.avatar-performance[data-program="design-type"][data-animate="true"] .ap-eyes{animation-name:ap-design-type-e}
+@keyframes ap-design-type-e{0%,12%{transform:translate(-2px,0px)}29%,43%{transform:translate(-2px,2px)}58%,73%{transform:translate(0px,-2px)}89%{transform:translate(-1px,0px)}100%{transform:translate(-2px,0px)}}
+.avatar-performance[data-program="design-type"] .ap-arm-left,.avatar-performance[data-program="design-type"] .ap-held-left{transform:translate(5px,0px) rotate(-10deg)}
+.avatar-performance[data-program="design-type"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="design-type"][data-animate="true"] .ap-held-left{animation-name:ap-design-type-l}
+@keyframes ap-design-type-l{0%,12%{transform:translate(5px,0px) rotate(-10deg)}29%,43%{transform:translate(6px,-2px) rotate(-14deg)}58%,73%,89%,100%{transform:translate(5px,0px) rotate(-10deg)}}
+.avatar-performance[data-program="design-type"] .ap-arm-right,.avatar-performance[data-program="design-type"] .ap-held-right{transform:translate(-30px,11px) rotate(6deg)}
+.avatar-performance[data-program="design-type"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="design-type"][data-animate="true"] .ap-held-right{animation-name:ap-design-type-r}
+@keyframes ap-design-type-r{0%,12%{transform:translate(-30px,11px) rotate(6deg)}29%,43%{transform:translate(-38px,8px) rotate(-1deg)}58%,73%{transform:translate(-33px,13px) rotate(9deg)}89%,100%{transform:translate(-30px,11px) rotate(6deg)}}
+
+/* design-trace: Lift the corner of a tracing sheet, steady the base drawing, follow its silhouette with a stylus, and lower the corner. */
+.avatar-performance[data-program="design-trace"] .ap-upper{transform:translate(0px,0px) rotate(-0.6deg)}
+.avatar-performance[data-program="design-trace"][data-animate="true"] .ap-upper{animation-name:ap-design-trace-u}
+@keyframes ap-design-trace-u{0%,10%{transform:translate(0px,0px) rotate(-0.6deg)}24%,36%{transform:translate(-1px,1px) rotate(-1.6deg)}50%,64%{transform:translate(1px,1px) rotate(0.5deg)}81%,100%{transform:translate(0px,0px) rotate(-0.6deg)}}
+.avatar-performance[data-program="design-trace"] .ap-eyes{transform:translate(-1px,2px)}
+.avatar-performance[data-program="design-trace"][data-animate="true"] .ap-eyes{animation-name:ap-design-trace-e}
+@keyframes ap-design-trace-e{0%{transform:translate(-1px,2px)}10%{transform:translate(-2px,2px)}24%,36%{transform:translate(-3px,1px)}50%,64%{transform:translate(1px,2px)}81%{transform:translate(0px,2px)}100%{transform:translate(-1px,2px)}}
+.avatar-performance[data-program="design-trace"] .ap-arm-left,.avatar-performance[data-program="design-trace"] .ap-held-left{transform:translate(7px,18px) rotate(-7deg)}
+.avatar-performance[data-program="design-trace"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="design-trace"][data-animate="true"] .ap-held-left{animation-name:ap-design-trace-l}
+@keyframes ap-design-trace-l{0%,10%{transform:translate(7px,18px) rotate(-7deg)}24%,36%{transform:translate(6px,12px) rotate(-14deg)}50%,64%{transform:translate(8px,15px) rotate(-9deg)}81%,100%{transform:translate(7px,18px) rotate(-7deg)}}
+.avatar-performance[data-program="design-trace"] .ap-arm-right,.avatar-performance[data-program="design-trace"] .ap-held-right{transform:translate(-22px,8px) rotate(-13deg)}
+.avatar-performance[data-program="design-trace"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="design-trace"][data-animate="true"] .ap-held-right{animation-name:ap-design-trace-r}
+@keyframes ap-design-trace-r{0%,10%{transform:translate(-22px,8px) rotate(-13deg)}24%{transform:translate(-27px,10px) rotate(-16deg)}36%{transform:translate(-17px,6px) rotate(-5deg)}50%,64%{transform:translate(-9px,13px) rotate(3deg)}81%,100%{transform:translate(-22px,8px) rotate(-13deg)}}
+
+/* design-palette: Keep a small paint palette low, bring the brush to two existing colour wells, then hover over the untouched sketch. */
+.avatar-performance[data-program="design-palette"] .ap-upper{transform:translate(0px,0px) rotate(-0.4deg)}
+.avatar-performance[data-program="design-palette"][data-animate="true"] .ap-upper{animation-name:ap-design-palette-u}
+@keyframes ap-design-palette-u{0%,9%{transform:translate(0px,0px) rotate(-0.4deg)}22%,35%{transform:translate(-1px,1px) rotate(-1.2deg)}49%,63%{transform:translate(1px,0px) rotate(0.8deg)}81%,100%{transform:translate(0px,0px) rotate(-0.4deg)}}
+.avatar-performance[data-program="design-palette"] .ap-eyes{transform:translate(-2px,2px)}
+.avatar-performance[data-program="design-palette"][data-animate="true"] .ap-eyes{animation-name:ap-design-palette-e}
+@keyframes ap-design-palette-e{0%,9%{transform:translate(-2px,2px)}22%,35%{transform:translate(-3px,2px)}49%,63%{transform:translate(1px,2px)}81%{transform:translate(0px,1px)}100%{transform:translate(-2px,2px)}}
+.avatar-performance[data-program="design-palette"] .ap-arm-left,.avatar-performance[data-program="design-palette"] .ap-held-left{transform:translate(7px,12px) rotate(-9deg)}
+.avatar-performance[data-program="design-palette"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="design-palette"][data-animate="true"] .ap-held-left{animation-name:ap-design-palette-l}
+@keyframes ap-design-palette-l{0%,9%{transform:translate(7px,12px) rotate(-9deg)}22%,35%{transform:translate(8px,11px) rotate(-12deg)}49%,63%,81%,100%{transform:translate(7px,12px) rotate(-9deg)}}
+.avatar-performance[data-program="design-palette"] .ap-arm-right,.avatar-performance[data-program="design-palette"] .ap-held-right{transform:translate(-20px,5px) rotate(-12deg)}
+.avatar-performance[data-program="design-palette"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="design-palette"][data-animate="true"] .ap-held-right{animation-name:ap-design-palette-r}
+@keyframes ap-design-palette-r{0%,9%{transform:translate(-20px,5px) rotate(-12deg)}22%{transform:translate(-30px,10px) rotate(-17deg)}35%{transform:translate(-24px,12px) rotate(-8deg)}49%,63%{transform:translate(-8px,10px) rotate(2deg)}81%,100%{transform:translate(-20px,5px) rotate(-12deg)}}
+
+/* test-cases: Fan unmarked case cards, point to one margin, compare the instrument, and restore the fan without marking any card. */
+.avatar-performance[data-program="test-cases"] .ap-upper{transform:translate(0px,0px) rotate(-0.4deg)}
+.avatar-performance[data-program="test-cases"][data-animate="true"] .ap-upper{animation-name:ap-test-cases-u}
+@keyframes ap-test-cases-u{0%,10%{transform:translate(0px,0px) rotate(-0.4deg)}25%,39%{transform:translate(-1px,1px) rotate(-1.6deg)}53%,69%{transform:translate(1px,0px) rotate(1.4deg)}86%,100%{transform:translate(0px,0px) rotate(-0.4deg)}}
+.avatar-performance[data-program="test-cases"] .ap-eyes{transform:translate(-2px,1px)}
+.avatar-performance[data-program="test-cases"][data-animate="true"] .ap-eyes{animation-name:ap-test-cases-e}
+@keyframes ap-test-cases-e{0%,10%{transform:translate(-2px,1px)}25%,39%{transform:translate(-3px,2px)}53%,69%{transform:translate(3px,-1px)}86%{transform:translate(0px,1px)}100%{transform:translate(-2px,1px)}}
+.avatar-performance[data-program="test-cases"] .ap-arm-left,.avatar-performance[data-program="test-cases"] .ap-held-left{transform:translate(4px,8px) rotate(-9deg)}
+.avatar-performance[data-program="test-cases"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="test-cases"][data-animate="true"] .ap-held-left{animation-name:ap-test-cases-l}
+@keyframes ap-test-cases-l{0%,10%{transform:translate(4px,8px) rotate(-9deg)}25%,39%{transform:translate(4px,4px) rotate(-14deg)}53%,69%{transform:translate(5px,9px) rotate(-6deg)}86%,100%{transform:translate(4px,8px) rotate(-9deg)}}
+.avatar-performance[data-program="test-cases"] .ap-arm-right{transform:translate(-18px,12px) rotate(2deg)}
+.avatar-performance[data-program="test-cases"][data-animate="true"] .ap-arm-right{animation-name:ap-test-cases-r}
+@keyframes ap-test-cases-r{0%,10%{transform:translate(-18px,12px) rotate(2deg)}25%,39%{transform:translate(-30px,4px) rotate(-14deg)}53%,69%{transform:translate(6px,-2px) rotate(-17deg)}86%,100%{transform:translate(-18px,12px) rotate(2deg)}}
+
+/* test-boundary: Brace a sample strip, slide two caliper jaws across its ends, pause at the edge, then release the grip a little. */
+.avatar-performance[data-program="test-boundary"] .ap-upper{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="test-boundary"][data-animate="true"] .ap-upper{animation-name:ap-test-boundary-u}
+@keyframes ap-test-boundary-u{0%,11%{transform:translate(0px,0px) rotate(0deg)}24%,37%{transform:translate(-1px,1px) rotate(-1.3deg)}52%,67%{transform:translate(1px,1px) rotate(0.8deg)}84%,100%{transform:translate(0px,0px) rotate(0deg)}}
+.avatar-performance[data-program="test-boundary"] .ap-eyes{transform:translate(0px,2px)}
+.avatar-performance[data-program="test-boundary"][data-animate="true"] .ap-eyes{animation-name:ap-test-boundary-e}
+@keyframes ap-test-boundary-e{0%{transform:translate(0px,2px)}11%{transform:translate(-2px,2px)}24%,37%{transform:translate(-3px,2px)}52%,67%{transform:translate(2px,2px)}84%{transform:translate(0px,1px)}100%{transform:translate(0px,2px)}}
+.avatar-performance[data-program="test-boundary"] .ap-arm-left,.avatar-performance[data-program="test-boundary"] .ap-held-left{transform:translate(14px,17px) rotate(-5deg)}
+.avatar-performance[data-program="test-boundary"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="test-boundary"][data-animate="true"] .ap-held-left{animation-name:ap-test-boundary-l}
+@keyframes ap-test-boundary-l{0%,11%{transform:translate(14px,17px) rotate(-5deg)}24%,37%{transform:translate(8px,17px) rotate(-9deg)}52%,67%{transform:translate(13px,15px) rotate(-3deg)}84%,100%{transform:translate(14px,17px) rotate(-5deg)}}
+.avatar-performance[data-program="test-boundary"] .ap-arm-right,.avatar-performance[data-program="test-boundary"] .ap-held-right{transform:translate(-14px,17px) rotate(5deg)}
+.avatar-performance[data-program="test-boundary"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="test-boundary"][data-animate="true"] .ap-held-right{animation-name:ap-test-boundary-r}
+@keyframes ap-test-boundary-r{0%,11%{transform:translate(-14px,17px) rotate(5deg)}24%,37%{transform:translate(-6px,17px) rotate(9deg)}52%,67%{transform:translate(-12px,15px) rotate(3deg)}84%,100%{transform:translate(-14px,17px) rotate(5deg)}}
+.avatar-performance[data-program="test-boundary"] .ap-foot-1{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="test-boundary"][data-animate="true"] .ap-foot-1{animation-name:ap-test-boundary-ap-foot-1}
+@keyframes ap-test-boundary-ap-foot-1{0%,11%{transform:translate(0px,0px) rotate(0deg)}24%,37%{transform:translate(-1px,0px) rotate(0deg)}52%,67%,84%,100%{transform:translate(0px,0px) rotate(0deg)}}
+.avatar-performance[data-program="test-boundary"] .ap-foot-4{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="test-boundary"][data-animate="true"] .ap-foot-4{animation-name:ap-test-boundary-ap-foot-4}
+@keyframes ap-test-boundary-ap-foot-4{0%,11%{transform:translate(0px,0px) rotate(0deg)}24%,37%{transform:translate(1px,0px) rotate(0deg)}52%,67%,84%,100%{transform:translate(0px,0px) rotate(0deg)}}
+
+/* test-calibrate: Steady the meter, adjust its plain dial with the right hand, pause to read the same raw marks, and return to the dial. */
+.avatar-performance[data-program="test-calibrate"] .ap-upper{transform:translate(0px,0px) rotate(0.6deg)}
+.avatar-performance[data-program="test-calibrate"][data-animate="true"] .ap-upper{animation-name:ap-test-calibrate-u}
+@keyframes ap-test-calibrate-u{0%,12%{transform:translate(0px,0px) rotate(0.6deg)}25%,37%{transform:translate(1px,1px) rotate(1.7deg)}49%,66%{transform:translate(0px,0px) rotate(0.3deg)}84%,100%{transform:translate(0px,0px) rotate(0.6deg)}}
+.avatar-performance[data-program="test-calibrate"] .ap-eyes{transform:translate(3px,-1px)}
+.avatar-performance[data-program="test-calibrate"][data-animate="true"] .ap-eyes{animation-name:ap-test-calibrate-e}
+@keyframes ap-test-calibrate-e{0%,12%{transform:translate(3px,-1px)}25%,37%{transform:translate(3px,1px)}49%,66%{transform:translate(3px,-2px)}84%{transform:translate(2px,0px)}100%{transform:translate(3px,-1px)}}
+.avatar-performance[data-program="test-calibrate"] .ap-arm-left{transform:translate(15px,15px) rotate(-5deg)}
+.avatar-performance[data-program="test-calibrate"][data-animate="true"] .ap-arm-left{animation-name:ap-test-calibrate-l}
+@keyframes ap-test-calibrate-l{0%,12%{transform:translate(15px,15px) rotate(-5deg)}25%,37%{transform:translate(17px,13px) rotate(-9deg)}49%,66%,84%,100%{transform:translate(15px,15px) rotate(-5deg)}}
+.avatar-performance[data-program="test-calibrate"] .ap-arm-right{transform:translate(11px,5px) rotate(-3deg)}
+.avatar-performance[data-program="test-calibrate"][data-animate="true"] .ap-arm-right{animation-name:ap-test-calibrate-r}
+@keyframes ap-test-calibrate-r{0%,12%{transform:translate(11px,5px) rotate(-3deg)}25%{transform:translate(10px,4px) rotate(-23deg)}37%{transform:translate(10px,4px) rotate(13deg)}49%,66%{transform:translate(8px,8px) rotate(2deg)}84%,100%{transform:translate(11px,5px) rotate(-3deg)}}
+
+/* test-reproduce: Consult the same condition card, place a fingertip beside a sample fixture, compare again, and hover without announcing a result. */
+.avatar-performance[data-program="test-reproduce"] .ap-upper{transform:translate(0px,0px) rotate(-0.8deg)}
+.avatar-performance[data-program="test-reproduce"][data-animate="true"] .ap-upper{animation-name:ap-test-reproduce-u}
+@keyframes ap-test-reproduce-u{0%,14%{transform:translate(0px,0px) rotate(-0.8deg)}29%{transform:translate(-1px,0px) rotate(-1.5deg)}44%,59%{transform:translate(1px,1px) rotate(1deg)}75%{transform:translate(-1px,0px) rotate(-1deg)}89%,100%{transform:translate(0px,0px) rotate(-0.8deg)}}
+.avatar-performance[data-program="test-reproduce"] .ap-eyes{transform:translate(-3px,0px)}
+.avatar-performance[data-program="test-reproduce"][data-animate="true"] .ap-eyes{animation-name:ap-test-reproduce-e}
+@keyframes ap-test-reproduce-e{0%,14%{transform:translate(-3px,0px)}29%{transform:translate(-3px,1px)}44%,59%{transform:translate(2px,2px)}75%,89%{transform:translate(-2px,0px)}100%{transform:translate(-3px,0px)}}
+.avatar-performance[data-program="test-reproduce"] .ap-arm-left,.avatar-performance[data-program="test-reproduce"] .ap-held-left{transform:translate(5px,1px) rotate(-10deg)}
+.avatar-performance[data-program="test-reproduce"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="test-reproduce"][data-animate="true"] .ap-held-left{animation-name:ap-test-reproduce-l}
+@keyframes ap-test-reproduce-l{0%,14%{transform:translate(5px,1px) rotate(-10deg)}29%,44%{transform:translate(6px,-2px) rotate(-14deg)}59%,75%,89%,100%{transform:translate(5px,1px) rotate(-10deg)}}
+.avatar-performance[data-program="test-reproduce"] .ap-arm-right{transform:translate(-7px,17px) rotate(3deg)}
+.avatar-performance[data-program="test-reproduce"][data-animate="true"] .ap-arm-right{animation-name:ap-test-reproduce-r}
+@keyframes ap-test-reproduce-r{0%,14%{transform:translate(-7px,17px) rotate(3deg)}29%{transform:translate(-9px,12px) rotate(-4deg)}44%,59%{transform:translate(-13px,17px) rotate(-8deg)}75%,89%{transform:translate(-6px,11px) rotate(2deg)}100%{transform:translate(-7px,17px) rotate(3deg)}}
+
+/* test-compare: Hold two narrow sample windows at different heights, compare their raw ticks, bring them level, and separate them again. */
+.avatar-performance[data-program="test-compare"] .ap-upper{transform:translate(0px,0px) rotate(-0.5deg)}
+.avatar-performance[data-program="test-compare"][data-animate="true"] .ap-upper{animation-name:ap-test-compare-u}
+@keyframes ap-test-compare-u{0%,11%{transform:translate(0px,0px) rotate(-0.5deg)}25%{transform:translate(-1px,0px) rotate(-1.5deg)}40%,55%{transform:translate(1px,0px) rotate(1.5deg)}71%{transform:translate(0px,1px) rotate(0deg)}87%,100%{transform:translate(0px,0px) rotate(-0.5deg)}}
+.avatar-performance[data-program="test-compare"] .ap-eyes{transform:translate(-3px,0px)}
+.avatar-performance[data-program="test-compare"][data-animate="true"] .ap-eyes{animation-name:ap-test-compare-e}
+@keyframes ap-test-compare-e{0%,11%{transform:translate(-3px,0px)}25%{transform:translate(-3px,-1px)}40%,55%{transform:translate(3px,1px)}71%{transform:translate(0px,2px)}87%{transform:translate(-2px,1px)}100%{transform:translate(-3px,0px)}}
+.avatar-performance[data-program="test-compare"] .ap-arm-left,.avatar-performance[data-program="test-compare"] .ap-held-left{transform:translate(3px,-3px) rotate(-10deg)}
+.avatar-performance[data-program="test-compare"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="test-compare"][data-animate="true"] .ap-held-left{animation-name:ap-test-compare-l}
+@keyframes ap-test-compare-l{0%,11%{transform:translate(3px,-3px) rotate(-10deg)}25%,40%{transform:translate(5px,-5px) rotate(-14deg)}55%,71%{transform:translate(8px,4px) rotate(-4deg)}87%,100%{transform:translate(3px,-3px) rotate(-10deg)}}
+.avatar-performance[data-program="test-compare"] .ap-arm-right,.avatar-performance[data-program="test-compare"] .ap-held-right{transform:translate(2px,11px) rotate(7deg)}
+.avatar-performance[data-program="test-compare"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="test-compare"][data-animate="true"] .ap-held-right{animation-name:ap-test-compare-r}
+@keyframes ap-test-compare-r{0%,11%,25%{transform:translate(2px,11px) rotate(7deg)}40%{transform:translate(1px,7px) rotate(2deg)}55%,71%{transform:translate(-2px,4px) rotate(-4deg)}87%,100%{transform:translate(2px,11px) rotate(7deg)}}
+
+/* build-fit: Hold two loose interlocking pieces, approach their edges, turn one to inspect the gap, and pull them apart again. */
+.avatar-performance[data-program="build-fit"] .ap-upper{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="build-fit"][data-animate="true"] .ap-upper{animation-name:ap-build-fit-u}
+@keyframes ap-build-fit-u{0%,10%{transform:translate(0px,0px) rotate(0deg)}25%,40%{transform:translate(-1px,1px) rotate(-0.8deg)}55%,70%{transform:translate(1px,0px) rotate(1.2deg)}86%,100%{transform:translate(0px,0px) rotate(0deg)}}
+.avatar-performance[data-program="build-fit"] .ap-eyes{transform:translate(0px,2px)}
+.avatar-performance[data-program="build-fit"][data-animate="true"] .ap-eyes{animation-name:ap-build-fit-e}
+@keyframes ap-build-fit-e{0%{transform:translate(0px,2px)}10%{transform:translate(-2px,2px)}25%,40%{transform:translate(-1px,2px)}55%,70%{transform:translate(2px,0px)}86%,100%{transform:translate(0px,2px)}}
+.avatar-performance[data-program="build-fit"] .ap-arm-left,.avatar-performance[data-program="build-fit"] .ap-held-left{transform:translate(12px,14px) rotate(-8deg)}
+.avatar-performance[data-program="build-fit"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="build-fit"][data-animate="true"] .ap-held-left{animation-name:ap-build-fit-l}
+@keyframes ap-build-fit-l{0%,10%{transform:translate(12px,14px) rotate(-8deg)}25%,40%{transform:translate(19px,13px) rotate(-4deg)}55%,70%{transform:translate(16px,11px) rotate(-13deg)}86%,100%{transform:translate(12px,14px) rotate(-8deg)}}
+.avatar-performance[data-program="build-fit"] .ap-arm-right,.avatar-performance[data-program="build-fit"] .ap-held-right{transform:translate(-12px,14px) rotate(8deg)}
+.avatar-performance[data-program="build-fit"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="build-fit"][data-animate="true"] .ap-held-right{animation-name:ap-build-fit-r}
+@keyframes ap-build-fit-r{0%,10%{transform:translate(-12px,14px) rotate(8deg)}25%,40%{transform:translate(-19px,13px) rotate(4deg)}55%,70%{transform:translate(-13px,8px) rotate(-9deg)}86%,100%{transform:translate(-12px,14px) rotate(8deg)}}
+.avatar-performance[data-program="build-fit"] .ap-foot-1{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="build-fit"][data-animate="true"] .ap-foot-1{animation-name:ap-build-fit-ap-foot-1}
+@keyframes ap-build-fit-ap-foot-1{0%,10%{transform:translate(0px,0px) rotate(0deg)}25%,40%{transform:translate(-1px,0px) rotate(0deg)}55%,70%,86%,100%{transform:translate(0px,0px) rotate(0deg)}}
+.avatar-performance[data-program="build-fit"] .ap-foot-4{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="build-fit"][data-animate="true"] .ap-foot-4{animation-name:ap-build-fit-ap-foot-4}
+@keyframes ap-build-fit-ap-foot-4{0%,10%{transform:translate(0px,0px) rotate(0deg)}25%,40%{transform:translate(1px,0px) rotate(0deg)}55%,70%,86%,100%{transform:translate(0px,0px) rotate(0deg)}}
+
+/* build-sort: Move one small component between two shallow trays, compare its shape with each loose row, and return it to the center. */
+.avatar-performance[data-program="build-sort"] .ap-upper{transform:translate(0px,0px) rotate(-0.4deg)}
+.avatar-performance[data-program="build-sort"][data-animate="true"] .ap-upper{animation-name:ap-build-sort-u}
+@keyframes ap-build-sort-u{0%,11%{transform:translate(0px,0px) rotate(-0.4deg)}26%,40%{transform:translate(-1px,1px) rotate(-1.3deg)}55%,71%{transform:translate(1px,1px) rotate(1.3deg)}88%,100%{transform:translate(0px,0px) rotate(-0.4deg)}}
+.avatar-performance[data-program="build-sort"] .ap-eyes{transform:translate(0px,2px)}
+.avatar-performance[data-program="build-sort"][data-animate="true"] .ap-eyes{animation-name:ap-build-sort-e}
+@keyframes ap-build-sort-e{0%{transform:translate(0px,2px)}11%,26%,40%{transform:translate(-3px,2px)}55%,71%{transform:translate(3px,2px)}88%{transform:translate(0px,1px)}100%{transform:translate(0px,2px)}}
+.avatar-performance[data-program="build-sort"] .ap-arm-left{transform:translate(12px,17px) rotate(-6deg)}
+.avatar-performance[data-program="build-sort"][data-animate="true"] .ap-arm-left{animation-name:ap-build-sort-l}
+@keyframes ap-build-sort-l{0%,11%{transform:translate(12px,17px) rotate(-6deg)}26%,40%{transform:translate(8px,13px) rotate(-11deg)}55%,71%{transform:translate(13px,17px) rotate(-4deg)}88%,100%{transform:translate(12px,17px) rotate(-6deg)}}
+.avatar-performance[data-program="build-sort"] .ap-arm-right,.avatar-performance[data-program="build-sort"] .ap-held-right{transform:translate(-20px,8px) rotate(-8deg)}
+.avatar-performance[data-program="build-sort"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="build-sort"][data-animate="true"] .ap-held-right{animation-name:ap-build-sort-r}
+@keyframes ap-build-sort-r{0%,11%{transform:translate(-20px,8px) rotate(-8deg)}26%,40%{transform:translate(-34px,15px) rotate(-15deg)}55%,71%{transform:translate(0px,15px) rotate(6deg)}88%,100%{transform:translate(-20px,8px) rotate(-8deg)}}
+
+/* build-wire: Steady a loose socket, follow its unpowered cable with the free hand, check the connector orientation, and leave the connection open. */
+.avatar-performance[data-program="build-wire"] .ap-upper{transform:translate(0px,0px) rotate(-0.4deg)}
+.avatar-performance[data-program="build-wire"][data-animate="true"] .ap-upper{animation-name:ap-build-wire-u}
+@keyframes ap-build-wire-u{0%,12%{transform:translate(0px,0px) rotate(-0.4deg)}27%,43%{transform:translate(-1px,1px) rotate(-1.1deg)}57%,72%{transform:translate(1px,0px) rotate(1.5deg)}88%,100%{transform:translate(0px,0px) rotate(-0.4deg)}}
+.avatar-performance[data-program="build-wire"] .ap-eyes{transform:translate(-2px,2px)}
+.avatar-performance[data-program="build-wire"][data-animate="true"] .ap-eyes{animation-name:ap-build-wire-e}
+@keyframes ap-build-wire-e{0%,12%{transform:translate(-2px,2px)}27%{transform:translate(-3px,2px)}43%{transform:translate(0px,2px)}57%,72%{transform:translate(3px,0px)}88%{transform:translate(-1px,1px)}100%{transform:translate(-2px,2px)}}
+.avatar-performance[data-program="build-wire"] .ap-arm-left,.avatar-performance[data-program="build-wire"] .ap-held-left{transform:translate(14px,16px) rotate(-8deg)}
+.avatar-performance[data-program="build-wire"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="build-wire"][data-animate="true"] .ap-held-left{animation-name:ap-build-wire-l}
+@keyframes ap-build-wire-l{0%,12%{transform:translate(14px,16px) rotate(-8deg)}27%,43%{transform:translate(15px,14px) rotate(-11deg)}57%,72%,88%,100%{transform:translate(14px,16px) rotate(-8deg)}}
+.avatar-performance[data-program="build-wire"] .ap-arm-right,.avatar-performance[data-program="build-wire"] .ap-held-right{transform:translate(-4px,17px) rotate(6deg)}
+.avatar-performance[data-program="build-wire"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="build-wire"][data-animate="true"] .ap-held-right{animation-name:ap-build-wire-r}
+@keyframes ap-build-wire-r{0%,12%{transform:translate(-4px,17px) rotate(6deg)}27%,43%{transform:translate(-17px,13px) rotate(-7deg)}57%,72%{transform:translate(-5px,3px) rotate(-24deg)}88%,100%{transform:translate(-4px,17px) rotate(6deg)}}
+
+/* build-rotate: Balance an unfinished frame in both hands, tilt it to inspect the underside, then regrip and bring it level. */
+.avatar-performance[data-program="build-rotate"] .ap-upper{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="build-rotate"][data-animate="true"] .ap-upper{animation-name:ap-build-rotate-u}
+@keyframes ap-build-rotate-u{0%,14%{transform:translate(0px,0px) rotate(0deg)}28%,41%{transform:translate(-1px,0px) rotate(-1.5deg)}56%,71%{transform:translate(1px,1px) rotate(0.9deg)}87%,100%{transform:translate(0px,0px) rotate(0deg)}}
+.avatar-performance[data-program="build-rotate"] .ap-eyes{transform:translate(0px,1px)}
+.avatar-performance[data-program="build-rotate"][data-animate="true"] .ap-eyes{animation-name:ap-build-rotate-e}
+@keyframes ap-build-rotate-e{0%{transform:translate(0px,1px)}14%{transform:translate(-1px,1px)}28%,41%{transform:translate(-2px,-1px)}56%,71%{transform:translate(2px,2px)}87%,100%{transform:translate(0px,1px)}}
+.avatar-performance[data-program="build-rotate"] .ap-arm-left{transform:translate(11px,10px) rotate(-5deg)}
+.avatar-performance[data-program="build-rotate"][data-animate="true"] .ap-arm-left{animation-name:ap-build-rotate-l}
+@keyframes ap-build-rotate-l{0%,14%{transform:translate(11px,10px) rotate(-5deg)}28%,41%{transform:translate(10px,4px) rotate(-14deg)}56%,71%{transform:translate(13px,13px) rotate(3deg)}87%,100%{transform:translate(11px,10px) rotate(-5deg)}}
+.avatar-performance[data-program="build-rotate"] .ap-arm-right{transform:translate(-11px,10px) rotate(5deg)}
+.avatar-performance[data-program="build-rotate"][data-animate="true"] .ap-arm-right{animation-name:ap-build-rotate-r}
+@keyframes ap-build-rotate-r{0%,14%{transform:translate(-11px,10px) rotate(5deg)}28%,41%{transform:translate(-13px,17px) rotate(-4deg)}56%,71%{transform:translate(-10px,6px) rotate(14deg)}87%,100%{transform:translate(-11px,10px) rotate(5deg)}}
+.avatar-performance[data-program="build-rotate"] .ap-foot-2{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="build-rotate"][data-animate="true"] .ap-foot-2{animation-name:ap-build-rotate-ap-foot-2}
+@keyframes ap-build-rotate-ap-foot-2{0%,14%{transform:translate(0px,0px) rotate(0deg)}28%,41%{transform:translate(0px,-1px) rotate(0deg)}56%,71%,87%,100%{transform:translate(0px,0px) rotate(0deg)}}
+.avatar-performance[data-program="build-rotate"] .ap-foot-3{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="build-rotate"][data-animate="true"] .ap-foot-3{animation-name:ap-build-rotate-ap-foot-3}
+@keyframes ap-build-rotate-ap-foot-3{0%,14%,28%,41%{transform:translate(0px,0px) rotate(0deg)}56%,71%{transform:translate(0px,-1px) rotate(0deg)}87%,100%{transform:translate(0px,0px) rotate(0deg)}}
+.avatar-performance[data-program="build-rotate"] .ap-scene-a{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="build-rotate"][data-animate="true"] .ap-scene-a{animation-name:ap-build-rotate-ap-scene-a}
+@keyframes ap-build-rotate-ap-scene-a{0%,14%{transform:translate(0px,0px) rotate(0deg)}28%,41%{transform:translate(-1px,0px) rotate(-14deg)}56%,71%{transform:translate(1px,0px) rotate(11deg)}87%,100%{transform:translate(0px,0px) rotate(0deg)}}
+
+/* build-stack: Lift a loose spacer above an uneven block stack, compare its edge with a plan, and set the spacer back beside the stack. */
+.avatar-performance[data-program="build-stack"] .ap-upper{transform:translate(0px,0px) rotate(0.4deg)}
+.avatar-performance[data-program="build-stack"][data-animate="true"] .ap-upper{animation-name:ap-build-stack-u}
+@keyframes ap-build-stack-u{0%,10%{transform:translate(0px,0px) rotate(0.4deg)}25%,40%{transform:translate(-1px,0px) rotate(-1.2deg)}55%,72%{transform:translate(1px,0px) rotate(1.4deg)}88%,100%{transform:translate(0px,0px) rotate(0.4deg)}}
+.avatar-performance[data-program="build-stack"] .ap-eyes{transform:translate(-2px,2px)}
+.avatar-performance[data-program="build-stack"][data-animate="true"] .ap-eyes{animation-name:ap-build-stack-e}
+@keyframes ap-build-stack-e{0%,10%{transform:translate(-2px,2px)}25%,40%{transform:translate(-3px,0px)}55%,72%{transform:translate(3px,-1px)}88%{transform:translate(-1px,1px)}100%{transform:translate(-2px,2px)}}
+.avatar-performance[data-program="build-stack"] .ap-arm-left,.avatar-performance[data-program="build-stack"] .ap-held-left{transform:translate(13px,17px) rotate(-6deg)}
+.avatar-performance[data-program="build-stack"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="build-stack"][data-animate="true"] .ap-held-left{animation-name:ap-build-stack-l}
+@keyframes ap-build-stack-l{0%,10%{transform:translate(13px,17px) rotate(-6deg)}25%,40%{transform:translate(16px,3px) rotate(-14deg)}55%,72%{transform:translate(19px,7px) rotate(-6deg)}88%,100%{transform:translate(13px,17px) rotate(-6deg)}}
+.avatar-performance[data-program="build-stack"] .ap-arm-right,.avatar-performance[data-program="build-stack"] .ap-held-right{transform:translate(4px,0px) rotate(-9deg)}
+.avatar-performance[data-program="build-stack"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="build-stack"][data-animate="true"] .ap-held-right{animation-name:ap-build-stack-r}
+@keyframes ap-build-stack-r{0%,10%{transform:translate(4px,0px) rotate(-9deg)}25%,40%{transform:translate(4px,-2px) rotate(-13deg)}55%,72%{transform:translate(2px,2px) rotate(-4deg)}88%,100%{transform:translate(4px,0px) rotate(-9deg)}}
+
+/* run-log: Guide a blank reading strip down existing terminal lines, pause at one line, then return to the top margin. */
+.avatar-performance[data-program="run-log"] .ap-upper{transform:translate(0px,0px) rotate(0.7deg)}
+.avatar-performance[data-program="run-log"][data-animate="true"] .ap-upper{animation-name:ap-run-log-u}
+@keyframes ap-run-log-u{0%,9%{transform:translate(0px,0px) rotate(0.7deg)}23%,38%{transform:translate(1px,0px) rotate(1.8deg)}52%,68%{transform:translate(0px,1px) rotate(0.8deg)}85%,100%{transform:translate(0px,0px) rotate(0.7deg)}}
+.avatar-performance[data-program="run-log"] .ap-eyes{transform:translate(3px,-2px)}
+.avatar-performance[data-program="run-log"][data-animate="true"] .ap-eyes{animation-name:ap-run-log-e}
+@keyframes ap-run-log-e{0%,9%{transform:translate(3px,-2px)}23%,38%{transform:translate(3px,0px)}52%,68%{transform:translate(3px,2px)}85%{transform:translate(2px,-1px)}100%{transform:translate(3px,-2px)}}
+.avatar-performance[data-program="run-log"] .ap-arm-left{transform:translate(8px,12px) rotate(-7deg)}
+.avatar-performance[data-program="run-log"][data-animate="true"] .ap-arm-left{animation-name:ap-run-log-l}
+@keyframes ap-run-log-l{0%,9%{transform:translate(8px,12px) rotate(-7deg)}23%,38%{transform:translate(9px,10px) rotate(-10deg)}52%,68%,85%,100%{transform:translate(8px,12px) rotate(-7deg)}}
+.avatar-performance[data-program="run-log"] .ap-arm-right,.avatar-performance[data-program="run-log"] .ap-held-right{transform:translate(9px,-9px) rotate(-13deg)}
+.avatar-performance[data-program="run-log"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="run-log"][data-animate="true"] .ap-held-right{animation-name:ap-run-log-r}
+@keyframes ap-run-log-r{0%,9%{transform:translate(9px,-9px) rotate(-13deg)}23%,38%{transform:translate(9px,0px) rotate(-7deg)}52%,68%{transform:translate(9px,10px) rotate(1deg)}85%,100%{transform:translate(9px,-9px) rotate(-13deg)}}
+
+/* run-scroll: Keep one hand on a small wheel at the console, scroll briefly, lean back to read, and let the hand hover. */
+.avatar-performance[data-program="run-scroll"] .ap-upper{transform:translate(0px,0px) rotate(0.7deg)}
+.avatar-performance[data-program="run-scroll"][data-animate="true"] .ap-upper{animation-name:ap-run-scroll-u}
+@keyframes ap-run-scroll-u{0%,10%{transform:translate(0px,0px) rotate(0.7deg)}22%,33%{transform:translate(1px,1px) rotate(1.5deg)}46%,63%{transform:translate(0px,-1px) rotate(-0.6deg)}80%,100%{transform:translate(0px,0px) rotate(0.7deg)}}
+.avatar-performance[data-program="run-scroll"] .ap-eyes{transform:translate(2px,1px)}
+.avatar-performance[data-program="run-scroll"][data-animate="true"] .ap-eyes{animation-name:ap-run-scroll-e}
+@keyframes ap-run-scroll-e{0%,10%{transform:translate(2px,1px)}22%,33%{transform:translate(3px,2px)}46%,63%{transform:translate(2px,-2px)}80%{transform:translate(1px,0px)}100%{transform:translate(2px,1px)}}
+.avatar-performance[data-program="run-scroll"] .ap-arm-left{transform:translate(11px,20px) rotate(-7deg)}
+.avatar-performance[data-program="run-scroll"][data-animate="true"] .ap-arm-left{animation-name:ap-run-scroll-l}
+@keyframes ap-run-scroll-l{0%,10%{transform:translate(11px,20px) rotate(-7deg)}22%,33%{transform:translate(12px,19px) rotate(-10deg)}46%,63%{transform:translate(14px,8px) rotate(-32deg)}80%,100%{transform:translate(11px,20px) rotate(-7deg)}}
+.avatar-performance[data-program="run-scroll"] .ap-arm-right{transform:translate(8px,23px) rotate(4deg)}
+.avatar-performance[data-program="run-scroll"][data-animate="true"] .ap-arm-right{animation-name:ap-run-scroll-r}
+@keyframes ap-run-scroll-r{0%,10%{transform:translate(8px,23px) rotate(4deg)}22%{transform:translate(9px,21px) rotate(-8deg)}33%{transform:translate(9px,25px) rotate(11deg)}46%{transform:translate(8px,23px) rotate(4deg)}63%,80%{transform:translate(4px,19px) rotate(-1deg)}100%{transform:translate(8px,23px) rotate(4deg)}}
+
+/* run-monitor: Compare two compact, unchanged monitor panes, lean toward the side panel, and return attention to the central prompt. */
+.avatar-performance[data-program="run-monitor"] .ap-upper{transform:translate(0px,0px) rotate(-0.5deg)}
+.avatar-performance[data-program="run-monitor"][data-animate="true"] .ap-upper{animation-name:ap-run-monitor-u}
+@keyframes ap-run-monitor-u{0%,13%{transform:translate(0px,0px) rotate(-0.5deg)}29%,45%{transform:translate(-1px,0px) rotate(-1.6deg)}59%,74%{transform:translate(1px,0px) rotate(1.9deg)}89%,100%{transform:translate(0px,0px) rotate(-0.5deg)}}
+.avatar-performance[data-program="run-monitor"] .ap-eyes{transform:translate(-3px,-1px)}
+.avatar-performance[data-program="run-monitor"][data-animate="true"] .ap-eyes{animation-name:ap-run-monitor-e}
+@keyframes ap-run-monitor-e{0%,13%{transform:translate(-3px,-1px)}29%,45%{transform:translate(-3px,-2px)}59%,74%{transform:translate(3px,-1px)}89%{transform:translate(0px,1px)}100%{transform:translate(-3px,-1px)}}
+.avatar-performance[data-program="run-monitor"] .ap-arm-left{transform:translate(2px,7px) rotate(-8deg)}
+.avatar-performance[data-program="run-monitor"][data-animate="true"] .ap-arm-left{animation-name:ap-run-monitor-l}
+@keyframes ap-run-monitor-l{0%,13%{transform:translate(2px,7px) rotate(-8deg)}29%,45%{transform:translate(-2px,0px) rotate(-16deg)}59%,74%{transform:translate(5px,10px) rotate(-4deg)}89%,100%{transform:translate(2px,7px) rotate(-8deg)}}
+.avatar-performance[data-program="run-monitor"] .ap-arm-right{transform:translate(3px,8px) rotate(7deg)}
+.avatar-performance[data-program="run-monitor"][data-animate="true"] .ap-arm-right{animation-name:ap-run-monitor-r}
+@keyframes ap-run-monitor-r{0%,13%{transform:translate(3px,8px) rotate(7deg)}29%,45%{transform:translate(1px,11px) rotate(4deg)}59%,74%{transform:translate(8px,0px) rotate(-13deg)}89%,100%{transform:translate(3px,8px) rotate(7deg)}}
+
+/* run-reference: Raise the same command reference slip, compare its abstract syntax with the screen, then fold its lower edge back into the grip. */
+.avatar-performance[data-program="run-reference"] .ap-upper{transform:translate(0px,0px) rotate(-0.6deg)}
+.avatar-performance[data-program="run-reference"][data-animate="true"] .ap-upper{animation-name:ap-run-reference-u}
+@keyframes ap-run-reference-u{0%,12%{transform:translate(0px,0px) rotate(-0.6deg)}28%,43%{transform:translate(-1px,0px) rotate(-1.5deg)}58%,74%{transform:translate(1px,0px) rotate(1.3deg)}90%,100%{transform:translate(0px,0px) rotate(-0.6deg)}}
+.avatar-performance[data-program="run-reference"] .ap-eyes{transform:translate(-3px,1px)}
+.avatar-performance[data-program="run-reference"][data-animate="true"] .ap-eyes{animation-name:ap-run-reference-e}
+@keyframes ap-run-reference-e{0%,12%{transform:translate(-3px,1px)}28%,43%{transform:translate(-3px,-1px)}58%,74%{transform:translate(3px,0px)}90%{transform:translate(-1px,1px)}100%{transform:translate(-3px,1px)}}
+.avatar-performance[data-program="run-reference"] .ap-arm-left,.avatar-performance[data-program="run-reference"] .ap-held-left{transform:translate(6px,6px) rotate(-9deg)}
+.avatar-performance[data-program="run-reference"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="run-reference"][data-animate="true"] .ap-held-left{animation-name:ap-run-reference-l}
+@keyframes ap-run-reference-l{0%,12%{transform:translate(6px,6px) rotate(-9deg)}28%,43%{transform:translate(7px,-1px) rotate(-15deg)}58%,74%{transform:translate(5px,8px) rotate(-6deg)}90%,100%{transform:translate(6px,6px) rotate(-9deg)}}
+.avatar-performance[data-program="run-reference"] .ap-arm-right{transform:translate(5px,5px) rotate(5deg)}
+.avatar-performance[data-program="run-reference"][data-animate="true"] .ap-arm-right{animation-name:ap-run-reference-r}
+@keyframes ap-run-reference-r{0%,12%{transform:translate(5px,5px) rotate(5deg)}28%,43%{transform:translate(3px,11px) rotate(10deg)}58%,74%{transform:translate(8px,-4px) rotate(-17deg)}90%,100%{transform:translate(5px,5px) rotate(5deg)}}
+
+/* run-trace: Rest one hand on a small route board, point along an existing console-to-node path, and return to watch the same terminal. */
+.avatar-performance[data-program="run-trace"] .ap-upper{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="run-trace"][data-animate="true"] .ap-upper{animation-name:ap-run-trace-u}
+@keyframes ap-run-trace-u{0%,10%{transform:translate(0px,0px) rotate(0deg)}23%,37%{transform:translate(-1px,1px) rotate(-1.3deg)}52%,67%{transform:translate(1px,0px) rotate(1.6deg)}84%,100%{transform:translate(0px,0px) rotate(0deg)}}
+.avatar-performance[data-program="run-trace"] .ap-eyes{transform:translate(-1px,2px)}
+.avatar-performance[data-program="run-trace"][data-animate="true"] .ap-eyes{animation-name:ap-run-trace-e}
+@keyframes ap-run-trace-e{0%,10%{transform:translate(-1px,2px)}23%,37%{transform:translate(-3px,2px)}52%,67%{transform:translate(3px,-1px)}84%{transform:translate(1px,0px)}100%{transform:translate(-1px,2px)}}
+.avatar-performance[data-program="run-trace"] .ap-arm-left{transform:translate(9px,17px) rotate(-8deg)}
+.avatar-performance[data-program="run-trace"][data-animate="true"] .ap-arm-left{animation-name:ap-run-trace-l}
+@keyframes ap-run-trace-l{0%,10%{transform:translate(9px,17px) rotate(-8deg)}23%,37%{transform:translate(8px,15px) rotate(-12deg)}52%,67%{transform:translate(10px,18px) rotate(-5deg)}84%,100%{transform:translate(9px,17px) rotate(-8deg)}}
+.avatar-performance[data-program="run-trace"] .ap-arm-right{transform:translate(-22px,12px) rotate(-8deg)}
+.avatar-performance[data-program="run-trace"][data-animate="true"] .ap-arm-right{animation-name:ap-run-trace-r}
+@keyframes ap-run-trace-r{0%,10%{transform:translate(-22px,12px) rotate(-8deg)}23%{transform:translate(-29px,14px) rotate(-16deg)}37%{transform:translate(-17px,10px) rotate(-4deg)}52%,67%{transform:translate(8px,-3px) rotate(-19deg)}84%,100%{transform:translate(-22px,12px) rotate(-8deg)}}
+
+/* wait-console: Watch a small unchanged side terminal, lean in to read, settle a hand at its edge, then return to a neutral wait. */
+.avatar-performance[data-program="wait-console"] .ap-upper{transform:translate(0px,0px) rotate(0.5deg)}
+.avatar-performance[data-program="wait-console"][data-animate="true"] .ap-upper{animation-name:ap-wait-console-u}
+@keyframes ap-wait-console-u{0%,16%{transform:translate(0px,0px) rotate(0.5deg)}31%,48%{transform:translate(1px,1px) rotate(1.7deg)}63%,79%{transform:translate(0px,0px) rotate(0.3deg)}91%,100%{transform:translate(0px,0px) rotate(0.5deg)}}
+.avatar-performance[data-program="wait-console"] .ap-eyes{transform:translate(2px,0px)}
+.avatar-performance[data-program="wait-console"][data-animate="true"] .ap-eyes{animation-name:ap-wait-console-e}
+@keyframes ap-wait-console-e{0%{transform:translate(2px,0px)}16%,31%{transform:translate(3px,-1px)}48%,63%{transform:translate(3px,1px)}79%,91%{transform:translate(1px,0px)}100%{transform:translate(2px,0px)}}
+.avatar-performance[data-program="wait-console"] .ap-arm-left{transform:translate(15px,10px) rotate(-26deg)}
+.avatar-performance[data-program="wait-console"][data-animate="true"] .ap-arm-left{animation-name:ap-wait-console-l}
+@keyframes ap-wait-console-l{0%,16%{transform:translate(15px,10px) rotate(-26deg)}31%,48%{transform:translate(16px,9px) rotate(-30deg)}63%,79%{transform:translate(14px,12px) rotate(-23deg)}91%,100%{transform:translate(15px,10px) rotate(-26deg)}}
+.avatar-performance[data-program="wait-console"] .ap-arm-right{transform:translate(9px,4px) rotate(-8deg)}
+.avatar-performance[data-program="wait-console"][data-animate="true"] .ap-arm-right{animation-name:ap-wait-console-r}
+@keyframes ap-wait-console-r{0%,16%{transform:translate(9px,4px) rotate(-8deg)}31%,48%{transform:translate(9px,1px) rotate(-15deg)}63%,79%{transform:translate(5px,6px) rotate(-3deg)}91%,100%{transform:translate(9px,4px) rotate(-8deg)}}
+
+/* wait-tray: Hold an empty receiving tray level, look down into the empty space, lift it together a little, then look outward and wait. */
+.avatar-performance[data-program="wait-tray"] .ap-upper{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="wait-tray"][data-animate="true"] .ap-upper{animation-name:ap-wait-tray-u}
+@keyframes ap-wait-tray-u{0%,14%{transform:translate(0px,0px) rotate(0deg)}30%,47%{transform:translate(0px,1px) rotate(-0.7deg)}63%,78%{transform:translate(0px,-1px) rotate(0.5deg)}91%,100%{transform:translate(0px,0px) rotate(0deg)}}
+.avatar-performance[data-program="wait-tray"] .ap-eyes{transform:translate(0px,0px)}
+.avatar-performance[data-program="wait-tray"][data-animate="true"] .ap-eyes{animation-name:ap-wait-tray-e}
+@keyframes ap-wait-tray-e{0%{transform:translate(0px,0px)}14%,30%,47%{transform:translate(0px,2px)}63%,78%{transform:translate(1px,-1px)}91%,100%{transform:translate(0px,0px)}}
+.avatar-performance[data-program="wait-tray"] .ap-arm-left{transform:translate(10px,17px) rotate(-4deg)}
+.avatar-performance[data-program="wait-tray"][data-animate="true"] .ap-arm-left{animation-name:ap-wait-tray-l}
+@keyframes ap-wait-tray-l{0%,14%,30%,47%{transform:translate(10px,17px) rotate(-4deg)}63%,78%{transform:translate(10px,14px) rotate(-4deg)}91%,100%{transform:translate(10px,17px) rotate(-4deg)}}
+.avatar-performance[data-program="wait-tray"] .ap-arm-right{transform:translate(-10px,17px) rotate(4deg)}
+.avatar-performance[data-program="wait-tray"][data-animate="true"] .ap-arm-right{animation-name:ap-wait-tray-r}
+@keyframes ap-wait-tray-r{0%,14%,30%,47%{transform:translate(-10px,17px) rotate(4deg)}63%,78%{transform:translate(-10px,14px) rotate(4deg)}91%,100%{transform:translate(-10px,17px) rotate(4deg)}}
+.avatar-performance[data-program="wait-tray"] .ap-foot-2{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="wait-tray"][data-animate="true"] .ap-foot-2{animation-name:ap-wait-tray-ap-foot-2}
+@keyframes ap-wait-tray-ap-foot-2{0%,14%,30%,47%{transform:translate(0px,0px) rotate(0deg)}63%,78%{transform:translate(0px,-1px) rotate(0deg)}91%,100%{transform:translate(0px,0px) rotate(0deg)}}
+.avatar-performance[data-program="wait-tray"] .ap-scene-a{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="wait-tray"][data-animate="true"] .ap-scene-a{animation-name:ap-wait-tray-ap-scene-a}
+@keyframes ap-wait-tray-ap-scene-a{0%,14%,30%,47%{transform:translate(0px,0px) rotate(0deg)}63%,78%{transform:translate(0px,-3px) rotate(0deg)}91%,100%{transform:translate(0px,0px) rotate(0deg)}}
+
+/* wait-headset: Gently fit one ear cup, lower that hand while the other checks the opposite cup, and return to listening with no new signal. */
+.avatar-performance[data-program="wait-headset"] .ap-upper{transform:translate(0px,0px) rotate(0.5deg)}
+.avatar-performance[data-program="wait-headset"][data-animate="true"] .ap-upper{animation-name:ap-wait-headset-u}
+@keyframes ap-wait-headset-u{0%,12%{transform:translate(0px,0px) rotate(0.5deg)}27%,42%{transform:translate(1px,0px) rotate(1.5deg)}57%,73%{transform:translate(-1px,0px) rotate(-1.6deg)}88%,100%{transform:translate(0px,0px) rotate(0.5deg)}}
+.avatar-performance[data-program="wait-headset"] .ap-eyes{transform:translate(1px,0px)}
+.avatar-performance[data-program="wait-headset"][data-animate="true"] .ap-eyes{animation-name:ap-wait-headset-e}
+@keyframes ap-wait-headset-e{0%{transform:translate(1px,0px)}12%,27%{transform:translate(2px,-1px)}42%{transform:translate(0px,-1px)}57%,73%{transform:translate(-2px,0px)}88%,100%{transform:translate(1px,0px)}}
+.avatar-performance[data-program="wait-headset"] .ap-arm-left{transform:translate(2px,6px) rotate(-5deg)}
+.avatar-performance[data-program="wait-headset"][data-animate="true"] .ap-arm-left{animation-name:ap-wait-headset-l}
+@keyframes ap-wait-headset-l{0%,12%{transform:translate(2px,6px) rotate(-5deg)}27%{transform:translate(3px,7px) rotate(-4deg)}42%,57%{transform:translate(6px,-8px) rotate(-21deg)}73%{transform:translate(6px,-6px) rotate(-18deg)}88%,100%{transform:translate(2px,6px) rotate(-5deg)}}
+.avatar-performance[data-program="wait-headset"] .ap-arm-right{transform:translate(-2px,-7px) rotate(-25deg)}
+.avatar-performance[data-program="wait-headset"][data-animate="true"] .ap-arm-right{animation-name:ap-wait-headset-r}
+@keyframes ap-wait-headset-r{0%,12%{transform:translate(-2px,-7px) rotate(-25deg)}27%,42%{transform:translate(-3px,-10px) rotate(-33deg)}57%,73%{transform:translate(-1px,6px) rotate(5deg)}88%,100%{transform:translate(-2px,-7px) rotate(-25deg)}}
+
+/* wait-bookmark: Keep a closed reference booklet in the left hand, smooth the exposed bookmark edge, and withdraw the free hand to wait. */
+.avatar-performance[data-program="wait-bookmark"] .ap-upper{transform:translate(0px,0px) rotate(-0.6deg)}
+.avatar-performance[data-program="wait-bookmark"][data-animate="true"] .ap-upper{animation-name:ap-wait-bookmark-u}
+@keyframes ap-wait-bookmark-u{0%,15%{transform:translate(0px,0px) rotate(-0.6deg)}29%,44%{transform:translate(-1px,0px) rotate(-1.5deg)}59%,75%{transform:translate(0px,0px) rotate(0deg)}90%,100%{transform:translate(0px,0px) rotate(-0.6deg)}}
+.avatar-performance[data-program="wait-bookmark"] .ap-eyes{transform:translate(-2px,1px)}
+.avatar-performance[data-program="wait-bookmark"][data-animate="true"] .ap-eyes{animation-name:ap-wait-bookmark-e}
+@keyframes ap-wait-bookmark-e{0%,15%{transform:translate(-2px,1px)}29%,44%{transform:translate(-3px,2px)}59%,75%{transform:translate(0px,-1px)}90%{transform:translate(-1px,0px)}100%{transform:translate(-2px,1px)}}
+.avatar-performance[data-program="wait-bookmark"] .ap-arm-left,.avatar-performance[data-program="wait-bookmark"] .ap-held-left{transform:translate(4px,17px) rotate(-8deg)}
+.avatar-performance[data-program="wait-bookmark"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="wait-bookmark"][data-animate="true"] .ap-held-left{animation-name:ap-wait-bookmark-l}
+@keyframes ap-wait-bookmark-l{0%,15%{transform:translate(4px,17px) rotate(-8deg)}29%,44%{transform:translate(5px,15px) rotate(-12deg)}59%,75%,90%,100%{transform:translate(4px,17px) rotate(-8deg)}}
+.avatar-performance[data-program="wait-bookmark"] .ap-arm-right{transform:translate(-17px,17px) rotate(-4deg)}
+.avatar-performance[data-program="wait-bookmark"][data-animate="true"] .ap-arm-right{animation-name:ap-wait-bookmark-r}
+@keyframes ap-wait-bookmark-r{0%,15%{transform:translate(-17px,17px) rotate(-4deg)}29%{transform:translate(-33px,19px) rotate(-14deg)}44%{transform:translate(-33px,22px) rotate(-10deg)}59%,75%{transform:translate(-10px,17px) rotate(2deg)}90%,100%{transform:translate(-17px,17px) rotate(-4deg)}}
+
+/* wait-pencil-roll: Roll a short pencil between two low hands, let it rest near one hand, look outward, and roll it back without writing. */
+.avatar-performance[data-program="wait-pencil-roll"] .ap-upper{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="wait-pencil-roll"][data-animate="true"] .ap-upper{animation-name:ap-wait-pencil-roll-u}
+@keyframes ap-wait-pencil-roll-u{0%,12%{transform:translate(0px,0px) rotate(0deg)}26%,39%{transform:translate(-1px,0px) rotate(-0.8deg)}55%,71%{transform:translate(0px,-1px) rotate(0.6deg)}88%,100%{transform:translate(0px,0px) rotate(0deg)}}
+.avatar-performance[data-program="wait-pencil-roll"] .ap-eyes{transform:translate(0px,2px)}
+.avatar-performance[data-program="wait-pencil-roll"][data-animate="true"] .ap-eyes{animation-name:ap-wait-pencil-roll-e}
+@keyframes ap-wait-pencil-roll-e{0%{transform:translate(0px,2px)}12%,26%{transform:translate(-2px,2px)}39%,55%{transform:translate(2px,2px)}71%,88%{transform:translate(0px,-1px)}100%{transform:translate(0px,2px)}}
+.avatar-performance[data-program="wait-pencil-roll"] .ap-arm-left{transform:translate(20px,14px) rotate(-4deg)}
+.avatar-performance[data-program="wait-pencil-roll"][data-animate="true"] .ap-arm-left{animation-name:ap-wait-pencil-roll-l}
+@keyframes ap-wait-pencil-roll-l{0%,12%{transform:translate(20px,14px) rotate(-4deg)}26%,39%{transform:translate(21px,12px) rotate(-10deg)}55%,71%{transform:translate(18px,15px) rotate(-2deg)}88%,100%{transform:translate(20px,14px) rotate(-4deg)}}
+.avatar-performance[data-program="wait-pencil-roll"] .ap-arm-right{transform:translate(-20px,14px) rotate(4deg)}
+.avatar-performance[data-program="wait-pencil-roll"][data-animate="true"] .ap-arm-right{animation-name:ap-wait-pencil-roll-r}
+@keyframes ap-wait-pencil-roll-r{0%,12%{transform:translate(-20px,14px) rotate(4deg)}26%{transform:translate(-18px,15px) rotate(2deg)}39%,55%{transform:translate(-21px,12px) rotate(10deg)}71%,88%,100%{transform:translate(-20px,14px) rotate(4deg)}}
+.avatar-performance[data-program="wait-pencil-roll"] .ap-scene-a{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="wait-pencil-roll"][data-animate="true"] .ap-scene-a{animation-name:ap-wait-pencil-roll-ap-scene-a}
+@keyframes ap-wait-pencil-roll-ap-scene-a{0%,12%{transform:translate(0px,0px) rotate(0deg)}26%{transform:translate(-2px,-1px) rotate(-8deg)}39%,55%{transform:translate(2px,-1px) rotate(8deg)}71%,88%,100%{transform:translate(0px,0px) rotate(0deg)}}
+
+/* wait-wrist: Raise an unnumbered watch face at the left wrist, steady that wrist with the other hand, glance down and lift the eyes before lowering it. */
+.avatar-performance[data-program="wait-wrist"] .ap-upper{transform:translate(0px,0px) rotate(-0.4deg)}
+.avatar-performance[data-program="wait-wrist"][data-animate="true"] .ap-upper{animation-name:ap-wait-wrist-u}
+@keyframes ap-wait-wrist-u{0%,16%{transform:translate(0px,0px) rotate(-0.4deg)}31%,46%{transform:translate(-1px,1px) rotate(-1.3deg)}60%,76%{transform:translate(0px,0px) rotate(0deg)}90%,100%{transform:translate(0px,0px) rotate(-0.4deg)}}
+.avatar-performance[data-program="wait-wrist"] .ap-eyes{transform:translate(0px,0px)}
+.avatar-performance[data-program="wait-wrist"][data-animate="true"] .ap-eyes{animation-name:ap-wait-wrist-e}
+@keyframes ap-wait-wrist-e{0%{transform:translate(0px,0px)}16%{transform:translate(-1px,1px)}31%,46%{transform:translate(-2px,2px)}60%,76%{transform:translate(0px,-1px)}90%,100%{transform:translate(0px,0px)}}
+.avatar-performance[data-program="wait-wrist"] .ap-arm-left,.avatar-performance[data-program="wait-wrist"] .ap-held-left{transform:translate(13px,14px) rotate(-10deg)}
+.avatar-performance[data-program="wait-wrist"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="wait-wrist"][data-animate="true"] .ap-held-left{animation-name:ap-wait-wrist-l}
+@keyframes ap-wait-wrist-l{0%,16%{transform:translate(13px,14px) rotate(-10deg)}31%,46%,60%{transform:translate(18px,4px) rotate(-24deg)}76%,90%,100%{transform:translate(13px,14px) rotate(-10deg)}}
+.avatar-performance[data-program="wait-wrist"] .ap-arm-right{transform:translate(-19px,15px) rotate(5deg)}
+.avatar-performance[data-program="wait-wrist"][data-animate="true"] .ap-arm-right{animation-name:ap-wait-wrist-r}
+@keyframes ap-wait-wrist-r{0%,16%{transform:translate(-19px,15px) rotate(5deg)}31%,46%,60%{transform:translate(-34px,8px) rotate(-12deg)}76%,90%,100%{transform:translate(-19px,15px) rotate(5deg)}}
+
+/* ask-present: Keep a question card low in one hand, open the free hand toward the viewer, hold that invitation, then soften the reach. */
+.avatar-performance[data-program="ask-present"] .ap-upper{transform:translate(0px,0px) rotate(-0.4deg)}
+.avatar-performance[data-program="ask-present"][data-animate="true"] .ap-upper{animation-name:ap-ask-present-u}
+@keyframes ap-ask-present-u{0%,14%{transform:translate(0px,0px) rotate(-0.4deg)}30%,48%{transform:translate(1px,0px) rotate(0.8deg)}63%,79%{transform:translate(0px,0px) rotate(0.2deg)}91%,100%{transform:translate(0px,0px) rotate(-0.4deg)}}
+.avatar-performance[data-program="ask-present"] .ap-eyes{transform:translate(0px,-1px)}
+.avatar-performance[data-program="ask-present"][data-animate="true"] .ap-eyes{animation-name:ap-ask-present-e}
+@keyframes ap-ask-present-e{0%,14%{transform:translate(0px,-1px)}30%,48%{transform:translate(1px,-1px)}63%,79%{transform:translate(0px,0px)}91%,100%{transform:translate(0px,-1px)}}
+.avatar-performance[data-program="ask-present"] .ap-arm-left,.avatar-performance[data-program="ask-present"] .ap-held-left{transform:translate(5px,12px) rotate(-8deg)}
+.avatar-performance[data-program="ask-present"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="ask-present"][data-animate="true"] .ap-held-left{animation-name:ap-ask-present-l}
+@keyframes ap-ask-present-l{0%,14%{transform:translate(5px,12px) rotate(-8deg)}30%,48%{transform:translate(5px,11px) rotate(-10deg)}63%,79%{transform:translate(6px,13px) rotate(-6deg)}91%,100%{transform:translate(5px,12px) rotate(-8deg)}}
+.avatar-performance[data-program="ask-present"] .ap-arm-right{transform:translate(1px,-3px) rotate(-13deg)}
+.avatar-performance[data-program="ask-present"][data-animate="true"] .ap-arm-right{animation-name:ap-ask-present-r}
+@keyframes ap-ask-present-r{0%,14%{transform:translate(1px,-3px) rotate(-13deg)}30%,48%{transform:translate(13px,-4px) rotate(-34deg)}63%,79%{transform:translate(9px,-1px) rotate(-22deg)}91%,100%{transform:translate(1px,-3px) rotate(-13deg)}}
+.avatar-performance[data-program="ask-present"] .ap-foot-4{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="ask-present"][data-animate="true"] .ap-foot-4{animation-name:ap-ask-present-ap-foot-4}
+@keyframes ap-ask-present-ap-foot-4{0%,14%{transform:translate(0px,0px) rotate(0deg)}30%,48%{transform:translate(2px,0px) rotate(0deg)}63%,79%{transform:translate(1px,0px) rotate(0deg)}91%,100%{transform:translate(0px,0px) rotate(0deg)}}
+
+/* ask-point-line: Support a question card across the lap, point beside one unresolved line, lift the eyes toward the viewer and leave the hand hovering. */
+.avatar-performance[data-program="ask-point-line"] .ap-upper{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="ask-point-line"][data-animate="true"] .ap-upper{animation-name:ap-ask-point-line-u}
+@keyframes ap-ask-point-line-u{0%,12%{transform:translate(0px,0px) rotate(0deg)}27%,42%{transform:translate(-1px,1px) rotate(-0.8deg)}57%,74%{transform:translate(0px,-1px) rotate(0.4deg)}89%,100%{transform:translate(0px,0px) rotate(0deg)}}
+.avatar-performance[data-program="ask-point-line"] .ap-eyes{transform:translate(0px,1px)}
+.avatar-performance[data-program="ask-point-line"][data-animate="true"] .ap-eyes{animation-name:ap-ask-point-line-e}
+@keyframes ap-ask-point-line-e{0%{transform:translate(0px,1px)}12%,27%,42%{transform:translate(-1px,2px)}57%,74%{transform:translate(0px,-1px)}89%{transform:translate(0px,0px)}100%{transform:translate(0px,1px)}}
+.avatar-performance[data-program="ask-point-line"] .ap-arm-left{transform:translate(14px,17px) rotate(-6deg)}
+.avatar-performance[data-program="ask-point-line"][data-animate="true"] .ap-arm-left{animation-name:ap-ask-point-line-l}
+@keyframes ap-ask-point-line-l{0%,12%{transform:translate(14px,17px) rotate(-6deg)}27%,42%{transform:translate(15px,16px) rotate(-9deg)}57%,74%,89%,100%{transform:translate(14px,17px) rotate(-6deg)}}
+.avatar-performance[data-program="ask-point-line"] .ap-arm-right{transform:translate(-17px,12px) rotate(4deg)}
+.avatar-performance[data-program="ask-point-line"][data-animate="true"] .ap-arm-right{animation-name:ap-ask-point-line-r}
+@keyframes ap-ask-point-line-r{0%,12%{transform:translate(-17px,12px) rotate(4deg)}27%,42%{transform:translate(-29px,15px) rotate(-8deg)}57%,74%{transform:translate(-25px,11px) rotate(-4deg)}89%,100%{transform:translate(-17px,12px) rotate(4deg)}}
+
+/* ask-tilt-card: Hold the unanswered card beside the right shoulder, inspect it, tilt it toward the viewer, and wait with the card still visible. */
+.avatar-performance[data-program="ask-tilt-card"] .ap-upper{transform:translate(0px,0px) rotate(0.6deg)}
+.avatar-performance[data-program="ask-tilt-card"][data-animate="true"] .ap-upper{animation-name:ap-ask-tilt-card-u}
+@keyframes ap-ask-tilt-card-u{0%,16%{transform:translate(0px,0px) rotate(0.6deg)}31%,47%{transform:translate(1px,0px) rotate(1.4deg)}61%,77%{transform:translate(0px,0px) rotate(0.3deg)}90%,100%{transform:translate(0px,0px) rotate(0.6deg)}}
+.avatar-performance[data-program="ask-tilt-card"] .ap-eyes{transform:translate(0px,-1px)}
+.avatar-performance[data-program="ask-tilt-card"][data-animate="true"] .ap-eyes{animation-name:ap-ask-tilt-card-e}
+@keyframes ap-ask-tilt-card-e{0%{transform:translate(0px,-1px)}16%,31%{transform:translate(3px,-1px)}47%{transform:translate(2px,-1px)}61%,77%{transform:translate(0px,-1px)}90%{transform:translate(0px,0px)}100%{transform:translate(0px,-1px)}}
+.avatar-performance[data-program="ask-tilt-card"] .ap-arm-left{transform:translate(14px,10px) rotate(-27deg)}
+.avatar-performance[data-program="ask-tilt-card"][data-animate="true"] .ap-arm-left{animation-name:ap-ask-tilt-card-l}
+@keyframes ap-ask-tilt-card-l{0%,16%{transform:translate(14px,10px) rotate(-27deg)}31%,47%{transform:translate(15px,9px) rotate(-31deg)}61%,77%{transform:translate(13px,12px) rotate(-23deg)}90%,100%{transform:translate(14px,10px) rotate(-27deg)}}
+.avatar-performance[data-program="ask-tilt-card"] .ap-arm-right,.avatar-performance[data-program="ask-tilt-card"] .ap-held-right{transform:translate(5px,-13px) rotate(-15deg)}
+.avatar-performance[data-program="ask-tilt-card"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="ask-tilt-card"][data-animate="true"] .ap-held-right{animation-name:ap-ask-tilt-card-r}
+@keyframes ap-ask-tilt-card-r{0%,16%{transform:translate(5px,-13px) rotate(-15deg)}31%,47%{transform:translate(5px,-15px) rotate(-21deg)}61%,77%{transform:translate(5px,-12px) rotate(-9deg)}90%,100%{transform:translate(5px,-13px) rotate(-15deg)}}
+
+/* ask-pencil-rest: Hold a small blank memo in the left hand, suspend the pencil above it, lift the pencil clear and look up for a decision. */
+.avatar-performance[data-program="ask-pencil-rest"] .ap-upper{transform:translate(0px,0px) rotate(-0.5deg)}
+.avatar-performance[data-program="ask-pencil-rest"][data-animate="true"] .ap-upper{animation-name:ap-ask-pencil-rest-u}
+@keyframes ap-ask-pencil-rest-u{0%,15%{transform:translate(0px,0px) rotate(-0.5deg)}29%,44%{transform:translate(-1px,0px) rotate(-1.2deg)}59%,76%{transform:translate(0px,-1px) rotate(0.3deg)}91%,100%{transform:translate(0px,0px) rotate(-0.5deg)}}
+.avatar-performance[data-program="ask-pencil-rest"] .ap-eyes{transform:translate(-2px,2px)}
+.avatar-performance[data-program="ask-pencil-rest"][data-animate="true"] .ap-eyes{animation-name:ap-ask-pencil-rest-e}
+@keyframes ap-ask-pencil-rest-e{0%,15%{transform:translate(-2px,2px)}29%,44%{transform:translate(-3px,2px)}59%,76%{transform:translate(0px,-1px)}91%{transform:translate(-1px,0px)}100%{transform:translate(-2px,2px)}}
+.avatar-performance[data-program="ask-pencil-rest"] .ap-arm-left,.avatar-performance[data-program="ask-pencil-rest"] .ap-held-left{transform:translate(6px,12px) rotate(-9deg)}
+.avatar-performance[data-program="ask-pencil-rest"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="ask-pencil-rest"][data-animate="true"] .ap-held-left{animation-name:ap-ask-pencil-rest-l}
+@keyframes ap-ask-pencil-rest-l{0%,15%{transform:translate(6px,12px) rotate(-9deg)}29%,44%{transform:translate(7px,10px) rotate(-12deg)}59%,76%,91%,100%{transform:translate(6px,12px) rotate(-9deg)}}
+.avatar-performance[data-program="ask-pencil-rest"] .ap-arm-right,.avatar-performance[data-program="ask-pencil-rest"] .ap-held-right{transform:translate(-24px,4px) rotate(-14deg)}
+.avatar-performance[data-program="ask-pencil-rest"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="ask-pencil-rest"][data-animate="true"] .ap-held-right{animation-name:ap-ask-pencil-rest-r}
+@keyframes ap-ask-pencil-rest-r{0%,15%{transform:translate(-24px,4px) rotate(-14deg)}29%,44%{transform:translate(-25px,1px) rotate(-20deg)}59%,76%{transform:translate(-16px,-4px) rotate(-31deg)}91%,100%{transform:translate(-24px,4px) rotate(-14deg)}}
+
+/* ask-open-folder: Support an empty half-open folder, glance inside, open the hands to present its empty center, then keep it partly open for the viewer. */
+.avatar-performance[data-program="ask-open-folder"] .ap-upper{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="ask-open-folder"][data-animate="true"] .ap-upper{animation-name:ap-ask-open-folder-u}
+@keyframes ap-ask-open-folder-u{0%,13%{transform:translate(0px,0px) rotate(0deg)}29%,45%{transform:translate(0px,1px) rotate(-0.6deg)}60%,76%{transform:translate(0px,-1px) rotate(0.5deg)}90%,100%{transform:translate(0px,0px) rotate(0deg)}}
+.avatar-performance[data-program="ask-open-folder"] .ap-eyes{transform:translate(0px,2px)}
+.avatar-performance[data-program="ask-open-folder"][data-animate="true"] .ap-eyes{animation-name:ap-ask-open-folder-e}
+@keyframes ap-ask-open-folder-e{0%,13%,29%,45%{transform:translate(0px,2px)}60%,76%{transform:translate(0px,-1px)}90%{transform:translate(0px,0px)}100%{transform:translate(0px,2px)}}
+.avatar-performance[data-program="ask-open-folder"] .ap-arm-left{transform:translate(15px,15px) rotate(-5deg)}
+.avatar-performance[data-program="ask-open-folder"][data-animate="true"] .ap-arm-left{animation-name:ap-ask-open-folder-l}
+@keyframes ap-ask-open-folder-l{0%,13%{transform:translate(15px,15px) rotate(-5deg)}29%,45%{transform:translate(12px,13px) rotate(-12deg)}60%,76%{transform:translate(10px,15px) rotate(-7deg)}90%,100%{transform:translate(15px,15px) rotate(-5deg)}}
+.avatar-performance[data-program="ask-open-folder"] .ap-arm-right{transform:translate(-15px,15px) rotate(5deg)}
+.avatar-performance[data-program="ask-open-folder"][data-animate="true"] .ap-arm-right{animation-name:ap-ask-open-folder-r}
+@keyframes ap-ask-open-folder-r{0%,13%{transform:translate(-15px,15px) rotate(5deg)}29%,45%{transform:translate(-12px,13px) rotate(12deg)}60%,76%{transform:translate(-10px,15px) rotate(7deg)}90%,100%{transform:translate(-15px,15px) rotate(5deg)}}
+.avatar-performance[data-program="ask-open-folder"] .ap-scene-a{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="ask-open-folder"][data-animate="true"] .ap-scene-a{animation-name:ap-ask-open-folder-ap-scene-a}
+@keyframes ap-ask-open-folder-ap-scene-a{0%,13%{transform:translate(0px,0px) rotate(0deg)}29%,45%{transform:translate(0px,-2px) rotate(0deg)}60%,76%,90%,100%{transform:translate(0px,0px) rotate(0deg)}}
+
+/* ask-hand-to-heart: Keep the card unresolved at the left side, bring the right hand briefly to the chest, extend a restrained request, and return to the chest. */
+.avatar-performance[data-program="ask-hand-to-heart"] .ap-upper{transform:translate(0px,0px) rotate(-0.2deg)}
+.avatar-performance[data-program="ask-hand-to-heart"][data-animate="true"] .ap-upper{animation-name:ap-ask-hand-to-heart-u}
+@keyframes ap-ask-hand-to-heart-u{0%,15%{transform:translate(0px,0px) rotate(-0.2deg)}31%,46%{transform:translate(0px,0px) rotate(-0.8deg)}62%,78%{transform:translate(1px,0px) rotate(0.7deg)}91%,100%{transform:translate(0px,0px) rotate(-0.2deg)}}
+.avatar-performance[data-program="ask-hand-to-heart"] .ap-eyes{transform:translate(0px,-1px)}
+.avatar-performance[data-program="ask-hand-to-heart"][data-animate="true"] .ap-eyes{animation-name:ap-ask-hand-to-heart-e}
+@keyframes ap-ask-hand-to-heart-e{0%,15%{transform:translate(0px,-1px)}31%,46%{transform:translate(0px,0px)}62%,78%{transform:translate(1px,-1px)}91%,100%{transform:translate(0px,-1px)}}
+.avatar-performance[data-program="ask-hand-to-heart"] .ap-arm-left,.avatar-performance[data-program="ask-hand-to-heart"] .ap-held-left{transform:translate(4px,13px) rotate(-8deg)}
+.avatar-performance[data-program="ask-hand-to-heart"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="ask-hand-to-heart"][data-animate="true"] .ap-held-left{animation-name:ap-ask-hand-to-heart-l}
+@keyframes ap-ask-hand-to-heart-l{0%,15%{transform:translate(4px,13px) rotate(-8deg)}31%,46%{transform:translate(5px,12px) rotate(-10deg)}62%,78%,91%,100%{transform:translate(4px,13px) rotate(-8deg)}}
+.avatar-performance[data-program="ask-hand-to-heart"] .ap-arm-right{transform:translate(-13px,-1px) rotate(-24deg)}
+.avatar-performance[data-program="ask-hand-to-heart"][data-animate="true"] .ap-arm-right{animation-name:ap-ask-hand-to-heart-r}
+@keyframes ap-ask-hand-to-heart-r{0%,15%{transform:translate(-13px,-1px) rotate(-24deg)}31%,46%{transform:translate(-14px,-4px) rotate(-32deg)}62%,78%{transform:translate(6px,-3px) rotate(-15deg)}91%,100%{transform:translate(-13px,-1px) rotate(-24deg)}}
+
+/* error-magnify: Keep the original warning sheet visible, bring a magnifier toward its margin, lean in to inspect, then withdraw without changing the mark. */
+.avatar-performance[data-program="error-magnify"] .ap-upper{transform:translate(0px,0px) rotate(-0.6deg)}
+.avatar-performance[data-program="error-magnify"][data-animate="true"] .ap-upper{animation-name:ap-error-magnify-u}
+@keyframes ap-error-magnify-u{0%,12%{transform:translate(0px,0px) rotate(-0.6deg)}27%,42%{transform:translate(-1px,1px) rotate(-1.7deg)}57%,74%{transform:translate(0px,0px) rotate(-0.2deg)}90%,100%{transform:translate(0px,0px) rotate(-0.6deg)}}
+.avatar-performance[data-program="error-magnify"] .ap-eyes{transform:translate(-2px,2px)}
+.avatar-performance[data-program="error-magnify"][data-animate="true"] .ap-eyes{animation-name:ap-error-magnify-e}
+@keyframes ap-error-magnify-e{0%,12%{transform:translate(-2px,2px)}27%,42%{transform:translate(-3px,2px)}57%,74%{transform:translate(-1px,1px)}90%{transform:translate(0px,0px)}100%{transform:translate(-2px,2px)}}
+.avatar-performance[data-program="error-magnify"] .ap-arm-left,.avatar-performance[data-program="error-magnify"] .ap-held-left{transform:translate(5px,9px) rotate(-9deg)}
+.avatar-performance[data-program="error-magnify"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="error-magnify"][data-animate="true"] .ap-held-left{animation-name:ap-error-magnify-l}
+@keyframes ap-error-magnify-l{0%,12%{transform:translate(5px,9px) rotate(-9deg)}27%,42%{transform:translate(6px,7px) rotate(-13deg)}57%,74%,90%,100%{transform:translate(5px,9px) rotate(-9deg)}}
+.avatar-performance[data-program="error-magnify"] .ap-arm-right,.avatar-performance[data-program="error-magnify"] .ap-held-right{transform:translate(-6px,3px) rotate(-16deg)}
+.avatar-performance[data-program="error-magnify"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="error-magnify"][data-animate="true"] .ap-held-right{animation-name:ap-error-magnify-r}
+@keyframes ap-error-magnify-r{0%,12%{transform:translate(-6px,3px) rotate(-16deg)}27%,42%{transform:translate(-31px,10px) rotate(-24deg)}57%,74%{transform:translate(-12px,5px) rotate(-11deg)}90%,100%{transform:translate(-6px,3px) rotate(-16deg)}}
+
+/* error-trace: Brace a horizontal problem sheet, hover the pencil along the same unresolved line, stop at its mark, and lift the pencil without editing. */
+.avatar-performance[data-program="error-trace"] .ap-upper{transform:translate(0px,0px) rotate(-0.3deg)}
+.avatar-performance[data-program="error-trace"][data-animate="true"] .ap-upper{animation-name:ap-error-trace-u}
+@keyframes ap-error-trace-u{0%,11%{transform:translate(0px,0px) rotate(-0.3deg)}25%,39%{transform:translate(-1px,1px) rotate(-1.4deg)}54%,69%{transform:translate(0px,0px) rotate(-0.1deg)}85%,100%{transform:translate(0px,0px) rotate(-0.3deg)}}
+.avatar-performance[data-program="error-trace"] .ap-eyes{transform:translate(0px,2px)}
+.avatar-performance[data-program="error-trace"][data-animate="true"] .ap-eyes{animation-name:ap-error-trace-e}
+@keyframes ap-error-trace-e{0%{transform:translate(0px,2px)}11%,25%{transform:translate(-2px,2px)}39%,54%{transform:translate(1px,2px)}69%,85%{transform:translate(0px,0px)}100%{transform:translate(0px,2px)}}
+.avatar-performance[data-program="error-trace"] .ap-arm-left{transform:translate(10px,19px) rotate(-8deg)}
+.avatar-performance[data-program="error-trace"][data-animate="true"] .ap-arm-left{animation-name:ap-error-trace-l}
+@keyframes ap-error-trace-l{0%,11%{transform:translate(10px,19px) rotate(-8deg)}25%,39%{transform:translate(11px,18px) rotate(-11deg)}54%,69%,85%,100%{transform:translate(10px,19px) rotate(-8deg)}}
+.avatar-performance[data-program="error-trace"] .ap-arm-right,.avatar-performance[data-program="error-trace"] .ap-held-right{transform:translate(-28px,8px) rotate(-16deg)}
+.avatar-performance[data-program="error-trace"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="error-trace"][data-animate="true"] .ap-held-right{animation-name:ap-error-trace-r}
+@keyframes ap-error-trace-r{0%,11%{transform:translate(-28px,8px) rotate(-16deg)}25%{transform:translate(-30px,10px) rotate(-19deg)}39%,54%{transform:translate(-20px,10px) rotate(-9deg)}69%,85%{transform:translate(-19px,2px) rotate(-26deg)}100%{transform:translate(-28px,8px) rotate(-16deg)}}
+
+/* error-overlay: Hold the same warning sheet and a translucent reference apart, compare them in turn, bring their margins closer, and leave both visible. */
+.avatar-performance[data-program="error-overlay"] .ap-upper{transform:translate(0px,0px) rotate(-0.6deg)}
+.avatar-performance[data-program="error-overlay"][data-animate="true"] .ap-upper{animation-name:ap-error-overlay-u}
+@keyframes ap-error-overlay-u{0%,13%{transform:translate(0px,0px) rotate(-0.6deg)}29%{transform:translate(-1px,0px) rotate(-1.5deg)}44%,59%{transform:translate(1px,0px) rotate(1.5deg)}75%{transform:translate(0px,1px) rotate(0deg)}90%,100%{transform:translate(0px,0px) rotate(-0.6deg)}}
+.avatar-performance[data-program="error-overlay"] .ap-eyes{transform:translate(-3px,1px)}
+.avatar-performance[data-program="error-overlay"][data-animate="true"] .ap-eyes{animation-name:ap-error-overlay-e}
+@keyframes ap-error-overlay-e{0%,13%,29%{transform:translate(-3px,1px)}44%,59%{transform:translate(3px,1px)}75%{transform:translate(0px,2px)}90%{transform:translate(-1px,1px)}100%{transform:translate(-3px,1px)}}
+.avatar-performance[data-program="error-overlay"] .ap-arm-left,.avatar-performance[data-program="error-overlay"] .ap-held-left{transform:translate(3px,6px) rotate(-8deg)}
+.avatar-performance[data-program="error-overlay"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="error-overlay"][data-animate="true"] .ap-held-left{animation-name:ap-error-overlay-l}
+@keyframes ap-error-overlay-l{0%,13%{transform:translate(3px,6px) rotate(-8deg)}29%,44%{transform:translate(4px,3px) rotate(-13deg)}59%,75%{transform:translate(9px,7px) rotate(-4deg)}90%,100%{transform:translate(3px,6px) rotate(-8deg)}}
+.avatar-performance[data-program="error-overlay"] .ap-arm-right,.avatar-performance[data-program="error-overlay"] .ap-held-right{transform:translate(1px,7px) rotate(7deg)}
+.avatar-performance[data-program="error-overlay"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="error-overlay"][data-animate="true"] .ap-held-right{animation-name:ap-error-overlay-r}
+@keyframes ap-error-overlay-r{0%,13%,29%{transform:translate(1px,7px) rotate(7deg)}44%{transform:translate(0px,4px) rotate(2deg)}59%,75%{transform:translate(-7px,7px) rotate(-7deg)}90%,100%{transform:translate(1px,7px) rotate(7deg)}}
+
+/* error-reference: Lift an open reference booklet beside the unchanged problem sheet, compare the two, lower the booklet slightly, and keep watching the problem. */
+.avatar-performance[data-program="error-reference"] .ap-upper{transform:translate(0px,0px) rotate(-0.5deg)}
+.avatar-performance[data-program="error-reference"][data-animate="true"] .ap-upper{animation-name:ap-error-reference-u}
+@keyframes ap-error-reference-u{0%,15%{transform:translate(0px,0px) rotate(-0.5deg)}31%,46%{transform:translate(-1px,0px) rotate(-1.6deg)}61%,77%{transform:translate(1px,0px) rotate(1.4deg)}91%,100%{transform:translate(0px,0px) rotate(-0.5deg)}}
+.avatar-performance[data-program="error-reference"] .ap-eyes{transform:translate(-3px,2px)}
+.avatar-performance[data-program="error-reference"][data-animate="true"] .ap-eyes{animation-name:ap-error-reference-e}
+@keyframes ap-error-reference-e{0%,15%{transform:translate(-3px,2px)}31%,46%{transform:translate(-3px,1px)}61%,77%{transform:translate(3px,0px)}91%{transform:translate(2px,1px)}100%{transform:translate(-3px,2px)}}
+.avatar-performance[data-program="error-reference"] .ap-arm-left,.avatar-performance[data-program="error-reference"] .ap-held-left{transform:translate(4px,13px) rotate(-7deg)}
+.avatar-performance[data-program="error-reference"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="error-reference"][data-animate="true"] .ap-held-left{animation-name:ap-error-reference-l}
+@keyframes ap-error-reference-l{0%,15%{transform:translate(4px,13px) rotate(-7deg)}31%,46%{transform:translate(5px,8px) rotate(-13deg)}61%,77%,91%,100%{transform:translate(4px,13px) rotate(-7deg)}}
+.avatar-performance[data-program="error-reference"] .ap-arm-right,.avatar-performance[data-program="error-reference"] .ap-held-right{transform:translate(0px,5px) rotate(6deg)}
+.avatar-performance[data-program="error-reference"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="error-reference"][data-animate="true"] .ap-held-right{animation-name:ap-error-reference-r}
+@keyframes ap-error-reference-r{0%,15%{transform:translate(0px,5px) rotate(6deg)}31%,46%{transform:translate(2px,7px) rotate(9deg)}61%,77%{transform:translate(-1px,2px) rotate(-1deg)}91%,100%{transform:translate(0px,5px) rotate(6deg)}}
+
+/* error-mark-place: Steady the unresolved warning sheet, approach its corner with a plain paperclip, hold the place, and ease the hand back with the mark still visible. */
+.avatar-performance[data-program="error-mark-place"] .ap-upper{transform:translate(0px,0px) rotate(-0.7deg)}
+.avatar-performance[data-program="error-mark-place"][data-animate="true"] .ap-upper{animation-name:ap-error-mark-place-u}
+@keyframes ap-error-mark-place-u{0%,12%{transform:translate(0px,0px) rotate(-0.7deg)}28%,43%{transform:translate(-1px,1px) rotate(-1.5deg)}58%,75%{transform:translate(0px,0px) rotate(-0.2deg)}90%,100%{transform:translate(0px,0px) rotate(-0.7deg)}}
+.avatar-performance[data-program="error-mark-place"] .ap-eyes{transform:translate(-2px,1px)}
+.avatar-performance[data-program="error-mark-place"][data-animate="true"] .ap-eyes{animation-name:ap-error-mark-place-e}
+@keyframes ap-error-mark-place-e{0%{transform:translate(-2px,1px)}12%,28%,43%{transform:translate(-3px,1px)}58%,75%{transform:translate(-1px,2px)}90%{transform:translate(0px,0px)}100%{transform:translate(-2px,1px)}}
+.avatar-performance[data-program="error-mark-place"] .ap-arm-left,.avatar-performance[data-program="error-mark-place"] .ap-held-left{transform:translate(5px,9px) rotate(-9deg)}
+.avatar-performance[data-program="error-mark-place"][data-animate="true"] .ap-arm-left,.avatar-performance[data-program="error-mark-place"][data-animate="true"] .ap-held-left{animation-name:ap-error-mark-place-l}
+@keyframes ap-error-mark-place-l{0%,12%{transform:translate(5px,9px) rotate(-9deg)}28%,43%{transform:translate(6px,7px) rotate(-13deg)}58%,75%,90%,100%{transform:translate(5px,9px) rotate(-9deg)}}
+.avatar-performance[data-program="error-mark-place"] .ap-arm-right,.avatar-performance[data-program="error-mark-place"] .ap-held-right{transform:translate(-26px,6px) rotate(-11deg)}
+.avatar-performance[data-program="error-mark-place"][data-animate="true"] .ap-arm-right,.avatar-performance[data-program="error-mark-place"][data-animate="true"] .ap-held-right{animation-name:ap-error-mark-place-r}
+@keyframes ap-error-mark-place-r{0%,12%{transform:translate(-26px,6px) rotate(-11deg)}28%,43%{transform:translate(-47px,-6px) rotate(-25deg)}58%,75%{transform:translate(-43px,-2px) rotate(-17deg)}90%,100%{transform:translate(-26px,6px) rotate(-11deg)}}
+
+/* error-set-down: Support the same warning sheet with both hands, let the shoulders and sheet settle lower, look outward for a pause, then lift the sheet back for review. */
+.avatar-performance[data-program="error-set-down"] .ap-upper{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="error-set-down"][data-animate="true"] .ap-upper{animation-name:ap-error-set-down-u}
+@keyframes ap-error-set-down-u{0%,17%{transform:translate(0px,0px) rotate(0deg)}33%,49%{transform:translate(0px,1px) rotate(-0.5deg)}64%,79%{transform:translate(0px,1px) rotate(0.4deg)}92%,100%{transform:translate(0px,0px) rotate(0deg)}}
+.avatar-performance[data-program="error-set-down"] .ap-eyes{transform:translate(0px,2px)}
+.avatar-performance[data-program="error-set-down"][data-animate="true"] .ap-eyes{animation-name:ap-error-set-down-e}
+@keyframes ap-error-set-down-e{0%,17%,33%,49%{transform:translate(0px,2px)}64%,79%{transform:translate(0px,-1px)}92%{transform:translate(0px,1px)}100%{transform:translate(0px,2px)}}
+.avatar-performance[data-program="error-set-down"] .ap-arm-left{transform:translate(14px,15px) rotate(-5deg)}
+.avatar-performance[data-program="error-set-down"][data-animate="true"] .ap-arm-left{animation-name:ap-error-set-down-l}
+@keyframes ap-error-set-down-l{0%,17%{transform:translate(14px,15px) rotate(-5deg)}33%,49%,64%,79%{transform:translate(14px,18px) rotate(-5deg)}92%,100%{transform:translate(14px,15px) rotate(-5deg)}}
+.avatar-performance[data-program="error-set-down"] .ap-arm-right{transform:translate(-14px,15px) rotate(5deg)}
+.avatar-performance[data-program="error-set-down"][data-animate="true"] .ap-arm-right{animation-name:ap-error-set-down-r}
+@keyframes ap-error-set-down-r{0%,17%{transform:translate(-14px,15px) rotate(5deg)}33%,49%,64%,79%{transform:translate(-14px,18px) rotate(5deg)}92%,100%{transform:translate(-14px,15px) rotate(5deg)}}
+.avatar-performance[data-program="error-set-down"] .ap-foot-2{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="error-set-down"][data-animate="true"] .ap-foot-2{animation-name:ap-error-set-down-ap-foot-2}
+@keyframes ap-error-set-down-ap-foot-2{0%,17%{transform:translate(0px,0px) rotate(0deg)}33%,49%,64%,79%{transform:translate(-1px,0px) rotate(0deg)}92%,100%{transform:translate(0px,0px) rotate(0deg)}}
+.avatar-performance[data-program="error-set-down"] .ap-scene-a{transform:translate(0px,0px) rotate(0deg)}
+.avatar-performance[data-program="error-set-down"][data-animate="true"] .ap-scene-a{animation-name:ap-error-set-down-ap-scene-a}
+@keyframes ap-error-set-down-ap-scene-a{0%,17%{transform:translate(0px,0px) rotate(0deg)}33%,49%,64%,79%{transform:translate(0px,3px) rotate(0deg)}92%,100%{transform:translate(0px,0px) rotate(0deg)}}

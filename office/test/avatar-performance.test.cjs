@@ -65,11 +65,12 @@ test('metadata, heartbeats, title edits and ordinary snapshots cannot restart a 
   assert.notEqual(Model.plan(fixture('reading', { id: 'provider:prefix/a' })).key, Model.plan(fixture('reading', { id: 'provider:prefix/b' })).key);
 });
 
-test('all 31 programs are reachable in real activities and rotate only on supplied visible work time', () => {
+test('all 88 programs are reachable in real activities and rotate only on supplied visible work time', () => {
   const all = new Set();
   for (const activity of Object.keys(Model.KINDS)) {
     const value = fixture(activity), first = Model.plan(value);
     const expected = Model.PROGRAMS[first.kind];
+    assert.equal(expected.length, 8, activity + ' has eight authored programs');
     assert.ok(first.programMs >= 18000 && first.programMs <= 24000);
     const seen = new Set();
     for (let index = 0; index < expected.length; index += 1) {
@@ -78,17 +79,17 @@ test('all 31 programs are reachable in real activities and rotate only on suppli
       assert.equal(plan.asset, first.asset);
       assert.equal(plan.reason, first.reason);
       assert.notEqual(plan.program, Model.plan(value, { visibleElapsed: first.programMs * (index + 1) }).program);
-      assert.doesNotMatch(plan.program, /success|pass|complete|retry|sleep/);
+      assert.doesNotMatch(plan.program, /(?:^|-)(?:success|pass|complete|retry|sleep)(?:-|$)/);
       seen.add(plan.program); all.add(plan.program);
     }
     assert.deepEqual([...seen].sort(), [...expected].sort());
     assert.equal(Model.plan(value, { visibleElapsed: first.programMs - 1 }).program, first.program);
     assert.equal(Model.plan(value, { now: 1e12 }).program, first.program, 'wall time alone does not rotate programs');
   }
-  assert.equal(all.size, 31);
+  assert.equal(all.size, 88);
 });
 
-function rendererFixture() {
+function rendererFixture(options = {}) {
   let writes = 0;
   const document = { createElement: () => node(), createElementNS: () => node() };
   function node() {
@@ -103,7 +104,7 @@ function rendererFixture() {
   const context = vm.createContext({ OfficeAvatarPerformanceModel: Model });
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../renderer/avatar-performance.js'), 'utf8'), context);
   const actorNode = node(), body = node();
-  const renderer = context.OfficeAvatarPerformance.create({ actorNode, body });
+  const renderer = context.OfficeAvatarPerformance.create({ actorNode, body, ...options });
   return { renderer, actorNode, body, writes: () => writes };
 }
 
@@ -191,4 +192,108 @@ test('rendered props are original code and reference the isolated source once wi
   assert.ok((svg.markup.match(/<use /g) || []).length >= 9, 'limbs, eyes and the body articulate independently from one source');
   assert.match(svg.markup, /href="\.\.\/assets\/avatars\/clawd-static-base\.svg"/);
   assert.doesNotMatch(svg.markup, /#DE886D|body-color-group|master-group|<script|data:/);
+});
+
+
+test('shared visible clocks resume after page destruction without counting the time spent in another room', () => {
+  const clockRegistry = Model.createClockRegistry({ limit: 8 });
+  const value = fixture('planning');
+  const firstPage = rendererFixture({ clockRegistry });
+  const initial = firstPage.renderer.update(value, { now: 0 });
+  firstPage.renderer.update(value, { now: initial.programMs - 1 });
+  firstPage.renderer.destroy();
+  const returnPage = rendererFixture({ clockRegistry });
+  assert.equal(returnPage.renderer.update(value, { now: 3600000 }).program, initial.program,
+    'an hour away is paused, and the previous visible total survives clearActors');
+  const next = returnPage.renderer.update(value, { now: 3600002 });
+  assert.notEqual(next.program, initial.program, 'two more visible milliseconds advance the resumed work program');
+  const coding = fixture('coding');
+  const codingFirst = returnPage.renderer.update(coding, { now: 3600003 });
+  returnPage.renderer.update(coding, { now: 3601003 });
+  returnPage.renderer.destroy();
+  const anotherPage = rendererFixture({ clockRegistry });
+  assert.equal(anotherPage.renderer.update(value, { now: 7200000 }).program, next.program);
+  assert.equal(anotherPage.renderer.update(coding, { now: 7200001 }).program, codingFirst.program,
+    'each of the eleven work kinds retains its own accumulated total');
+  anotherPage.renderer.destroy();
+});
+
+test('a newer lease exclusively owns one canonical full identity and an old renderer cannot change its clock', () => {
+  const clocks = Model.createClockRegistry();
+  const old = clocks.open(fixture('planning', { provider: 'Claude Code' }));
+  old.sample('notebook', { now: 0 });
+  assert.equal(old.sample('notebook', { now: 7000 }), 7000);
+  const current = clocks.open(fixture('planning', { provider: 'claude-code' }));
+  assert.equal(current.sample('notebook', { now: 100000 }), 7000, 'a new lease has no wall-time catch-up');
+  old.sample('notebook', { now: 2000000 });
+  old.release();
+  assert.equal(current.sample('notebook', { now: 100005 }), 7005,
+    'stale updates and release cannot claim or pause the new owner');
+  assert.equal(clocks.size, 1, 'provider aliases share one complete identity');
+  const other = clocks.open(fixture('planning', { provider: 'cursor' }));
+  assert.equal(other.sample('notebook', { now: 300000 }), 0, 'a different provider remains a different identity');
+  current.release(); other.release();
+});
+
+test('shared clocks pause quiet and lifecycle intervals, reject clock reversal and retain only supported kinds', () => {
+  const clock = Model.createClockRegistry().open(fixture());
+  clock.sample('keyboard', { now: 10 });
+  assert.equal(clock.sample('keyboard', { now: 110, visible: false }), 100);
+  assert.equal(clock.sample('keyboard', { now: 10000, visible: false }), 100);
+  assert.equal(clock.sample('keyboard', { now: 20000 }), 100);
+  assert.equal(clock.sample('keyboard', { now: 20005 }), 105);
+  assert.equal(clock.sample('keyboard', { now: 20000 }), 105);
+  assert.equal(clock.sample('none', { now: 20010 }), 0);
+  assert.equal(clock.sample('keyboard', { now: 1e9 }), 110);
+  clock.sample('keyboard', { visible: true });
+  assert.equal(clock.sample('keyboard', { now: 2e9 }), 110, 'missing timestamps cannot create catch-up');
+  clock.release();
+  assert.equal(clock.sample('keyboard', { now: 3e9 }), 110, 'release ends timing ownership');
+});
+
+test('clock history uses inactive LRU eviction while every visible lease remains protected', () => {
+  const clocks = Model.createClockRegistry({ limit: 3 });
+  const saved = clocks.open(fixture('planning', { id: 'saved' }));
+  saved.sample('notebook', { now: 0 }); saved.sample('notebook', { now: 100 }); saved.release();
+  const protectedClock = clocks.open(fixture('planning', { id: 'protected' }));
+  protectedClock.sample('notebook', { now: 0 }); protectedClock.sample('notebook', { now: 222 });
+  for (let index = 0; index < 12; index += 1) {
+    const temporary = clocks.open(fixture('planning', { id: 'old-' + index }));
+    temporary.sample('notebook', { now: 0 }); temporary.sample('notebook', { now: 50 }); temporary.release();
+    assert.ok(clocks.size <= 3);
+  }
+  const reopened = clocks.open(fixture('planning', { id: 'saved' }));
+  assert.equal(reopened.elapsed('notebook'), 0, 'the least recent inactive identity is forgotten');
+  assert.equal(protectedClock.sample('notebook', { now: 223 }), 223, 'visible owners are not evicted by history churn');
+  clocks.clear();
+  assert.equal(clocks.size, 0);
+  protectedClock.sample('notebook', { now: 999999 });
+  assert.equal(clocks.size, 0, 'clearing history invalidates old handles');
+  reopened.release(); protectedClock.release();
+});
+
+test('new authored programs move independent body joints and share precise held-object grip trajectories', () => {
+  const css = fs.readFileSync(path.join(__dirname, '../renderer/avatar-performance.css'), 'utf8');
+  const expanded = css.slice(css.indexOf('/* 0.8:'));
+  const blocks = expanded.split(/\n\/\* ([a-z-]+): /).slice(1);
+  const fingerprints = new Set();
+  assert.equal(blocks.length / 2, 57);
+  for (let index = 0; index < blocks.length; index += 2) {
+    const name = blocks[index], block = blocks[index + 1];
+    const tracks = [...block.matchAll(/@keyframes ([^{]+)\{([^\n]+)\}/g)];
+    const bodyTracks = tracks.filter(match => /-[uler]$/.test(match[1]));
+    assert.equal(bodyTracks.length, 4, name + ' explicitly authors upper body, eyes and both hands');
+    assert.ok(bodyTracks.filter(match => new Set([...match[2].matchAll(/transform:([^}]+)/g)].map(value => value[1])).size > 1).length >= 3,
+      name + ' has at least three genuinely changing character joints');
+    const fingerprint = bodyTracks.map(match => match[2]).join('/');
+    assert.equal(fingerprints.has(fingerprint), false, name + ' cannot merely rename another entire body program');
+    fingerprints.add(fingerprint);
+    for (const side of ['left', 'right']) {
+      if (!block.includes('.ap-held-' + side)) continue;
+      const joint = side === 'left' ? 'l' : 'r';
+      assert.match(block, new RegExp('\\.ap-arm-' + side + '[^\n]*,\\.avatar-performance[^\n]*\\.ap-held-' + side + '[^\n]*animation-name:ap-' + name + '-' + joint),
+        name + ' held object and cropped hand use the same animation');
+    }
+  }
+  assert.doesNotMatch(expanded, /(?:^|[;{])(?:width|height|left|top|margin|padding):/m, 'playback uses only transform/opacity');
 });

@@ -41,7 +41,77 @@
     'error-review': CARD
   });
 
-  function create({ actorNode, body, session = {} } = {}) {
+  const paper = (x,y,w,h,ink='#f1e5c3') => `<path fill="#8b7350" d="M${x-2} ${y-2}h${w+4}v${h+4}H${x-2}Z"/><path fill="${ink}" d="M${x} ${y}h${w}v${h}H${x}Z"/><path stroke="#b8a27a" fill="none" d="M${x+4} ${y+6}h${w-8}m${8-w} 6h${w-12}m${12-w} 6h${w-8}"/>`;
+  const terminal = (x,y,w,h) => `<path fill="#7a684b" d="M${x-2} ${y-2}h${w+4}v${h+4}H${x-2}Z"/><path fill="#344e4c" d="M${x} ${y}h${w}v${h}H${x}Z"/><path stroke="#b3c6a4" stroke-width="2" d="M${x+4} ${y+5}h4m4 0h${w-16}m${12-w} 6h${w-12}m${12-w} 6h6"/>`;
+  const workmat = '<path fill="#798e7c" d="M36 115h84v10H36Z"/><path stroke="#a2b09b" d="M42 120h72m-60-4v8m15-8v8m15-8v8m15-8v8"/>';
+  const leftPaper = `<g class="ap-held-left">${paper(22,77,27,32)}</g>`;
+  const rightPaper = `<g class="ap-held-right">${paper(88,77,25,32)}</g>`;
+  const rightPen = '<g class="ap-held-right"><path fill="#c4a66b" d="m115 79 3 2-17 28-3-2Z"/><path fill="#504e3c" d="m98 107 3 2-6 5Z"/></g>';
+  const leftPen = '<g class="ap-held-left"><path fill="#c4a66b" d="m39 79 3-2 17 28-3 2Z"/><path fill="#504e3c" d="m56 107 3-2 5 7Z"/></g>';
+  const openBook = '<g class="ap-scene-a"><path fill="#8c6b4a" d="m45 102 31 4 32-4v19l-32 5-31-5Z"/><path fill="#f3e5c2" d="m47 100 29 4 30-4v18l-30 5-29-5Z"/><path stroke="#baa079" d="m51 106 20 3m-20 2 16 2m15-4 19-3m-19 8 19-3"/></g>';
+  const flatPlan = '<g class="ap-scene-a"><path fill="#d6c38f" d="m40 105 63-7 12 21-65 7Z"/><path stroke="#9caa92" fill="none" d="m48 109 19-2 3 6-19 2Zm25-3 19-2 3 6-19 2Zm-7 7 14-2m-21 9 31-4"/></g>';
+  const testMark = '<path fill="#b87857" d="M63 107h3v5h-3Zm0 7h3v2h-3Z"/>';
+  const WORK_SCENES = Object.freeze({
+    'read-scroll': `<g class="ap-scene-a"><path fill="#ede0ba" d="M53 96h49v23H53Z"/><path stroke="#bba279" d="M60 101h34m-34 5h29m-29 5h34"/></g><g class="ap-held-left"><path fill="#a98c5b" d="M42 77h6v31h-6Z"/><path fill="#dbc48c" d="M40 76h10v4H40Zm0 29h10v4H40Z"/></g><g class="ap-held-right"><path fill="#a98c5b" d="M107 77h6v31h-6Z"/><path fill="#dbc48c" d="M105 76h10v4h-10Zm0 29h10v4h-10Z"/></g>`,
+    'read-outline': leftPaper+`<g class="ap-held-left"><path fill="#b58b68" d="M49 80h5v5h-5Z"/><path fill="#8aa99b" d="M49 89h5v5h-5Z"/><path fill="#c1b67a" d="M49 98h5v5h-5Z"/></g>`,
+    'read-footnote': leftPaper+`<g class="ap-held-right">${paper(99,80,22,19)}<path fill="#b09263" d="M103 83h3v3h-3Z"/></g>`,
+    'read-bookmark': openBook+`<g class="ap-held-right"><path fill="#af7562" d="M108 89h4v21l-2-2-2 2Z"/></g>`,
+    'read-diagram': `<g class="ap-scene-a"><path fill="#eee1ba" d="m40 99 24 3 26-4 23 4v20l-23-4-26 4-24-3Z"/><path stroke="#b5a17a" fill="none" d="M64 102v20m26-24v20m-41-11h10m11-1h14v6h11m-20-6v9h-5m25-8h12"/><path fill="#8ea89b" d="M69 104h5v4h-5Zm24 5h5v4h-5Z"/></g>`,
+    'search-catalogue': `<g class="ap-scene-a"><path fill="#9a7b51" d="M94 105h42v20H94Z"/><path fill="#665a40" d="M98 107h34v9H98Z"/><path fill="#d6c798" d="M101 109h29v5h-29Z"/><path fill="#b5a579" d="M109 120h13v2h-13Z"/></g><g class="ap-held-right">${paper(100,72,26,23)}</g>`,
+    'search-map': flatPlan+`<g class="ap-held-right"><path fill="#8b7650" d="m108 89 3-2 9 14-3 2Z"/><path fill="#d6bd83" d="M96 78h13v3h3v12h-3v3H96v-3h-3V81h3Z"/><path fill="#a3beb0" fill-opacity=".7" d="M97 81h11v11H97Z"/></g>`,
+    'search-clues': `<g class="ap-scene-a">${paper(38,106,24,15)}${paper(78,106,24,15)}<path fill="#bd9473" d="M43 109h5v3h-5Z"/><path fill="#8ea698" d="M83 109h5v3h-5Z"/></g><g class="ap-held-right">${paper(98,75,24,24)}<path fill="#bdb37b" d="M103 80h5v3h-5Z"/></g>`,
+    'search-shelves': `<g class="ap-scene-a"><path fill="#735e44" d="M25 119h45v5H25Z"/><path fill="#b6bf99" d="M28 91h8v28h-8Z"/><path fill="#bd936d" d="M38 85h9v34h-9Z"/><path fill="#a2b3a2" d="M58 88h9v31h-9Z"/></g><g class="ap-held-left"><path fill="#ddc38f" d="M48 80h9v30h-9Z"/><path fill="#998763" d="M50 86h5v2h-5Zm0 5h5v2h-5Z"/></g>`,
+    'search-query': `<g class="ap-scene-a">${paper(40,104,45,18)}</g><g class="ap-scene-b">${terminal(106,62,29,31)}</g>`+rightPen,
+    'plan-decompose': workmat+`<g class="ap-held-left"><path fill="#e7d6a9" d="M43 81h20v18H43Z"/><path fill="#99ad99" d="M48 85h10v3H48Z"/></g><g class="ap-held-right"><path fill="#dbc28d" d="M92 81h20v18H92Z"/><path fill="#b28c6c" d="M96 85h10v3H96Z"/></g><path stroke="#b5a374" stroke-dasharray="3 3" d="M72 117h12"/>`,
+    'plan-sequence': `<g class="ap-scene-a"><path fill="#eee0b6" d="M40 103h71v21H40Z"/><path stroke="#9ea891" fill="none" d="M47 109h12v8H47Zm23 0h12v8H70Zm23 0h12v8H93Zm-34 4h11m12 0h11"/></g>`+rightPen,
+    'plan-branches': `<g class="ap-held-right"><path fill="#b3c29f" d="m94 58 17-5 12 36-17 5Z"/><path fill="#d7bd88" d="m105 51 18 2-4 38-18-2Z"/><path fill="#efe1bd" d="m118 56 16 8-17 32-16-8Z"/><path stroke="#a28c66" d="m105 65 6 2m4 5 6 2m-8 8 6 2"/></g>`,
+    'plan-trace': `<g class="ap-held-left"><g transform="translate(-23 0)">${paper(43,77,32,33)}<path stroke="#879e91" fill="none" d="M48 85h10v9h11m-11-5h9m-9 5v9"/></g></g>`+rightPen,
+    'code-debug': PROPS.keyboard+`<g class="ap-scene-a"><path fill="none" stroke="#d5bf83" d="M68 95h30v12H68Z"/></g>`,
+    'code-refactor': PROPS.keyboard+`<g class="ap-scene-a"><path fill="#53706a" d="M73 93h2v18h-2Z"/></g><g class="ap-held-left"><path fill="#ddc994" d="M43 87h22v6H43Z"/><path stroke="#9b906d" d="M48 90h12"/></g>`,
+    'code-terminal': `<g class="ap-scene-a">${terminal(92,61,42,40)}<path fill="#9b9471" d="M43 111h75l4 13H38Z"/><path stroke="#d8cea8" stroke-width="2" d="M46 115h26m7 0h32m-66 6h66"/></g>`,
+    'code-patch': PROPS.keyboard+leftPaper,
+    'code-document': PROPS.keyboard+`<g class="ap-held-left"><path fill="#a0b39c" d="M26 80h25v30H26Z"/><path fill="#e9dcba" d="M29 82h20v26H29Z"/><path stroke="#b29d78" d="M32 88h14m-14 6h10m-10 6h14"/></g>`,
+    'design-layout': workmat+`<g class="ap-held-left"><path fill="#d2b781" d="M43 83h19v15H43Z"/><path fill="#edddb4" d="M46 86h13v3H46Z"/></g><g class="ap-held-right"><path fill="#94ad9f" d="M92 82h21v17H92Z"/><path fill="#dce3bd" d="M96 86h12v3H96Z"/></g>`,
+    'design-compass': flatPlan+`<g class="ap-held-right"><path stroke="#bba774" stroke-width="3" fill="none" d="m109 87-13 24m13-24 10 25"/><path fill="#6c7462" d="M107 84h5v6h-5Z"/></g><path stroke="#91a99a" fill="none" d="M68 116q12-18 28-2"/>`,
+    'design-type': `<g class="ap-held-left"><g transform="translate(-23 0)">${paper(43,73,33,34)}<path stroke="#819b92" stroke-width="2" fill="none" d="M52 96V83h9v13m-9-6h9m5-7v13"/></g></g><g class="ap-held-right"><path fill="#d6bf84" d="M83 88h31v5H83Z"/><path stroke="#8c805f" d="M87 88v3m6-3v2m6-2v3m6-3v2"/></g>`,
+    'design-trace': flatPlan+`<g class="ap-held-left"><path fill="#e7ead3" fill-opacity=".7" d="M44 83h42v22H44Z"/><path stroke="#9eb2a0" fill="none" d="m50 100 10-11 12 4 8 8"/></g>`+rightPen,
+    'design-palette': flatPlan+`<g class="ap-held-left"><path fill="#cbb27e" d="M37 78h31v22H37Z"/><path fill="#c99274" d="M41 82h7v6h-7Z"/><path fill="#82a397" d="M52 82h7v6h-7Z"/><path fill="#b0b981" d="M43 91h7v5h-7Z"/><path fill="#eee0bc" d="M58 92h5v5h-5Z"/></g>`+rightPen,
+    'test-cases': `<g class="ap-held-left"><g transform="translate(-20 0)"><path fill="#b4bf9c" d="m38 76 22-3 5 33-22 3Z"/><path fill="#d3bd89" d="m45 74 23 2-3 33-23-2Z"/><path fill="#efe1bc" d="M46 79h25v29H46Z"/><path stroke="#af9b72" d="M50 86h16m-16 6h12m-12 6h16"/></g></g><g class="ap-scene-a">${terminal(109,68,24,28)}</g>`,
+    'test-boundary': workmat+`<g class="ap-scene-a"><path fill="#e1ca91" d="M55 106h47v8H55Z"/><path fill="#a5b297" d="M61 109h35v2H61Z"/></g><g class="ap-held-left"><path fill="#a7b8a1" d="M42 84h4v18h12v4H42Z"/></g><g class="ap-held-right"><path fill="#a7b8a1" d="M109 84h4v22H97v-4h12Z"/></g>`,
+    'test-calibrate': `<g class="ap-scene-a"><path fill="#c4bc93" d="M96 63h38v54H96Z"/>${terminal(101,69,28,23)}<path fill="#8e9478" d="M116 99h12v12h-12Z"/><path stroke="#ded0a0" d="M122 101v8"/></g>`,
+    'test-reproduce': leftPaper+workmat+`<g class="ap-scene-a"><path fill="#b2b998" d="M86 101h25v17H86Z"/><path fill="#526f64" d="M91 105h15v7H91Z"/><path fill="#d4c798" d="M96 107h5v3h-5Z"/></g>`,
+    'test-compare': `<g class="ap-held-left"><g transform="translate(-20 0)"><path fill="#b1bea0" d="M41 77h25v32H41Z"/>${terminal(45,82,17,21)}</g></g><g class="ap-held-right"><g transform="translate(16 0)"><path fill="#d1bb8a" d="M92 77h25v32H92Z"/>${terminal(96,82,17,21)}</g></g>`,
+    'build-fit': workmat+`<g class="ap-held-left"><path fill="#cfb987" d="M40 81h20v7h5v7h-5v7H40Z"/><path fill="#958662" d="M45 86h9v10h-9Z"/></g><g class="ap-held-right"><path fill="#a2b49d" d="M94 81h21v21H94v-7h5v-7h-5Z"/><path fill="#6f8777" d="M105 86h6v10h-6Z"/></g>`,
+    'build-sort': workmat+`<g class="ap-scene-a"><path fill="#a18b61" d="M30 109h31v14H30Zm65 0h31v14H95Z"/><path fill="#7f7757" d="M33 112h25v8H33Zm65 0h25v8H98Z"/><path fill="#c9ba88" d="M36 115h6v4h-6Zm9 0h8v4h-8Zm56 0h4v4h-4Zm10 0h8v4h-8Z"/></g><g class="ap-held-right"><path fill="#d8c18b" d="M104 86h13v8h-13Z"/><path fill="#8a9f88" d="M108 88h5v3h-5Z"/></g>`,
+    'build-wire': workmat+`<g class="ap-held-left"><path fill="#c3b483" d="M42 84h22v14H42Z"/><path fill="#667e6d" d="M50 88h8v6h-8Z"/></g><g class="ap-held-right"><path stroke="#74664b" stroke-width="3" fill="none" d="M110 90q20 10 4 15"/><path fill="#a9b59b" d="M105 85h12v9h-12Z"/><path fill="#d6cc9e" d="M106 81h3v5h-3Zm6 0h3v5h-3Z"/></g>`,
+    'build-rotate': `<g class="ap-scene-a"><path fill="none" stroke="#c8bd91" stroke-width="5" d="M55 88h45v25H55Z"/><path fill="#8ba08e" d="M73 94h9v13h-9Z"/></g>`,
+    'build-stack': workmat+`<g class="ap-scene-a"><path fill="#a4b394" d="M44 109h25v11H44Z"/><path fill="#c5b37e" d="M49 100h22v9H49Z"/><path fill="#8d9f88" d="M46 94h19v6H46Z"/></g><g class="ap-held-left"><path fill="#d9c48f" d="M42 86h20v7H42Z"/></g><g class="ap-held-right">${paper(99,70,27,31)}<path stroke="#91a391" d="M104 90h16m-13-5h10m-7-5h4"/></g>`,
+    'run-log': `<g class="ap-scene-a">${terminal(96,56,39,55)}</g><g class="ap-held-right"><path fill="#d7c493" d="M98 88h27v4H98Z"/></g>`,
+    'run-scroll': PROPS.console+`<g class="ap-scene-a"><path fill="#c8bd94" d="M114 109h12v15h-12Z"/><path fill="#8b987d" d="M118 112h4v7h-4Z"/></g>`,
+    'run-monitor': `<g class="ap-scene-a">${terminal(25,64,25,35)}<path fill="#927a53" d="M35 100h4v18h-4Zm-9 18h24v4H26Z"/></g><g class="ap-scene-b">${terminal(108,64,25,35)}<path fill="#927a53" d="M119 100h4v18h-4Zm-9 18h24v4h-24Z"/></g>`,
+    'run-reference': `<g class="ap-held-left"><g transform="translate(-21 0)">${paper(40,75,30,34)}<path fill="#879f91" d="M44 83h3v3h-3Zm0 6h3v3h-3Z"/></g></g><g class="ap-scene-a">${terminal(104,66,30,38)}</g>`,
+    'run-trace': `<g class="ap-scene-a"><path fill="#b5b88e" d="M38 103h51v21H38Z"/><path stroke="#6d8b7a" fill="none" d="M44 110h12v8h16v-9h11"/><path fill="#d8d2a5" d="M43 107h5v5h-5Zm27 8h5v5h-5Z"/></g><g class="ap-scene-b">${terminal(106,63,28,34)}</g>`,
+    'wait-console': `<g class="ap-scene-a">${terminal(105,77,29,34)}<path fill="#9d906b" d="M113 113h14v4h-14Z"/></g>`,
+    'wait-tray': `<g class="ap-scene-a"><path fill="#a78c60" d="m52 105 49 0 7 17H45Z"/><path fill="#665e44" d="m55 108 43 0 3 9H51Z"/><path fill="#c2ac7a" d="M45 120h63v4H45Z"/></g>`,
+    'wait-headset': `<g class="ap-scene-a"><path stroke="#827352" stroke-width="4" fill="none" d="M48 77V65h59v12"/><path fill="#b3bd9e" d="M46 74h7v16h-7Zm57 0h7v16h-7Z"/><path fill="#627b6d" d="M48 77h3v10h-3Zm57 0h3v10h-3Z"/></g>`,
+    'wait-bookmark': `<g class="ap-held-left"><path fill="#99ad98" d="M41 78h26v31H41Z"/><path fill="#e0d1a9" d="M45 80h20v26H45Z"/><path fill="#af7e67" d="M57 78h4v19l-2-2-2 2Z"/></g>`,
+    'wait-pencil-roll': `<g class="ap-scene-a"><path fill="#c9ad70" d="M63 102h31v4H63Z"/><path fill="#756147" d="m94 102 6 2-6 2Z"/><path fill="#cca493" d="M62 102h4v4h-4Z"/></g>`,
+    'wait-wrist': `<g class="ap-held-left"><path fill="#8c7756" d="M50 84h4v13h-4Z"/><path fill="#d8c28e" d="M48 87h11v9H48Z"/><path fill="#f0e2bb" d="M50 89h7v5h-7Z"/><path stroke="#667b65" d="M53 89v3h2"/></g>`,
+    'ask-present': leftPaper,
+    'ask-point-line': `<g class="ap-scene-a">${paper(56,102,48,20)}<path fill="#cfb27f" d="M74 99h12v5H74Z"/></g>`,
+    'ask-tilt-card': `<g class="ap-held-right">${paper(104,62,25,31)}<path fill="#d5b781" d="M110 60h10v5h-10Z"/></g>`,
+    'ask-pencil-rest': `<g class="ap-held-left"><path fill="#d1be8d" d="M42 80h30v26H42Z"/><path fill="#f0e2bc" d="M44 82h26v22H44Z"/></g>`+rightPen,
+    'ask-open-folder': `<g class="ap-scene-a"><path fill="#aaa97e" d="m52 99 24 5v21l-24-5Z"/><path fill="#e8dbb6" d="m54 101 20 4v17l-20-4Z"/><path fill="#c5b07b" d="m77 104 25-5v21l-25 5Z"/><path fill="#eee2bf" d="m79 105 21-4v17l-21 4Z"/></g>`,
+    'ask-hand-to-heart': leftPaper,
+    'error-magnify': `<g class="ap-held-left"><g transform="translate(-21 0)">${paper(43,78,29,34)}<path fill="#b87857" d="M58 101h3v4h-3Zm0 6h3v2h-3Z"/></g></g><g class="ap-held-right"><path fill="#8b7650" d="m108 89 3-2 9 14-3 2Z"/><path fill="#d6bd83" d="M96 78h13v3h3v12h-3v3H96v-3h-3V81h3Z"/><path fill="#a3beb0" fill-opacity=".7" d="M97 81h11v11H97Z"/></g>`,
+    'error-trace': `<g class="ap-scene-a">${paper(49,104,57,18)}<path fill="#b87857" d="M82 110h3v4h-3Zm0 6h3v2h-3Z"/></g>`+rightPen,
+    'error-overlay': `<g class="ap-held-left"><g transform="translate(-20 0)">${paper(42,77,29,34)}<path fill="#b87857" d="M58 101h3v4h-3Zm0 6h3v2h-3Z"/></g></g><g class="ap-held-right"><g transform="translate(20 0)"><path fill="#d8e3cb" fill-opacity=".7" d="M87 77h27v33H87Z"/><path stroke="#8fa698" d="M91 85h18m-18 6h13m-13 6h18"/></g></g>`,
+    'error-reference': `<g class="ap-held-left"><g transform="translate(-13 0)"><path fill="#9d8961" d="m29 81 17 3 18-3v25l-18 3-17-3Z"/><path fill="#ede0ba" d="m31 79 15 3 16-3v24l-16 3-15-3Z"/><path stroke="#baa47c" d="m35 87 7 1m-7 5 7 1m8-6 8-1m-8 7 8-1"/></g></g><g class="ap-held-right"><g transform="translate(8 0)">${paper(97,73,27,34)}<path fill="#b87857" d="M109 96h3v4h-3Zm0 6h3v2h-3Z"/></g></g>`,
+    'error-mark-place': `<g class="ap-held-left"><g transform="translate(-22 0)">${paper(43,78,30,34)}<path fill="#b87857" d="M58 101h3v4h-3Zm0 6h3v2h-3Z"/></g></g><g class="ap-held-right"><path stroke="#b8bea1" stroke-width="2" fill="none" d="M107 85v11h6V83h-9v15"/></g>`,
+    'error-set-down': `<g class="ap-scene-a">${paper(56,98,44,21)}<path fill="#b87857" d="M76 104h3v5h-3Zm0 7h3v2h-3Z"/></g>`
+  });
+
+  function create({ actorNode, body, session = {}, clockRegistry } = {}) {
     if (!Model) throw new Error('Avatar performance model must load before its renderer.');
     if (!actorNode || !body || !body.ownerDocument) throw new TypeError('An actor node and character body are required.');
     const document = body.ownerDocument;
@@ -69,6 +139,7 @@
     // actor identity. Brief tool bouts cannot erase accumulated thinking time.
     const visibleClocks = new Map();
     let clockIdentity = '', lastNow = null;
+    let clockLease = null;
     const bridges = new Set();
     let ghost = null;
     const view = document.defaultView;
@@ -111,15 +182,17 @@
       // Credit only the kind that was actually visible since the previous
       // update. Other kinds, hidden intervals and quiet modes never catch up
       // from wall time. Returning to a kind resumes its own accumulated clock.
-      const identity = JSON.stringify([session.provider, session.id || session.sessionId]);
+      const identity = Model.identityFor(session);
       if (identity !== clockIdentity) {
+        if (clockLease) clockLease.release();
         visibleClocks.clear(); clockIdentity = identity; lastNow = null;
+        clockLease = clockRegistry && typeof clockRegistry.open === 'function' ? clockRegistry.open(session) : null;
       }
-      if (now !== null && lastNow !== null && last && last.active && last.animate && Model.PROGRAMS[last.kind]) {
+      if (!clockLease && now !== null && lastNow !== null && last && last.active && last.animate && Model.PROGRAMS[last.kind]) {
         visibleClocks.set(last.kind, (visibleClocks.get(last.kind) || 0) + Math.max(0, now - lastNow));
       }
       lastNow = now === null ? null : Math.max(lastNow === null ? now : lastNow, now);
-      const visibleElapsed = visibleClocks.get(base.kind) || 0;
+      const visibleElapsed = clockLease ? clockLease.sample(base.kind, { now, visible: base.active && base.animate }) : visibleClocks.get(base.kind) || 0;
       const plan = Model.plan(session, { ...options, visibleElapsed });
       const changed = !last || last.program !== plan.program || last.kind !== plan.kind;
       const blend = changed && plan.active && plan.animate;
@@ -130,7 +203,7 @@
       if (changed) {
         // The hands must stay above their held objects: putting the laptop or
         // folio in front would hide the new wrist choreography completely.
-        back.innerHTML = plan.active ? (PROPS[plan.kind] || '') + (EXTRA[plan.program] || '') : '';
+        back.innerHTML = plan.active ? (WORK_SCENES[plan.program] || (PROPS[plan.kind] || '') + (EXTRA[plan.program] || '')) : '';
         front.innerHTML = '';
         layer.dataset.kind = plan.kind;
         layer.dataset.program = plan.program;
@@ -165,6 +238,7 @@
       if (destroyed) return;
       destroyed = true;
       stopBridge();
+      if (clockLease) { clockLease.release(); clockLease = null; }
       visibleClocks.clear();
       body.classList.remove('has-avatar-performance');
       delete actorNode.dataset.performance;
