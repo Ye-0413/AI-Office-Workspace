@@ -1,0 +1,42 @@
+name: Office quality
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Node tests and native observation locks
+    # Exercise macOS's real advisory locks as well as the portable models.
+    runs-on: macos-latest
+    timeout-minutes: 15
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: office/package-lock.json
+
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm --prefix office ci --ignore-scripts
+
+      - name: Build native lock helper for the runner architecture
+        run: node office/scripts/build-native.cjs
+
+      # These tests use metadata and temporary fixtures, never restored artwork.
+      - name: Check provider catalog and run regression tests
+        run: npm --prefix office test

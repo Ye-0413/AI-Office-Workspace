@@ -38,6 +38,7 @@ app.whenReady().then(async()=>{
   assert.equal(await run(`document.querySelector('.actor-bubble').textContent`),p.greetingZh);
   assert.equal(snapshot().sessions[0].activity,first.activity,'a social gesture cannot change observed work');
   assert.equal(calls.length,0,'a greeting cannot call a provider or demo action');
+  await wait(900);assert.equal(await run(`document.querySelector('.actor-bubble').dataset.show`),'true','static greetings retain time to read');
   await run(`document.getElementById('language-button').click()`);await wait(180);
   assert.equal(await run(`document.querySelector('.actor-title').textContent`),p.aliasEn);
   assert.equal(await run(`document.getElementById('inspect-persona-trait').textContent`),p.traitEn);

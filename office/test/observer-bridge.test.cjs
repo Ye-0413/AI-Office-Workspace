@@ -391,6 +391,74 @@ test('tail follows rotation and truncation, rejects oversized/malformed lines, a
   assert.deepEqual(received.map(event => event.sessionId), ['one', 'two', 'three']);
 });
 
+test('tail drains unread retained rotation before current without replaying startup history', async t => {
+  const options = sandbox(t), received = [];
+  append(options, makeEvent('historical'));
+  const bridge = createObserverBridge({ ...options, onEvent: event => received.push(event) });
+  bridge.start(); t.after(() => bridge.stop());
+  const backlog = Array.from({ length: 600 }, (_, i) => makeEvent(`before-rotation-${i}`));
+  const pending = backlog.map(event => JSON.stringify(event)).join('\n') + '\n';
+  assert.ok(Buffer.byteLength(pending) > 2 * 64 * 1024, 'backlog spans several bounded polling reads');
+  fs.appendFileSync(eventFile(options), pending);
+  fs.renameSync(eventFile(options), `${eventFile(options)}.1`);
+  append(options, makeEvent('after-rotation'));
+  await until(() => received.length >= backlog.length + 1);
+  assert.deepEqual(received.map(event => event.sessionId), [...backlog.map(event => event.sessionId), 'after-rotation']);
+  await new Promise(resolve => setTimeout(resolve, 300));
+  assert.equal(received.length, backlog.length + 1, 'drained records are delivered once');
+});
+
+test('tail preserves a split UTF-8 record through rotation while current spool is temporarily absent', async t => {
+  const options = sandbox(t), received = [];
+  append(options, makeEvent('historical'));
+  const bridge = createObserverBridge({ ...options, onEvent: event => received.push(event) });
+  bridge.start(); t.after(() => bridge.stop());
+  const line = Buffer.from(`${JSON.stringify({ ...makeEvent('split-before-rotation'), title: '中文任务' })}\n`);
+  const split = line.indexOf(Buffer.from('中文')) + 1;
+  fs.appendFileSync(eventFile(options), line.subarray(0, split));
+  await new Promise(resolve => setTimeout(resolve, 350));
+  assert.equal(received.length, 0);
+  fs.appendFileSync(eventFile(options), line.subarray(split));
+  append(options, makeEvent('last-before-rotation'));
+  fs.renameSync(eventFile(options), `${eventFile(options)}.1`);
+  await until(() => received.length === 2);
+  assert.equal(received[0].title, '中文任务');
+  append(options, makeEvent('after-rotation'));
+  await until(() => received.length === 3);
+  assert.deepEqual(received.map(event => event.sessionId), ['split-before-rotation', 'last-before-rotation', 'after-rotation']);
+});
+
+test('tail does not replay an unrelated or symbolic retained backup after replacement', async t => {
+  const options = sandbox(t), received = [];
+  append(options, makeEvent('historical'));
+  const bridge = createObserverBridge({ ...options, onEvent: event => received.push(event) });
+  bridge.start(); t.after(() => bridge.stop());
+  fs.renameSync(eventFile(options), `${eventFile(options)}.other`);
+  fs.writeFileSync(`${eventFile(options)}.1`, `${JSON.stringify(makeEvent('unrelated-backup'))}\n`);
+  append(options, makeEvent('first-current'));
+  await until(() => received.length === 1);
+  fs.unlinkSync(`${eventFile(options)}.1`);
+  fs.renameSync(eventFile(options), `${eventFile(options)}.later`);
+  fs.symlinkSync(`${eventFile(options)}.later`, `${eventFile(options)}.1`);
+  append(options, makeEvent('second-current'));
+  await until(() => received.length === 2);
+  assert.deepEqual(received.map(event => event.sessionId), ['first-current', 'second-current']);
+});
+
+test('tail isolates malformed retained records and never joins fragments across generations', async t => {
+  const options = sandbox(t), received = [];
+  append(options, makeEvent('historical'));
+  const bridge = createObserverBridge({ ...options, onEvent: event => received.push(event) });
+  bridge.start(); t.after(() => bridge.stop());
+  const fragment = JSON.stringify(makeEvent('cross-generation-phantom'));
+  const split = Math.floor(fragment.length / 2);
+  fs.appendFileSync(eventFile(options), `${'x'.repeat(70 * 1024)}\nnot-json\n${JSON.stringify(makeEvent('retained-valid'))}\n${fragment.slice(0, split)}`);
+  fs.renameSync(eventFile(options), `${eventFile(options)}.1`);
+  fs.writeFileSync(eventFile(options), `${fragment.slice(split)}\n${JSON.stringify(makeEvent('current-valid'))}\n`);
+  await until(() => received.length >= 2);
+  assert.deepEqual(received.map(event => event.sessionId), ['retained-valid', 'current-valid']);
+});
+
 test('stop keeps installed configuration and restart skips intervening history', async t => {
   const options = sandbox(t);
   const received = [];

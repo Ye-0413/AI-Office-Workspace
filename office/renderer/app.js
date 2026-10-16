@@ -422,7 +422,7 @@
     const pose = ['teacup','bookmark','leaf'].includes(p.keepsake) ? 'clawd-aegyo-shy.svg' : ['paperboat','lantern','bell'].includes(p.keepsake) ? 'clawd-react-double.svg' : 'clawd-react-double-jump.svg';
     setPose(actor, pose, true);
     say(actor, language === 'en' ? p.greetingEn : p.greetingZh, 3000);
-    if (!await delay(actor, quietSprites() ? 700 : 1800, serial)) return;
+    if (!await delay(actor, 3000, serial)) return;
     actor.node.dataset.reaction = 'false';
     settle(actor, seat, true).catch(showError);
   }

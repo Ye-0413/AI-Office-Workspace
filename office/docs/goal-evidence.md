@@ -60,3 +60,22 @@ Codex raw JavaScript `exec` wrappers are inspected with a bounded, non-executing
 ## 0.3.1 Hermes Gateway activation
 
 A long-running local Gateway can predate the observer installation. Both the previous installer and Hermes CLI's unchanged-enable path skipped runtime activation. Explicit Connect now checks the owned local UNIX socket, identifies the Gateway and requested Hermes home, invokes Hermes' supported reload-plugins control verb, and confirms all eleven observer hook registrations. An installed Hermes row exposes a separate Reload plugin action. Inspection and ordinary polling never trigger reload. Unsupported, absent or unconfirmed Gateways keep an honest installed-only status; no AI message, tool invocation, approval or Gateway restart is sent. Observer workers drain and retire on plugin unload, with their exit callbacks released. Release verification and live local activation results are recorded in the external build report.
+
+
+## 0.4.0 Hong Kong day, harbour personas and observation reliability — 2026-10-16
+
+The current release adds an explicit `Asia/Hong_Kong` clock with five decorative day phases, cyclic continuous palettes, a visible sun/moon, clouds, city lights, reflections and a small ferry. Glass masks retain the timber mullions, sill and planting. The door's glass also changes with the same palette. Previewing a phase keeps the actual HK clock and is explicitly marked; Back to now restores automatic time. Decorative loops pause when hidden, in reduced motion and in low power. Native screenshots were inspected and the pane masks corrected against the original background.
+
+Optional harbour names map full provider/actor identity to 8,192 bilingual combinations. Classic identity mapping remains unchanged and visible in task details, alongside a fixed decorative personality and keepsake. The explicit local greeting uses an authored reaction and retains three seconds of reading time, including static modes; it cannot send a tool message or change observed state. Existing task text remains literal. Three authored synthetic stories add nine concrete tasks and failure/repair/retry, independently waiting actors and explicit lifecycle endings. Switching stories cancels previous timers and replaces the cast.
+
+The bridge previously reset its offset immediately when a spool inode changed, losing unread records still available in `.jsonl.1`. It now drains the matching retained inode first, retaining byte offset and partial UTF-8 state while keeping the 64 KiB per-poll bound. Regressions cover 600 queued records without loss/duplication, a rename/create gap, split Chinese text, unrelated or symbolic backups, malformed/oversized records and isolation of fragments across file identities. Retention is still finite: data already overwritten beyond the current and one retained spool cannot be reconstructed.
+
+Validation for 0.4.0:
+
+- 320 Node regression tests pass locally. The same locked install and native-helper rebuild are also exercised from a clean source checkout with Node 24.18.0 and without restricted artwork or an Electron download. Artwork identity and pose coverage use the tracked manifest; restored local SVGs retain their actual-file/security checks.
+- Existing Electron 41.10.4 renderer suite: 28 checks pass with no renderer errors. Visitor interruption/hidden/reduced-motion stress: six checks pass. New native suites cover all five day previews, real clock and reset focus, responsive controls, stable bilingual aliases, local greetings, story selection/reload and unanswered questions.
+- Apple Silicon 0.4.0 app builds. Bundle checks compare 127 packaged source files, 50 required runtime paths, native lock helper and macOS 13 support. The packaged hook returns only `{}` and emits a normalized event in an isolated temporary directory.
+- Packaged protocol replay delivers 60 synthetic events, verifies 332 actor-state assertions and all 28 catalog provider dialects, including native locks and TOML configuration fixtures. This is not a claim that all 28 live clients were exercised. No live hook configuration or approval setting was changed.
+- The Office quality workflow runs on main pushes and pull requests, with immutable verified action revisions, minimum read permissions and bounded execution. Remote run status is available in GitHub Actions.
+
+All local screenshots and app build artifacts remain outside committed source; restricted character artwork and the original app icon are not published to GitHub.

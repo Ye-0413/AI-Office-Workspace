@@ -156,7 +156,7 @@ test('all ten dialogue contexts can be reached and normal roaming never repeats 
   assert.deepEqual([...zones].sort(), ['archive', 'bench', 'board', 'desk', 'door', 'front', 'library', 'plant', 'sofa', 'window']);
 });
 
-test('rare easter eggs have at least three ordinary stops between them and all poses exist', () => {
+test('rare easter eggs have at least three ordinary stops between them and all poses are declared artwork', () => {
   const { model, enter, tick } = fixture({ random: () => 0, arrivalDelayMs: 0,
     dwellMinMs: 1, dwellMaxMs: 1 });
   let state = enter(); const eggs = [];
@@ -165,8 +165,14 @@ test('rare easter eggs have at least three ordinary stops between them and all p
     model.arrived(state.stopSerial, state.generation); state = tick(1);
   }
   assert.deepEqual(eggs, [0, 4, 8]);
+  const manifest = require('../assets/avatars.manifest.json');
+  const declared = new Set(manifest.files.map(file => file.destination));
+  const avatars = path.join(__dirname, '../assets/avatars');
   for (const filename of [...STOPS.flatMap(stop => stop.poses), ...EASTER_EGGS.map(egg => egg.pose)]) {
-    assert.ok(fs.existsSync(path.join(__dirname, '../assets/avatars', filename)), filename);
+    assert.ok(declared.has('avatars/' + filename), filename + ' must be declared in the tracked artwork manifest');
+    // Restricted artwork is optional in a source checkout. When restored
+    // locally, keep checking that every referenced pose is actually available.
+    if (fs.existsSync(avatars)) assert.ok(fs.statSync(path.join(avatars, filename)).isFile(), filename);
   }
 });
 

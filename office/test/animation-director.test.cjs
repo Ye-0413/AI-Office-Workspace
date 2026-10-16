@@ -11,19 +11,25 @@ const session = (activity = 'coding', patch = {}) => ({ id: 'codex:actor-a', ses
 const end = (patch = {}) => ({ eventId: 'result-a', event: 'tool-end', at: now - 500, activity: 'planning', outcome: 'success', evidence: { rawEvent: 'PostToolUse' }, ...patch });
 const phasePlans = (value, language = 'zh') => Array.from({ length: 9 }, (_, index) => Director.plan(value, { now: now + index * Director.PHASE_MS, language }));
 
-test('all 50 original SVGs are accounted for; every selected asset exists and works without an embedded script', () => {
+test('all 50 original SVGs are accounted for; selected assets are declared and restored SVGs stay isolated', () => {
   const directory = path.join(__dirname, '..', 'assets', 'avatars');
-  const original = fs.readdirSync(directory).filter(name => /^clawd.*\.svg$/.test(name)).sort();
+  const manifest = require('../assets/avatars.manifest.json');
+  const original = manifest.files.filter(file => /^avatars\/clawd.*\.svg$/.test(file.destination)).map(file => path.posix.basename(file.destination)).sort();
   const selected = Object.values(Director.ASSETS);
   const excluded = Object.keys(Director.EXCLUDED);
   assert.equal(original.length, 50);
   assert.equal(new Set([...selected, ...excluded]).size, 50);
   assert.deepEqual([...new Set([...selected, ...excluded])].sort(), original);
   assert.ok(selected.length >= 20, 'use a meaningful part of the original animation library');
-  for (const filename of selected) {
-    const content = fs.readFileSync(path.join(directory, filename), 'utf8');
-    assert.match(content, /<svg\b/);
-    assert.doesNotMatch(content, /<script\b/i, filename + ' must animate as an isolated img');
+  // A clean source checkout has the manifest without restricted SVGs. Keep
+  // validating actual restored artwork when an authorized local copy exists.
+  if (fs.existsSync(directory)) {
+    assert.deepEqual(fs.readdirSync(directory).filter(name => /^clawd.*\.svg$/.test(name)).sort(), original);
+    for (const filename of selected) {
+      const content = fs.readFileSync(path.join(directory, filename), 'utf8');
+      assert.match(content, /<svg\b/);
+      assert.doesNotMatch(content, /<script\b/i, filename + ' must animate as an isolated img');
+    }
   }
 });
 

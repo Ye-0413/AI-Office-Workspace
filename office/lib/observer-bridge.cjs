@@ -392,15 +392,25 @@ function createObserverBridge(options = {}) {
     let fd;
     try {
       safeDirectory(dataDir); safeDirectory(path.join(dataDir, 'events'));
-      const stat = lstat(spool(provider));
-      if (!stat) { faults.delete(provider); return; }
-      if (!stat.isFile() || stat.isSymbolicLink()) throw new Error('活动记录不是普通文件，已停止读取');
+      let file = spool(provider), stat = lstat(file);
+      if (stat && (!stat.isFile() || stat.isSymbolicLink())) throw new Error('活动记录不是普通文件，已停止读取');
       faults.delete(provider);
       const position = positions.get(provider);
-      const fileId = `${stat.dev}:${stat.ino}`;
+      let fileId = stat ? `${stat.dev}:${stat.ino}` : null;
+      if (position.fileId && fileId !== position.fileId) {
+        // The hook retains the previous inode as .1. Finish its unread tail
+        // before advancing to the new generation, including the rename/create
+        // gap. Match the inode rather than replaying an unrelated backup.
+        const retainedFile = `${file}.1`, retained = lstat(retainedFile);
+        if (retained && retained.isFile() && !retained.isSymbolicLink()
+          && `${retained.dev}:${retained.ino}` === position.fileId && retained.size > position.offset) {
+          file = retainedFile; stat = retained; fileId = position.fileId;
+        }
+      }
+      if (!stat) return;
       if (fileId !== position.fileId || stat.size < position.offset) Object.assign(position, { fileId, offset: 0, carry: Buffer.alloc(0), dropping: false });
       if (stat.size === position.offset) return;
-      fd = fs.openSync(spool(provider), fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0));
+      fd = fs.openSync(file, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0));
       const opened = fs.fstatSync(fd);
       if (opened.ino !== stat.ino || opened.dev !== stat.dev) return;
       const buffer = Buffer.alloc(Math.min(MAX_READ, Math.max(0, stat.size - position.offset)));
