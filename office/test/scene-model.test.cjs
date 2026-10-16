@@ -358,7 +358,7 @@ test('identity registries are bounded to 2048 entries and live/demo instances ca
   assert.equal(demo.get(current), name, 'same identity derives the same name even across independent registries');
 });
 
-const CLOCK_RESERVED = [{ left: 470, top: 65, right: 830, bottom: 170 }];
+const CLOCK_RESERVED = Scene.CLOCK_RESERVED;
 function assertReadableLayout(page, options) {
   assert.equal(page.layoutFits, true);
   assert.equal(page.seats.size, page.visible.length);

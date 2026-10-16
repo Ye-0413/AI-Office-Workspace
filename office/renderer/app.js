@@ -24,7 +24,7 @@
   const cloneLedger = Clones.createLedger();
   const restedClones = new Set();
   const paletteRegistry = Family.createPaletteRegistry();
-  const CLOCK_RESERVED = [{ left: 470, top: 65, right: 830, bottom: 170 }];
+  const CLOCK_RESERVED = Scene.CLOCK_RESERVED;
   const ENTRY_POINT = { x: 87, y: 78, zone: 'exit' };
   const traffic = Traffic.createCoordinator({ reservedRects: CLOCK_RESERVED, gap: Scene.ACTOR_GAP, limit: 64,
     legalPoint: (point, actor) => Scene.legalActorPoint(point, { ...actor, reservedRects: CLOCK_RESERVED }) });

@@ -1,0 +1,248 @@
+{
+  "version": "0.8.1",
+  "publicBody": "original capsule robot; no external sprite references",
+  "source": {
+    "model": "office/lib/avatar-performance-model.js",
+    "renderer": "office/renderer/avatar-performance.js",
+    "css": "office/renderer/avatar-performance.css"
+  },
+  "sourceHashes": {
+    "office/renderer/avatar-performance.js": "eea6f0cefb4307a81b90f99c95e908aad0c931cdf03d50108ea590170d858310",
+    "office/renderer/avatar-performance.css": "b172979e1f35fc7f4bbbeea716f8e7b391437633fddea309e033cfb02eb3e7a5",
+    "docs/animations/preview-body.js": "62d91da1250ba740843f29f9b69cd2ebb4a85a2c04e370a6b12be1a577a60ff6"
+  },
+  "previewTiming": "12-second synchronized cycles; application timing is unchanged",
+  "assets": [
+    {
+      "file": "overview.gif",
+      "programs": [
+        "read-scroll",
+        "search-catalogue",
+        "plan-temple",
+        "code-debug",
+        "design-layout",
+        "test-cases",
+        "build-fit",
+        "run-log",
+        "wait-tray",
+        "ask-point-line",
+        "error-trace"
+      ],
+      "width": 1000,
+      "height": 718,
+      "frames": 144,
+      "fps": 12,
+      "seconds": 12,
+      "bytes": 1264208
+    },
+    {
+      "file": "reading.gif",
+      "programs": [
+        "read-turn",
+        "read-annotate",
+        "read-compare",
+        "read-scroll",
+        "read-outline",
+        "read-footnote",
+        "read-bookmark",
+        "read-diagram"
+      ],
+      "width": 1000,
+      "height": 508,
+      "frames": 144,
+      "fps": 12,
+      "seconds": 12,
+      "bytes": 1081176
+    },
+    {
+      "file": "searching.gif",
+      "programs": [
+        "search-sweep",
+        "search-index",
+        "search-compare",
+        "search-catalogue",
+        "search-map",
+        "search-clues",
+        "search-shelves",
+        "search-query"
+      ],
+      "width": 1000,
+      "height": 508,
+      "frames": 144,
+      "fps": 12,
+      "seconds": 12,
+      "bytes": 1191416
+    },
+    {
+      "file": "planning.gif",
+      "programs": [
+        "plan-chin",
+        "plan-pencil",
+        "plan-map",
+        "plan-temple",
+        "plan-decompose",
+        "plan-sequence",
+        "plan-branches",
+        "plan-trace"
+      ],
+      "width": 1000,
+      "height": 508,
+      "frames": 144,
+      "fps": 12,
+      "seconds": 12,
+      "bytes": 1182250
+    },
+    {
+      "file": "coding.gif",
+      "programs": [
+        "code-burst",
+        "code-pointer",
+        "code-review",
+        "code-debug",
+        "code-refactor",
+        "code-terminal",
+        "code-patch",
+        "code-document"
+      ],
+      "width": 1000,
+      "height": 508,
+      "frames": 144,
+      "fps": 12,
+      "seconds": 12,
+      "bytes": 1239125
+    },
+    {
+      "file": "designing.gif",
+      "programs": [
+        "design-brush",
+        "design-swatches",
+        "design-ruler",
+        "design-layout",
+        "design-compass",
+        "design-type",
+        "design-trace",
+        "design-palette"
+      ],
+      "width": 1000,
+      "height": 508,
+      "frames": 144,
+      "fps": 12,
+      "seconds": 12,
+      "bytes": 1054135
+    },
+    {
+      "file": "testing.gif",
+      "programs": [
+        "test-measure",
+        "test-notes",
+        "test-inspect",
+        "test-cases",
+        "test-boundary",
+        "test-calibrate",
+        "test-reproduce",
+        "test-compare"
+      ],
+      "width": 1000,
+      "height": 508,
+      "frames": 144,
+      "fps": 12,
+      "seconds": 12,
+      "bytes": 1237170
+    },
+    {
+      "file": "building.gif",
+      "programs": [
+        "build-wrench",
+        "build-align",
+        "build-blueprint",
+        "build-fit",
+        "build-sort",
+        "build-wire",
+        "build-rotate",
+        "build-stack"
+      ],
+      "width": 1000,
+      "height": 508,
+      "frames": 144,
+      "fps": 12,
+      "seconds": 12,
+      "bytes": 1092258
+    },
+    {
+      "file": "running.gif",
+      "programs": [
+        "run-watch",
+        "run-notes",
+        "run-keyboard",
+        "run-log",
+        "run-scroll",
+        "run-monitor",
+        "run-reference",
+        "run-trace"
+      ],
+      "width": 1000,
+      "height": 508,
+      "frames": 144,
+      "fps": 12,
+      "seconds": 12,
+      "bytes": 1205537
+    },
+    {
+      "file": "waiting-tool.gif",
+      "programs": [
+        "wait-chin",
+        "wait-listen",
+        "wait-console",
+        "wait-tray",
+        "wait-headset",
+        "wait-bookmark",
+        "wait-pencil-roll",
+        "wait-wrist"
+      ],
+      "width": 1000,
+      "height": 508,
+      "frames": 144,
+      "fps": 12,
+      "seconds": 12,
+      "bytes": 836328
+    },
+    {
+      "file": "waiting-user.gif",
+      "programs": [
+        "ask-raised",
+        "ask-card",
+        "ask-present",
+        "ask-point-line",
+        "ask-tilt-card",
+        "ask-pencil-rest",
+        "ask-open-folder",
+        "ask-hand-to-heart"
+      ],
+      "width": 1000,
+      "height": 508,
+      "frames": 144,
+      "fps": 12,
+      "seconds": 12,
+      "bytes": 842936
+    },
+    {
+      "file": "error.gif",
+      "programs": [
+        "error-scratch",
+        "error-review",
+        "error-magnify",
+        "error-trace",
+        "error-overlay",
+        "error-reference",
+        "error-mark-place",
+        "error-set-down"
+      ],
+      "width": 1000,
+      "height": 508,
+      "frames": 144,
+      "fps": 12,
+      "seconds": 12,
+      "bytes": 1132819
+    }
+  ]
+}

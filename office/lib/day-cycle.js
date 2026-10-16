@@ -15,8 +15,12 @@
     night: Object.freeze(['夜晚', 'Night'])
   });
   const PREVIEW_HOURS = Object.freeze({ dawn: 6, morning: 9, afternoon: 14, sunset: 18, night: 22 });
+  const MONTHS_EN = Object.freeze(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']);
+  const WEEKDAYS_ZH = Object.freeze({ Mon: '星期一', Tue: '星期二', Wed: '星期三', Thu: '星期四', Fri: '星期五', Sat: '星期六', Sun: '星期日' });
   const formatter = new Intl.DateTimeFormat('en-GB', {
-    timeZone: TIME_ZONE, hourCycle: 'h23', hour: '2-digit', minute: '2-digit', second: '2-digit'
+    timeZone: TIME_ZONE, calendar: 'gregory', numberingSystem: 'latn',
+    year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short',
+    hourCycle: 'h23', hour: '2-digit', minute: '2-digit', second: '2-digit'
   });
   // Keyframes describe art direction rather than astronomical sunrise times.
   // Duplicate midnight endpoints make every rendered value continuous at 00:00.
@@ -53,6 +57,9 @@
     if (!Number.isFinite(date.getTime())) throw new TypeError('A valid timestamp is required for the Hong Kong day');
     const parts = Object.fromEntries(formatter.formatToParts(date).filter(part => part.type !== 'literal').map(part => [part.type, part.value]));
     const clock = parts.hour + ':' + parts.minute;
+    const dateIso = parts.year.padStart(4, '0') + '-' + parts.month + '-' + parts.day;
+    const dateZh = parts.year + '年' + Number(parts.month) + '月' + Number(parts.day) + '日 ' + WEEKDAYS_ZH[parts.weekday];
+    const dateEn = parts.weekday + ', ' + Number(parts.day) + ' ' + MONTHS_EN[Number(parts.month) - 1] + ' ' + parts.year;
     const liveHour = Number(parts.hour) + Number(parts.minute) / 60 + Number(parts.second) / 3600 + date.getUTCMilliseconds() / 3600000;
     const selected = options && MODES.includes(options.sceneTime) ? options.sceneTime
       : options && options.night === true ? 'night' : 'auto';
@@ -64,7 +71,7 @@
     const amount = smooth((hour - start[0]) / (end[0] - start[0]));
     const orbit = (hour - 12) / 24 * Math.PI * 2;
     return {
-      phase, clock, labelZh: LABELS[phase][0], labelEn: LABELS[phase][1],
+      phase, clock, dateIso, dateZh, dateEn, labelZh: LABELS[phase][0], labelEn: LABELS[phase][1],
       preview, night: phase === 'night',
       skyTop: mixColor(start[1], end[1], amount), skyBottom: mixColor(start[2], end[2], amount),
       water: mixColor(start[3], end[3], amount), skyline: mixColor(start[4], end[4], amount),

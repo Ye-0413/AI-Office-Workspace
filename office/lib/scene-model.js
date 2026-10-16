@@ -12,6 +12,7 @@
   const ALL_ROOMS = '__office_all_projects__';
   const ACTOR_GAP = 12;
   const ACTOR_VIEWPORT = Object.freeze({ left: 12, top: 72, right: 1268, bottom: 662 });
+  const CLOCK_RESERVED = Object.freeze([Object.freeze({ left: 470, top: 65, right: 830, bottom: 175 })]);
   // Local CSS pixels around the actor's feet. This includes the clipped body,
   // all three name-tag lines, its family border and the selected keepsake.
   const ACTOR_FOOTPRINT = Object.freeze({
@@ -469,5 +470,5 @@
     return chars.length > length ? chars.slice(0, length).join('') + '…' : title;
   }
 
-  return { WORLD, CAPACITY, ALL_ROOMS, ZONES, SPECS, OBSTACLES, ACTOR_GAP, ACTOR_VIEWPORT, ACTOR_FOOTPRINT, actorScale, actorBounds, boundsOverlap, actorsOverlap, legalActorPoint, timestamp, distance, projectKey, inRoom, providerName, identityName, createIdentityRegistry, isClosed, needsAttention, activitySpec, roomsFor, chooseRoom, pageSessions, assignSeats, route, segmentHitsRect, shortTitle };
+  return { WORLD, CAPACITY, ALL_ROOMS, ZONES, SPECS, OBSTACLES, ACTOR_GAP, ACTOR_VIEWPORT, CLOCK_RESERVED, ACTOR_FOOTPRINT, actorScale, actorBounds, boundsOverlap, actorsOverlap, legalActorPoint, timestamp, distance, projectKey, inRoom, providerName, identityName, createIdentityRegistry, isClosed, needsAttention, activitySpec, roomsFor, chooseRoom, pageSessions, assignSeats, route, segmentHitsRect, shortTitle };
 });

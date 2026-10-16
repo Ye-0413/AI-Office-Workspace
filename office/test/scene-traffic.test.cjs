@@ -150,7 +150,7 @@ test('a reserved visual clock rectangle is avoided along the whole path', () => 
   }
 });
 test('a proven stationary doorway blocker yields, newcomer walks in, then blocker returns to its real station', () => {
-  const reservedRects = [{ left: 470, top: 65, right: 830, bottom: 170 }];
+  const reservedRects = Scene.CLOCK_RESERVED;
   function run(reverse) {
     const traffic = Traffic.createCoordinator({ reservedRects, gap: Scene.ACTOR_GAP,
       legalPoint: (p, a) => Scene.legalActorPoint(p, { ...a, reservedRects }) });
