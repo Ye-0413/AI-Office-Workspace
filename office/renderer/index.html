@@ -14,6 +14,8 @@
   <script defer src="../lib/family-model.js"></script>
   <script defer src="../lib/visitor-model.js"></script>
   <script defer src="../lib/visitor-dialogue.js"></script>
+  <script defer src="../lib/day-cycle.js"></script>
+  <script defer src="day-scenery.js"></script>
   <script defer src="idle-visitor.js"></script>
   <script defer src="app.js"></script>
 </head>
@@ -22,9 +24,10 @@
     <div id="world-frame" class="world-frame">
       <div id="world" class="world">
         <img id="room-art" class="room-art" src="../assets/office-room.jpg" alt="迷你办公室，书架、构思白板、构建实验台、代码工位、咖啡休息角和成果架围绕中央通路" draggable="false">
-        <div id="studio-door" class="studio-door" data-open="false" aria-hidden="true"><span class="door-darkness"></span><span class="door-leaf"></span><span class="door-light"></span></div>
+        <div id="studio-door" class="studio-door" data-open="false" aria-hidden="true"><span class="door-darkness"></span><span class="door-leaf"><span class="door-window"><i class="door-city"></i><i class="door-window-lights"></i></span></span><span class="door-light"></span></div>
         <div class="scene-night" aria-hidden="true"></div>
         <div class="scene-lamplight" aria-hidden="true"></div>
+        <div id="window-scenery" class="window-scenery" aria-hidden="true"></div>
         <div class="window-weather" aria-hidden="true"><div class="rain"></div></div>
         <div class="dust" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
 
@@ -53,6 +56,7 @@
     <header class="topbar">
       <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i></span><span>小小工作室</span><span class="brand-sub">AI MINI OFFICE</span></div>
       <div id="room-switcher" class="room-switcher" hidden><label for="project-select" class="sr-only">项目房间</label><select id="project-select" aria-label="项目房间"></select><button id="other-attention" class="attention-button" type="button" hidden></button></div>
+      <button id="day-clock" class="day-clock" type="button"><span class="day-clock-icon" aria-hidden="true">☀</span><time id="hk-clock">香港时间</time><span id="day-phase"></span></button>
       <div class="top-actions"><button id="language-button" class="language-button" type="button" aria-label="切换到 English">EN</button><button id="mode-button" type="button" class="mode-button"><span class="mode-dot" aria-hidden="true"></span><span id="mode-label">实时观察</span></button><button id="connections-button" type="button" class="icon-button" aria-label="连接 AI 工具" title="连接 AI 工具"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3v5m8-5v5M6 8h12v3a6 6 0 0 1-6 6v4m-6-13v3a6 6 0 0 0 6 6"/></svg><span id="connection-count" class="connection-count">0</span></button><button id="settings-button" type="button" class="icon-button" aria-label="房间偏好与显示器" title="房间偏好与显示器"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/><circle cx="12" cy="12" r="5"/></svg></button></div>
     </header>
 
@@ -89,7 +93,8 @@
 
     <dialog id="settings-dialog" class="office-dialog settings-dialog" aria-labelledby="settings-title">
       <div class="dialog-header"><div><span class="dialog-eyebrow">把小房间放到喜欢的地方</span><h2 id="settings-title">房间偏好</h2></div><button type="button" class="dialog-close" data-close-dialog aria-label="关闭房间偏好">×</button></div>
-      <div class="setting-row"><div><label for="setting-night">晚间灯光</label><span>温暖的台灯，安静的夜色。</span></div><input id="setting-night" type="checkbox"></div>
+      <div class="setting-row scene-time-setting"><div><label for="setting-sceneTime">香港的一天</label><span>依照香港时间变换天色，也可以预览喜欢的时段。</span></div><select id="setting-sceneTime"><option value="auto">跟随香港时间</option><option value="dawn">晨曦</option><option value="morning">上午</option><option value="afternoon">午后</option><option value="sunset">日落</option><option value="night">夜晚</option></select></div>
+      <button id="day-reset" class="day-reset" type="button" hidden>回到此刻</button>
       <div class="setting-row"><div><label for="setting-rain">窗外细雨</label><span>只改变环境，不代表任务状态。</span></div><input id="setting-rain" type="checkbox"></div>
       <div class="setting-row"><div><label for="setting-idleVisitor">闲时串门</label><span>安静时有访客来逛逛；真实任务入驻就让路。</span></div><input id="setting-idleVisitor" type="checkbox"></div>
       <div class="setting-row"><div><label for="setting-reducedMotion">减少动作</label><span>保留位置与状态，暂停角色循环及装饰动作。</span></div><input id="setting-reducedMotion" type="checkbox"></div>

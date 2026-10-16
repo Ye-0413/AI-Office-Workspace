@@ -13,9 +13,10 @@
   const actorsLayer = $('actors');
   const actors = new Map();
   const archivedTurns = new Map();
-  const settingsDefaults = { rain: false, night: false, reducedMotion: false, lowPower: false, idleVisitor: true, sound: false, selectedProject: '', language: 'zh' };
+  const settingsDefaults = { rain: false, night: false, sceneTime: 'auto', reducedMotion: false, lowPower: false, idleVisitor: true, sound: false, selectedProject: '', language: 'zh' };
   let settings = { ...settingsDefaults };
   let language = 'zh';
+  const scenery = window.OfficeDayScenery.create({ office, world, layer: $('window-scenery') });
   const attendanceModels = { live: Attendance.createAttendance(), demo: Attendance.createAttendance() };
   let attendance = { present: [], entering: [], leaving: [], retired: [] };
   const staticCopy = [];
@@ -769,10 +770,11 @@
     language = settings.language === 'en' ? 'en' : 'zh';
     applyLanguage();
     office.dataset.rain = String(settings.rain);
-    office.dataset.night = String(settings.night);
+    scenery.update(settings, language);
     office.dataset.reducedMotion = String(reduced());
     office.dataset.lowPower = String(settings.lowPower);
-    for (const key of ['night', 'rain', 'reducedMotion', 'lowPower', 'idleVisitor']) $('setting-' + key).checked = Boolean(settings[key]);
+    for (const key of ['rain', 'reducedMotion', 'lowPower', 'idleVisitor']) $('setting-' + key).checked = Boolean(settings[key]);
+    $('setting-sceneTime').value = settings.sceneTime;
     for (const actor of actors.values()) {
       if (reduced() && actor.motion) {
         const target = actor.target;
@@ -836,6 +838,9 @@
   $('provider-search').addEventListener('input', renderConnections);
   $('language-button').addEventListener('click', () => saveSettings({ language: language === 'en' ? 'zh' : 'en' }));
   $('settings-button').addEventListener('click', () => openDialog('settings-dialog'));
+  $('day-clock').addEventListener('click', () => { openDialog('settings-dialog'); $('setting-sceneTime').focus(); });
+  $('setting-sceneTime').addEventListener('change', event => saveSettings({ sceneTime: event.target.value }));
+  $('day-reset').addEventListener('click', () => { $('setting-sceneTime').focus(); saveSettings({ sceneTime: 'auto' }); });
   $('roster-button').addEventListener('click', () => openDialog('roster-dialog'));
   $('inspect-helper').addEventListener('click', () => { const id = $('inspect-helper').dataset.parentId; if (id) selectSession(id); });
   $('mode-button').addEventListener('click', () => changeMode(snapshot.mode === 'demo' ? 'live' : 'demo'));
@@ -856,7 +861,7 @@
   for (const [id, action] of [['demo-play', null], ['demo-next', 'advance'], ['demo-reset', 'reset']]) {
     $(id).addEventListener('click', () => attempt(async () => { await call('demoAction', action || (snapshot.demo.running ? 'pause' : 'play')); await refreshSnapshot(); }));
   }
-  for (const key of ['night', 'rain', 'reducedMotion', 'lowPower', 'idleVisitor']) $('setting-' + key).addEventListener('change', (event) => saveSettings({ [key]: event.target.checked }));
+  for (const key of ['rain', 'reducedMotion', 'lowPower', 'idleVisitor']) $('setting-' + key).addEventListener('change', (event) => saveSettings({ [key]: event.target.checked }));
   $('move-display').addEventListener('click', () => attempt(async () => {
     const value = $('display-select').value;
     if (!value) return;
@@ -876,7 +881,7 @@
     office.dataset.hidden = String(document.hidden);
     for (const actor of actors.values()) setPose(actor, actor.wantedAsset || actor.spec.asset);
     visitor.tick();
-    if (!document.hidden) ensureMotionTicker();
+    if (!document.hidden) { scenery.update(settings, language); ensureMotionTicker(); }
   });
   mediaReduce.addEventListener('change', () => applySettings(settings));
   const observer = new ResizeObserver(refreshScale);
@@ -904,6 +909,7 @@
   }).catch((error) => { showError(error); applySettings(settings); render(); });
   const clockTimer = setInterval(() => {
     if (document.hidden) return;
+    scenery.update(settings, language);
     renderInspector();
     const roomSessions = snapshot.sessions.filter((session) => Scene.projectKey(session) === selectedProject && !Scene.isClosed(session));
     const recent = roomSessions.reduce((latest, session) => Math.max(latest, Scene.timestamp(session.lastEventAt)), 0);
@@ -912,6 +918,7 @@
   window.addEventListener('beforeunload', () => {
     destroyed = true;
     visitor.destroy();
+    scenery.destroy();
     clearInterval(clockTimer);
     clearTimeout(frameTimer);
     clearTimeout(doorTimer);

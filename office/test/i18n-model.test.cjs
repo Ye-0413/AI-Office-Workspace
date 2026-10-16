@@ -17,6 +17,23 @@ test('stable keys select supported locales and leave missing keys explicit', () 
   assert.ok(Object.isFrozen(I18n));
 });
 
+test('Hong Kong time controls and all phase labels have keyed and static English copy', () => {
+  const entries = [
+    ['title', '香港的一天', 'A day in Hong Kong'],
+    ['description', '依照香港时间变换天色，也可以预览喜欢的时段。', 'The light follows Hong Kong time. Preview any part of the day.'],
+    ['auto', '跟随香港时间', 'Follow Hong Kong time'], ['dawn', '晨曦', 'Dawn'],
+    ['morning', '上午', 'Morning'], ['afternoon', '午后', 'Afternoon'],
+    ['sunset', '日落', 'Sunset'], ['night', '夜晚', 'Night'],
+    ['clock', '香港时间', 'Hong Kong time'], ['preview', '时段预览', 'Time preview'],
+    ['live', '回到此刻', 'Back to now']
+  ];
+  for (const [key, zh, en] of entries) {
+    assert.equal(I18n.t('zh', 'dayCycle.' + key), zh);
+    assert.equal(I18n.t('en', 'dayCycle.' + key), en);
+    assert.equal(I18n.translate('en', zh), en);
+  }
+});
+
 test('fixed interface copy translates without changing Chinese output or whitespace', () => {
   assert.equal(I18n.translate('en', '连接 AI 工具'), 'Connect AI tools');
   assert.equal(I18n.translate('en', '\n  小小工作室，等大家入驻。  '), '\n  A little office, ready for your agents.  ');

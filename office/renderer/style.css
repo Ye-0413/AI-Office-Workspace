@@ -113,3 +113,39 @@
 .office[data-hidden="true"] .visitor .actor-bubble{opacity:0}
 .visitor[data-zone="window"] .actor-bubble{transform:translateX(-25%)}
 .provider-actions{display:flex;flex-direction:column;align-items:stretch;gap:5px}.provider-actions button{white-space:nowrap}
+
+/* Hong Kong's harbour stays inside the glass. Mullions and sill remain visible. */
+.window-scenery{position:absolute;left:0;top:0;width:12.8%;height:45%;z-index:2;pointer-events:none;overflow:hidden;clip-path:polygon(0 9%,100% 0,100% 84%,0 100%);mask-image:linear-gradient(90deg,#000 0 39%,transparent 39% 43%,#000 43% 78%,transparent 78% 82%,#000 82%);opacity:0;transition:opacity 250ms var(--ease-out)}
+.window-scenery[data-ready="true"]{opacity:1}
+.harbour-view{position:absolute;inset:0;opacity:0;transition:opacity 250ms var(--ease-out);mask-image:linear-gradient(#000 0 66%,#000b 82%,transparent 100%)}
+.harbour-view[data-visible="true"]{opacity:1}.harbour-view svg{display:block;width:100%;height:100%}
+.sky-top{stop-color:var(--skyTop)}.sky-bottom{stop-color:var(--skyBottom)}.water-top{stop-color:var(--water)}.harbour-city{fill:var(--skyline)}.harbour-mountain{fill:var(--skyline);opacity:.42}
+.harbour-sun,.harbour-moon,.harbour-stars,.harbour-lights,.harbour-reflections{transition:opacity 250ms var(--ease-out)}
+.harbour-cloud{animation:harbour-cloud 90s linear infinite}.cloud-front{animation-duration:110s;animation-delay:-35s}.cloud-back{animation-delay:-25s}
+.harbour-ferry{animation:harbour-ferry 64s linear infinite;animation-delay:-18s}
+@keyframes harbour-cloud{from{transform:translateX(-80px)}to{transform:translateX(200px)}}
+@keyframes harbour-ferry{from{transform:translate(-45px,258px)}to{transform:translate(210px,247px)}}
+.day-clock{-webkit-app-region:no-drag;display:flex;align-items:center;gap:7px;margin-left:auto;flex:none;border:1px solid #ddc69b6b;border-radius:4px;background:#403126c9;box-shadow:0 2px 6px #22180d20;color:#f7e4be;padding:7px 9px;font-size:10px;line-height:1.3;min-height:30px}
+.day-clock time{font-variant-numeric:tabular-nums;font-weight:600;letter-spacing:.025em}.day-clock-icon{color:#f1cf8d;font-size:14px}.day-clock+.top-actions{margin-left:0}
+#day-phase{color:#e2ccaa}.scene-time-setting{align-items:flex-start}.scene-time-setting>div{max-width:200px}.scene-time-setting select{max-width:155px;flex:none;min-height:33px;padding:6px 8px;border:1px solid #bda276;border-radius:3px;background:#fff3d7;color:#614b30;font-size:11px;color-scheme:light}
+.day-reset{display:block;border:0;background:transparent;color:#735936;padding:9px 0 0;font-size:11px;text-decoration:underline;text-underline-offset:3px}
+.office[data-reduced-motion="true"] .harbour-cloud,.office[data-reduced-motion="true"] .harbour-ferry,.office[data-low-power="true"] .harbour-cloud,.office[data-low-power="true"] .harbour-ferry{animation-play-state:paused}
+.office[data-hidden="true"] .harbour-cloud,.office[data-hidden="true"] .harbour-ferry{animation-play-state:paused}
+.office[data-reduced-motion="true"] .harbour-view,.office[data-reduced-motion="true"] .window-scenery{transition:opacity 150ms ease}
+@media(hover:hover) and (pointer:fine){.day-clock:hover{background:#5b452fe8;border-color:#e7d3a6}.day-reset:hover{color:#392a19}}
+@media(prefers-reduced-motion:reduce){.harbour-cloud,.harbour-ferry{animation-play-state:paused}.harbour-view,.window-scenery{transition:opacity 150ms ease}}
+@media(max-width:1050px){.day-clock{gap:5px;padding:6px 7px}.day-clock #day-phase{display:none}.topbar{gap:9px}}
+@media(max-width:800px){.day-clock{font-size:9px;padding:6px}.day-clock-icon{display:none}.brand{max-width:120px;overflow:hidden}}
+
+/* Six glass panes follow the original timber perspective, leaving frames and
+   the foreground planting untouched. Coordinates are in the 1280px world. */
+.window-scenery,.window-weather{clip-path:path('M0 0L50 0L50 9L0 29Z M59 0L73 0L59 6Z M0 64L53 44L53 120L0 142Z M61 41L104 24L104 100L61 117Z M112 22L130 15L130 89L112 96Z M0 151L53 129L53 242L0 267Z M61 126L104 109L104 216L61 238Z M112 105L130 98L130 155L112 162Z');mask-image:none}
+.harbour-view{mask-image:linear-gradient(#000 0 46%,#000e 55%,#0008 71%,transparent 87%)}
+.harbour-view svg{shape-rendering:crispEdges}
+.harbour-view:not([data-visible="true"]) .harbour-cloud,.harbour-view:not([data-visible="true"]) .harbour-ferry{animation-play-state:paused}
+
+.door-window{position:absolute;left:19.5%;top:6.2%;width:45%;height:55%;overflow:hidden;background:linear-gradient(var(--door-sky-top),var(--door-sky));clip-path:polygon(0 0,100% 0,100% 100%,0 100%);mask-image:linear-gradient(90deg,#000 0 47%,transparent 47% 55%,#000 55%),linear-gradient(#000 0 28%,transparent 28% 34%,#000 34% 62%,transparent 62% 68%,#000 68%);mask-composite:intersect;pointer-events:none}
+.door-city{position:absolute;inset:20% 0 0;background:var(--door-city);clip-path:polygon(0 45%,13% 45%,13% 20%,25% 20%,25% 45%,40% 45%,40% 0,44% 0,44% 10%,58% 10%,58% 30%,74% 30%,74% 20%,84% 20%,84% 45%,100% 45%,100% 100%,0 100%);opacity:.8}
+.door-window-lights{position:absolute;inset:35% 8% 8%;background:repeating-linear-gradient(0deg,transparent 0 8px,#ffe4a8 8px 10px,transparent 10px 15px);opacity:0;mask-image:repeating-linear-gradient(90deg,#000 0 2px,transparent 2px 6px);transition:opacity 250ms var(--ease-out)}
+
+.door-window{mix-blend-mode:multiply;opacity:.8}.door-city{opacity:.45}
