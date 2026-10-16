@@ -17,6 +17,9 @@ PLAN-*.md
 codex-*.md
 CHANGELOG-draft.md
 docs/**
+!docs/scenes/
+!docs/scenes/**
+docs/scenes/frames/
 !docs/animations/
 !docs/animations/**
 !docs/guides/

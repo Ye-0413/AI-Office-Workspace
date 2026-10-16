@@ -1,0 +1,32 @@
+/* A single authored hanging object; actors remain above all decoration. */
+.festival-stage{position:absolute;inset:0;z-index:5;pointer-events:none}
+.festival-widget{position:absolute;left:20%;top:17%;width:120px;height:128px;transform:translate(-50%,-50%);pointer-events:none}
+.festival-control{display:flex;align-items:center;flex-direction:column;gap:1px;width:120px;height:128px;padding:0;border:0;background:transparent;pointer-events:auto;color:#614b33;outline-offset:2px;-webkit-tap-highlight-color:transparent}
+.festival-art{display:block;flex:none;width:120px;height:110px;overflow:visible;shape-rendering:crispEdges;filter:drop-shadow(0 2px 0 #4e392d3b);pointer-events:none}
+.festival-primary{transform-box:fill-box;transform-origin:center}
+.festival-caption{display:block;width:max-content;max-width:170px;white-space:nowrap;padding:2px 5px;border:1px solid #b59a6b;border-radius:2px;background:#e8d8b7ed;color:#665037;box-shadow:0 1px 0 #60472f36;font-size:10px;line-height:13px;pointer-events:none}
+.festival-control:focus-visible{outline:2px solid #ffe7a7;border-radius:3px}
+.festival-weather{position:absolute;left:0;top:0;width:12.8%;height:45%;z-index:2;pointer-events:none;overflow:hidden;clip-path:path('M0 0L50 0L50 9L0 29Z M59 0L73 0L59 6Z M0 64L53 44L53 120L0 142Z M61 41L104 24L104 100L61 117Z M112 22L130 15L130 89L112 96Z M0 151L53 129L53 242L0 267Z M61 126L104 109L104 216L61 238Z M112 105L130 98L130 155L112 162Z')}
+.festival-weather svg{display:block;width:100%;height:100%;shape-rendering:crispEdges}
+.festival-weather[data-weather="rain"] .festival-weather-particle{animation:festival-rain 1400ms linear infinite}
+.festival-weather[data-weather="snow"] .festival-weather-particle{animation:festival-snow 6000ms linear infinite}
+.festival-weather[data-quiet="true"] .festival-weather-particle{animation:none;opacity:.65}
+.festival-chooser{position:relative;flex:none;color:#665135;-webkit-app-region:no-drag}
+.festival-summary{display:flex;align-items:center;justify-content:center;gap:4px;height:30px;min-width:55px;list-style:none;padding:0 6px;border:1px solid #c1aa7d;border-radius:3px;background:linear-gradient(#f4e9cc,#e8d9b7);color:#675133;box-shadow:inset 0 1px 0 #fff8,0 1px 1px #49311c26;font-size:10px;cursor:pointer;-webkit-app-region:no-drag}
+.festival-summary::-webkit-details-marker{display:none}.festival-summary svg{width:15px;height:15px;flex:none}
+.festival-summary:focus-visible{outline:3px solid #f6d68b;outline-offset:3px}
+.festival-panel{position:absolute;right:0;top:calc(100% + 13px);display:grid;grid-template-columns:1fr;gap:7px;width:255px;max-height:calc(100vh - 90px);overflow:auto;padding:14px 15px;border:1px solid #aa8d5d;border-radius:4px;background:repeating-linear-gradient(0deg,#7c5b3006 0 1px,transparent 1px 4px),#f0e1bd;box-shadow:0 8px 24px #34211640;-webkit-app-region:no-drag}
+.festival-heading{margin-bottom:5px;color:#604b32;font-size:14px;font-weight:600}
+.festival-field-label{font-size:11px;color:#6d5739}
+.festival-panel select{width:100%;min-width:0;min-height:33px;margin:0 0 4px;padding:5px 7px;border:1px solid #b49a70;border-radius:3px;background:#fff0d2;color:#604b32;font-size:11px;color-scheme:light;-webkit-app-region:no-drag}
+.festival-panel option{background:#fff0d2;color:#604b32}
+.festival-date,.festival-disclaimer{margin:2px 0 0;font-size:10px;line-height:1.6;color:#7f6745;overflow-wrap:anywhere}
+.festival-disclaimer{padding-top:7px;border-top:1px solid #cbb487}
+.festival-feedback{position:absolute;left:18px;bottom:107px;z-index:42;max-width:min(350px,calc(100% - 36px));padding:8px 11px;border:1px solid #bda273;border-radius:3px;background:#eee0c2f2;box-shadow:0 2px 0 #49332233;color:#655034;font-size:11px;line-height:1.6;pointer-events:none;overflow-wrap:anywhere}
+.festival-feedback:empty{display:none}
+.festival-stage[data-quiet="true"] *{transition:none!important;animation:none!important}
+@keyframes festival-rain{from{transform:translate(4px,-16px)}to{transform:translate(-4px,16px)}}
+@keyframes festival-snow{0%{transform:translate(-2px,-8px);opacity:.4}50%{transform:translate(3px,6px);opacity:1}100%{transform:translate(-1px,22px);opacity:.4}}
+@media(hover:hover) and (pointer:fine){.festival-summary:hover{background:#fff1d4;border-color:#b59964}.festival-control:hover .festival-caption{background:#fff0ce}}
+@media(max-width:800px){.festival-summary{min-width:30px;padding:0 5px}.festival-summary-text{display:none}.festival-panel{right:-50px;width:235px;max-height:calc(100vh - 83px);padding:12px}.festival-feedback{left:12px;bottom:104px;max-width:280px;font-size:10px}}
+@media(prefers-reduced-motion:reduce){.festival-weather-particle{animation:none!important;opacity:.65}.festival-stage *{transition:none!important;animation:none!important}}

@@ -16,7 +16,7 @@
   const actorsLayer = $('actors');
   const actors = new Map();
   const archivedTurns = new Map();
-  const settingsDefaults = { rain: false, night: false, sceneTime: 'auto', agentScale: 1, reducedMotion: false, lowPower: false, idleVisitor: true, sound: false, selectedProject: '', language: 'zh' };
+  const settingsDefaults = { rain: false, night: false, sceneTime: 'auto', sceneVenue: 'workshop', sceneTheme: 'auto', sceneWeather: 'auto', agentScale: 1, reducedMotion: false, lowPower: false, idleVisitor: true, sound: false, selectedProject: '', language: 'zh' };
   let settings = { ...settingsDefaults };
   let language = 'zh';
   const usageHistory = window.OfficeUsageHistory?.create({ bridge, getLanguage: () => language });
@@ -28,7 +28,7 @@
   const paletteRegistry = Family.createPaletteRegistry();
   const CLOCK_RESERVED = Scene.CLOCK_RESERVED;
   const ENTRY_POINT = { x: 87, y: 78, zone: 'exit' };
-  const traffic = Traffic.createCoordinator({ reservedRects: CLOCK_RESERVED, gap: Scene.ACTOR_GAP, limit: 64,
+  const traffic = Traffic.createCoordinator({ reservedRects: CLOCK_RESERVED, gap: Scene.ACTOR_GAP, limit: 256,
     legalPoint: (point, actor) => Scene.legalActorPoint(point, { ...actor, reservedRects: CLOCK_RESERVED }) });
   const trafficWaiters = new Map();
   let trafficTimer = 0;
@@ -49,6 +49,9 @@
   let selectedSession = '';
   let page = 0;
   let seats = new Map();
+  let uniformScale = 1;
+  const pendingArrivals = new Set();
+  let admissionFrame = 0;
   const actorFootprints = new Map();
   const footprintCache = new Map();
   const protectedEntrances = new Map();
@@ -65,6 +68,16 @@
   const observedIds = new Set();
   let familyGraph = Family.build([]);
   const visitor = window.OfficeIdleVisitor.create({ layer: $('visitors'), world, openDoor, context: () => ({ enabled: settings.idleVisitor, ready: snapshotReceived > 0, mode: snapshot.mode, busy: attendance.present.length > 0 || actors.size > 0, hidden: document.hidden, reducedMotion: reduced(), lowPower: settings.lowPower, language }) });
+  const sceneContext = () => ({ venue: settings.sceneVenue, scene: settings.sceneVenue, theme: settings.sceneTheme, weather: settings.sceneWeather,
+    language, reducedMotion: reduced(), lowPower: settings.lowPower, hidden: document.hidden, dayPhase: office.dataset.dayPhase, now: Date.now() });
+  const social = window.OfficeAgentSocial?.create({ layer: $('social-effects'), world, getActors: () => actors, getContext: sceneContext });
+  const themeEnvironment = window.OfficeThemeEnvironment?.create({ office, world, getState: sceneContext });
+  const venueStage = window.OfficeVenueStage?.create({ office, world, topbar: document.querySelector('.topbar'), getState: sceneContext,
+    onSelectVenue: id => saveSettings({ sceneVenue: id }), onInteraction: payload => social?.trigger(payload) });
+  const festivalStage = window.OfficeFestivalStage?.create({ office, world, topbar: document.querySelector('.topbar'), getState: sceneContext,
+    onSelectTheme: id => saveSettings({ sceneTheme: id }), onSelectWeather: id => saveSettings({ sceneWeather: id }), onInteraction: payload => { themeEnvironment?.trigger(payload); social?.trigger(payload); } });
+
+  office.dataset.festivals = String(Boolean(festivalStage));
 
   function tr(value) { return I18n.translate(language, String(value == null ? '' : value)); }
   function text(element, value) {
@@ -109,6 +122,7 @@
   }
   function persona(session) { return window.OfficeAgentPersona.forSession(session); }
   function displayName(session) { const p = persona(session); return language === 'en' ? p.aliasEn : p.aliasZh; }
+  function zoneName(zone) { return zone === 'stage' ? (language === 'en' ? 'All-agent floor' : '全员席位') : window.OfficeVenues?.zoneLabel(settings.sceneVenue, zone, language) || tr(Scene.ZONES[zone]?.name || ''); }
   function cloneSummary(session) { return I18n.t(language, 'family.clonesSummary', cloneLedger.stats(session.id)); }
   function archiveCount() { return selectedProject === Scene.ALL_ROOMS ? Math.min(3, [...archivedTurns.values()].reduce((sum, count) => sum + count, 0)) : archivedTurns.get(selectedProject) || 0; }
   function keepsakeIcon(session) { return ({teacup:'♨',paperboat:'⛵',bookmark:'▤',lantern:'✧',leaf:'❧',pebble:'◇',bell:'♧',pencil:'✎',shell:'⌁',star:'✦',acorn:'♧',ribbon:'⋈'})[persona(session).keepsake] || '✦'; }
@@ -116,7 +130,8 @@
   function quietSprites() { return reduced() || settings.lowPower || document.hidden; }
   function assetURL(name, replay) { return '../assets/avatars/' + name + (replay ? '?_t=' + (++spriteNonce) : ''); }
   function setPose(actor, name, replay = false) {
-    const performance = actor.performance && actor.performance.update(actor.session, { now: Date.now(), reducedMotion: reduced(), lowPower: settings.lowPower, hidden: document.hidden || actor.entryPending, walking: Boolean(actor.motion) || actor.node.dataset.walking === 'true', reaction: actor.completing || actor.node.dataset.reaction === 'true' || Boolean(actor.performanceSuspended) || cloneBusy(actor) || actor.holdingFamily, departing: actor.departing, stale: actor.spec.stale });
+    const performanceSession = actor.visualWorkActivity ? { ...actor.session, activity: actor.visualWorkActivity } : actor.session;
+    const performance = actor.performance && actor.performance.update(performanceSession, { now: Date.now(), reducedMotion: reduced(), lowPower: settings.lowPower, hidden: document.hidden || actor.entryPending, walking: Boolean(actor.motion) || actor.node.dataset.walking === 'true', reaction: false, departing: actor.departing, stale: actor.spec.stale });
     const asset = quietSprites() ? 'clawd-static-base.svg' : performance && performance.active ? performance.asset : name;
     actor.wantedAsset = name;
     const recoverBitmap = actor.image.hidden && actor.image.complete;
@@ -150,19 +165,10 @@
     $('world-frame').style.transform = 'translate(-50%,-50%) scale(' + scale + ')';
   }
   function actorTransform(point, helper) {
-    return 'translate3d(' + (point.x * 12.8).toFixed(2) + 'px,' + (point.y * 7.2).toFixed(2) + 'px,0) scale(' + Scene.actorScale(point, { helper, scale: settings.agentScale }).toFixed(4) + ')';
+    return 'translate3d(' + (point.x * 12.8).toFixed(2) + 'px,' + (point.y * 7.2).toFixed(2) + 'px,0) scale(' + uniformScale.toFixed(6) + ')';
   }
   function sceneOptions() {
-    // Keep the entrance clear even before an arrival. A temporary reservation
-    // changed the page divisor halfway through an entrance at large sizes.
-    const rootFootprints = attendance.present.filter(session => !session.parentId && Scene.inRoom(session, selectedProject)).map(session => actorFootprints.get(session.id)).filter(Boolean);
-    const footprint = rootFootprints.length ? Object.fromEntries(['left','right','top','bottom'].map(key => [key, Math.max(...rootFootprints.map(value => value[key]))])) : undefined;
-    const entryIds = new Set(attendance.present.filter(session => !session.parentId && (actors.get(session.id)?.entranceActive
-      || actors.get(session.id)?.entryPending && !actors.get(session.id)?.restoreEntry
-      || snapshotReceived > 1 && !observedIds.has(session.id))).map(session => session.id));
-    return { suppressedIds: restedClones, scale: settings.agentScale, footprints: actorFootprints, entryIds, entryPoint: ENTRY_POINT,
-      reservedRects: CLOCK_RESERVED.concat(Scene.actorReservation(ENTRY_POINT, { scale: settings.agentScale, footprint }),
-        [...protectedEntrances].map(([id, point]) => Scene.actorReservation(point, { ...actorGeometry(actors.get(id)), ownerId: id }))), previousSeats: seats };
+    return { requestedScale: settings.agentScale, footprints: actorFootprints, reservedRects: CLOCK_RESERVED, previousSeats: seats, previousScale: uniformScale, previousRequestedScale: currentPage.requestedScale };
   }
   function updateEntranceLane() {
     const needsLane = actor => !actor.helper && !reduced() && !document.hidden && (actor.entryPending && !actor.restoreEntry || actor.entranceActive);
@@ -176,7 +182,7 @@
       render();
     });
   }
-  function actorGeometry(actor) { return { helper: actor.helper, scale: settings.agentScale, footprint: actorFootprints.get(actor.id) }; }
+  function actorGeometry(actor) { return { helper: actor.helper, uniformScale, layoutMode: currentPage.layoutMode, footprint: actorFootprints.get(actor.id) }; }
   function measureActorFootprints(sessions) {
     const frameScale = world.getBoundingClientRect().width / Scene.WORLD.width;
     if (!frameScale) return;
@@ -451,7 +457,7 @@
     delete actor.node.dataset.cloneTarget;
     delete actor.node.dataset.cloneReason;
     if (actor.opacityMotion) { actor.opacityMotion.cancel(); actor.opacityMotion = null; }
-    actor.node.style.opacity = '1';
+    if (!pendingArrivals.has(actor.id)) actor.node.style.opacity = '1';
     if (actor.motion) {
       actor.position = currentPosition(actor);
       actor.node.style.transform = actorTransform(actor.position, actor.helper);
@@ -513,7 +519,7 @@
       for (const actor of actors.values()) {
         if (actor.motion) {
           const point = currentPosition(actor);
-          actor.node.style.zIndex = String(Math.round(point.y * 10));
+          actor.node.style.zIndex = '10';
           moving = true;
         }
       }
@@ -541,7 +547,7 @@
     if (length < .65 || instant || reduced() || document.hidden) {
       actor.position = { x: target.x, y: target.y };
       actor.node.style.transform = actorTransform(actor.position, actor.helper);
-      actor.node.style.zIndex = String(Math.round(target.y * 10));
+      actor.node.style.zIndex = '10';
       actor.arrivedAt = performance.now();
       actor.node.dataset.traffic = 'arrived';
       return true;
@@ -569,7 +575,7 @@
     if (actor.serial !== serial) return false;
     actor.position = { x: target.x, y: target.y };
     actor.node.style.transform = actorTransform(actor.position, actor.helper);
-    actor.node.style.zIndex = String(Math.round(target.y * 10));
+    actor.node.style.zIndex = '10';
     actor.motion = null;
     motion.cancel();
     actor.node.dataset.walking = 'false';
@@ -586,7 +592,9 @@
     actor.spec = Scene.activitySpec(actor.session);
     actor.node.dataset.walking = 'false';
     const plan = Director.plan(actor.session, { now: Date.now(), language });
-    actor.performanceSuspended = /^(?:cue|recent-work)\//.test(plan.phase || '');
+    // A brief observed edit uses the same articulated body and continuous
+    // per-activity clocks. Result captions never replace it with a fresh SVG.
+    actor.visualWorkActivity = plan.recentWork ? plan.phase.slice('recent-work/'.length) : '';
     const freshCue = plan.cueKey && plan.cueKey !== actor.lastCue;
     setPose(actor, plan.asset || actor.spec.asset, Boolean(freshCue));
     actor.node.dataset.phase = plan.phase || '';
@@ -669,11 +677,11 @@
     actor.node.dataset.cloneOrigin = parent ? parent.id : '';
     actor.position = parent ? currentPosition(parent) : { x: seat.x, y: seat.y };
     actor.node.style.transform = actorTransform(actor.position, true);
-    actor.node.style.zIndex = String(Math.round(actor.position.y * 10) + 1);
+    actor.node.style.zIndex = '10';
     if (quietSprites()) {
       actor.position = { x: seat.x, y: seat.y };
       actor.node.style.transform = actorTransform(actor.position, true);
-      actor.node.style.zIndex = String(Math.round(seat.y * 10));
+      actor.node.style.zIndex = '10';
       actor.justEntered = false;
       finishAtStation(actor);
       return;
@@ -720,86 +728,64 @@
     // may be travelling between the old and newly planned seat layouts.
     move(actor, target, actor.serial).then(ok => { if (ok && actors.get(actor.id) === actor) finishAtStation(actor); }).catch(showError);
   }
+  // Bodies occupy their safe seats immediately. Finite echoes explain the
+  // doorway/clone journey without putting a real observer in an invisible queue.
+  function flatJourney(actor, from, to, kind) {
+    if (quietSprites() || $('effects').querySelectorAll('.flat-journey').length >= 8) return;
+    const echo = element('span', 'flat-journey');
+    echo.dataset.kind = kind; echo.dataset.ownerId = actor.id;
+    echo.style.setProperty('--family-color', paletteRegistry.forRoot(cloneLedger.rootFor(actor.id) || actor.id).color);
+    const image = element('img'); image.alt = ''; image.src = assetURL('clawd-static-base.svg'); echo.append(image);
+    $('effects').append(echo);
+    const frames = Array.from({ length: 61 }, (_, i) => {
+      const t = i / 60, progress = t * t * (3 - 2 * t);
+      const x = (from.x + (to.x - from.x) * progress) * 12.8;
+      const y = (from.y + (to.y - from.y) * progress) * 7.2 - Math.sin(t * Math.PI) * 28;
+      return { offset: t, transform: 'translate(' + x + 'px,' + y + 'px) scale(' + uniformScale + ') rotate(' + (Math.sin(t * Math.PI * 6) * 4) + 'deg)', opacity: Math.sin(t * Math.PI) * .6 };
+    });
+    const motion = echo.animate(frames, { duration: 1100, easing: 'linear' });
+    const effect = { cancel() { motion.cancel(); echo.remove(); } };
+    actor.cloneEffects.add(effect);
+    motion.finished.catch(() => {}).finally(() => { actor.cloneEffects.delete(effect); echo.remove(); });
+  }
   async function returnClone(actor, reason) {
     if (actor.departing) return;
     const serial = cancelAction(actor);
     actor.departing = true; actor.returnReason = reason;
     clonePhase(actor, 'returning');
+    const parent = cloneAncestor(actor);
+    actor.node.dataset.cloneTarget = parent ? parent.id : '';
     actor.node.dataset.cloneReason = reason;
-    actor.node.dataset.attention = 'false';
     text(actor.state, completedCloneReturn(reason) ? '结束分身' : '分身暂歇');
-    let parent = cloneAncestor(actor);
-    actor.node.dataset.cloneTarget = parent ? parent.id : '';
     setPose(actor, 'clawd-static-base.svg');
-    if (quietSprites()) { finishCloneReturn(actor, parent, reason); return; }
-    // Re-read the rendered body after each leg: the original parent may have
-    // moved, returned into its own parent, or left this room in the meantime.
-    while (parent && actor.serial === serial && !destroyed) {
-      actor.node.dataset.cloneTarget = parent.id;
-      const target = { ...currentPosition(parent), zone: parent.target?.zone || parent.spec.zone };
-      if (!await move(actor, target, serial)) return;
-      parent = cloneAncestor(actor);
-      if (!parent || Scene.distance(currentPosition(actor), currentPosition(parent)) < 1.1) break;
-      if (!await delay(actor, 80, serial)) return;
-    }
+    flatJourney(actor, currentPosition(actor), parent ? currentPosition(parent) : currentPosition(actor), 'return');
+    if (!quietSprites() && !await delay(actor, 1100, serial)) return;
     if (actor.serial !== serial || destroyed) return;
-    parent = cloneAncestor(actor);
-    actor.node.dataset.cloneTarget = parent ? parent.id : '';
-    if (parent) {
-      actor.position = currentPosition(parent);
-      actor.node.style.transform = actorTransform(actor.position, true);
-    }
-    clonePhase(actor, 'absorbing');
-    actor.node.dataset.walking = 'false';
-    actor.bubble.dataset.show = 'false';
     cloneEffect(actor, parent || actor, 'absorb');
-    const fade = actor.node.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 240, easing: 'cubic-bezier(.23,1,.32,1)', fill: 'forwards' });
-    actor.opacityMotion = fade;
-    await fade.finished.catch(() => {});
-    if (actor.serial !== serial || destroyed) return;
     finishCloneReturn(actor, parent, reason);
   }
   async function depart(actor, inactive = false) {
-    // An unmaterialized entrance has no body or route reservation to return.
-    // Remove that pending presentation immediately when its source retires.
-    if (actor.entryPending) {
-      if (actor.helper && inactive) rememberRestedClone(actor.id);
-      observedIds.delete(actor.id);
-      removeActor(actor.id);
-      releaseWaitingRoots();
-      return;
-    }
     if (actor.departing) return;
     if (actor.helper) {
       const completed = inactive && completedCloneTurn(actor.session, actor.lastTurnAt);
       if (completed) actor.lastTurnAt = Scene.timestamp(actor.session.turnCompletedAt);
-      await returnClone(actor, inactive ? completed ? 'completed' : 'resting' : 'ended'); return;
+      return returnClone(actor, inactive ? completed ? 'completed' : 'resting' : 'ended');
     }
     actor.retireRequested = { inactive };
-    if (cloneLedger.stats(actor.id).active > 0) { holdForClones(actor); return; }
-    // A root waits locally for visible clones to merge; helpers never acquire
-    // an independent doorway route, including uncertain or idle retirements.
     for (const child of relatedClones(actor)) if (!child.departing) {
       const current = snapshot.sessions.find(session => session.id === child.id);
       if (current) { child.session = current; child.spec = Scene.activitySpec(current); }
-      depart(child, !Scene.isClosed(child.session)).catch(showError);
+      // Active descendants retain their bodies and ancestor anchor until their
+      // own observed turn ends; the root can wait at its seat.
+      if (!current || Scene.isClosed(current) || !hasBodyActivity(current)) depart(child, !current || !Scene.isClosed(current)).catch(showError);
     }
     if (relatedClones(actor).length) { holdForClones(actor); return; }
     actor.holdingFamily = false; actor.node.dataset.cloneHold = 'false';
-    actor.departing = true;
-    const serial = cancelAction(actor);
-    actor.node.dataset.attention = 'false';
+    const serial = cancelAction(actor); actor.departing = true;
     text(actor.state, inactive ? '这一轮已歇下' : '会话已结束');
-    say(actor, inactive ? '有新工作再回来' : '这次先收工啦', 2200);
-    if (!await move(actor, doorPoint(actor), serial, false)) return;
-    openDoor();
-    if (!reduced()) {
-      const fade = actor.node.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: 'cubic-bezier(.23,1,.32,1)', fill: 'forwards' });
-      actor.opacityMotion = fade;
-      await fade.finished.catch(() => {});
-    }
-    if (actor.serial !== serial) return;
-    removeActor(actor.id);
+    flatJourney(actor, currentPosition(actor), ENTRY_POINT, 'leave'); openDoor();
+    if (!quietSprites() && !await delay(actor, 1100, serial)) return;
+    if (actor.serial === serial) removeActor(actor.id);
   }
   function makeActor(session, seat) {
     const node = element('div', 'actor');
@@ -836,13 +822,13 @@
     const restored = observedIds.has(session.id) && (reflowPending || !attendance.entering.includes(session.id))
       || snapshotReceived === 1 && !session.parentId;
     const helper = Boolean(session.parentId);
-    const actor = { id: session.id, session, spec: Scene.activitySpec(session), node, button, body, image, title, relation, provider, state, bubble, carry, arrival, position: { x: seat.x, y: seat.y }, target: seat, helper, serial: 0, delays: new Set(), cloneEffects: new Set(), clonePhase: helper ? 'working' : '', motion: null, lastTurnAt: Scene.timestamp(session.turnCompletedAt), arrivedAt: -10000, lastZone: restored ? seat.zone : '', currentAsset: '', wantedAsset: '', bubbleTimer: 0, defer: 0, justEntered: !restored, completing: false, departing: false, holdingFamily: false, retireRequested: null, entryPending: true, restoreEntry: restored };
-    node.style.visibility = 'hidden';
+    const actor = { id: session.id, session, spec: Scene.activitySpec(session), node, button, body, image, title, relation, provider, state, bubble, carry, arrival, position: { x: seat.x, y: seat.y }, target: seat, helper, serial: 0, delays: new Set(), cloneEffects: new Set(), clonePhase: helper ? 'working' : '', motion: null, lastTurnAt: Scene.timestamp(session.turnCompletedAt), arrivedAt: -10000, lastZone: restored ? seat.zone : '', currentAsset: '', wantedAsset: '', bubbleTimer: 0, defer: 0, justEntered: !restored, completing: false, departing: false, holdingFamily: false, retireRequested: null, entryPending: false, restoreEntry: restored };
+    node.style.visibility = 'visible';
     node.dataset.clonePhase = actor.clonePhase;
     actor.performance = window.OfficeAvatarPerformance.create({ actorNode: node, body, image, session, clockRegistry: performanceClocks });
     actor.appearance = window.OfficeFamilyAppearance.create({ actorNode: node, body, image });
     node.style.transform = actorTransform(actor.position, actor.helper);
-    node.style.zIndex = '860';
+    node.style.zIndex = '10';
     image.addEventListener('error', () => {
       if (actor.currentAsset !== 'clawd-static-base.svg') { actor.currentAsset = 'clawd-static-base.svg'; image.dataset.asset = 'clawd-static-base.svg'; image.src = assetURL('clawd-static-base.svg'); }
       else { image.hidden = true; showError('角色素材暂未加载，后续状态更新会重试。任务状态仍在观察。'); }
@@ -863,10 +849,21 @@
     button.addEventListener('keydown', (event) => { if (event.key === ' ' && event.shiftKey) { event.preventDefault(); react(actor); } });
     updateActorLabel(actor);
     actors.set(session.id, actor);
-    // Image state is available while the physical entrance waits its turn.
+    observedIds.add(actor.id);
+    if (!restored && !quietSprites()) {
+      // A new body waits only for its actual visible envelope to be clear.
+      // This shared RAF is independent of traffic and all AI state.
+      node.style.opacity = '0'; pendingArrivals.add(actor.id); queueAdmission();
+    }
     setPose(actor, actor.spec.asset);
-    updateEntranceLane();
-    queueTraffic();
+    finishAtStation(actor);
+    if (!restored) {
+      const parent = actor.helper ? cloneAncestor(actor) : null;
+      node.dataset.cloneOrigin = parent ? parent.id : '';
+      flatJourney(actor, parent ? currentPosition(parent) : actor.helper ? seat : ENTRY_POINT, seat, actor.helper ? 'split' : 'enter');
+      if (!actor.helper) openDoor();
+      else cloneEffect(actor, parent || actor, 'split');
+    }
     return actor;
   }
   function updateActorLabel(actor) {
@@ -913,16 +910,30 @@
     const p = persona(actor.session);
     const pose = ['teacup','bookmark','leaf'].includes(p.keepsake) ? 'clawd-aegyo-shy.svg' : ['paperboat','lantern','bell'].includes(p.keepsake) ? 'clawd-react-double.svg' : 'clawd-react-double-jump.svg';
     setPose(actor, pose, true);
+    if (!quietSprites()) {
+      const arm = actor.body.querySelector('.ap-arm-right');
+      if (arm) {
+        const wave = arm.animate([{ transform: 'translate(0px,0px) rotate(0deg)' },
+          { transform: 'translate(0px,-5px) rotate(-12deg)', offset: .25 },
+          { transform: 'translate(0px,-4px) rotate(6deg)', offset: .5 },
+          { transform: 'translate(0px,-5px) rotate(-10deg)', offset: .75 },
+          { transform: 'translate(0px,0px) rotate(0deg)' }],
+        { duration: 1000, composite: 'add', easing: 'cubic-bezier(.77,0,.175,1)' });
+        const effect = { cancel: () => wave.cancel() }; actor.cloneEffects.add(effect);
+        wave.finished.catch(() => {}).finally(() => { actor.cloneEffects.delete(effect); wave.cancel(); });
+      }
+    }
     say(actor, language === 'en' ? p.greetingEn : p.greetingZh, 3000);
     if (!await delay(actor, 3000, serial)) return;
     actor.node.dataset.reaction = 'false';
-    settle(actor, seat, true).catch(showError);
+    finishAtStation(actor);
   }
   function removeActor(id) {
     const actor = actors.get(id);
     if (!actor) return;
     cancelAction(actor);
     clearTimeout(actor.bubbleTimer);
+    pendingArrivals.delete(actor.id);
     if (actor.performance) { actor.performance.update(actor.session, { now: Date.now(), hidden: true }); actor.performance.destroy(); }
     if (actor.appearance) actor.appearance.destroy();
     actor.node.remove();
@@ -950,114 +961,98 @@
     for (const effect of $('effects').children) effect.getAnimations().forEach((animation) => animation.cancel());
     $('effects').replaceChildren();
   }
-  function reconcileActors() {
-    const sessions = snapshot.sessions;
-    const sessionMap = new Map(sessions.map((session) => [session.id, session]));
-    const visibleIds = new Set(currentPage.visible.map((session) => session.id));
-    const retiringIds = new Set(attendance.retired);
-    // Process descendants first so their return owns its parent anchor before
-    // a simultaneous root end can begin the doorway departure.
-    for (const actor of [...actors.values()].sort((a, b) => cloneLedger.parentChain(b.id).length - cloneLedger.parentChain(a.id).length)) {
-      const next = sessionMap.get(actor.id);
-      if (actor.retireRequested && next && !Scene.isClosed(next) && visibleIds.has(actor.id)) {
-        actor.retireRequested = null; actor.holdingFamily = false; actor.node.dataset.cloneHold = 'false';
+  function queueAdmission() {
+    if (admissionFrame || destroyed || !pendingArrivals.size) return;
+    admissionFrame = requestAnimationFrame(admitBodies);
+  }
+  function admitBodies() {
+    admissionFrame = 0;
+    if (destroyed) return;
+    const cast = [...actors.values()].map(actor => {
+      const matrix = new DOMMatrixReadOnly(getComputedStyle(actor.node).transform);
+      const scale = Math.hypot(matrix.m11, matrix.m12);
+      return { actor, bounds: Scene.actorBounds({ x: matrix.m41 / 12.8, y: matrix.m42 / 7.2 },
+        { uniformScale: scale, footprint: actorFootprints.get(actor.id) }), scale };
+    });
+    // A newcomer uses the destination scale. Keep its finite arrival at that
+    // same scale as everyone else; do not expose a smaller body halfway through
+    // an older body's fit transition merely because the envelopes already clear.
+    // Chromium serializes matrix() with limited significant digits: a scale
+    // above 1 can round by 0.000005. Exact string equality would strand a new
+    // body forever even after its transition has completely finished.
+    const sameScale = cast.every(item => Math.abs(item.scale - uniformScale) <= .00001);
+    for (const id of [...pendingArrivals]) {
+      const item = cast.find(item => item.actor.id === id);
+      if (!item) { pendingArrivals.delete(id); continue; }
+      if (sameScale && cast.every(other => other === item || !Scene.boundsOverlap(item.bounds, other.bounds, 0))) {
+        item.actor.node.style.opacity = '1'; pendingArrivals.delete(id);
       }
-      if ((next && Scene.isClosed(next) || retiringIds.has(actor.id) || attendance.leaving.includes(actor.id) || actor.retireRequested) && Scene.inRoom(next || actor.session, selectedProject)) {
-        actor.session = next || actor.session; actor.spec = Scene.activitySpec(actor.session); updateActorLabel(actor);
-        depart(actor, !Scene.isClosed(actor.session)).catch(showError);
-      }
-      else if (!visibleIds.has(actor.id) && !actor.departing) removeActor(actor.id);
     }
+    queueAdmission();
+  }
+  function hasBodyActivity(session) {
+    // Unknown activity is a valid live body, even without a classified tool.
+    // Do not use the narrower work-statistics predicate as a visibility gate.
+    return !Scene.isClosed(session) && !session.disconnected && session.status !== 'stale'
+      && (Clones.isActive(session) || ['active', 'waiting'].includes(session.status) && session.activity !== 'idle');
+  }
+  function reconcileActors() {
+    const sessionMap = new Map(snapshot.sessions.map(session => [session.id, session]));
+    const visibleIds = new Set(currentPage.visible.map(session => session.id));
     const nextSeats = currentPage.seats;
-    for (const session of currentPage.visible.slice().sort((a, b) => cloneLedger.parentChain(a.id).length - cloneLedger.parentChain(b.id).length)) {
-      // A quiet synchronous return earlier in this reconciliation may have
-      // absorbed this idle body after the visible-page list was calculated.
-      if (restedClones.has(session.id) && !Clones.isActive(session)) continue;
+    const layoutChanged = reflowPending || Math.abs(uniformScale - currentPage.uniformScale) > .000001
+      || [...nextSeats].some(([id, seat]) => !seats.has(id) || Scene.distance(seats.get(id), seat) > .01);
+    // Stable anchors never jump on a heartbeat, new arrival or work-zone
+    // change. CSS retargets the shared scale from its current rendered value.
+    uniformScale = currentPage.uniformScale;
+    for (const actor of actors.values()) {
+      const seat = nextSeats.get(actor.id);
+      if (seat) {
+        actor.position = { x: seat.x, y: seat.y }; actor.target = seat;
+        actor.node.style.transform = actorTransform(seat, actor.helper);
+      }
+    }
+    for (const actor of [...actors.values()]) if (!visibleIds.has(actor.id)) {
+      const next = sessionMap.get(actor.id);
+      actor.session = next || actor.session; actor.spec = Scene.activitySpec(actor.session);
+      depart(actor, !Scene.isClosed(actor.session)).catch(showError);
+    }
+    for (const session of currentPage.visible.slice().sort((a,b) => cloneLedger.parentChain(a.id).length - cloneLedger.parentChain(b.id).length)) {
+      if (restedClones.has(session.id) && !hasBodyActivity(session)) continue;
       const seat = nextSeats.get(session.id);
-      if (!seat) continue;
+      if (!seat) throw new Error('全员布局缺少角色席位：' + session.id);
       let actor = actors.get(session.id);
       if (!actor) { makeActor(session, seat); continue; }
-      const old = actor.session;
-      const oldSpec = actor.spec;
-      const spec = Scene.activitySpec(session);
-      actor.session = session;
-      actor.spec = spec;
-      actor.helper = Boolean(session.parentId);
-      updateActorLabel(actor);
-      if (actor.entryPending) {
-        const changed = actor.target && (actor.target.zone !== seat.zone || Scene.distance(actor.target, seat) > .7)
-          || old.activity !== session.activity || oldSpec.stale !== spec.stale;
-        if (actor.stagedEntry && changed) cancelAction(actor);
-        actor.target = seat;
-        continue;
-      }
-      if (reflowPending) {
-        cancelAction(actor);
-        if (!actor.helper && actor.entranceActive) {
-          // Keep a newcomer at its actual doorway/interrupted position.
-          // Other bodies have safe seats around its protected envelope; the
-          // newcomer must still physically walk into the room after reflow.
-          actor.target = seat;
-          settle(actor, seat, true).catch(showError);
-          continue;
-        }
+      const old = actor.session, previousTurn = actor.lastTurnAt;
+      actor.session = session; actor.spec = Scene.activitySpec(session); actor.helper = Boolean(session.parentId);
+      if (actor.departing && hasBodyActivity(session)) { cancelAction(actor); actor.departing = false; }
+      if (layoutChanged) {
         actor.position = { x: seat.x, y: seat.y }; actor.target = seat;
-        actor.entranceActive = false;
-        actor.node.style.transform = actorTransform(actor.position, actor.helper);
-        actor.node.style.zIndex = String(Math.round(seat.y * 10));
-        actor.justEntered = false; finishAtStation(actor); continue;
+        actor.entryPending = false; actor.stagedEntry = false; actor.entranceActive = false;
+        actor.node.style.visibility = 'visible'; if (!pendingArrivals.has(actor.id)) actor.node.style.opacity = '1';
+        actor.node.style.transform = actorTransform(seat, actor.helper); actor.node.style.zIndex = '10';
       }
+      updateActorLabel(actor);
       const completedAt = Scene.timestamp(session.turnCompletedAt);
-      const newCompletion = actor.helper ? completedCloneTurn(session, actor.lastTurnAt) : completedAt > actor.lastTurnAt && session.activity === 'idle' && !spec.stale;
-      const targetChanged = !actor.target || actor.target.zone !== seat.zone || Scene.distance(actor.target, seat) > .7;
-      const stateChanged = old.activity !== session.activity || oldSpec.stale !== spec.stale || Boolean(old.attention) !== Boolean(session.attention);
-      // A brief tool can end before its route starts. Invalidate that old route
-      // even when the next activity returns to the actor's existing station.
-      const queuedChanged = actor.queuedSeat && (actor.queuedSeat.zone !== seat.zone || Scene.distance(actor.queuedSeat, seat) > .7);
-      if (actor.defer && queuedChanged) {
-        clearTimeout(actor.defer);
-        actor.defer = 0;
-        actor.queuedSeat = null;
+      if (actor.helper && completedCloneTurn(session, previousTurn)) {
+        actor.lastTurnAt = completedAt; returnClone(actor, 'completed').catch(showError);
+      } else {
+        actor.lastTurnAt = Math.max(previousTurn, completedAt);
+        if (!actor.helper && completedAt > previousTurn && session.activity === 'idle' && !actor.spec.stale) {
+          const key = Scene.projectKey(session);
+          archivedTurns.set(key, Math.min(3, (archivedTurns.get(key) || 0) + 1));
+          addEffect('reply', actor.position);
+        }
+        if (old.activity !== session.activity) social?.update();
+        if (!actor.departing && actor.node.dataset.reaction !== 'true') finishAtStation(actor);
       }
-      if (actor.departing) {
-        // An idle source row can remain present during a neutral return after
-        // its root ends. Only new work/reopening may interrupt that return.
-        if (actor.helper && ['resting', 'completed'].includes(actor.returnReason) && !Clones.isActive(session)) continue;
-        actor.departing = false;
-        cancelAction(actor);
-        settle(actor, seat, true).catch(showError);
-        continue;
-      }
-      if (newCompletion && actor.helper) { actor.lastTurnAt = completedAt; returnClone(actor, 'completed').catch(showError); }
-      else if (newCompletion) completeTurn(actor, completedAt, seat).catch(showError);
-      else if (targetChanged || stateChanged) {
-        if (spec.stale) {
-          cancelAction(actor);
-          finishAtStation(actor);
-        } else if (targetChanged || (oldSpec.stale && !spec.stale && Scene.distance(actor.position, seat) > .7)) {
-          const urgent = Scene.needsAttention(session);
-          if (urgent) settle(actor, seat, true).catch(showError);
-          else if (!actor.defer) {
-            if (actor.motion) cancelAction(actor);
-            const serial = actor.serial;
-            const queued = { ...seat };
-            actor.queuedSeat = queued;
-            actor.defer = setTimeout(() => {
-              if (actors.get(actor.id) !== actor || actor.serial !== serial || actor.queuedSeat !== queued) return;
-              actor.defer = 0;
-              actor.queuedSeat = null;
-              settle(actor, queued).catch(showError);
-            }, 1000);
-          }
-        } else if (!actor.motion && !actor.completing) finishAtStation(actor);
-      } else if (!actor.motion && !actor.completing && !actor.departing && actor.node.dataset.reaction !== 'true') finishAtStation(actor);
     }
-    seats = nextSeats;
-    reflowPending = false;
-    updateEntranceLane();
-    queueTraffic();
-    renderHelperLinks();
-    updateProps();
+    seats = nextSeats; reflowPending = false;
+    office.dataset.layout = currentPage.layoutMode;
+    office.dataset.flat = 'true';
+    office.dataset.fitScale = uniformScale.toFixed(4);
+    queueAdmission();
+    renderHelperLinks(); updateProps();
   }
   function renderHelperLinks() {
     const layer = $('helper-links');
@@ -1097,15 +1092,7 @@
   function selectSession(id) {
     const session = snapshot.sessions.find((item) => item.id === id);
     if (!session) return;
-    if (!Scene.inRoom(session, selectedProject)) switchRoom(Scene.projectKey(session), false);
-    const family = Scene.pageSessions(attendance.present, selectedProject, 0, '', sceneOptions());
-    const roots = family.roots;
-    const mainId = family.rootIdsBySession.get(session.id) || session.id;
-    const index = roots.findIndex((item) => item.id === mainId);
-    const nextPage = index < 0 ? page : Math.floor(index / family.capacity);
     selectedSession = id;
-    if (nextPage !== page) { page = nextPage; clearActors(); selectedSession = id; render(); }
-    else if (!currentPage.visible.some((item) => item.id === id)) render();
     $('inspector').hidden = false;
     for (const actor of actors.values()) updateActorLabel(actor);
     renderInspector();
@@ -1127,8 +1114,8 @@
     text($('inspect-title'), session.title || '未命名任务');
     const makingRoom = actor && (actor.yielding || actor.node?.dataset.traffic === 'queued');
     text($('inspect-location'), attendance.retired.includes(session.id) || restedClones.has(session.id) ? session.parentId ? '分身暂歇' : '门外休息'
-      : makingRoom ? (language === 'en' ? 'Temporarily making room · ' : '临时让路 · ') + tr(Scene.ZONES[(actor.target || spec).zone].name)
-        : actor && actor.motion ? '前往' + Scene.ZONES[(actor.target || spec).zone].name : Scene.ZONES[spec.zone].name);
+      : makingRoom ? (language === 'en' ? 'Temporarily making room · ' : '临时让路 · ') + zoneName((actor.target || spec).zone)
+        : actor && actor.motion ? (language === 'en' ? 'Heading to ' : '前往') + zoneName((actor.target || spec).zone) : zoneName(actor?.target?.zone || spec.zone));
     text($('inspect-summary'), session.summary || spec.verb);
     text($('inspect-state'), spec.label);
     text($('inspect-signal'), timeAgo(session.lastEventAt));
@@ -1207,7 +1194,7 @@
       row.dataset.attention = String(Scene.needsAttention(session));
       const family = familyGraph.info.get(session.id);
       row.style.setProperty('--family-color', paletteRegistry.forRoot(cloneLedger.rootFor(session.id) || family?.rootId || session.id).color);
-      row.style.marginLeft = (Math.min(3,family ? family.depth : 0)*18)+'px';
+      row.style.marginLeft = '0px';
       const copy = element('span', 'roster-copy');
       copy.append(element('strong', '', displayName(session)), element('span', 'roster-task', session.title || '未命名任务'));
       const parent = familyGraph.byId.get(session.parentId);
@@ -1222,7 +1209,7 @@
   function render() {
     office.dataset.mode = snapshot.mode;
     cloneLedger.update(snapshot.sessions, Date.now());
-    for (const session of snapshot.sessions) if (Clones.isActive(session)) restedClones.delete(session.id);
+    for (const session of snapshot.sessions) if (hasBodyActivity(session)) restedClones.delete(session.id);
     attendance = attendanceModel.update(snapshot.sessions);
     familyGraph = Family.build(snapshot.sessions);
     const openFamilies = snapshot.sessions.filter(session => !Scene.isClosed(session))
@@ -1230,31 +1217,18 @@
     paletteRegistry.update(openFamilies);
     familyGraph = Family.build(snapshot.sessions, { registry: paletteRegistry });
     measureActorFootprints(attendance.present);
-    const roomBefore = selectedProject;
+    // Project names remain in the inspector and roster; every project shares
+    // this one floor. Saved filters from older builds cannot hide live bodies.
     rooms = Scene.roomsFor(snapshot.sessions);
-    const roomChoice = Scene.chooseRoom(rooms, attendance.present, { current: selectedProject, explicit: roomSelectionExplicit });
-    selectedProject = roomChoice.key;
-    roomSelectionExplicit = roomChoice.explicit;
-    if (roomBefore && roomBefore !== selectedProject) { clearActors(); page = 0; }
-    const options = document.createDocumentFragment();
-    const overview = element('option', 'project-option', I18n.t(language, 'room.overview', {count: rooms.reduce((sum, room) => sum + room.roots, 0)}));
-    overview.value = Scene.ALL_ROOMS;
-    options.append(overview);
-    for (const room of rooms) {
-      const option = element('option', 'project-option', I18n.t(language, 'room.option', {name:room.name,count:room.roots}) + (room.helpers ? I18n.t(language,'room.helpersSuffix',{count:room.helpers}) : '') + (room.attention ? I18n.t(language,'room.attentionSuffix',{count:room.attention}) : ''));
-      option.value = room.key;
-      options.append(option);
-    }
-    if (selectedProject && selectedProject !== Scene.ALL_ROOMS && !rooms.some((room) => room.key === selectedProject)) {
-      const option = element('option', 'project-option', I18n.t(language,'room.quietOption',{name:selectedProject.split(/[\\/]/).filter(Boolean).pop()}));
-      option.value = selectedProject;
-      options.append(option);
-    }
-    $('project-select').replaceChildren(options);
-    $('project-select').value = selectedProject;
-    $('room-switcher').hidden = !rooms.length;
-    currentPage = Scene.pageSessions(attendance.present, selectedProject, page, selectedSession, sceneOptions());
-    page = currentPage.page;
+    selectedProject = Scene.ALL_ROOMS; roomSelectionExplicit = false;
+    $('project-select').replaceChildren(element('option', 'project-option', language === 'en' ? 'All agents · one floor' : '全体 Agent · 同一层'));
+    $('project-select').firstElementChild.value = Scene.ALL_ROOMS;
+    $('project-select').value = Scene.ALL_ROOMS;
+    $('room-switcher').hidden = true;
+    const presentBodies = attendance.present.filter(session => !restedClones.has(session.id) || hasBodyActivity(session));
+    const bodyIds = new Set(presentBodies.map(session => session.id));
+    const retiringBodies = [...actors.values()].filter(actor => !bodyIds.has(actor.id) && !restedClones.has(actor.id)).map(actor => snapshot.sessions.find(session => session.id === actor.id) || actor.session);
+    currentPage = { ...Scene.layoutStableAll(presentBodies.concat(retiringBodies), sceneOptions()), visible: presentBodies }; page = 0;
     reconcileActors();
     const alive = snapshot.sessions.filter((session) => !Scene.isClosed(session));
     const allRoomSessions = alive.filter((session) => Scene.inRoom(session, selectedProject));
@@ -1276,7 +1250,7 @@
     $('status-dot').dataset.status = localAttention.length ? 'waiting' : roomSessions.length ? 'active' : 'empty';
     let summary = roomSessions.length ? rootCount + ' 项独立任务' + (helpers ? ' · ' + helpers + ' 位临时帮手' : '') : '实时办公室 · 等待任务入驻';
     if (quiet) summary += ' · ' + quiet + ' 项信号暂未更新';
-    if (currentPage.helperOverflow) summary += language === 'en' ? ' · including ' + currentPage.helperOverflow + ' helpers off stage' : ' · 其中 ' + currentPage.helperOverflow + ' 位帮手未显示';
+    if (uniformScale < settings.agentScale - .001) summary += language === 'en' ? ' · fitted to ' + Math.round(uniformScale * 100) + '% for everyone' : ' · 全员适配 ' + Math.round(uniformScale * 100) + '%';
     text($('room-summary'), summary);
     const stats = snapshot.activityStats;
     const count = key => stats && !stats.error && Number.isInteger(stats[key]) && stats[key] >= 0 ? stats[key] : '—';
@@ -1305,6 +1279,7 @@
     for (const session of alive) if (nextAttention.has(session.id) && !previousAttention.has(session.id)) text($('announcer'), I18n.t(language,'announce.attention',{provider:Scene.providerName(session.provider),title:session.title || '任务'}));
     previousAttention = nextAttention;
     refreshQuietPresentation();
+    venueStage?.update(sceneContext()); festivalStage?.update(sceneContext()); themeEnvironment?.update(sceneContext()); social?.update();
   }
   function receive(next) {
     if (!next || !Array.isArray(next.sessions)) return;
@@ -1315,16 +1290,8 @@
     render();
   }
   async function refreshSnapshot() { const next = await call('getSnapshot'); if (next) receive(next); }
-  function switchRoom(key, persist = true) {
-    roomSelectionExplicit = true;
-    if (key === selectedProject) { if (persist) saveSettings({ selectedProject: key }); return; }
-    clearActors();
-    selectedProject = key;
-    selectedSession = '';
-    page = 0;
-    $('inspector').hidden = true;
-    render();
-    if (persist) saveSettings({ selectedProject: key });
+  function switchRoom() {
+    selectedProject = Scene.ALL_ROOMS; page = 0; render();
   }
   function jumpAttention(outside = false) {
     const candidates = snapshot.sessions.filter((session) => Scene.needsAttention(session) && (outside ? !Scene.inRoom(session, selectedProject) : Scene.inRoom(session, selectedProject)));
@@ -1361,6 +1328,7 @@
     office.dataset.reducedMotion = String(reduced());
     office.dataset.lowPower = String(settings.lowPower);
     for (const key of ['rain', 'reducedMotion', 'lowPower', 'idleVisitor']) $('setting-' + key).checked = Boolean(settings[key]);
+    if (window.OfficeFestivals) $('setting-rain').checked = window.OfficeFestivals.resolve({ theme: settings.sceneTheme, weather: settings.sceneWeather }).weather === 'rain';
     $('setting-sceneTime').value = settings.sceneTime;
     $('setting-agentScale').value = String(Math.round(settings.agentScale * 100));
     text($('agent-scale-value'), Math.round(settings.agentScale * 100) + '%');
@@ -1452,7 +1420,7 @@
     const result = await call('openSource', id);
     if (result && (result.message || result.detail)) text($('inspect-action-note'), result.message || result.detail);
   }));
-  for (const key of ['rain', 'reducedMotion', 'lowPower', 'idleVisitor']) $('setting-' + key).addEventListener('change', (event) => saveSettings({ [key]: event.target.checked }));
+  for (const key of ['rain', 'reducedMotion', 'lowPower', 'idleVisitor']) $('setting-' + key).addEventListener('change', (event) => saveSettings(key === 'rain' ? { rain: event.target.checked, sceneWeather: event.target.checked ? 'rain' : 'off' } : { [key]: event.target.checked }));
   $('move-display').addEventListener('click', () => attempt(async () => {
     const value = $('display-select').value;
     if (!value) return;
@@ -1473,6 +1441,7 @@
     for (const actor of [...actors.values()]) { finishQuietClone(actor); if (actors.has(actor.id)) setPose(actor, actor.wantedAsset || actor.spec.asset); }
     renderHelperLinks();
     visitor.tick();
+    venueStage?.update(sceneContext()); festivalStage?.update(sceneContext()); themeEnvironment?.update(sceneContext()); social?.update();
     if (!document.hidden) { scenery.update(settings, language); ensureMotionTicker(); }
   });
   mediaReduce.addEventListener('change', () => applySettings(settings));
@@ -1490,11 +1459,7 @@
   Promise.all([call('getSettings'), call('getSnapshot')]).then(([savedSettings, initial]) => {
     // Settings can arrive after the first live push. Apply the saved deliberate
     // room choice once, without mistaking future automatic choices for intent.
-    if (savedSettings && savedSettings.selectedProject) {
-      clearActors(); page = 0;
-      selectedProject = savedSettings.selectedProject;
-      roomSelectionExplicit = true;
-    }
+    selectedProject = Scene.ALL_ROOMS;
     applySettings(savedSettings || settingsDefaults);
     if (snapshotReceived === receivedAtStart) receive(initial);
     else render();
@@ -1502,21 +1467,24 @@
   const clockTimer = setInterval(() => {
     if (document.hidden) return;
     scenery.update(settings, language);
+    festivalStage?.update(sceneContext()); venueStage?.update(sceneContext()); themeEnvironment?.update(sceneContext());
     renderInspector();
     const roomSessions = snapshot.sessions.filter((session) => Scene.inRoom(session, selectedProject) && !Scene.isClosed(session));
     const recent = roomSessions.reduce((latest, session) => Math.max(latest, Scene.timestamp(session.lastEventAt)), 0);
     text($('signal-summary'), recent ? timeAgo(recent) : '');
   }, 12000);
-  const secondsTimer = setInterval(() => { if (!document.hidden) scenery.updateClock(settings, language); }, 1000);
+  const secondsTimer = setInterval(() => { if (!document.hidden) { scenery.updateClock(settings, language); festivalStage?.update(sceneContext()); themeEnvironment?.update(sceneContext()); social?.tick(); } }, 1000);
   window.addEventListener('beforeunload', () => {
     destroyed = true;
     usageHistory?.dispose();
     setupAssistant?.dispose();
     visitor.destroy();
+    social?.destroy(); venueStage?.destroy(); festivalStage?.destroy(); themeEnvironment?.destroy();
     scenery.destroy();
     clearInterval(clockTimer);
     clearInterval(secondsTimer);
     cancelAnimationFrame(frameTimer);
+    cancelAnimationFrame(admissionFrame); pendingArrivals.clear();
     clearTimeout(trafficTimer);
     clearTrafficBlock();
     clearTimeout(doorTimer);

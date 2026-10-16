@@ -44,7 +44,7 @@
       bounds: { x1: b.left * 100 / world.width, x2: b.right * 100 / world.width,
         y1: b.top * 100 / world.height, y2: b.bottom * 100 / world.height } }));
     const gap = Number.isFinite(options.gap) ? Math.max(0, options.gap) : 8;
-    const limit = Math.max(2, Math.min(64, Math.floor(options.limit) || 16));
+    const limit = Math.max(2, Math.min(4096, Math.floor(options.limit) || 256));
     const actors = new Map(), requests = new Map();
     let active = null, sequence = 0, revision = 0, cached = null, invalid = false;
 
@@ -62,9 +62,11 @@
         const position = point(value?.position);
         if (!value?.id || !position || next.has(String(value.id))) { invalid = true; continue; }
         const scale = Number.isFinite(value.scale) ? value.scale : 1;
+        const uniformScale = typeof value.uniformScale === 'number' && Number.isFinite(value.uniformScale) && value.uniformScale > 0 ? value.uniformScale : undefined;
         const footprint = value.footprint && ['left','right','top','bottom'].every(key => Number.isFinite(value.footprint[key]) && value.footprint[key] >= 0)
           ? Object.fromEntries(['left','right','top','bottom'].map(key => [key, value.footprint[key]])) : undefined;
-        next.set(String(value.id), { id: String(value.id), position, helper: Boolean(value.helper), scale, footprint, staged: value.staged === true, canYield: value.canYield !== false });
+        next.set(String(value.id), { id: String(value.id), position, helper: Boolean(value.helper), scale, uniformScale,
+          ...(value.layoutMode === 'grid' ? { layoutMode: 'grid' } : {}), footprint, staged: value.staged === true, canYield: value.canYield !== false });
       }
       const signature = JSON.stringify([...next.values()].sort((a, b) => a.id.localeCompare(b.id)));
       if (signature !== sync.signature || invalid !== sync.invalid) { sync.signature = signature; sync.invalid = invalid; changed(); }

@@ -86,7 +86,8 @@
   const needsAttention = (session) => !isClosed(session) && (session.attention === true || session.activity === 'waiting-user' || session.activity === 'error');
 
   const agentScale = value => Math.max(.65, Math.min(1.35, Number.isFinite(Number(value)) && Number(value) > 0 ? Number(value) : 1));
-  function actorScale(point, { helper = false, scale = 1 } = {}) {
+  function actorScale(point, { helper = false, scale = 1, uniformScale } = {}) {
+    if (typeof uniformScale === 'number' && Number.isFinite(uniformScale) && uniformScale > 0) return uniformScale;
     return (.76 + finite(point && point.y) / 500) * (helper ? .84 : 1) * agentScale(scale);
   }
   function actorBounds(point, options = {}) {
@@ -112,10 +113,12 @@
     return boundsOverlap(actorBounds(a, aOptions), actorBounds(b, bOptions), gap);
   }
   function legalActorPoint(point, options = {}) {
-    if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y) || point.x < 5 || point.x > 95 || point.y < 40.7 || point.y > 86) return false;
+    if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return false;
+    const grid = options.layoutMode === 'grid';
+    if (!grid && (point.x < 5 || point.x > 95 || point.y < 40.7 || point.y > 86)) return false;
     // Seats and route endpoints use the same furniture clearance. A point
     // inside the route's .8 margin must never be offered as an arrival target.
-    if (OBSTACLES.some(rect => inside(point, rect, .8))) return false;
+    if (!grid && OBSTACLES.some(rect => inside(point, rect, .8))) return false;
     const bounds = actorBounds(point, options), viewport = options.viewport || ACTOR_VIEWPORT;
     if (bounds.left < viewport.left - 1e-7 || bounds.right > viewport.right + 1e-7 || bounds.top < viewport.top - 1e-7 || bounds.bottom > viewport.bottom + 1e-7) return false;
     return !(options.reservedRects || []).some(rect => rect && (!rect.ownerId || rect.ownerId !== (options.id || options.session?.id))
@@ -354,6 +357,219 @@
     return { ...result, visible: [], seats: new Map(), hidden: room.length, layoutFits: false };
   }
 
+  /** All authoritative attendance rows share one plane; no body capacity limit.
+   * Identity, activity and ancestry are never rewritten to make a layout fit.
+   * Dense layouts describe stage positions rather than fictional furniture use.
+   */
+  function layoutAll(present, options = {}) {
+    const byId = new Map();
+    for (const session of Array.isArray(present) ? present : []) {
+      if (session && typeof session.id === 'string' && session.id) byId.set(session.id, session);
+    }
+    const visible = [...byId.values()].sort((a, b) => a.id.localeCompare(b.id));
+    const rootIdsBySession = familyRoots(visible);
+    const roots = visible.filter(session => rootIdsBySession.get(session.id) === session.id);
+    const requestedScale = agentScale(options.requestedScale ?? options.scale);
+    const reservedRects = (Array.isArray(options.reservedRects) ? options.reservedRects : CLOCK_RESERVED)
+      .filter(rect => rect && ['left', 'right', 'top', 'bottom'].every(key => Number.isFinite(rect[key])) && rect.right > rect.left && rect.bottom > rect.top);
+    const viewport = options.viewport || ACTOR_VIEWPORT;
+    const previous = options.previousSeats instanceof Map ? options.previousSeats : new Map();
+    const footprints = new Map(visible.map(session => {
+      const measured = options.footprints?.get(session.id);
+      const valid = measured && ['left', 'right', 'top', 'bottom'].every(key => Number.isFinite(measured[key]) && measured[key] >= 0)
+        && measured.left + measured.right > 0 && measured.top + measured.bottom > 0;
+      return [session.id, valid ? measured : session.parentId ? ACTOR_FOOTPRINT.helper : ACTOR_FOOTPRINT.root];
+    }));
+    const workZone = session => {
+      const spec = activitySpec(session), old = previous.get(session.id);
+      return spec.stale && old && ZONES[old.workZone || old.zone] ? old.workZone || old.zone : spec.zone;
+    };
+    const finish = (raw, uniformScale, layoutMode, gap, stageRect = null) => {
+      const seats = new Map(visible.map(session => [session.id, { ...raw.get(session.id), workZone: workZone(session),
+        depth: 1, helper: Boolean(session.parentId), uniformScale, layoutMode }]));
+      Object.defineProperties(seats, { fits: { value: true }, unplacedIds: { value: [] } });
+      return { visible, seats, roots, rootIdsBySession, requestedScale, uniformScale, layoutMode, gap, stageRect,
+        page: 0, pages: 1, capacity: visible.length, helperCapacity: visible.filter(session => session.parentId).length,
+        hidden: 0, helperOverflow: 0, layoutFits: true };
+    };
+    if (!visible.length) return finish(new Map(), requestedScale, 'stations', ACTOR_GAP);
+    // Reuse semantic positions only when the entire cast fits at equal size.
+    // Previous grid positions are not furniture positions, even for stale rows.
+    if (visible.length <= 8) {
+      const stationPrevious = new Map([...previous].filter(([, seat]) => ZONES[seat.zone]));
+      const stationOptions = { ...options, scale: requestedScale, uniformScale: requestedScale, footprints, reservedRects, viewport, greedyOnly: true };
+      let stations = assignSeats(visible, stationPrevious, stationOptions);
+      if (!stations.fits) stations = assignSeats(visible, new Map(), stationOptions);
+      if (stations.fits) return finish(stations, requestedScale, 'stations', ACTOR_GAP);
+    }
+
+    // Sweep free horizontal bands around visual overlays. Keep a bounded set
+    // of large empty rectangles, including the entire area below the clock.
+    // Grid packing ignores painted furniture, never the viewport or overlays.
+    const blocked = reservedRects.map(rect => ({ left: Math.max(viewport.left, rect.left - RESERVED_GAP),
+      right: Math.min(viewport.right, rect.right + RESERVED_GAP), top: Math.max(viewport.top, rect.top - RESERVED_GAP),
+      bottom: Math.min(viewport.bottom, rect.bottom + RESERVED_GAP) })).filter(rect => rect.left < rect.right && rect.top < rect.bottom);
+    const edges = [...new Set([viewport.top, viewport.bottom, ...blocked.flatMap(rect => [rect.top, rect.bottom])])].sort((a, b) => a - b);
+    let rectangles = [];
+    const addRect = (left, right, top, bottom) => {
+      if (right <= left || bottom <= top) return;
+      rectangles.push({ left, right, top, bottom, area: (right - left) * (bottom - top) });
+      if (rectangles.length > 64) rectangles = rectangles.sort((a, b) => b.area - a.area).slice(0, 32);
+    };
+    for (let a = 0; a < edges.length - 1; a += 1) for (let b = a + 1; b < edges.length; b += 1) {
+      const top = edges[a], bottom = edges[b];
+      const intervals = blocked.filter(rect => rect.top < bottom && rect.bottom > top).sort((a, b) => a.left - b.left);
+      let left = viewport.left;
+      for (const rect of intervals) { addRect(left, rect.left, top, bottom); left = Math.max(left, rect.right); }
+      addRect(left, viewport.right, top, bottom);
+    }
+    rectangles = rectangles.sort((a, b) => b.area - a.area).slice(0, 32);
+    if (!rectangles.length) throw new RangeError('The presentation viewport is fully occupied by reserved overlays');
+    const envelope = Object.fromEntries(['left', 'right', 'top', 'bottom'].map(key => [key, Math.max(...[...footprints.values()].map(value => value[key]))]));
+    const width = envelope.left + envelope.right, height = envelope.top + envelope.bottom;
+    let best = null;
+    for (const rect of rectangles) for (let columns = 1; columns <= visible.length; columns += 1) {
+      const rows = Math.ceil(visible.length / columns);
+      // A two-pixel minimum gap survives very dense fits; the remaining gap
+      // scales with the whole cast. No renderer minimum-size clamp is applied.
+      const uniformScale = Math.min(requestedScale,
+        (rect.right - rect.left - 2 * (columns - 1)) / (columns * width + 10 * (columns - 1)),
+        (rect.bottom - rect.top - 2 * (rows - 1)) / (rows * height + 10 * (rows - 1)));
+      if (!(uniformScale > 0)) continue;
+      if (!best || uniformScale > best.uniformScale + 1e-9 || Math.abs(uniformScale - best.uniformScale) < 1e-9 && rows < best.rows) best = { rect, columns, rows, uniformScale };
+    }
+    if (!best) throw new RangeError('The presentation viewport has no positive-size space for the full cast');
+    const { rect, columns, rows, uniformScale } = best, gap = 2 + 10 * uniformScale;
+    const cellWidth = width * uniformScale, cellHeight = height * uniformScale;
+    const top = rect.top + (rect.bottom - rect.top - rows * cellHeight - (rows - 1) * gap) / 2;
+    const seats = new Map(visible.map((session, index) => {
+      const row = Math.floor(index / columns), column = index % columns, count = Math.min(columns, visible.length - row * columns);
+      const left = rect.left + (rect.right - rect.left - count * cellWidth - (count - 1) * gap) / 2;
+      return [session.id, { x: (left + column * (cellWidth + gap) + envelope.left * uniformScale) * 100 / WORLD.width,
+        y: (top + row * (cellHeight + gap) + envelope.top * uniformScale) * 100 / WORLD.height, zone: 'stage' }];
+    }));
+    return finish(seats, uniformScale, 'grid', gap, { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom });
+  }
+
+  /** Stable all-cast presentation. Existing identities keep their exact foot
+   * anchors through activity, arrival, removal and scale changes. Only a shared
+   * scale changes; new identities fill real whitespace around those anchors.
+   */
+  function layoutStableAll(present, options = {}) {
+    const byId = new Map();
+    for (const session of Array.isArray(present) ? present : []) if (session && typeof session.id === 'string' && session.id) byId.set(session.id, session);
+    const visible = [...byId.values()].sort((a, b) => a.id.localeCompare(b.id));
+    const requestedScale = agentScale(options.requestedScale ?? options.scale), viewport = options.viewport || ACTOR_VIEWPORT;
+    const reservedRects = (Array.isArray(options.reservedRects) ? options.reservedRects : CLOCK_RESERVED)
+      .filter(rect => rect && ['left', 'right', 'top', 'bottom'].every(key => Number.isFinite(rect[key])) && rect.right > rect.left && rect.bottom > rect.top);
+    const previous = options.previousSeats instanceof Map ? options.previousSeats : new Map();
+    const footprints = new Map(visible.map(session => {
+      const measured = options.footprints?.get(session.id);
+      const valid = measured && ['left', 'right', 'top', 'bottom'].every(key => Number.isFinite(measured[key]) && measured[key] >= 0)
+        && measured.left + measured.right > 0 && measured.top + measured.bottom > 0;
+      return [session.id, valid ? measured : session.parentId ? ACTOR_FOOTPRINT.helper : ACTOR_FOOTPRINT.root];
+    }));
+    const fixed = visible.filter(session => {
+      const old = previous.get(session.id); return old && Number.isFinite(old.x) && Number.isFinite(old.y);
+    });
+    const added = visible.filter(session => !fixed.includes(session));
+    const finish = (positions, uniformScale) => {
+      const rootIdsBySession = familyRoots(visible);
+      const seats = new Map(visible.map(session => {
+        const point = positions.get(session.id), old = previous.get(session.id), spec = activitySpec(session);
+        const workZone = spec.stale && old && ZONES[old.workZone || old.zone] ? old.workZone || old.zone : spec.zone;
+        return [session.id, { x: point.x, y: point.y, zone: ZONES[point.zone] ? point.zone : 'stage', workZone,
+          depth: 1, helper: Boolean(session.parentId), uniformScale, layoutMode: 'grid' }];
+      }));
+      Object.defineProperties(seats, { fits: { value: true }, unplacedIds: { value: [] } });
+      return { visible, seats, roots: visible.filter(session => rootIdsBySession.get(session.id) === session.id), rootIdsBySession,
+        requestedScale, uniformScale, layoutMode: 'grid', stable: true, gap: 2 + 10 * uniformScale,
+        page: 0, pages: 1, capacity: visible.length, helperCapacity: visible.filter(session => session.parentId).length,
+        hidden: 0, helperOverflow: 0, layoutFits: true, stageRect: null };
+    };
+    if (!visible.length) return finish(new Map(), requestedScale);
+    if (!fixed.length) {
+      const initial = layoutAll(visible, { ...options, footprints, requestedScale, reservedRects, gap: 2 + 10 * requestedScale });
+      return finish(initial.seats, initial.uniformScale);
+    }
+
+    // At fixed anchors all four bounds are linear in the one shared scale.
+    // Separation may be horizontal OR vertical, so each pair uses the larger
+    // of those two scale limits. This avoids repeated O(n²) binary fit checks.
+    const ratio = (clearance, extent) => extent > 0 ? clearance / extent : clearance >= 0 ? Infinity : -Infinity;
+    const anchors = fixed.map(session => ({ session, point: previous.get(session.id), footprint: footprints.get(session.id) }));
+    let maximum = requestedScale;
+    for (const actor of anchors) {
+      const x = actor.point.x * WORLD.width / 100, y = actor.point.y * WORLD.height / 100, f = actor.footprint;
+      maximum = Math.min(maximum, ratio(x - viewport.left, f.left), ratio(viewport.right - x, f.right), ratio(y - viewport.top, f.top), ratio(viewport.bottom - y, f.bottom));
+      for (const rect of reservedRects) maximum = Math.min(maximum, Math.max(
+        ratio(rect.left - RESERVED_GAP - x, f.right), ratio(x - rect.right - RESERVED_GAP, f.left),
+        ratio(rect.top - RESERVED_GAP - y, f.bottom), ratio(y - rect.bottom - RESERVED_GAP, f.top)));
+    }
+    for (let i = 0; i < anchors.length; i += 1) for (let j = i + 1; j < anchors.length; j += 1) {
+      const a = anchors[i], b = anchors[j], dx = (b.point.x - a.point.x) * WORLD.width / 100, dy = (b.point.y - a.point.y) * WORLD.height / 100;
+      const horizontal = (Math.abs(dx) - 2) / ((dx >= 0 ? a.footprint.right + b.footprint.left : a.footprint.left + b.footprint.right) + 10);
+      const vertical = (Math.abs(dy) - 2) / ((dy >= 0 ? a.footprint.bottom + b.footprint.top : a.footprint.top + b.footprint.bottom) + 10);
+      maximum = Math.min(maximum, Math.max(horizontal, vertical));
+    }
+    if (!(maximum > 0)) throw new RangeError('An existing agent anchor is outside the viewport or occupied by a reserved overlay');
+    const oldScale = typeof options.previousScale === 'number' && Number.isFinite(options.previousScale) && options.previousScale > 0
+      ? options.previousScale : previous.get(fixed[0].id).uniformScale;
+    // Re-dividing the same pixel anchors can differ by a floating-point ULP.
+    // Do not turn a metadata refresh into a fresh scale transition for that.
+    if (Number.isFinite(oldScale) && oldScale <= requestedScale && maximum < oldScale && oldScale - maximum < 1e-10) maximum = oldScale;
+    const removed = [...previous.keys()].some(id => !byId.has(id));
+    const requestChanged = Number.isFinite(options.previousRequestedScale) && options.previousRequestedScale !== requestedScale;
+    // A routine metadata refresh does not breathe or repack the whole cast.
+    // A removal or deliberate size preference change may enlarge at the same
+    // anchors, subject to every viewport, overlay and pair constraint above.
+    if (!removed && !requestChanged && Number.isFinite(oldScale) && oldScale > 0) maximum = Math.min(maximum, oldScale);
+    if (!added.length) return finish(new Map(anchors.map(actor => [actor.session.id, actor.point])), maximum);
+
+    const envelope = Object.fromEntries(['left', 'right', 'top', 'bottom'].map(key => [key, Math.max(...[...footprints.values()].map(value => value[key]))]));
+    function place(uniformScale) {
+      const gap = 2 + 10 * uniformScale;
+      const positions = new Map(anchors.map(actor => [actor.session.id, actor.point]));
+      const occupied = anchors.map(actor => actorBounds(actor.point, { uniformScale, footprint: actor.footprint }));
+      const x1 = viewport.left + envelope.left * uniformScale, x2 = viewport.right - envelope.right * uniformScale;
+      const y1 = viewport.top + envelope.top * uniformScale, y2 = viewport.bottom - envelope.bottom * uniformScale;
+      if (x2 < x1 || y2 < y1) return null;
+      const candidates = [], seen = new Set();
+      const add = point => { const key = point.x.toFixed(7) + '/' + point.y.toFixed(7); if (!seen.has(key)) { seen.add(key); candidates.push(point); } };
+      // Nearby semantic positions are preferred only for the new bodies. They
+      // never change where an already visible identity stands.
+      for (const session of added) for (const [x, y] of ZONES[activitySpec(session).zone].seats) add({ x, y });
+      // A fixed-size candidate lattice bounds placement work independently of
+      // the number of observed rows. It holds well above the 256-body target.
+      for (let row = 0; row < 32; row += 1) for (let column = 0; column < 48; column += 1) add({
+        x: (x1 + (x2 - x1) * column / 47) * 100 / WORLD.width,
+        y: (y1 + (y2 - y1) * row / 31) * 100 / WORLD.height
+      });
+      let index = 0;
+      for (const point of candidates) {
+        const bounds = actorBounds(point, { uniformScale, footprint: envelope });
+        if (bounds.left < viewport.left - 1e-7 || bounds.right > viewport.right + 1e-7 || bounds.top < viewport.top - 1e-7 || bounds.bottom > viewport.bottom + 1e-7) continue;
+        if (reservedRects.some(rect => boundsOverlap(bounds, rect, RESERVED_GAP)) || occupied.some(rect => boundsOverlap(bounds, rect, gap))) continue;
+        positions.set(added[index].id, { ...point, zone: 'stage' }); occupied.push(bounds); index += 1;
+        if (index === added.length) return positions;
+      }
+      return null;
+    }
+    const current = place(maximum);
+    if (current) return finish(current, maximum);
+    // Only scale is searched. Every retained foot coordinate remains bit-for-
+    // bit identical, even when a burst of hundreds of new identities arrives.
+    let high = maximum, low = maximum, positions = null;
+    for (let pass = 0; pass < 40 && !positions; pass += 1) { low /= 2; positions = place(low); }
+    if (!positions) throw new RangeError('The full cast has no positive-size placement around its fixed anchors');
+    let best = positions;
+    for (let pass = 0; pass < 12; pass += 1) {
+      const middle = (low + high) / 2, candidate = place(middle);
+      if (candidate) { low = middle; best = candidate; } else high = middle;
+    }
+    return finish(best, low);
+  }
+
   function hash(value) {
     let result = 2166136261;
     for (const char of String(value)) result = Math.imul(result ^ char.charCodeAt(0), 16777619);
@@ -365,7 +581,7 @@
     const descriptors = sessions.map(session => {
       const old = previous.get(session.id), spec = activitySpec(session);
       const zone = spec.stale && old ? old.zone : spec.zone;
-      return { session, old, spec, zone, helper: Boolean(session.parentId), scale: agentScale(options.scale), footprint: options.footprints?.get(session.id), entering: Boolean(options.entryIds?.has(session.id)) };
+      return { session, old, spec, zone, helper: Boolean(session.parentId), scale: agentScale(options.scale), uniformScale: options.uniformScale, footprint: options.footprints?.get(session.id), entering: Boolean(options.entryIds?.has(session.id)) };
     }).sort((a, b) => Number(b.entering) - Number(a.entering) || Number(b.session.id === options.preferredId) - Number(a.session.id === options.preferredId)
       || Number(a.helper) - Number(b.helper) || String(a.session.id).localeCompare(String(b.session.id)));
     // A larger body may need another seat in its work area, never a coding
@@ -406,6 +622,9 @@
       placed.push({ actor, point });
     }
     if (placed.length === descriptors.length) return finish(placed);
+    // All-cast presentation has a bounded grid fallback. It must not exhaust
+    // permutations of eight different measured nameplates on every snapshot.
+    if (options.greedyOnly) return finish(placed);
 
     // Two pedestrian rows give a bounded, deterministic packing fallback. Full
     // rectangles are justified across the viewport; helpers can clear a central
@@ -559,5 +778,5 @@
     return chars.length > length ? chars.slice(0, length).join('') + '…' : title;
   }
 
-  return { WORLD, CAPACITY, ALL_ROOMS, ZONES, STATION_AREAS, stationCompatible, SPECS, OBSTACLES, ACTOR_GAP, ACTOR_VIEWPORT, CLOCK_RESERVED, ACTOR_FOOTPRINT, actorScale, actorBounds, actorReservation, boundsOverlap, actorsOverlap, legalActorPoint, timestamp, distance, projectKey, inRoom, providerName, identityName, createIdentityRegistry, isClosed, needsAttention, activitySpec, roomsFor, chooseRoom, pageSessions, assignSeats, route, segmentHitsRect, shortTitle };
+  return { WORLD, CAPACITY, ALL_ROOMS, ZONES, STATION_AREAS, stationCompatible, SPECS, OBSTACLES, ACTOR_GAP, ACTOR_VIEWPORT, CLOCK_RESERVED, ACTOR_FOOTPRINT, actorScale, actorBounds, actorReservation, boundsOverlap, actorsOverlap, legalActorPoint, timestamp, distance, projectKey, inRoom, providerName, identityName, createIdentityRegistry, isClosed, needsAttention, activitySpec, roomsFor, chooseRoom, pageSessions, layoutAll, layoutStableAll, assignSeats, route, segmentHitsRect, shortTitle };
 });

@@ -65,3 +65,53 @@ test('harbour display names persist without changing the original session identi
   for (const nameStyle of ['custom', '', true, null, {}]) assert.throws(() => settings.set({nameStyle}), /name style/);
   assert.equal(settings.get().nameStyle, 'harbour');
 });
+
+test('existing preferences gain the workshop without rewriting the file and venue choices persist independently', t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'office-settings-venue-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const filename = path.join(dir, 'settings.json');
+  const original = JSON.stringify({ rain: true, language: 'en', agentScale: 1.35, sceneTime: 'sunset', nameStyle: 'harbour' });
+  fs.writeFileSync(filename, original);
+  const settings = createSettings(dir);
+  assert.equal(settings.get().sceneVenue, 'workshop');
+  assert.equal(fs.readFileSync(filename, 'utf8'), original, 'migration remains read-only');
+  for (const sceneVenue of ['teahouse', 'observatory', 'workshop']) {
+    settings.set({ sceneVenue });
+    const restored = createSettings(dir).get();
+    assert.equal(restored.sceneVenue, sceneVenue);
+    assert.equal(restored.agentScale, 1.35);
+    assert.equal(restored.sceneTime, 'sunset');
+    assert.equal(restored.language, 'en');
+    assert.equal(restored.nameStyle, 'harbour');
+    assert.equal(restored.rain, true);
+  }
+});
+
+test('invalid venue patches leave both in-memory preferences and the saved file unchanged', t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'office-settings-venue-invalid-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const settings = createSettings(dir);
+  settings.set({ sceneVenue: 'teahouse', rain: true });
+  const filename = path.join(dir, 'settings.json');
+  const original = fs.readFileSync(filename, 'utf8');
+  for (const sceneVenue of ['Workshop', 'unknown', '../assets/other.jpg', '', null, true, 1, {}, ['teahouse']]) {
+    assert.throws(() => settings.set({ sceneVenue, rain: false }), /scene venue/);
+    assert.equal(settings.get().sceneVenue, 'teahouse');
+    assert.equal(settings.get().rain, true);
+    assert.equal(fs.readFileSync(filename, 'utf8'), original);
+  }
+});
+
+test('seasonal scenes and weather migrate read-only, persist, and reject invalid compound patches atomically', t => {
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'office-settings-festivals-'));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
+  const file=path.join(dir,'settings.json'),original=JSON.stringify({rain:true,language:'en'});fs.writeFileSync(file,original);
+  const settings=createSettings(dir);assert.equal(settings.get().sceneTheme,'auto');assert.equal(settings.get().sceneWeather,'rain');assert.equal(fs.readFileSync(file,'utf8'),original);
+  const festivals=require('../lib/festival-model.js');
+  for(const sceneTheme of festivals.THEME_IDS){settings.set({sceneTheme});assert.equal(createSettings(dir).get().sceneTheme,sceneTheme);}
+  for(const sceneWeather of festivals.WEATHER_MODES){settings.set({sceneWeather});assert.equal(createSettings(dir).get().sceneWeather,sceneWeather);}
+  const before=fs.readFileSync(file,'utf8');
+  for(const invalid of ['',null,true,'../other.svg',{},['halloween']]){
+    assert.throws(()=>settings.set({sceneTheme:invalid,sceneWeather:'snow'}),/scene theme/);assert.equal(fs.readFileSync(file,'utf8'),before);
+    assert.throws(()=>settings.set({sceneWeather:invalid,sceneTheme:'christmas'}),/scene weather/);assert.equal(fs.readFileSync(file,'utf8'),before);
+  }
+});

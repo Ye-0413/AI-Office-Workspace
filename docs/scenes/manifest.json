@@ -1,0 +1,361 @@
+{
+  "themes": [
+    {
+      "id": "spring",
+      "nameZh": "春日新芽",
+      "nameEn": "Spring shoots",
+      "actionZh": "浇一滴春水",
+      "actionEn": "Water a spring shoot",
+      "kind": "seasonal-study"
+    },
+    {
+      "id": "summer",
+      "nameZh": "夏日清风",
+      "nameEn": "Summer breeze",
+      "actionZh": "展开竹扇",
+      "actionEn": "Unfold a bamboo fan",
+      "kind": "seasonal-study"
+    },
+    {
+      "id": "autumn",
+      "nameZh": "秋日拾叶",
+      "nameEn": "Autumn leaf album",
+      "actionZh": "收下一片秋叶",
+      "actionEn": "Keep an autumn leaf",
+      "kind": "seasonal-study"
+    },
+    {
+      "id": "winter",
+      "nameZh": "冬日雪瓶",
+      "nameEn": "Winter snow globe",
+      "actionZh": "轻摇雪景瓶",
+      "actionEn": "Shake the snow globe",
+      "kind": "seasonal-study"
+    },
+    {
+      "id": "halloween",
+      "nameZh": "万圣南瓜夜",
+      "nameEn": "Halloween lantern",
+      "actionZh": "点亮南瓜灯",
+      "actionEn": "Light the pumpkin lantern",
+      "kind": "festival"
+    },
+    {
+      "id": "christmas",
+      "nameZh": "圣诞暖灯",
+      "nameEn": "Christmas lights",
+      "actionZh": "打开树下礼盒",
+      "actionEn": "Open the gift under the tree",
+      "kind": "festival"
+    },
+    {
+      "id": "qingming",
+      "nameZh": "清明纸鸢",
+      "nameEn": "Qingming kite",
+      "actionZh": "放起一只纸鸢",
+      "actionEn": "Let a paper kite rise",
+      "kind": "festival"
+    },
+    {
+      "id": "newyear",
+      "nameZh": "新年心愿",
+      "nameEn": "New Year wishes",
+      "actionZh": "挂一枚新年愿签",
+      "actionEn": "Hang a New Year wish",
+      "kind": "festival"
+    },
+    {
+      "id": "lunarnewyear",
+      "nameZh": "新春灯结",
+      "nameEn": "Lunar New Year lantern",
+      "actionZh": "展开新春灯笼",
+      "actionEn": "Unfold the New Year lantern",
+      "kind": "festival"
+    },
+    {
+      "id": "midautumn",
+      "nameZh": "中秋望月",
+      "nameEn": "Mid-Autumn moon",
+      "actionZh": "拨开云边望月",
+      "actionEn": "Part the clouds for the moon",
+      "kind": "festival"
+    },
+    {
+      "id": "hanami",
+      "nameZh": "花见樱枝",
+      "nameEn": "Hanami blossom branch",
+      "actionZh": "轻触一枝春樱",
+      "actionEn": "Wake a blossom branch",
+      "kind": "seasonal-study"
+    },
+    {
+      "id": "midsummer",
+      "nameZh": "仲夏花环",
+      "nameEn": "Midsummer wreath",
+      "actionZh": "织起仲夏彩带",
+      "actionEn": "Weave Midsummer ribbons",
+      "kind": "festival"
+    },
+    {
+      "id": "dayofdead",
+      "nameZh": "亡灵节花忆",
+      "nameEn": "Día de Muertos remembrance",
+      "actionZh": "展开万寿菊剪纸",
+      "actionEn": "Unfold the marigold paper",
+      "kind": "festival"
+    },
+    {
+      "id": "dragonboat",
+      "nameZh": "龙舟击楫",
+      "nameEn": "Dragon boat rhythm",
+      "actionZh": "划一桨龙舟",
+      "actionEn": "Row the dragon boat",
+      "kind": "festival"
+    },
+    {
+      "id": "tanabata",
+      "nameZh": "七夕星桥",
+      "nameEn": "Tanabata star bridge",
+      "actionZh": "搭起一段星桥",
+      "actionEn": "Build a star bridge",
+      "kind": "festival"
+    },
+    {
+      "id": "lanternfest",
+      "nameZh": "元宵灯谜",
+      "nameEn": "Lantern riddle",
+      "actionZh": "展开一张灯谜",
+      "actionEn": "Unfold a lantern riddle",
+      "kind": "festival"
+    },
+    {
+      "id": "diwali",
+      "nameZh": "排灯小径",
+      "nameEn": "Diwali lamp path",
+      "actionZh": "点一盏陶灯",
+      "actionEn": "Light a clay lamp",
+      "kind": "festival"
+    },
+    {
+      "id": "holi",
+      "nameZh": "洒红调色盘",
+      "nameEn": "Holi pigment palette",
+      "actionZh": "调一勺彩粉",
+      "actionEn": "Mix a spoon of pigment",
+      "kind": "festival"
+    },
+    {
+      "id": "easter",
+      "nameZh": "彩蛋花纹坊",
+      "nameEn": "Easter egg patterns",
+      "actionZh": "配好半枚彩蛋",
+      "actionEn": "Match an egg pattern",
+      "kind": "festival"
+    },
+    {
+      "id": "valentine",
+      "nameZh": "心笺邮匣",
+      "nameEn": "Valentine paper letter",
+      "actionZh": "折好一封心笺",
+      "actionEn": "Fold a paper letter",
+      "kind": "festival"
+    },
+    {
+      "id": "stpatrick",
+      "nameZh": "三叶草结环",
+      "nameEn": "Shamrock wreath",
+      "actionZh": "展开一株三叶草",
+      "actionEn": "Open a shamrock",
+      "kind": "festival"
+    },
+    {
+      "id": "thanksgiving",
+      "nameZh": "秋收分拣台",
+      "nameEn": "Harvest sorting table",
+      "actionZh": "收好一份秋实",
+      "actionEn": "Sort a little harvest",
+      "kind": "festival"
+    },
+    {
+      "id": "carnival",
+      "nameZh": "嘉年华羽面",
+      "nameEn": "Carnival feather mask",
+      "actionZh": "展开羽毛面具",
+      "actionEn": "Unfold a feather mask",
+      "kind": "festival"
+    },
+    {
+      "id": "oktoberfest",
+      "nameZh": "椒盐结工坊",
+      "nameEn": "Pretzel knot workshop",
+      "actionZh": "编一个椒盐结",
+      "actionEn": "Braid a pretzel knot",
+      "kind": "festival"
+    },
+    {
+      "id": "loykrathong",
+      "nameZh": "水灯莲台",
+      "nameEn": "Loy Krathong lotus light",
+      "actionZh": "展开莲瓣水灯",
+      "actionEn": "Open a lotus lantern",
+      "kind": "festival"
+    },
+    {
+      "id": "songkran",
+      "nameZh": "泼水涟漪",
+      "nameEn": "Songkran water ripples",
+      "actionZh": "轻倒一勺清水",
+      "actionEn": "Pour a little water",
+      "kind": "festival"
+    },
+    {
+      "id": "tulip",
+      "nameZh": "郁金香苗圃",
+      "nameEn": "Tulip miniature garden",
+      "actionZh": "唤醒一朵郁金香",
+      "actionEn": "Open a tulip",
+      "kind": "seasonal-study"
+    },
+    {
+      "id": "lavender",
+      "nameZh": "薰衣草香笺",
+      "nameEn": "Lavender paper sachet",
+      "actionZh": "包一枚薰衣草香笺",
+      "actionEn": "Wrap a lavender sachet",
+      "kind": "seasonal-study"
+    },
+    {
+      "id": "sunflower",
+      "nameZh": "向日葵追光",
+      "nameEn": "Sunflower light study",
+      "actionZh": "转动一束日光",
+      "actionEn": "Move a little sunbeam",
+      "kind": "seasonal-study"
+    },
+    {
+      "id": "rainy",
+      "nameZh": "雨滴木琴",
+      "nameEn": "Raindrop xylophone",
+      "actionZh": "敲响一滴小雨",
+      "actionEn": "Play a raindrop",
+      "kind": "seasonal-study"
+    },
+    {
+      "id": "snowfall",
+      "nameZh": "雪球小工地",
+      "nameEn": "Snowball workshop",
+      "actionZh": "滚好一枚雪球",
+      "actionEn": "Roll a little snowball",
+      "kind": "seasonal-study"
+    },
+    {
+      "id": "aurora",
+      "nameZh": "极光织带",
+      "nameEn": "Aurora ribbon loom",
+      "actionZh": "织一条极光带",
+      "actionEn": "Weave an aurora ribbon",
+      "kind": "seasonal-study"
+    },
+    {
+      "id": "meteor",
+      "nameZh": "流星轨道台",
+      "nameEn": "Meteor orbit table",
+      "actionZh": "推一颗轨道流星",
+      "actionEn": "Guide an orbiting meteor",
+      "kind": "seasonal-study"
+    },
+    {
+      "id": "solstice",
+      "nameZh": "日影刻度盘",
+      "nameEn": "Solstice shadow dial",
+      "actionZh": "拨动一格日影",
+      "actionEn": "Turn a shadow dial",
+      "kind": "seasonal-study"
+    },
+    {
+      "id": "ocean",
+      "nameZh": "漂流瓶书桌",
+      "nameEn": "Ocean bottle desk",
+      "actionZh": "展开瓶中的纸卷",
+      "actionEn": "Unroll a bottle note",
+      "kind": "seasonal-study"
+    },
+    {
+      "id": "bamboo",
+      "nameZh": "风竹听雨",
+      "nameEn": "Bamboo breeze chimes",
+      "actionZh": "拨动一管风竹",
+      "actionEn": "Nudge a bamboo chime",
+      "kind": "seasonal-study"
+    },
+    {
+      "id": "firefly",
+      "nameZh": "萤火小径",
+      "nameEn": "Firefly path",
+      "actionZh": "点一段萤火路",
+      "actionEn": "Light a firefly path",
+      "kind": "seasonal-study"
+    },
+    {
+      "id": "sailing",
+      "nameZh": "纸帆折叠台",
+      "nameEn": "Paper sailboat table",
+      "actionZh": "折出一片纸帆",
+      "actionEn": "Fold a paper sail",
+      "kind": "seasonal-study"
+    },
+    {
+      "id": "music",
+      "nameZh": "齿轮八音匣",
+      "nameEn": "Clockwork music box",
+      "actionZh": "摇一圈小音匣",
+      "actionEn": "Turn a music box crank",
+      "kind": "seasonal-study"
+    },
+    {
+      "id": "bookday",
+      "nameZh": "书页藏签",
+      "nameEn": "Book and bookmark",
+      "actionZh": "翻到一枚藏书签",
+      "actionEn": "Find a bookmark",
+      "kind": "festival"
+    },
+    {
+      "id": "chess",
+      "nameZh": "骑士跳格",
+      "nameEn": "Knight move puzzle",
+      "actionZh": "走一步骑士棋",
+      "actionEn": "Move the little knight",
+      "kind": "seasonal-study"
+    },
+    {
+      "id": "dawn",
+      "nameZh": "晨光棱镜",
+      "nameEn": "Dawn prism",
+      "actionZh": "转动晨光棱镜",
+      "actionEn": "Turn the dawn prism",
+      "kind": "seasonal-study"
+    },
+    {
+      "id": "nightmarket",
+      "nameZh": "灯火小夜摊",
+      "nameEn": "Lantern night stall",
+      "actionZh": "挂上一盏小摊灯",
+      "actionEn": "Hang a little stall lantern",
+      "kind": "seasonal-study"
+    }
+  ],
+  "samples": 41,
+  "durationMs": 1000,
+  "sourceHashes": {
+    "office/lib/festival-model.js": "1d9fd8d25afb9b580ce5df71c081f265209f25bece681e22aedaef0e2d45b565",
+    "office/lib/festival-studies.js": "0787c8d4a3af218a2d379be877283d121354a84d76b6e897b1066c62454b4489",
+    "office/renderer/festival-stage.js": "3e821b4ccde7bde4ea9812802db364dac3d9694e1ac1e6b29c1c9d038a1c73d9",
+    "office/renderer/festival-stage.css": "2a3e152b8a5055aebcbdf607c19ff11aef888265e78ecec7c1cc6a584cf678a5"
+  },
+  "source": [
+    "office/lib/festival-model.js",
+    "office/lib/festival-studies.js",
+    "office/renderer/festival-stage.js"
+  ]
+}

@@ -619,3 +619,192 @@ test('packed board fallback keeps the newcomer to the right and every offered fo
   for(const point of result.seats.values())for(const obstacle of Scene.OBSTACLES)assert.equal(Scene.segmentHitsRect(point,point,obstacle,.8),false,'a safe seat must also be a legal walking endpoint');
   assert.equal(Scene.legalActorPoint({x:49.621664,y:46.5},{scale:1.35,footprint}),false,'the former middle target lay inside the route buffer');
 });
+
+function assertAllBodies(layout, sessions, options = {}) {
+  assert.equal(layout.visible.length, sessions.length);
+  assert.equal(layout.seats.size, sessions.length);
+  assert.equal(layout.pages, 1); assert.equal(layout.page, 0);
+  assert.equal(layout.hidden, 0); assert.equal(layout.helperOverflow, 0); assert.equal(layout.layoutFits, true);
+  assert.ok(layout.uniformScale > 0 && layout.uniformScale <= layout.requestedScale);
+  const viewport = options.viewport || Scene.ACTOR_VIEWPORT;
+  const reservedRects = options.reservedRects || Scene.CLOCK_RESERVED;
+  const geometry = session => ({ id: session.id, helper: Boolean(session.parentId), footprint: options.footprints?.get(session.id), uniformScale: layout.uniformScale, layoutMode: layout.layoutMode, reservedRects, viewport });
+  const measured = layout.visible.map(session => {
+    assert.ok(sessions.includes(session), 'a visible row keeps its authoritative source object');
+    const seat = layout.seats.get(session.id), actor = geometry(session), bounds = Scene.actorBounds(seat, actor);
+    assert.equal(Scene.actorScale(seat, actor), layout.uniformScale);
+    assert.equal(Scene.legalActorPoint(seat, actor), true, 'offered feet are legal for the actual presentation mode');
+    assert.ok(bounds.left >= viewport.left - 1e-6 && bounds.right <= viewport.right + 1e-6);
+    assert.ok(bounds.top >= viewport.top - 1e-6 && bounds.bottom <= viewport.bottom + 1e-6);
+    for (const reserved of reservedRects) assert.equal(Scene.boundsOverlap(bounds, reserved, 3.999), false, 'the full envelope leaves overlays readable');
+    assert.equal(seat.depth, 1);
+    assert.equal(seat.helper, Boolean(session.parentId));
+    return { session, bounds };
+  });
+  for (let i = 0; i < measured.length; i += 1) for (const other of measured.slice(i + 1)) {
+    assert.equal(Scene.boundsOverlap(measured[i].bounds, other.bounds, layout.gap - 1e-6), false, 'every body and full plate is separated: ' + measured[i].session.id + '/' + other.session.id);
+  }
+}
+
+test('a shared explicit scale removes depth and helper hierarchy without changing legacy geometry', () => {
+  const footprint = { left: 83, right: 83, top: 135, bottom: 77 };
+  for (const uniformScale of [.12, .3, .65, 1, 1.35]) for (const helper of [false, true]) for (const y of [24, 46.5, 84]) {
+    const actor = { uniformScale, helper, footprint, scale: 1.35 };
+    assert.equal(Scene.actorScale({ x: 50, y }, actor), uniformScale);
+    const bounds = Scene.actorBounds({ x: 50, y }, actor);
+    assert.ok(Math.abs(bounds.width - 166 * uniformScale) < 1e-8);
+    assert.ok(Math.abs(bounds.height - 212 * uniformScale) < 1e-8);
+  }
+  assert.notEqual(Scene.actorScale({ y: 80 }), Scene.actorScale({ y: 40 }));
+  assert.notEqual(Scene.actorScale({ y: 80 }, { helper: true }), Scene.actorScale({ y: 80 }));
+});
+
+test('a small complete cast keeps real work stations at the same visual scale', () => {
+  const sessions = [task('root', 'coding'), task('child', 'reading', { parentId: 'root' })];
+  for (const requestedScale of [.65, 1, 1.35]) {
+    const layout = Scene.layoutAll(sessions, { requestedScale });
+    assertAllBodies(layout, sessions);
+    assert.equal(layout.layoutMode, 'stations');
+    assert.equal(layout.uniformScale, requestedScale);
+    for (const session of sessions) {
+      const seat = layout.seats.get(session.id);
+      assert.equal(seat.workZone, Scene.activitySpec(session).zone);
+      assert.equal(Scene.stationCompatible(seat, seat.zone), true);
+    }
+    assert.equal(layout.rootIdsBySession.get('child'), 'root');
+  }
+});
+
+test('one hundred actual mains and helpers across projects all fit without paging, inferred activity or identity loss', () => {
+  const activities = ['coding', 'planning', 'reading', 'testing', 'idle', 'unknown', 'waiting-user'];
+  const sessions = Array.from({ length: 100 }, (_, index) => task('all-' + String(index).padStart(3, '0'), activities[index % activities.length], {
+    projectPath: '/projects/' + index % 7,
+    ...(index % 5 ? { parentId: 'all-' + String(index - index % 5).padStart(3, '0') } : {}),
+    ...(index % 9 === 0 ? { status: 'stale', disconnected: true } : {})
+  }));
+  const original = JSON.stringify(sessions);
+  for (const requestedScale of [.65, 1, 1.35]) {
+    const layout = Scene.layoutAll(sessions, { requestedScale });
+    assertAllBodies(layout, sessions);
+    assert.equal(layout.layoutMode, 'grid');
+    assert.ok(layout.uniformScale < .65, 'a dense cast can fit below the preference slider minimum');
+    for (const session of sessions) if (session.parentId) assert.equal(layout.rootIdsBySession.get(session.id), session.parentId);
+    for (const seat of layout.seats.values()) assert.equal(seat.zone, 'stage', 'a stage position never pretends to be a painted workstation');
+  }
+  assert.equal(JSON.stringify(sessions), original);
+});
+
+test('256 mixed measured nameplates retain every body inside a custom viewport and outside overlays', () => {
+  const sessions = Array.from({ length: 256 }, (_, index) => task('dense-' + String(index).padStart(3, '0'), 'planning', index % 3 ? { parentId: 'dense-000' } : {}));
+  const options = { requestedScale: 1.35, viewport: { left: 30, top: 90, right: 1250, bottom: 640 },
+    reservedRects: Scene.CLOCK_RESERVED.concat({ left: 1070, top: 460, right: 1250, bottom: 640 }),
+    footprints: new Map(sessions.map((session, index) => [session.id, { left: 84 + index % 25, right: 108 + index % 50, top: 140, bottom: 90 + index % 20 }])) };
+  const layout = Scene.layoutAll(sessions, options);
+  assertAllBodies(layout, sessions, options);
+  assert.equal(layout.capacity, 256);
+  assert.ok(layout.uniformScale < .4);
+});
+
+test('entry lifecycle, selection, cached absorption and incoming snapshot order cannot remove or rearrange the same cast', () => {
+  const sessions = Array.from({ length: 20 }, (_, index) => task('stable-' + index, 'coding', index ? { parentId: 'stable-0' } : {}));
+  const initial = Scene.layoutAll(sessions, { requestedScale: 1.35 });
+  const changed = sessions.slice().reverse().map(session => ({ ...session, activity: 'unknown', status: 'active', activeTools: 0 }));
+  const options = { requestedScale: 1.35, previousSeats: initial.seats, entryIds: new Set(changed.map(session => session.id)),
+    suppressedIds: new Set(changed.map(session => session.id)), preferredId: 'stable-19', roomKey: '/other-project' };
+  const repeated = Scene.layoutAll(changed, options);
+  assertAllBodies(repeated, changed, options);
+  for (const session of sessions) {
+    const before = initial.seats.get(session.id), after = repeated.seats.get(session.id);
+    assert.equal(after.x, before.x); assert.equal(after.y, before.y);
+    assert.equal(repeated.rootIdsBySession.get(session.id), 'stable-0');
+  }
+  assert.equal(repeated.uniformScale, initial.uniformScale);
+});
+
+test('grid stale positions can become work stations again and empty attendance is a valid complete layout', () => {
+  const sessions = Array.from({ length: 12 }, (_, index) => task('resize-' + index, 'planning'));
+  const dense = Scene.layoutAll(sessions);
+  const lone = { ...sessions[0], status: 'stale', disconnected: true, activity: 'unknown' };
+  const restored = Scene.layoutAll([lone], { previousSeats: dense.seats });
+  assertAllBodies(restored, [lone]);
+  assert.equal(restored.layoutMode, 'stations');
+  assert.ok(Scene.ZONES[restored.seats.get(lone.id).zone]);
+  const empty = Scene.layoutAll([]);
+  assert.equal(empty.seats.size, 0); assert.equal(empty.visible.length, 0); assert.equal(empty.hidden, 0); assert.equal(empty.pages, 1);
+});
+
+test('eight distinct measured coding plates use a bounded complete grid instead of factorial workstation search', () => {
+  const sessions = Array.from({ length: 8 }, (_, index) => task('bounded-' + index, 'coding'));
+  const options = { requestedScale: 1.35, footprints: new Map(sessions.map((session, index) => [session.id, { left: 80 + index * 5, right: 83 + index * 3, top: 135, bottom: 77 }])) };
+  const start = performance.now(), layout = Scene.layoutAll(sessions, options), elapsed = performance.now() - start;
+  assertAllBodies(layout, sessions, options);
+  assert.equal(layout.layoutMode, 'grid');
+  // The former 8! fallback took over ten seconds for these actual constraints.
+  // A broad one-second budget catches that freeze without microbenchmarking.
+  assert.ok(elapsed < 1000, 'full attendance layout must not block a frame loop for seconds: ' + elapsed + 'ms');
+});
+
+test('stable presentation keeps the first main at its exact anchor when a helper appears and either activity changes', () => {
+  const root = task('anchor-root', 'coding'), helper = task('anchor-helper', 'unknown', { parentId: root.id, activeTools: 0 });
+  const first = Scene.layoutStableAll([root], { requestedScale: 1.35 });
+  const next = Scene.layoutStableAll([root, helper], { requestedScale: 1.35, previousSeats: first.seats, previousScale: first.uniformScale, previousRequestedScale: first.requestedScale });
+  assertAllBodies(next, [root, helper]);
+  assert.equal(next.seats.get(root.id).x, first.seats.get(root.id).x);
+  assert.equal(next.seats.get(root.id).y, first.seats.get(root.id).y);
+  const changed = [{ ...helper, activity: 'testing' }, { ...root, activity: 'reading' }];
+  const working = Scene.layoutStableAll(changed, { requestedScale: 1.35, previousSeats: next.seats, previousScale: next.uniformScale, previousRequestedScale: next.requestedScale,
+    suppressedIds: new Set([helper.id]), entryIds: new Set([helper.id]) });
+  assertAllBodies(working, changed);
+  for (const session of changed) {
+    assert.equal(working.seats.get(session.id).x, next.seats.get(session.id).x);
+    assert.equal(working.seats.get(session.id).y, next.seats.get(session.id).y);
+    assert.equal(working.seats.get(session.id).workZone, Scene.activitySpec(session).zone);
+  }
+  assert.equal(working.uniformScale, next.uniformScale, 'metadata must not make the whole cast breathe');
+});
+
+test('stable arrival and removal bursts through 100 and 256 bodies never change any retained foot coordinate', () => {
+  const all = Array.from({ length: 256 }, (_, index) => task('stream-' + String(index).padStart(3, '0'), ['coding', 'planning', 'reading'][index % 3],
+    index % 4 ? { parentId: 'stream-' + String(index - index % 4).padStart(3, '0') } : {}));
+  const footprints = new Map(all.map((session, index) => [session.id, { left: 83 + index % 13, right: 85 + index % 19, top: 135, bottom: 77 + index % 5 }]));
+  let previous = Scene.layoutStableAll(all.slice(0, 1), { footprints, requestedScale: 1.35 });
+  for (const count of [2, 3, 8, 20, 100, 256, 100, 10, 1]) {
+    const sessions = all.slice(0, count).reverse();
+    const layout = Scene.layoutStableAll(sessions, { footprints, requestedScale: 1.35, previousSeats: previous.seats, previousScale: previous.uniformScale, previousRequestedScale: previous.requestedScale });
+    assertAllBodies(layout, sessions, { footprints });
+    for (const [id, old] of previous.seats) if (layout.seats.has(id)) {
+      assert.equal(layout.seats.get(id).x, old.x, 'retained x for ' + id);
+      assert.equal(layout.seats.get(id).y, old.y, 'retained y for ' + id);
+    }
+    if (count < previous.visible.length) assert.ok(layout.uniformScale >= previous.uniformScale - 1e-9, 'removal may enlarge without moving feet');
+    previous = layout;
+  }
+  assert.equal(previous.uniformScale, 1.35, 'the remaining first main returns to the requested size at its original workstation');
+});
+
+test('stable snapshots and reversible size preferences change scale without rearranging an already dense cast', () => {
+  const sessions = Array.from({ length: 100 }, (_, index) => task('steady-' + index, 'coding'));
+  let before = Scene.layoutStableAll(sessions, { requestedScale: 1.35 });
+  const original = new Map(before.seats);
+  for (const requestedScale of [.65, 1.35, 1, .65, 1.35]) {
+    const next = Scene.layoutStableAll(sessions.slice().reverse(), { requestedScale, previousRequestedScale: before.requestedScale, previousSeats: before.seats, previousScale: before.uniformScale });
+    assertAllBodies(next, sessions);
+    for (const [id, point] of original) { assert.equal(next.seats.get(id).x, point.x); assert.equal(next.seats.get(id).y, point.y); }
+    const repeated = Scene.layoutStableAll(sessions, { requestedScale, previousRequestedScale: requestedScale, previousSeats: next.seats, previousScale: next.uniformScale });
+    assert.equal(repeated.uniformScale, next.uniformScale);
+    before = next;
+  }
+});
+
+test('uniform shrink and growth between stable layouts keep all retained envelopes separated at every intermediate scale', () => {
+  const all = Array.from({ length: 25 }, (_, index) => task('interpolate-' + index));
+  const initial = Scene.layoutStableAll(all.slice(0, 3));
+  const full = Scene.layoutStableAll(all, { previousSeats: initial.seats, previousScale: initial.uniformScale, previousRequestedScale: initial.requestedScale });
+  const reduced = Scene.layoutStableAll(all.slice(0, 3), { previousSeats: full.seats, previousScale: full.uniformScale, previousRequestedScale: full.requestedScale });
+  for (const [from, to, sessions] of [[initial, full, initial.visible], [full, reduced, reduced.visible]]) for (let step = 0; step <= 30; step += 1) {
+    const scale = from.uniformScale + (to.uniformScale - from.uniformScale) * step / 30;
+    for (let i = 0; i < sessions.length; i += 1) for (const other of sessions.slice(i + 1)) {
+      assert.equal(Scene.actorsOverlap(to.seats.get(sessions[i].id), { uniformScale: scale }, to.seats.get(other.id), { uniformScale: scale }, 2 + 10 * scale - 1e-6), false);
+    }
+  }
+});

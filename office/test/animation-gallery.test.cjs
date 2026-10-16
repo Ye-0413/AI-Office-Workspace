@@ -43,3 +43,13 @@ test('README animation links resolve locally and explain the public preview appe
   assert.match(source,/88/);assert.match(source,/原创示意/);
  }
 });
+
+test('seasonal gallery covers every real theme with at least 31 distinct animated frames',()=>{
+ const F=require('../lib/festival-model.js'),gallery=path.join(repo,'docs/scenes'),manifest=JSON.parse(fs.readFileSync(path.join(gallery,'manifest.json')));
+ assert.ok(F.THEMES.length>=43);assert.deepEqual(manifest.themes.map(t=>t.id),F.THEMES.map(t=>t.id));assert.equal(new Set(manifest.themes.map(t=>t.id)).size,F.THEMES.length);
+ assert.equal(manifest.samples,41);assert.ok(manifest.durationMs>=600);
+ for(const [name,hash]of Object.entries(manifest.sourceHashes||{}))assert.equal(createHash('sha256').update(fs.readFileSync(path.join(repo,name))).digest('hex'),hash,'re-export scene GIF after changing '+name);
+ assert.equal(Object.keys(manifest.sourceHashes||{}).length,4,'the gallery must identify the actual four rendering sources');
+ const gif=inspectGif(fs.readFileSync(path.join(gallery,'overview.gif')));assert.equal(gif.frames,41);assert.ok(gif.uniqueImages>=31);assert.equal(gif.loop,0);
+ for(const name of ['overview.png','rooms.png']){const bytes=fs.readFileSync(path.join(gallery,name));assert.equal(bytes.toString('hex',0,8),'89504e470d0a1a0a');assert.ok(bytes.length>10000);}
+});

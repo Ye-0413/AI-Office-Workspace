@@ -101,6 +101,7 @@
     ['AI 小小工作室', 'AI Mini Office'],
     ['迷你办公室，书架、构思白板、构建实验台、代码工位、咖啡休息角和成果架围绕中央通路', 'A miniature office with a library, planning board, build bench, coding desks, coffee corner and results shelf around a central walkway'],
     ['当前项目的任务角色', 'Task characters in this project'],
+    ['所有项目的任务角色', 'Task characters from all projects'],
     ['项目房间', 'Project room'],
     ['连接 AI 工具', 'Connect AI tools'],
     ['搜索 AI 工具', 'Search AI tools'],

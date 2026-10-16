@@ -205,3 +205,21 @@
 @media(hover:hover) and (pointer:fine){.usage-agent-row:hover{background:#fff4dc;border-color:#b79c6e}.usage-agent-row[aria-expanded="true"]:hover{background:#e6e8cc}.usage-history-dialog .dialog-close:hover{background:#e3d1a8;color:#685035}}
 @media(max-width:800px){.usage-history-dialog{width:calc(100vw - 36px);max-height:calc(100vh - 36px);padding:18px}.usage-agent-row{gap:12px}.usage-agent-heading{gap:6px}.usage-provider-badge{max-width:106px}.usage-metric{padding:9px 11px}}
 @media(max-width:560px){.usage-filters{grid-template-columns:1fr 1fr}.usage-filters>label:first-child{grid-column:1/-1}.usage-dates{gap:8px}.usage-overview{grid-template-columns:repeat(2,minmax(0,1fr))}.usage-agent-row{grid-template-columns:minmax(0,1fr);gap:9px}.usage-event{grid-template-columns:minmax(0,1fr);gap:4px}.usage-actions>span{margin-left:0;width:100%}}
+
+/* One cast, one physical scale and one paint plane, regardless of ancestry. */
+.office[data-flat="true"] .actor{z-index:10!important}
+.office[data-flat="true"] .actor[data-helper="true"] .nameplate{min-width:0;max-width:190px;padding:6px 11px 7px}
+.office[data-flat="true"] .actor[data-helper="true"] .actor-title{font-size:16px}
+.office[data-flat="true"] .actor[data-helper="true"] .actor-subline{display:flex;font-size:11px}
+.office[data-flat="true"] #room-switcher,.office[data-flat="true"] #pagination{display:none}
+.flat-journey{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none;transform-origin:0 0;filter:drop-shadow(0 0 3px var(--family-color))}
+.flat-journey img{position:absolute;left:-38px;top:-90px;width:76px;height:80px;pointer-events:none}
+.office[data-flat="true"] .actor .nameplate,.office[data-flat="true"] .actor[data-helper="true"] .nameplate{width:220px;min-width:220px;max-width:220px;height:70px;padding:6px 11px 7px}
+.office[data-flat="true"] .actor-title,.office[data-flat="true"] .actor-relation{max-width:198px}
+.office[data-flat="true"] .actor-subline{max-width:198px;overflow:hidden;white-space:nowrap}
+.office[data-flat="true"] .actor-provider{flex:none}
+.office[data-flat="true"] .actor-state{overflow:hidden;text-overflow:ellipsis}
+.office[data-flat="true"] .actor{transition:transform 420ms var(--ease-out),opacity 120ms var(--ease-out)}
+.office[data-flat="true"][data-reduced-motion="true"] .actor,.office[data-flat="true"][data-low-power="true"] .actor,.office[data-flat="true"][data-hidden="true"] .actor{transition:none}
+@media(prefers-reduced-motion:reduce){.office[data-flat="true"] .actor{transition:none}}
+.office[data-festivals="true"] .window-weather{display:none}

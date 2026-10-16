@@ -10,6 +10,22 @@
   'use strict';
   let serial = 0;
   const SVG_NS = 'http://www.w3.org/2000/svg';
+  const reducedOwners = new WeakMap();
+  function watchReduced(view, callback) {
+    if (!view?.matchMedia) return { matches: () => false, destroy() {} };
+    let owner = reducedOwners.get(view);
+    if (!owner) {
+      const query = view.matchMedia('(prefers-reduced-motion: reduce)'), callbacks = new Set();
+      const listener = () => { for (const notify of [...callbacks]) notify(); };
+      query.addEventListener('change', listener);
+      owner = { query, callbacks, listener }; reducedOwners.set(view, owner);
+    }
+    owner.callbacks.add(callback);
+    return { matches: () => owner.query.matches, destroy() {
+      owner.callbacks.delete(callback);
+      if (!owner.callbacks.size) { owner.query.removeEventListener('change', owner.listener); reducedOwners.delete(view); }
+    } };
+  }
   const PROPS = Object.freeze({
     folio: `<g class="ap-folio"><path fill="#8d6948" d="M47 95 76 99 106 95 106 117 77 122 47 117Z"/><path fill="#f5e5bf" d="M49 94 76 98 104 94 104 114 77 119 49 114Z"/><path fill="#c9aa79" d="M76 98h2v21h-2Z"/><path stroke="#bc9b70" fill="none" d="m53 100 18 3m-18 2 18 3m-18 2 13 2m17-9 16-3m-16 8 16-3m-16 8 12-2"/><g class="ap-page"><path fill="#fff0d2" d="m78 98 25-5v20l-25 6Z"/><path stroke="#c3a37c" d="m82 102 15-3m-15 7 15-3m-15 7 10-2"/></g><path fill="#b7795f" d="m66 117 3 1v9l-2-2-1 1Z"/></g>`,
     lens: `<g class="ap-reference"><path fill="#a2b7a4" d="M43 77h31v41H43Z"/><path fill="#f3e7c6" d="M46 79h25v36H46Z"/><path fill="#9ca48a" d="M50 84h17v2H50Zm0 5h13v2H50Zm0 5h17v2H50Zm0 10h13v2H50Z"/><path fill="#d5ba86" d="M49 98h18v3H49Z"/></g><g class="ap-lens"><path fill="#604d39" d="m84 82 5-3 13 18-5 3Z"/><path fill="#ddc188" d="M70 62h15v4h4v15h-4v4H70v-4h-4V66h4Z"/><path fill="#526b65" d="M71 66h13v14H71Z"/><path fill="#bad8ce" opacity=".72" d="M73 68h9v10h-9Z"/><path fill="#f4efcf" d="M73 68h3v3h-3Z"/></g>`,
@@ -143,6 +159,12 @@
     const bridges = new Set();
     let ghost = null;
     const view = document.defaultView;
+    let systemMotion = null, inheritedOptions = {};
+    const bitmap = body.querySelector('img');
+    const originalBitmapOpacity = bitmap?.style?.getPropertyValue?.('opacity') || '';
+    let visual = null, presence = 'inactive', presenceSerial = 0;
+    const fades = new Set(), paused = new Map();
+    let frozen = [];
     const joints = () => typeof svg.querySelectorAll === 'function' ? [...svg.querySelectorAll('.ap-upper,.ap-eyes,.ap-arm,.ap-foot')] : [];
     function stopBridge() {
       for (const motion of bridges) motion.cancel();
@@ -161,7 +183,7 @@
       return joints().map(node => ({ node, transform: view.getComputedStyle(node).transform }));
     }
     function retainProps() {
-      if (!view || !last || !last.active || typeof back.cloneNode !== 'function') return null;
+      if (!view || !visual || typeof back.cloneNode !== 'function') return null;
       const copy = back.cloneNode(true);
       const originals = [back, ...back.querySelectorAll('*')];
       const copies = [copy, ...copy.querySelectorAll('*')];
@@ -173,9 +195,76 @@
       });
       return copy;
     }
+    const opacity = (node, fallback) => {
+      const value = node && view?.getComputedStyle ? Number(view.getComputedStyle(node).opacity) : NaN;
+      return Number.isFinite(value) ? value : fallback;
+    };
+    function stopFade(preserve = false) {
+      const rigOpacity = preserve ? opacity(layer, 0) : 0, imageOpacity = preserve ? opacity(bitmap, 1) : 1;
+      presenceSerial++;
+      for (const motion of fades) motion.cancel();
+      fades.clear();
+      if (preserve) { layer.style.opacity = String(rigOpacity); if (bitmap) bitmap.style.opacity = String(imageOpacity); }
+    }
+    function freezeVisual() {
+      if (frozen.length || !view?.getComputedStyle || !svg.querySelectorAll) return;
+      // Capture the actual composed pose, including an interrupted 180ms
+      // bridge and its outgoing object. Pause the original CSS clocks instead
+      // of changing program selectors or rebuilding any body crop.
+      const nodes = [...svg.querySelectorAll('.ap-upper,.ap-eyes,.ap-blink,.ap-arm,.ap-foot,.ap-props-back,.ap-props-back *,.ap-props-front,.ap-props-front *')];
+      frozen = nodes.map(node => {
+        const style = view.getComputedStyle(node);
+        const values = ['transform', 'opacity'].map(name => ({ name, value: node.style.getPropertyValue(name), priority: node.style.getPropertyPriority(name), computed: style[name] }));
+        return { node, values };
+      });
+      for (const item of frozen) for (const value of item.values) item.node.style.setProperty(value.name, value.computed, 'important');
+      for (const motion of layer.getAnimations?.({ subtree: true }) || []) {
+        paused.set(motion, motion.playState);
+        if (motion.playState === 'running' || motion.pending) motion.pause();
+      }
+    }
+    function thawVisual(resume = false) {
+      for (const item of frozen) for (const value of item.values) {
+        if (value.value) item.node.style.setProperty(value.name, value.value, value.priority);
+        else item.node.style.removeProperty(value.name);
+      }
+      frozen = [];
+      for (const [motion, state] of paused) if (resume && state === 'running' && motion.playState === 'paused') motion.play();
+      paused.clear();
+    }
+    function fadePresence(active) {
+      const rigFrom = opacity(layer, active ? 0 : 1), imageFrom = opacity(bitmap, active ? 1 : 0);
+      const token = ++presenceSerial;
+      const rigTo = active ? 1 : 0, imageTo = active ? 0 : 1;
+      layer.style.opacity = String(rigTo); if (bitmap) bitmap.style.opacity = String(imageTo);
+      const options = { duration: 220, easing: 'cubic-bezier(.23,1,.32,1)' };
+      const motion = layer.animate([{ opacity: rigFrom }, { opacity: rigTo }], options);
+      fades.add(motion);
+      if (bitmap?.animate) {
+        const imageMotion = bitmap.animate([{ opacity: imageFrom }, { opacity: imageTo }], options);
+        fades.add(imageMotion);imageMotion.finished.catch(() => {}).finally(() => fades.delete(imageMotion));
+      }
+      motion.finished.then(() => {
+        if (destroyed || token !== presenceSerial) return;
+        presence = active ? 'active' : 'inactive';
+        if (!active) body.classList.remove('has-avatar-performance');
+      }).catch(() => {}).finally(() => fades.delete(motion));
+      presence = active ? 'entering' : 'exiting';
+    }
+    function settleInactive() {
+      stopFade(); stopBridge();
+      layer.hidden = true; layer.style.opacity = '0';
+      layer.dataset.animate = 'false';
+      thawVisual(false);
+      body.classList.remove('has-avatar-performance');
+      if (bitmap) bitmap.style.opacity = '1';
+      presence = 'inactive';
+    }
 
     function update(value = session, options = {}) {
       if (destroyed) return Model.plan({}, {});
+      inheritedOptions = options;
+      options = { ...options, reducedMotion: Boolean(options.reducedMotion || systemMotion?.matches()) };
       session = value;
       const base = Model.plan(session, options);
       const now = Number.isFinite(options.now) ? options.now : null;
@@ -194,30 +283,47 @@
       lastNow = now === null ? null : Math.max(lastNow === null ? now : lastNow, now);
       const visibleElapsed = clockLease ? clockLease.sample(base.kind, { now, visible: base.active && base.animate }) : visibleClocks.get(base.kind) || 0;
       const plan = Model.plan(session, { ...options, visibleElapsed });
-      const changed = !last || last.program !== plan.program || last.kind !== plan.kind;
-      const blend = changed && plan.active && plan.animate;
+      const changed = !visual || visual.program !== plan.program || visual.kind !== plan.kind;
+      const quiet = Boolean(options.reducedMotion || options.lowPower || options.hidden);
+      const canFade = Boolean(view?.getComputedStyle && layer.animate && bitmap?.animate && !quiet);
+      if (!plan.active) {
+        const natural = ['stale', 'unclassified', 'closed'].includes(plan.reason);
+        if (natural && visual?.animate && canFade) {
+          if (presence === 'active' || presence === 'entering') {
+            stopFade(true); freezeVisual(); fadePresence(false);
+          }
+        } else if (!last || last.active || presence !== 'inactive' || layer.dataset.animate !== 'false') settleInactive();
+        if (!last || last.active) { actorNode.dataset.performance = 'none'; actorNode.dataset.performanceProgram = ''; }
+        last = plan;
+        return plan;
+      }
+      const resuming = Boolean(visual && presence !== 'active' && presence !== 'entering');
+      const blend = changed && plan.animate;
       const before = blend ? capture() : [];
       const oldProps = blend ? retainProps() : null;
+      if (resuming || !plan.animate) { stopFade(true); thawVisual(plan.animate && !changed); }
       if (changed || !plan.animate) stopBridge();
       // No DOM writes for unchanged snapshots: animation timelines stay alive.
       if (changed) {
         // The hands must stay above their held objects: putting the laptop or
         // folio in front would hide the new wrist choreography completely.
-        back.innerHTML = plan.active ? (WORK_SCENES[plan.program] || (PROPS[plan.kind] || '') + (EXTRA[plan.program] || '')) : '';
+        back.innerHTML = WORK_SCENES[plan.program] || (PROPS[plan.kind] || '') + (EXTRA[plan.program] || '');
         front.innerHTML = '';
         layer.dataset.kind = plan.kind;
         layer.dataset.program = plan.program;
-        actorNode.dataset.performance = plan.kind;
-        actorNode.dataset.performanceProgram = plan.program;
       }
-      if (!last || last.key !== plan.key) {
+      if (actorNode.dataset.performance !== plan.kind) actorNode.dataset.performance = plan.kind;
+      if (actorNode.dataset.performanceProgram !== plan.program) actorNode.dataset.performanceProgram = plan.program;
+      if (!visual || visual.key !== plan.key) {
         layer.dataset.variant = String(plan.variant);
         layer.style.setProperty('--ap-offset', plan.phaseOffset + 'ms');
       }
-      if (!last || last.animate !== plan.animate) layer.dataset.animate = String(plan.animate);
-      if (!last || last.active !== plan.active) {
-        layer.hidden = !plan.active;
-        body.classList.toggle('has-avatar-performance', plan.active);
+      if (layer.dataset.animate !== String(plan.animate)) layer.dataset.animate = String(plan.animate);
+      if (!last || !last.active || !plan.animate) {
+        layer.hidden = false;
+        body.classList.toggle('has-avatar-performance', true);
+        if (resuming && canFade && plan.animate) fadePresence(true);
+        else { layer.style.opacity = '1'; if (bitmap) bitmap.style.opacity = '0'; presence = 'active'; }
       }
       if (blend) {
         for (const item of before) {
@@ -231,21 +337,30 @@
           if (fading) fading.finished.catch(() => {}).finally(() => { oldProps.remove(); if (ghost === oldProps) ghost = null; });
         }
       }
-      last = plan;
+      visual = plan; last = plan;
       return plan;
     }
     function destroy() {
       if (destroyed) return;
       destroyed = true;
+      systemMotion?.destroy();
+      stopFade(); thawVisual(false);
       stopBridge();
       if (clockLease) { clockLease.release(); clockLease = null; }
       visibleClocks.clear();
       body.classList.remove('has-avatar-performance');
+      if (bitmap?.style?.removeProperty) {
+        if (originalBitmapOpacity) bitmap.style.setProperty('opacity', originalBitmapOpacity);
+        else bitmap.style.removeProperty('opacity');
+      }
       delete actorNode.dataset.performance;
       delete actorNode.dataset.performanceProgram;
       layer.remove();
-      last = null;
+      visual = null; last = null;
     }
+    // A single shared media listener cancels finite fades as well as CSS
+    // choreography. No wall-time credit is inferred from this local UI event.
+    systemMotion = watchReduced(view, () => update(session, { ...inheritedOptions, now: undefined }));
     return Object.freeze({ update, destroy, get plan() { return last; } });
   }
   return Object.freeze({ create });

@@ -1,0 +1,12 @@
+/* Original, room-wide pixel dressing stays behind the equal-sized cast. */
+.theme-environment{position:absolute;inset:0;z-index:3;pointer-events:none;contain:layout style}
+.theme-dressing{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;shape-rendering:crispEdges;pointer-events:none}
+.theme-dressing>g{opacity:.91}.theme-response-group,.theme-window-response,.theme-edge-response{transform-box:fill-box;transform-origin:center;pointer-events:none}
+.theme-object-state{transform-box:fill-box;transform-origin:50% 85%;transition:transform 260ms cubic-bezier(.23,1,.32,1),opacity 220ms linear;pointer-events:none}
+.theme-window{position:absolute;left:0;top:0;width:12.8%;height:45%;z-index:3;pointer-events:none;overflow:hidden;clip-path:path('M0 0L50 0L50 9L0 29Z M59 0L73 0L59 6Z M0 64L53 44L53 120L0 142Z M61 41L104 24L104 100L61 117Z M112 22L130 15L130 89L112 96Z M0 151L53 129L53 242L0 267Z M61 126L104 109L104 216L61 238Z M112 105L130 98L130 155L112 162Z');mask-image:none}
+.theme-window>svg{display:block;width:100%;height:100%;shape-rendering:crispEdges;opacity:.83}
+.theme-environment[data-phase="night"] .theme-dressing{opacity:.65}.theme-window[data-phase="night"]>svg{opacity:.64}
+.theme-environment[data-phase="sunset"] .theme-dressing{opacity:.94}.theme-window[data-phase="sunset"]>svg{opacity:.87}
+.theme-environment[data-phase="dawn"] .theme-dressing{opacity:.77}.theme-window[data-phase="dawn"]>svg{opacity:.7}
+.theme-environment[data-quiet="true"] *,.theme-window[data-quiet="true"] *{animation:none!important;transition:none!important}
+@media(prefers-reduced-motion:reduce){.theme-environment *,.theme-window *{animation:none!important;transition:none!important}}

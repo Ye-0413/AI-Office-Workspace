@@ -260,3 +260,32 @@ test('a cancelled arrival still lets its cooperative blocker return; protected p
   bodies[0].position = back.target; traffic.finish('A', back.token); assert.deepEqual(back.target, { x: 60, y: 72 });
   assert.equal(traffic.state().queued, 0);
 });
+
+test('traffic retains at least 256 bodies instead of truncating the observed cast at 64', () => {
+  const sessions = Array.from({ length: 256 }, (_, i) => ({ id: 'all-' + i, activity: 'coding' }));
+  const layout = Scene.layoutAll(sessions), traffic = Traffic.createCoordinator({ gap: layout.gap - 1e-6 });
+  const bodies = sessions.map(session => ({ id: session.id, position: layout.seats.get(session.id), uniformScale: layout.uniformScale, layoutMode: layout.layoutMode }));
+  assert.equal(traffic.sync(bodies), true);
+  assert.equal(traffic.state().actors, 256);
+  assert.equal(traffic.state().invalid, false);
+  assert.equal(traffic.request('all-255', bodies[255].position), true, 'the final actual body remains registered');
+  assert.equal(traffic.next('all-255').kind, 'arrived');
+  traffic.clear(); assert.equal(traffic.state().actors, 0);
+});
+
+test('traffic passes explicit uniform scales through geometry and replans when the whole plane is resized', () => {
+  const seen = [];
+  const sharedBounds = (point, body) => { seen.push({ id: body.id, uniformScale: body.uniformScale, helper: body.helper }); return Scene.actorBounds(point, body); };
+  const traffic = Traffic.createCoordinator({ bounds: sharedBounds, legalPoint: () => true, obstacles: [], route: (a, b) => [a, b], gap: 2 });
+  const a = actor('uniform-root', 15, 70, { uniformScale: .25 }), b = actor('uniform-helper', 50, 55, { helper: true, uniformScale: .25 });
+  traffic.sync([a, b]); assert.equal(traffic.request(a.id, { x: 85, y: 70 }), true);
+  const small = traffic.next(a.id); assert.equal(small.kind, 'move'); assert.equal(small.path.length, 2);
+  assert.ok(seen.some(value => value.id === b.id && value.helper && value.uniformScale === .25));
+  traffic.cancel(a.id, a.position); a.uniformScale = b.uniformScale = 1.35;
+  traffic.sync([a, b]); traffic.request(a.id, { x: 85, y: 70 });
+  const large = traffic.next(a.id); assert.equal(large.kind, 'move'); assert.ok(large.path.length > 2, 'large equal-sized bodies require a different route');
+  for (let leg = 1; leg < large.path.length; leg += 1) for (let step = 0; step <= 150; step += 1) {
+    const from = large.path[leg - 1], to = large.path[leg], p = { x: from.x + (to.x - from.x) * step / 150, y: from.y + (to.y - from.y) * step / 150 };
+    assert.equal(Scene.actorsOverlap(p, a, b.position, b, 1.99), false);
+  }
+});

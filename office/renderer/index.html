@@ -10,6 +10,10 @@
   <link rel="stylesheet" href="clone-motion.css">
   <link rel="stylesheet" href="family-appearance.css">
   <link rel="stylesheet" href="setup-assistant.css">
+  <link rel="stylesheet" href="venue-stage.css">
+  <link rel="stylesheet" href="agent-social.css">
+  <link rel="stylesheet" href="festival-stage.css">
+  <link rel="stylesheet" href="theme-environment.css">
   <script defer src="../lib/provider-labels.js"></script>
   <script defer src="../lib/scene-model.js"></script>
   <script defer src="../lib/scene-traffic.js"></script>
@@ -30,10 +34,18 @@
   <script defer src="idle-visitor.js"></script>
   <script defer src="usage-history.js"></script>
   <script defer src="setup-assistant.js"></script>
+  <script defer src="../lib/venue-model.js"></script>
+  <script defer src="../lib/social-interactions.js"></script>
+  <script defer src="../lib/festival-studies.js"></script>
+  <script defer src="../lib/festival-model.js"></script>
+  <script defer src="venue-stage.js"></script>
+  <script defer src="agent-social.js"></script>
+  <script defer src="festival-stage.js"></script>
+  <script defer src="theme-environment.js"></script>
   <script defer src="app.js"></script>
 </head>
 <body>
-  <main id="office" class="office" aria-label="AI 小小工作室" data-mode="live" data-quiet="true">
+  <main id="office" class="office" aria-label="AI 小小工作室" data-mode="live" data-quiet="true" data-flat="true">
     <div id="world-frame" class="world-frame">
       <div id="world" class="world">
         <img id="room-art" class="room-art" src="../assets/office-room.jpg" alt="迷你办公室，书架、构思白板、构建实验台、代码工位、咖啡休息角和成果架围绕中央通路" draggable="false">
@@ -60,9 +72,10 @@
         <div class="floor-sign sign-sofa" data-zone-label="sofa">咖啡休息角</div>
         <div class="floor-sign sign-archive" data-zone-label="archive">成果架</div>
         <div id="helper-links" class="helper-links" aria-hidden="true"></div>
-        <div id="actors" class="actors" aria-label="当前项目的任务角色"></div>
+        <div id="actors" class="actors" aria-label="所有项目的任务角色"></div>
         <div id="visitors" class="visitors"></div>
         <div id="effects" class="effects" aria-hidden="true"></div>
+        <div id="social-effects" aria-hidden="true"></div>
         <div id="empty-state" class="sr-only" role="status">小小工作室，等大家入驻。</div>
         <div id="page-empty" class="sr-only" role="status" hidden>这个房间暂时安静下来。</div>
         <div class="scene-vignette" aria-hidden="true"></div>
