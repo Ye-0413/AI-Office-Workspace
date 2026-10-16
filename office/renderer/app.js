@@ -17,14 +17,14 @@
   let settings = { ...settingsDefaults };
   let language = 'zh';
   const scenery = window.OfficeDayScenery.create({ office, world, layer: $('window-scenery') });
-  const attendanceModels = { live: Attendance.createAttendance(), demo: Attendance.createAttendance() };
+  const attendanceModel = Attendance.createAttendance();
   let attendance = { present: [], entering: [], leaving: [], retired: [] };
   const staticCopy = [];
   const copyWalker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   for (let node = copyWalker.nextNode(); node; node = copyWalker.nextNode()) if (node.nodeValue.trim()) staticCopy.push({ node, original: node.nodeValue });
   const staticAttributes = [...document.querySelectorAll('[aria-label],[title],[alt],[placeholder]')].flatMap(node => ['aria-label','title','alt','placeholder'].filter(name => node.hasAttribute(name)).map(name => ({node,name,original:node.getAttribute(name)})));
   let doorTimer = 0;
-  let snapshot = { mode: 'live', now: Date.now(), sessions: [], connections: [], demo: { running: false, tick: 0 } };
+  let snapshot = { mode: 'live', now: Date.now(), sessions: [], connections: [] };
   let selectedProject = '';
   let roomSelectionExplicit = false;
   let selectedSession = '';
@@ -90,7 +90,8 @@
   function quietSprites() { return reduced() || settings.lowPower || document.hidden; }
   function assetURL(name, replay) { return '../assets/avatars/' + name + (replay ? '?_t=' + (++spriteNonce) : ''); }
   function setPose(actor, name, replay = false) {
-    const asset = quietSprites() ? 'clawd-static-base.svg' : name;
+    const performance = actor.performance && actor.performance.update(actor.session, { now: Date.now(), reducedMotion: reduced(), lowPower: settings.lowPower, hidden: document.hidden, walking: Boolean(actor.motion) || actor.node.dataset.walking === 'true', reaction: actor.completing || actor.node.dataset.reaction === 'true' || Boolean(actor.performanceSuspended), departing: actor.departing, stale: actor.spec.stale });
+    const asset = quietSprites() ? 'clawd-static-base.svg' : performance && performance.active ? performance.asset : name;
     actor.wantedAsset = name;
     if (actor.currentAsset === asset && !replay) return;
     actor.currentAsset = asset;
@@ -107,7 +108,6 @@
   }
   function sourceName(source) {
     const value = String(source || '');
-    if (/demo|模拟/i.test(value)) return '模拟事件';
     if (/hook/i.test(value)) return '工具 hook 事件';
     if (/jsonl|log|rollout|transcript/i.test(value)) return '只读会话日志';
     return value || '事件来源未提供';
@@ -237,6 +237,7 @@
     actor.spec = Scene.activitySpec(actor.session);
     actor.node.dataset.walking = 'false';
     const plan = Director.plan(actor.session, { now: Date.now(), language });
+    actor.performanceSuspended = /^(?:cue|recent-work)\//.test(plan.phase || '');
     const freshCue = plan.cueKey && plan.cueKey !== actor.lastCue;
     setPose(actor, plan.asset || actor.spec.asset, Boolean(freshCue));
     actor.node.dataset.phase = plan.phase || '';
@@ -367,6 +368,7 @@
     const restored = observedIds.has(session.id) && !attendance.entering.includes(session.id);
     observedIds.add(session.id);
     const actor = { id: session.id, session, spec: Scene.activitySpec(session), node, button, body, image, title, relation, provider, state, bubble, carry, arrival, position: restored ? { x: seat.x, y: seat.y } : { x: Scene.ZONES.exit.x, y: Scene.ZONES.exit.y }, target: seat, helper: Boolean(session.parentId), serial: 0, delays: new Set(), motion: null, lastTurnAt: Scene.timestamp(session.turnCompletedAt), arrivedAt: -10000, lastZone: restored ? seat.zone : '', currentAsset: '', wantedAsset: '', bubbleTimer: 0, defer: 0, justEntered: !restored, completing: false, departing: false };
+    actor.performance = window.OfficeAvatarPerformance.create({ actorNode: node, body, image, session });
     node.style.transform = actorTransform(actor.position, actor.helper);
     node.style.zIndex = '860';
     image.addEventListener('error', () => {
@@ -431,6 +433,7 @@
     if (!actor) return;
     cancelAction(actor);
     clearTimeout(actor.bubbleTimer);
+    if (actor.performance) actor.performance.destroy();
     actor.node.remove();
     actors.delete(id);
     if (selectedSession === id) { selectedSession = ''; $('inspector').hidden = true; }
@@ -595,8 +598,8 @@
     $('inspect-helper').disabled = !parent;
     text($('inspect-helper'), parent ? (language === 'en' ? '↳ Helping ' : '↳ 协助 ') + displayName(parent) + ' ↗' : session.parentId ? (language === 'en' ? 'Parent is outside' : '父任务未在场') : (language === 'en' ? 'Leader · ' + children.length + ' helpers' : '领队 · ' + children.length + ' 位帮手'));
     text($('open-source'), '打开项目文件夹 ↗');
-    $('open-source').disabled = snapshot.mode === 'demo' || !session.projectPath;
-    text($('inspect-action-note'), snapshot.mode === 'demo' ? '演示中的模拟项目，不对应本地文件夹。' : Scene.needsAttention(session) ? '请回到 ' + Scene.providerName(session.provider) + ' 回答或处理审批。' : spec.stale ? '最后位置已保留，尚不能确认当前进度。' : '此按钮打开 Finder。任务与对话请回到原工具查看。');
+    $('open-source').disabled = !session.projectPath;
+    text($('inspect-action-note'), Scene.needsAttention(session) ? '请回到 ' + Scene.providerName(session.provider) + ' 回答或处理审批。' : spec.stale ? '最后位置已保留，尚不能确认当前进度。' : '此按钮打开 Finder。任务与对话请回到原工具查看。');
     text($('inspect-source'), sourceName(session.evidence && session.evidence.source));
     text($('inspect-confidence'), confidenceName(session.evidence && session.evidence.confidence));
     text($('inspect-animation'), Director.plan(session, { now: Date.now(), language }).detail);
@@ -675,7 +678,7 @@
   }
   function render() {
     office.dataset.mode = snapshot.mode;
-    attendance = attendanceModels[snapshot.mode].update(snapshot.sessions);
+    attendance = attendanceModel.update(snapshot.sessions);
     familyGraph = Family.build(snapshot.sessions.filter(session => !Scene.isClosed(session)));
     const roomBefore = selectedProject;
     rooms = Scene.roomsFor(snapshot.sessions);
@@ -726,22 +729,6 @@
     text($('page-label'), (page + 1) + ' / ' + currentPage.pages + ' 组');
     $('page-prev').disabled = page === 0;
     $('page-next').disabled = page >= currentPage.pages - 1;
-    $('demo-controls').hidden = snapshot.mode !== 'demo';
-    const stories = Array.isArray(snapshot.demo.stories) ? snapshot.demo.stories : [];
-    const storySelect = $('demo-story');
-    const storyKey = stories.map(story => story.id).join(':') + ':' + language;
-    if (storySelect.dataset.stories !== storyKey) {
-      storySelect.replaceChildren(...stories.map(story => { const option = document.createElement('option'); option.value = story.id; option.textContent = language === 'en' ? story.titleEn : story.titleZh; return option; }));
-      storySelect.dataset.stories = storyKey;
-    }
-    storySelect.hidden = stories.length === 0;
-    storySelect.value = snapshot.demo.storyId || 'classic';
-    const frameLabel = language === 'en' ? snapshot.demo.frameLabelEn : snapshot.demo.frameLabelZh;
-    $('demo-scene-label').hidden = snapshot.mode !== 'demo' || !frameLabel;
-    $('demo-scene-label').textContent = frameLabel ? (language === 'en' ? 'Simulated · ' : '模拟 · ') + frameLabel : '';
-    text($('demo-play'), snapshot.demo && snapshot.demo.running ? '暂停事件' : '继续演示');
-    text($('mode-label'), snapshot.mode === 'demo' ? '演示房间' : '实时观察');
-    $('mode-button').setAttribute('aria-label', snapshot.mode === 'demo' ? '当前是模拟演示，点击回到实时观察' : '当前是实时观察，点击体验演示房间');
     renderConnections();
     if ($('roster-dialog').open) renderRoster();
     renderInspector();
@@ -753,29 +740,10 @@
   function receive(next) {
     if (!next || !Array.isArray(next.sessions)) return;
     snapshotReceived += 1;
-    if (next.mode !== snapshot.mode || ((next.demo && snapshot.demo) && (next.demo.tick < snapshot.demo.tick || next.demo.storyId !== snapshot.demo.storyId))) {
-      if (next.mode === 'demo' && next.demo && snapshot.demo && (next.demo.tick < snapshot.demo.tick || next.demo.storyId !== snapshot.demo.storyId)) attendanceModels.demo.clear();
-      clearActors();
-      selectedSession = '';
-      selectedProject = '';
-      roomSelectionExplicit = false;
-      archivedTurns.clear();
-      observedIds.clear();
-      page = 0;
-      previousAttention.clear();
-    }
-    snapshot = { ...next, mode: next.mode === 'demo' ? 'demo' : 'live', sessions: next.sessions.filter((session) => session && typeof session.id === 'string'), connections: Array.isArray(next.connections) ? next.connections : [], demo: next.demo || { running: false, tick: 0 } };
+    snapshot = { ...next, mode: 'live', sessions: next.sessions.filter((session) => session && typeof session.id === 'string'), connections: Array.isArray(next.connections) ? next.connections : [] };
     render();
   }
   async function refreshSnapshot() { const next = await call('getSnapshot'); if (next) receive(next); }
-  async function changeMode(mode) {
-    if (mutationPending) return;
-    mutationPending = true;
-    $('mode-button').disabled = true;
-    try { await call('setMode', mode); await refreshSnapshot(); }
-    catch (error) { showError(error); }
-    finally { mutationPending = false; $('mode-button').disabled = false; renderConnections(); }
-  }
   function switchRoom(key, persist = true) {
     roomSelectionExplicit = true;
     if (key === selectedProject) { if (persist) saveSettings({ selectedProject: key }); return; }
@@ -877,13 +845,7 @@
   $('roster-button').addEventListener('click', () => openDialog('roster-dialog'));
   $('greet-agent').addEventListener('click', () => { const actor = actors.get(selectedSession); if (actor) react(actor); });
   $('setting-nameStyle').addEventListener('change', event => saveSettings({ nameStyle: event.target.value }));
-  $('demo-story').addEventListener('change', event => attempt(async () => {
-    try { const result = await call('demoAction', 'story:' + event.target.value); if (result && Array.isArray(result.sessions)) receive(result); else await refreshSnapshot(); }
-    finally { $('demo-story').value = snapshot.demo.storyId || 'classic'; }
-  }));
   $('inspect-helper').addEventListener('click', () => { const id = $('inspect-helper').dataset.parentId; if (id) selectSession(id); });
-  $('mode-button').addEventListener('click', () => changeMode(snapshot.mode === 'demo' ? 'live' : 'demo'));
-  $('exit-demo').addEventListener('click', () => changeMode('live'));
   $('dismiss-error').addEventListener('click', () => { $('error-message').hidden = true; });
   $('project-select').addEventListener('change', (event) => switchRoom(event.target.value));
   $('other-attention').addEventListener('click', () => jumpAttention(true));
@@ -897,9 +859,6 @@
     const result = await call('openSource', id);
     if (result && (result.message || result.detail)) text($('inspect-action-note'), result.message || result.detail);
   }));
-  for (const [id, action] of [['demo-play', null], ['demo-next', 'advance'], ['demo-reset', 'reset']]) {
-    $(id).addEventListener('click', () => attempt(async () => { await call('demoAction', action || (snapshot.demo.running ? 'pause' : 'play')); await refreshSnapshot(); }));
-  }
   for (const key of ['rain', 'reducedMotion', 'lowPower', 'idleVisitor']) $('setting-' + key).addEventListener('change', (event) => saveSettings({ [key]: event.target.checked }));
   $('move-display').addEventListener('click', () => attempt(async () => {
     const value = $('display-select').value;

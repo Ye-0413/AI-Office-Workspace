@@ -8,9 +8,9 @@ A local macOS playground for watching independent AI sessions inhabit a tiny off
 
 ## 本地体验
 
-打开构建产物中的 **AI Mini Office.app**；使用 DMG 时先将应用拖进「应用程序」，再打开并连接 AI 工具。默认进入「实时观察」，只读观察最近的本地 Codex 会话；每个独立 session 是一个角色，子 Agent 是临时帮手。「演示」可体验多个任务同时工作、等待、测试、完成一轮和离场。
+打开构建产物中的 **AI Mini Office.app**；使用 DMG 时先将应用拖进「应用程序」，再打开并连接 AI 工具。应用只有「实时观察」，只读观察最近的本地 Codex 会话；每个独立 session 是一个角色，子 Agent 来自真实父子关系。空房间不会自动生成模拟任务。
 
-没有伙伴在场时，初始界面只展示完整的空工作室和右上角控制区。连接与偏好从右上角打开为木框纸色面板；语言和演示入口也在同一区域。历史闲置任务不会触发中央欢迎卡片。真实伙伴全部离场、空闲 8 秒后，会有一位明确标记的装饰访客来串门：在 10 个角落随机停留，翻书、喝咖啡、看看植物，偶尔变个小魔术。500 条独立撰写的中英双语气泡按区域轮换，真实工作出现即让路；逛约两分半后离开，过一会儿再来。可在右上角偏好中关闭「闲时串门」。访客不会加入任务数、伙伴列表或真实事件记录。
+没有伙伴在场时，初始界面只展示完整的空工作室和右上角控制区。连接与偏好从右上角打开为木框纸色面板；语言切换也在同一区域。历史闲置任务不会触发中央欢迎卡片。真实伙伴全部离场、空闲 8 秒后，会有一位明确标记的装饰访客来串门：在 10 个角落随机停留，翻书、喝咖啡、看看植物，偶尔变个小魔术。500 条独立撰写的中英双语气泡按区域轮换，真实工作出现即让路；逛约两分半后离开，过一会儿再来。可在右上角偏好中关闭「闲时串门」。访客不会加入任务数、伙伴列表或真实事件记录。
 
 每个任务 ID 会生成固定昵称，例如 Maple Pip、Sunbeam Truffle；任务描述变化、重新进门和重启都不会改名。点击角色查看原始任务标题、完整 ID 和最近事件，双击可以打招呼。新角色从右侧工作室门口入场；确认闲置 20 秒后暂离，有新工作时同一角色返回。等待输入、仍有活跃帮手和信号失联会分别处理，暂离不会关闭原始会话。
 
@@ -26,11 +26,13 @@ Codex 的线程 UUID 与每轮 ID 分开识别，子 Agent 日志中复制的父
 
 28 种接入方式已做隔离配置和事件回归检查；这不表示 28 种真实客户端都已运行。Codex 已验证真实多 Agent 日志到角色显示，其他客户端仍需实际会话验收。各工具的宿主版本、配置路径与已知边界见 `docs/upstream-compatibility.md`。KiroCrew 的网关、目录和配置锁使用随应用打包的 macOS 原生小程序，无需额外 Python。
 
-房间默认跟随香港时间，晨曦、上午、午后、日落和夜晚使用连续的天色与室内灯光。左侧木窗与门上的玻璃都能看见海港剪影，慢云、渡轮、城市灯与海面反光保持在窗内。点击右上角 HK 时钟可预览时段，再用「回到此刻」恢复实时；预览期间时钟仍显示真实香港时间。减少动作、节能和隐藏窗口都会暂停装饰循环，不改变真实任务状态。
+房间默认跟随香港时间，晨曦、上午、午后、日落和夜晚使用连续的天色与室内灯光。左侧木窗与门上的玻璃都能看见海港剪影，慢云、渡轮、城市灯与海面反光保持在窗内。香港时钟放在白板下的木柜上，数字为 34px，挂钟指针也与真实香港时间同步。点击柜上的时钟可预览时段，再用「回到此刻」恢复实时；预览期间时钟仍显示真实香港时间。减少动作、节能和隐藏窗口都会暂停装饰循环，不改变真实任务状态。
 
-房间偏好新增「海港昵称」，提供 8,192 种双语组合；经典昵称仍可保留。每个身份还有固定的小性格、纪念物和问候，任务详情保留原始昵称、标题与 ID。「打个招呼」只触发工作室里的回应。演示房间可切换「早班渡轮小队」「雨窗修补下午」「小灯夜班交接」，按具体事件呈现协作、失败修复、测试重试和未回答的问题。所有演示项目均为模拟，不执行所描述的命令。
+房间偏好新增「海港昵称」，提供 8,192 种双语组合；经典昵称仍可保留。每个身份还有固定的小性格、纪念物和问候，任务详情保留原始昵称、标题与 ID。「打个招呼」只触发工作室里的回应。
 
 观察日志轮换时会先按文件身份排空保留文件的未读尾部，再读取新文件；每轮仍最多读取 64 KiB。损坏行和不同文件的 JSON 碎片会被隔离。GitHub 的 Office quality 工作流在 main 推送和 PR 上安装锁定依赖、重建原生锁并运行回归测试；公开源码检查无需还原角色素材。
+
+头像新增十一组原创关节动画，针对真实阅读、搜索、思考、写代码、设计、测试、构建、运行、等待工具、等待用户及错误状态。身体、眼神、手脚与新道具协同动作，任务刷新不会重置动作时间线；工具结果和生命周期反应保留独立呈现。动作只引用本地静态角色素材，不将受限 SVG 内容写入源码；减少动作、节能、隐藏、走路或离场时会暂停。
 
 ## Run and build
 
@@ -50,7 +52,7 @@ The `.app` is generated in `../dist-mini-office/mac-arm64/`. The application con
 
 ## Observe real work
 
-The default mode is **实时观察**. A read-only, bounded Codex rollout observer discovers recent local activity. Each session and reliably identified child agent has its own identity. A separate, clearly labeled demonstration room uses the same adapters and reducer with synthetic events.
+The default mode is **实时观察**. A read-only, bounded Codex rollout observer discovers recent local activity. Each session and reliably identified child agent has its own identity. There is no demonstration store, synthetic task timer, mode switch or demo IPC in the application. Synthetic events exist only in isolated regression fixtures.
 
 The connection panel installs optional passive observation hooks only when explicitly selected. It preserves existing hooks and native approval behavior. Codex hook trust must still be reviewed in Codex; this app does not write trust hashes or approve tools. Unknown Cursor host versions use a conservative observation subset. Claude Code must be available and run a real session before its end-to-end connection can be considered verified.
 

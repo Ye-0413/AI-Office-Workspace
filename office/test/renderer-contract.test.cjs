@@ -131,14 +131,6 @@ test('a failed removal keeps the backend message and unlocks the panel without r
   assert.equal(sandbox.mutationPending, false);
 });
 
-test('demo project folders are explicitly simulated and unavailable, including attention tasks', () => {
-  const session = { id: 'fixture', sessionId: 'fixture', provider: 'codex', title: '演示任务', projectPath: '/Demo/小小工作室', activity: 'waiting-user', status: 'waiting', attention: true, events: [] };
-  const { sandbox, nodes } = context({ snapshot: { mode: 'demo', sessions: [session] } });
-  sandbox.renderInspector();
-  assert.equal(nodes.get('open-source').disabled, true);
-  assert.match(nodes.get('inspect-action-note').textContent, /模拟项目.*不对应本地文件夹/);
-});
-
 test('live folders remain available and missing-path tasks remain disabled', () => {
   const session = { id: 'fixture', sessionId: 'fixture', provider: 'codex', title: '真实任务', projectPath: '/projects/mini-office', activity: 'waiting-user', status: 'waiting', attention: true, events: [] };
   const { sandbox, nodes } = context({ snapshot: { mode: 'live', sessions: [session] } });

@@ -6,10 +6,13 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">
   <title>小小工作室 · AI Mini Office</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="avatar-performance.css">
   <script defer src="../lib/provider-labels.js"></script>
   <script defer src="../lib/scene-model.js"></script>
   <script defer src="../lib/attendance-model.js"></script>
   <script defer src="../lib/animation-director.js"></script>
+  <script defer src="../lib/avatar-performance-model.js"></script>
+  <script defer src="avatar-performance.js"></script>
   <script defer src="../lib/i18n-model.js"></script>
   <script defer src="../lib/family-model.js"></script>
   <script defer src="../lib/visitor-model.js"></script>
@@ -37,6 +40,8 @@
         <div class="room-prop prop-bench" data-zone-prop="bench" aria-hidden="true"><i></i><i></i><i></i></div>
         <div class="room-prop prop-desk" data-zone-prop="desk" aria-hidden="true"><span>&lt;/&gt;</span></div>
         <div class="room-prop prop-sofa" data-zone-prop="sofa" aria-hidden="true"><i></i><i></i><i></i></div>
+        <button id="day-clock" class="day-clock" type="button"><span class="clock-label"><span>香港时间</span><span class="day-clock-icon" aria-hidden="true">☀</span></span><time id="hk-clock">00:00</time><span id="day-phase"></span><span class="clock-feet" aria-hidden="true"></span></button>
+        <div class="wall-clock" aria-hidden="true"><i class="wall-hour"></i><i class="wall-minute"></i><i class="wall-pin"></i></div>
         <div id="archive-stack" class="archive-stack" aria-hidden="true"><i></i><i></i><i></i></div>
         <div class="floor-sign sign-library" data-zone-label="library">资料书架</div>
         <div class="floor-sign sign-board" data-zone-label="board">构思白板</div>
@@ -57,8 +62,7 @@
     <header class="topbar">
       <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i></span><span>小小工作室</span><span class="brand-sub">AI MINI OFFICE</span></div>
       <div id="room-switcher" class="room-switcher" hidden><label for="project-select" class="sr-only">项目房间</label><select id="project-select" aria-label="项目房间"></select><button id="other-attention" class="attention-button" type="button" hidden></button></div>
-      <button id="day-clock" class="day-clock" type="button"><span class="day-clock-icon" aria-hidden="true">☀</span><time id="hk-clock">香港时间</time><span id="day-phase"></span></button>
-      <div class="top-actions"><button id="language-button" class="language-button" type="button" aria-label="切换到 English">EN</button><button id="mode-button" type="button" class="mode-button"><span class="mode-dot" aria-hidden="true"></span><span id="mode-label">实时观察</span></button><button id="connections-button" type="button" class="icon-button" aria-label="连接 AI 工具" title="连接 AI 工具"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3v5m8-5v5M6 8h12v3a6 6 0 0 1-6 6v4m-6-13v3a6 6 0 0 0 6 6"/></svg><span id="connection-count" class="connection-count">0</span></button><button id="settings-button" type="button" class="icon-button" aria-label="房间偏好与显示器" title="房间偏好与显示器"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/><circle cx="12" cy="12" r="5"/></svg></button></div>
+      <div class="top-actions"><button id="language-button" class="language-button" type="button" aria-label="切换到 English">EN</button><span class="observation-status"><span class="mode-dot" aria-hidden="true"></span><span>实时观察</span></span><button id="connections-button" type="button" class="icon-button" aria-label="连接 AI 工具" title="连接 AI 工具"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3v5m8-5v5M6 8h12v3a6 6 0 0 1-6 6v4m-6-13v3a6 6 0 0 0 6 6"/></svg><span id="connection-count" class="connection-count">0</span></button><button id="settings-button" type="button" class="icon-button" aria-label="房间偏好与显示器" title="房间偏好与显示器"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/><circle cx="12" cy="12" r="5"/></svg></button></div>
     </header>
 
     <div id="error-message" class="error-message" role="alert" hidden><span></span><button id="dismiss-error" type="button" aria-label="关闭错误提示">×</button></div>
@@ -66,8 +70,6 @@
       <div class="room-status-copy"><span id="status-dot" class="status-dot" aria-hidden="true"></span><span id="room-summary">正在打开办公室…</span><span id="signal-summary" class="signal-summary"></span></div>
       <div id="pagination" class="pagination" hidden><button id="page-prev" type="button" aria-label="上一组任务">←</button><span id="page-label"></span><button id="page-next" type="button" aria-label="下一组任务">→</button></div>
       <button id="roster-button" class="roster-button" type="button" hidden>房间里的伙伴</button>
-      <div id="demo-controls" class="demo-controls" hidden><label for="demo-story" class="sr-only">演示故事</label><select id="demo-story" aria-label="演示故事"></select><span class="demo-caption">模拟事件</span><button id="demo-play" type="button">暂停</button><button id="demo-next" type="button">下一幕 →</button><button id="demo-reset" type="button" aria-label="从头播放演示">↻</button><button id="exit-demo" type="button">回到实时</button></div>
-      <span id="demo-scene-label" class="demo-scene-label" hidden></span>
       <button id="attention-jump" type="button" class="attention-jump" hidden></button>
     </footer>
 

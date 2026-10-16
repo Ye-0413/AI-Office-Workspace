@@ -37,8 +37,6 @@ app.whenReady().then(async () => {
   bind('snapshot', () => snapshot);
   bind('settings', () => settings);
   bind('set-settings', patch => { settings = { ...settings, ...patch }; return settings; });
-  bind('mode', mode => { snapshot = { ...snapshot, mode }; win.webContents.send('office:snapshot', snapshot); return snapshot; });
-  bind('demo', () => snapshot);
   bind('connect', () => ({ ok: true, message: 'fixture only' }));
   bind('displays', () => [{ id: 1, label: 'Fixture display', width: 1280, height: 720, primary: true }]);
   bind('move-display', () => ({ id: 1 }));
@@ -295,13 +293,13 @@ app.whenReady().then(async () => {
     assert.equal(await evaluate(`document.documentElement.lang`), 'zh-CN');
     assert.equal(await evaluate(`document.getElementById('connections-title').textContent`), '连接 AI 工具');
   });
-  await check('native dialogs and mode controls use the exposed IPC contract', async () => {
+  await check('native dialogs expose only real observation controls', async () => {
     await evaluate(`document.getElementById('connections-button').click()`);
     assert.equal(await evaluate(`document.getElementById('connections-dialog').open`), true);
-    await evaluate(`document.getElementById('connections-dialog').close();document.getElementById('mode-button').click()`);
-    await wait(100);
-    assert.ok(invokeCalls.some(call => call.name === 'mode' && call.args[0] === 'demo'));
-    assert.equal(await evaluate(`document.getElementById('office').dataset.mode`), 'demo');
+    await evaluate(`document.getElementById('connections-dialog').close()`);
+    assert.equal(await evaluate(`document.getElementById('mode-button')`), null);
+    assert.equal(await evaluate(`typeof window.office.demoAction`), 'undefined');
+    assert.equal(await evaluate(`document.getElementById('office').dataset.mode`), 'live');
   });
   await check('the final departing actor restores an empty studio without hiding another room that needs attention', async () => {
     await send([task('last-actor','coding')], {mode:'live'});

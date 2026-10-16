@@ -56,8 +56,11 @@
       world.style.setProperty('--door-city', state.skyline);
       world.querySelector('.door-window-lights').style.opacity = state.windowGlow;
       const clock = document.getElementById('hk-clock');
-      clock.textContent = 'HK ' + state.clock;
+      clock.textContent = state.clock;
       clock.dateTime = new Date(now).toISOString();
+      const [hour, minute] = state.clock.split(':').map(Number);
+      document.querySelector('.wall-hour').style.transform = 'rotate(' + ((hour % 12) * 30 + minute / 2) + 'deg)';
+      document.querySelector('.wall-minute').style.transform = 'rotate(' + (minute * 6) + 'deg)';
       const label = language === 'en' ? state.labelEn : state.labelZh;
       document.getElementById('day-phase').textContent = label + (state.preview ? (language === 'en' ? ' · Preview' : ' · 预览') : '');
       const button = document.getElementById('day-clock');

@@ -22,7 +22,7 @@ app.whenReady().then(async()=>{
   for(const phase of ['dawn','morning','afternoon','sunset','night']){
     await run(`document.getElementById('setting-sceneTime').value='${phase}';document.getElementById('setting-sceneTime').dispatchEvent(new Event('change',{bubbles:true}))`);await wait(320);
     const state=await run(`({phase:document.getElementById('office').dataset.dayPhase,preview:document.getElementById('office').dataset.timePreview,clock:document.getElementById('hk-clock').textContent,views:document.querySelectorAll('.harbour-view[data-visible="true"]').length,sessions:document.querySelectorAll('.actor').length,error:!document.getElementById('error-message').hidden})`);
-    assert.equal(state.phase,phase);assert.equal(state.preview,'true');assert.match(state.clock,/^HK \d{2}:\d{2}$/);assert.equal(state.views,1);assert.equal(state.sessions,0);assert.equal(state.error,false);assert.equal(settings.sceneTime,phase);
+    assert.equal(state.phase,phase);assert.equal(state.preview,'true');assert.match(state.clock,/^\d{2}:\d{2}$/);assert.equal(state.views,1);assert.equal(await run(`document.getElementById('day-clock').closest('#world')!==null`),true);assert.ok(await run(`parseFloat(getComputedStyle(document.getElementById('hk-clock')).fontSize)>=30`));assert.equal(state.sessions,0);assert.equal(state.error,false);assert.equal(settings.sceneTime,phase);
     await capture('hong-kong-'+phase);
   }
   await run(`document.getElementById('day-clock').click()`);assert.equal(await run(`document.activeElement.id`),'setting-sceneTime');

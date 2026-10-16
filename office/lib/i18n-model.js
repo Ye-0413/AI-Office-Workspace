@@ -507,6 +507,16 @@
   ];
   function backendFragment(value,toEnglish) {
     if (!toEnglish && connectionChinese.has(value)) return connectionChinese.get(value);
+    const rolloutErrorFrom = toEnglish ? '本地 rollout 只读观察异常：' : 'Local rollout observation error: ';
+    const rolloutErrorAt = value.startsWith(rolloutErrorFrom) ? 0 : value.indexOf(' · ' + rolloutErrorFrom);
+    if (rolloutErrorAt >= 0) {
+      const prefix = rolloutErrorAt ? value.slice(0, rolloutErrorAt) : '';
+      const prefixParts = prefix ? prefix.split(' · ').map(part => backendFragment(part,toEnglish) ?? (toEnglish ? fragment(part) : connectionChinese.get(part) ?? null)) : [];
+      const diagnostic = value.slice(rolloutErrorAt + (rolloutErrorAt ? 3 : 0) + rolloutErrorFrom.length);
+      if (diagnostic.length > 0 && diagnostic.length <= 256 && !/[\u0000-\u001f\u007f]/.test(diagnostic)) {
+        if (prefixParts.every(part => part !== null)) return (prefix ? prefixParts.join(' · ') + ' · ' : '') + (toEnglish ? 'Local rollout observation error: ' : '本地 rollout 只读观察异常：') + diagnostic;
+      }
+    }
     let match=(toEnglish?/^正在连接 ([^\r\n]{1,96})…$/:/^Connecting ([^\r\n]{1,96})…$/).exec(value);
     if(match&&providerNames.has(match[1]))return t(toEnglish?'en':'zh','connections.connecting',{provider:match[1]});
     match=(toEnglish?/^正在移除 ([^\r\n]{1,96}) 观察配置…$/:/^Removing ([^\r\n]{1,96}) observation setup…$/).exec(value);
