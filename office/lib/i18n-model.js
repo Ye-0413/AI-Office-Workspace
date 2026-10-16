@@ -61,6 +61,13 @@
   });
 
   const phrases = [
+    ['演示故事', 'Demo story'],
+    ['伙伴昵称', 'Agent names'],
+    ['海港名字与小性格，只在工作室里使用。', 'Harbour names and little personalities, just for the office.'],
+    ['经典昵称', 'Classic names'],
+    ['海港昵称', 'Harbour names'],
+    ['工作室里的小性格', 'A little office personality'],
+    ['打个招呼', 'Say hello'],
     ['香港的一天', 'A day in Hong Kong'],
     ['依照香港时间变换天色，也可以预览喜欢的时段。', 'The light follows Hong Kong time. Preview any part of the day.'],
     ['跟随香港时间', 'Follow Hong Kong time'],

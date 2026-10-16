@@ -13,7 +13,7 @@
   const actorsLayer = $('actors');
   const actors = new Map();
   const archivedTurns = new Map();
-  const settingsDefaults = { rain: false, night: false, sceneTime: 'auto', reducedMotion: false, lowPower: false, idleVisitor: true, sound: false, selectedProject: '', language: 'zh' };
+  const settingsDefaults = { rain: false, night: false, sceneTime: 'auto', nameStyle: 'classic', reducedMotion: false, lowPower: false, idleVisitor: true, sound: false, selectedProject: '', language: 'zh' };
   let settings = { ...settingsDefaults };
   let language = 'zh';
   const scenery = window.OfficeDayScenery.create({ office, world, layer: $('window-scenery') });
@@ -83,6 +83,9 @@
     try { return await action(); }
     catch (error) { showError(error); return null; }
   }
+  function persona(session) { return window.OfficeAgentPersona.forSession(session); }
+  function displayName(session) { const p = persona(session); return settings.nameStyle === 'harbour' ? (language === 'en' ? p.aliasEn : p.aliasZh) : Scene.identityName(session); }
+  function keepsakeIcon(session) { return ({teacup:'♨',paperboat:'⛵',bookmark:'▤',lantern:'✧',leaf:'❧',pebble:'◇',bell:'♧',pencil:'✎',shell:'⌁',star:'✦',acorn:'♧',ribbon:'⋈'})[persona(session).keepsake] || '✦'; }
   function reduced() { return settings.reducedMotion || mediaReduce.matches; }
   function quietSprites() { return reduced() || settings.lowPower || document.hidden; }
   function assetURL(name, replay) { return '../assets/avatars/' + name + (replay ? '?_t=' + (++spriteNonce) : ''); }
@@ -159,6 +162,11 @@
   }
   function say(actor, phrase, duration = 2300) {
     text(actor.bubble, phrase);
+    actor.bubble.style.transform = 'translateX(-50%)';
+    const bounds = actor.bubble.getBoundingClientRect();
+    const displayScale = actor.button.getBoundingClientRect().width / actor.button.offsetWidth;
+    const correction = Math.max(8 - bounds.left, Math.min(0, innerWidth - 8 - bounds.right));
+    if (correction && displayScale > 0) actor.bubble.style.transform = 'translateX(calc(-50% + ' + (correction / displayScale).toFixed(2) + 'px))';
     actor.bubble.dataset.show = 'true';
     clearTimeout(actor.bubbleTimer);
     actor.bubbleTimer = setTimeout(() => { actor.bubble.dataset.show = 'false'; }, duration);
@@ -344,7 +352,9 @@
     const provider = element('span', 'actor-provider');
     const state = element('span', 'actor-state');
     subline.append(provider, state);
-    plate.append(title, relation, subline);
+    const keepsake = element('span', 'actor-keepsake', keepsakeIcon(session));
+    keepsake.setAttribute('aria-hidden', 'true');
+    plate.append(title, relation, subline, keepsake);
     const mark = element('span', 'actor-mark', '!');
     mark.setAttribute('aria-hidden', 'true');
     const bubble = element('span', 'actor-bubble');
@@ -385,17 +395,17 @@
     actor.node.dataset.stale = String(Boolean(spec.stale));
     actor.node.dataset.selected = String(session.id === selectedSession);
     actor.provider.dataset.provider = String(session.provider).toLowerCase();
-    text(actor.title, Scene.identityName(session));
+    actor.title.textContent = displayName(session);
     const family = familyGraph.info.get(session.id);
     const parent = familyGraph.byId.get(session.parentId);
     actor.node.style.setProperty('--family-color', family ? family.color : '#a7a563');
     actor.node.dataset.family = family ? family.rootId : session.id;
     actor.node.dataset.hasFamily = String(Boolean(session.parentId || family && family.descendants));
-    actor.relation.textContent = parent ? I18n.t(language,'identity.parent',{name:Scene.identityName(parent)}) : session.parentId ? tr('子任务 · 父任务未在场') : family && family.descendants ? I18n.t(language,'family.leader',{count:family.descendants}) : '';
+    actor.relation.textContent = parent ? I18n.t(language,'identity.parent',{name:displayName(parent)}) : session.parentId ? tr('子任务 · 父任务未在场') : family && family.descendants ? I18n.t(language,'family.leader',{count:family.descendants}) : '';
     actor.relation.title = actor.relation.textContent;
     text(actor.provider, session.provider === 'claude-code' ? 'Claude' : Scene.providerName(session.provider));
     if (!actor.motion && !actor.completing && !actor.departing) text(actor.state, spec.label);
-    actor.button.setAttribute('aria-label', Scene.identityName(session) + ' · ' + Scene.providerName(session.provider) + ' · ' + String(session.title || '未命名任务') + '，' + tr(spec.label) + '。' + tr('单击查看详情，双击打招呼。'));
+    actor.button.setAttribute('aria-label', displayName(session) + ' · ' + Scene.providerName(session.provider) + ' · ' + String(session.title || '未命名任务') + '，' + tr(spec.label) + '。' + tr('单击查看详情，双击打招呼。'));
     actor.button.setAttribute('aria-pressed', String(session.id === selectedSession));
   }
   async function react(actor) {
@@ -408,8 +418,10 @@
     const seat = actor.target;
     const serial = cancelAction(actor);
     actor.node.dataset.reaction = 'true';
-    setPose(actor, 'clawd-react-double-jump.svg', true);
-    say(actor, '收到，你也在这里呀', 2200);
+    const p = persona(actor.session);
+    const pose = ['teacup','bookmark','leaf'].includes(p.keepsake) ? 'clawd-aegyo-shy.svg' : ['paperboat','lantern','bell'].includes(p.keepsake) ? 'clawd-react-double.svg' : 'clawd-react-double-jump.svg';
+    setPose(actor, pose, true);
+    say(actor, language === 'en' ? p.greetingEn : p.greetingZh, 3000);
     if (!await delay(actor, quietSprites() ? 700 : 1800, serial)) return;
     actor.node.dataset.reaction = 'false';
     settle(actor, seat, true).catch(showError);
@@ -564,7 +576,12 @@
     const actor = actors.get(session.id);
     $('inspect-provider').dataset.provider = String(session.provider).toLowerCase();
     text($('inspect-provider'), Scene.providerName(session.provider));
-    text($('inspect-nickname'), Scene.identityName(session));
+    $('inspect-nickname').textContent = displayName(session);
+    const personality = persona(session);
+    $('inspect-persona-name').textContent = settings.nameStyle === 'harbour' ? Scene.identityName(session) : (language === 'en' ? personality.aliasEn : personality.aliasZh);
+    $('inspect-persona-trait').textContent = language === 'en' ? personality.traitEn : personality.traitZh;
+    $('inspect-keepsake').textContent = keepsakeIcon(session);
+    $('greet-agent').disabled = !actor || actor.departing || Boolean(spec.stale);
     text($('inspect-title'), session.title || '未命名任务');
     text($('inspect-location'), attendance.retired.includes(session.id) ? '门外休息' : actor && actor.motion ? '前往' + Scene.ZONES[(actor.target || spec).zone].name : Scene.ZONES[spec.zone].name);
     text($('inspect-summary'), session.summary || spec.verb);
@@ -576,7 +593,7 @@
     $('inspect-helper').hidden = !session.parentId && !children.length;
     $('inspect-helper').dataset.parentId = parent ? parent.id : '';
     $('inspect-helper').disabled = !parent;
-    text($('inspect-helper'), parent ? (language === 'en' ? '↳ Helping ' : '↳ 协助 ') + Scene.identityName(parent) + ' ↗' : session.parentId ? (language === 'en' ? 'Parent is outside' : '父任务未在场') : (language === 'en' ? 'Leader · ' + children.length + ' helpers' : '领队 · ' + children.length + ' 位帮手'));
+    text($('inspect-helper'), parent ? (language === 'en' ? '↳ Helping ' : '↳ 协助 ') + displayName(parent) + ' ↗' : session.parentId ? (language === 'en' ? 'Parent is outside' : '父任务未在场') : (language === 'en' ? 'Leader · ' + children.length + ' helpers' : '领队 · ' + children.length + ' 位帮手'));
     text($('open-source'), '打开项目文件夹 ↗');
     $('open-source').disabled = snapshot.mode === 'demo' || !session.projectPath;
     text($('inspect-action-note'), snapshot.mode === 'demo' ? '演示中的模拟项目，不对应本地文件夹。' : Scene.needsAttention(session) ? '请回到 ' + Scene.providerName(session.provider) + ' 回答或处理审批。' : spec.stale ? '最后位置已保留，尚不能确认当前进度。' : '此按钮打开 Finder。任务与对话请回到原工具查看。');
@@ -647,9 +664,9 @@
       row.style.setProperty('--family-color',family ? family.color : '#a7a563');
       row.style.marginLeft = (Math.min(3,family ? family.depth : 0)*18)+'px';
       const copy = element('span', 'roster-copy');
-      copy.append(element('strong', '', Scene.identityName(session)), element('span', 'roster-task', session.title || '未命名任务'));
+      copy.append(element('strong', '', displayName(session)), element('span', 'roster-task', session.title || '未命名任务'));
       const parent = familyGraph.byId.get(session.parentId);
-      if (parent) { const relation = element('span','roster-relation'); relation.textContent = '↳ ' + I18n.t(language,'identity.parent',{name:Scene.identityName(parent)}); copy.append(relation); }
+      if (parent) { const relation = element('span','roster-relation'); relation.textContent = '↳ ' + I18n.t(language,'identity.parent',{name:displayName(parent)}); copy.append(relation); }
       row.append(copy, element('span', 'roster-state', (attendance.retired.includes(session.id) ? tr('门外休息') : tr(spec.label)) + ' →'));
       row.addEventListener('click', () => { $('roster-dialog').close(); selectSession(session.id); });
       fragment.append(row);
@@ -710,6 +727,18 @@
     $('page-prev').disabled = page === 0;
     $('page-next').disabled = page >= currentPage.pages - 1;
     $('demo-controls').hidden = snapshot.mode !== 'demo';
+    const stories = Array.isArray(snapshot.demo.stories) ? snapshot.demo.stories : [];
+    const storySelect = $('demo-story');
+    const storyKey = stories.map(story => story.id).join(':') + ':' + language;
+    if (storySelect.dataset.stories !== storyKey) {
+      storySelect.replaceChildren(...stories.map(story => { const option = document.createElement('option'); option.value = story.id; option.textContent = language === 'en' ? story.titleEn : story.titleZh; return option; }));
+      storySelect.dataset.stories = storyKey;
+    }
+    storySelect.hidden = stories.length === 0;
+    storySelect.value = snapshot.demo.storyId || 'classic';
+    const frameLabel = language === 'en' ? snapshot.demo.frameLabelEn : snapshot.demo.frameLabelZh;
+    $('demo-scene-label').hidden = snapshot.mode !== 'demo' || !frameLabel;
+    $('demo-scene-label').textContent = frameLabel ? (language === 'en' ? 'Simulated · ' : '模拟 · ') + frameLabel : '';
     text($('demo-play'), snapshot.demo && snapshot.demo.running ? '暂停事件' : '继续演示');
     text($('mode-label'), snapshot.mode === 'demo' ? '演示房间' : '实时观察');
     $('mode-button').setAttribute('aria-label', snapshot.mode === 'demo' ? '当前是模拟演示，点击回到实时观察' : '当前是实时观察，点击体验演示房间');
@@ -724,8 +753,8 @@
   function receive(next) {
     if (!next || !Array.isArray(next.sessions)) return;
     snapshotReceived += 1;
-    if (next.mode !== snapshot.mode || ((next.demo && snapshot.demo) && next.demo.tick < snapshot.demo.tick)) {
-      if (next.mode === 'demo' && next.demo && snapshot.demo && next.demo.tick < snapshot.demo.tick) attendanceModels.demo.clear();
+    if (next.mode !== snapshot.mode || ((next.demo && snapshot.demo) && (next.demo.tick < snapshot.demo.tick || next.demo.storyId !== snapshot.demo.storyId))) {
+      if (next.mode === 'demo' && next.demo && snapshot.demo && (next.demo.tick < snapshot.demo.tick || next.demo.storyId !== snapshot.demo.storyId)) attendanceModels.demo.clear();
       clearActors();
       selectedSession = '';
       selectedProject = '';
@@ -775,6 +804,7 @@
     office.dataset.lowPower = String(settings.lowPower);
     for (const key of ['rain', 'reducedMotion', 'lowPower', 'idleVisitor']) $('setting-' + key).checked = Boolean(settings[key]);
     $('setting-sceneTime').value = settings.sceneTime;
+    $('setting-nameStyle').value = settings.nameStyle;
     for (const actor of actors.values()) {
       if (reduced() && actor.motion) {
         const target = actor.target;
@@ -786,9 +816,12 @@
         actor.node.style.transform = actorTransform(actor.position, actor.helper);
         finishAtStation(actor);
       } else setPose(actor, actor.wantedAsset || actor.spec.asset);
+      updateActorLabel(actor);
+      if (previousLanguage !== language) { clearTimeout(actor.bubbleTimer); actor.bubble.dataset.show = 'false'; }
     }
     renderHelperLinks();
     visitor.tick();
+    renderInspector();
     if (previousLanguage !== language) render();
   }
   async function saveSettings(patch) {
@@ -842,6 +875,12 @@
   $('setting-sceneTime').addEventListener('change', event => saveSettings({ sceneTime: event.target.value }));
   $('day-reset').addEventListener('click', () => { $('setting-sceneTime').focus(); saveSettings({ sceneTime: 'auto' }); });
   $('roster-button').addEventListener('click', () => openDialog('roster-dialog'));
+  $('greet-agent').addEventListener('click', () => { const actor = actors.get(selectedSession); if (actor) react(actor); });
+  $('setting-nameStyle').addEventListener('change', event => saveSettings({ nameStyle: event.target.value }));
+  $('demo-story').addEventListener('change', event => attempt(async () => {
+    try { const result = await call('demoAction', 'story:' + event.target.value); if (result && Array.isArray(result.sessions)) receive(result); else await refreshSnapshot(); }
+    finally { $('demo-story').value = snapshot.demo.storyId || 'classic'; }
+  }));
   $('inspect-helper').addEventListener('click', () => { const id = $('inspect-helper').dataset.parentId; if (id) selectSession(id); });
   $('mode-button').addEventListener('click', () => changeMode(snapshot.mode === 'demo' ? 'live' : 'demo'));
   $('exit-demo').addEventListener('click', () => changeMode('live'));

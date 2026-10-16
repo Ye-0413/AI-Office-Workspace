@@ -24,7 +24,7 @@ function context(extra = {}) {
   const nodes = new Map();
   const errors = [];
   const sandbox = {
-    Scene, Director, language:'zh', bridge: {}, mutationPending: false,
+    Scene, Director, persona:require('../lib/agent-persona.js').forSession, displayName:Scene.identityName, keepsakeIcon:()=> '✦',settings:{nameStyle:'classic'},language:'zh', bridge: {}, mutationPending: false,
     $: id => { if (!nodes.has(id)) nodes.set(id, node()); return nodes.get(id); },
     text: (target, value) => { target.textContent = String(value ?? ''); },
     element: (tag, className, content) => ({ ...node(content), tagName: tag, className }),

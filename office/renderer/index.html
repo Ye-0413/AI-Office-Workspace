@@ -14,6 +14,7 @@
   <script defer src="../lib/family-model.js"></script>
   <script defer src="../lib/visitor-model.js"></script>
   <script defer src="../lib/visitor-dialogue.js"></script>
+  <script defer src="../lib/agent-persona.js"></script>
   <script defer src="../lib/day-cycle.js"></script>
   <script defer src="day-scenery.js"></script>
   <script defer src="idle-visitor.js"></script>
@@ -65,14 +66,16 @@
       <div class="room-status-copy"><span id="status-dot" class="status-dot" aria-hidden="true"></span><span id="room-summary">正在打开办公室…</span><span id="signal-summary" class="signal-summary"></span></div>
       <div id="pagination" class="pagination" hidden><button id="page-prev" type="button" aria-label="上一组任务">←</button><span id="page-label"></span><button id="page-next" type="button" aria-label="下一组任务">→</button></div>
       <button id="roster-button" class="roster-button" type="button" hidden>房间里的伙伴</button>
-      <div id="demo-controls" class="demo-controls" hidden><span class="demo-caption">模拟事件</span><button id="demo-play" type="button">暂停</button><button id="demo-next" type="button">下一幕 →</button><button id="demo-reset" type="button" aria-label="从头播放演示">↻</button><button id="exit-demo" type="button">回到实时</button></div>
+      <div id="demo-controls" class="demo-controls" hidden><label for="demo-story" class="sr-only">演示故事</label><select id="demo-story" aria-label="演示故事"></select><span class="demo-caption">模拟事件</span><button id="demo-play" type="button">暂停</button><button id="demo-next" type="button">下一幕 →</button><button id="demo-reset" type="button" aria-label="从头播放演示">↻</button><button id="exit-demo" type="button">回到实时</button></div>
+      <span id="demo-scene-label" class="demo-scene-label" hidden></span>
       <button id="attention-jump" type="button" class="attention-jump" hidden></button>
     </footer>
 
     <aside id="inspector" class="inspector" aria-label="任务详情" hidden>
       <div class="inspector-main"><div class="inspector-heading"><span id="inspect-provider" class="provider-badge"></span><span id="inspect-nickname" class="inspect-nickname"></span><span id="inspect-location" class="inspect-location"></span><button type="button" id="inspect-helper" class="inspect-helper" hidden>临时帮手</button></div><h2 id="inspect-title"></h2><p id="inspect-summary"></p><div class="inspector-meta"><span id="inspect-state"></span><span id="inspect-signal"></span><span id="inspect-tools"></span></div></div>
-      <div class="inspector-actions"><button id="open-source" type="button" class="button button-warm">打开项目文件夹 ↗</button><span id="inspect-action-note">角色行动来自观察事件</span></div>
+      <div class="inspector-actions"><button id="greet-agent" type="button" class="button button-paper">打个招呼</button><button id="open-source" type="button" class="button button-warm">打开项目文件夹 ↗</button><span id="inspect-action-note">角色行动来自观察事件</span></div>
       <button id="close-inspector" type="button" class="close-inspector" aria-label="关闭任务详情">×</button>
+      <div id="inspect-persona" class="inspect-persona"><span id="inspect-keepsake" aria-hidden="true"></span><div><strong id="inspect-persona-name"></strong><span id="inspect-persona-trait"></span></div><small>工作室里的小性格</small></div>
       <details id="event-details" class="event-details"><summary>最近活动与判断依据</summary><div class="evidence-summary"><span id="inspect-source"></span><span id="inspect-confidence"></span></div><div id="inspect-animation" class="animation-evidence"></div><ol id="inspect-events"></ol><div id="inspect-session-id" class="session-identity"></div></details>
     </aside>
 
@@ -95,6 +98,7 @@
       <div class="dialog-header"><div><span class="dialog-eyebrow">把小房间放到喜欢的地方</span><h2 id="settings-title">房间偏好</h2></div><button type="button" class="dialog-close" data-close-dialog aria-label="关闭房间偏好">×</button></div>
       <div class="setting-row scene-time-setting"><div><label for="setting-sceneTime">香港的一天</label><span>依照香港时间变换天色，也可以预览喜欢的时段。</span></div><select id="setting-sceneTime"><option value="auto">跟随香港时间</option><option value="dawn">晨曦</option><option value="morning">上午</option><option value="afternoon">午后</option><option value="sunset">日落</option><option value="night">夜晚</option></select></div>
       <button id="day-reset" class="day-reset" type="button" hidden>回到此刻</button>
+      <div class="setting-row"><div><label for="setting-nameStyle">伙伴昵称</label><span>海港名字与小性格，只在工作室里使用。</span></div><select id="setting-nameStyle"><option value="classic">经典昵称</option><option value="harbour">海港昵称</option></select></div>
       <div class="setting-row"><div><label for="setting-rain">窗外细雨</label><span>只改变环境，不代表任务状态。</span></div><input id="setting-rain" type="checkbox"></div>
       <div class="setting-row"><div><label for="setting-idleVisitor">闲时串门</label><span>安静时有访客来逛逛；真实任务入驻就让路。</span></div><input id="setting-idleVisitor" type="checkbox"></div>
       <div class="setting-row"><div><label for="setting-reducedMotion">减少动作</label><span>保留位置与状态，暂停角色循环及装饰动作。</span></div><input id="setting-reducedMotion" type="checkbox"></div>

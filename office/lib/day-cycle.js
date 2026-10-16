@@ -72,7 +72,7 @@
       roomShade: round(mix(start[6], end[6], amount)),
       lamplight: round(mix(start[7], end[7], amount)),
       starsOpacity: round(mix(start[8], end[8], amount)),
-      sunX: round(50 + Math.sin(orbit) * 36), sunY: round(72 - Math.max(0, Math.cos(orbit)) * 54),
+      sunX: round(50 + Math.sin(orbit) * 36), sunY: round(62 - Math.max(0, Math.cos(orbit)) * 44),
       sunOpacity: round(smooth((hour - 5) / 1.25) * (1 - smooth((hour - 17.75) / 1.25))),
       moonOpacity: round(1 - smooth((hour - 4.5) / 2.5) + smooth((hour - 18) / 2))
     };

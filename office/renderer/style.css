@@ -149,3 +149,19 @@
 .door-window-lights{position:absolute;inset:35% 8% 8%;background:repeating-linear-gradient(0deg,transparent 0 8px,#ffe4a8 8px 10px,transparent 10px 15px);opacity:0;mask-image:repeating-linear-gradient(90deg,#000 0 2px,transparent 2px 6px);transition:opacity 250ms var(--ease-out)}
 
 .door-window{mix-blend-mode:multiply;opacity:.8}.door-city{opacity:.45}
+
+/* A personal stamp and a small card distinguish personality from task evidence. */
+.actor-keepsake{position:absolute;right:-7px;top:-9px;display:flex;align-items:center;justify-content:center;width:21px;height:21px;border:1px solid #c5ad7a;background:#f2e8c9;color:#7e8862;box-shadow:0 2px 3px #2c24162b;border-radius:50%;font-size:13px;opacity:0;transform:translateY(3px);transition:transform 160ms var(--ease-out),opacity 160ms var(--ease-out)}
+.actor[data-selected="true"] .actor-keepsake,.actor[data-reaction="true"] .actor-keepsake{opacity:1;transform:translateY(0)}
+.actor[data-reaction="true"] .actor-keepsake{transform:translateY(-3px) rotate(-8deg)}
+.actor-bubble{white-space:normal;width:max-content;max-width:218px;text-align:center}
+.actor[data-zone="door"] .actor-bubble{transform:translateX(-80%)}
+.inspect-persona{grid-column:1/-1;display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px dashed #bda77a88;border-radius:5px;background:#f8efd966;font-size:11px;line-height:1.5;color:#796443}
+#inspect-keepsake{font-size:23px;color:#7d8b63;width:29px;text-align:center}.inspect-persona>div{display:flex;flex-direction:column;gap:2px}.inspect-persona strong{font-weight:600;color:#695535}.inspect-persona small{margin-left:auto;font-size:10px;color:#8c7857}.inspector-actions{gap:6px}
+.settings-dialog .setting-row select{max-width:155px;min-height:33px;flex:none;border:1px solid #bda276;background:#fff3d7;color:#614b30;border-radius:3px;padding:6px 8px;font-size:11px;color-scheme:light}
+.demo-controls select{max-width:150px;border:1px solid #bea07477;border-radius:4px;background:#4f3c2a;color:#f0ddb7;font-size:10px;padding:5px 6px;min-height:28px;color-scheme:dark}
+.demo-scene-label{position:absolute;bottom:54px;right:24px;max-width:430px;border:1px solid #c7b38b60;border-radius:4px;padding:6px 9px;background:#3e3029db;color:#e2d3b7;font-size:10px;line-height:1.5;pointer-events:none}
+@media(prefers-reduced-motion:reduce){.actor-keepsake{transform:none!important;transition:opacity 150ms ease}}
+.office[data-reduced-motion="true"] .actor-keepsake{transform:none!important;transition:opacity 150ms ease}
+@media(max-width:1050px){.demo-controls select{max-width:110px}.demo-controls{gap:4px}.demo-scene-label{font-size:9px;right:18px;max-width:300px}.inspect-persona small{display:none}.room-status-copy{flex-shrink:1}}
+@media(max-width:800px){.demo-controls select{max-width:86px;font-size:9px}.room-status-copy{max-width:150px}.demo-scene-label{max-width:260px}.inspect-persona{padding:7px 9px}.inspector-actions .button{min-height:30px;padding:5px 8px}}

@@ -46,3 +46,14 @@ test('legacy evening light migrates without overriding an explicit time mode or 
     if (saved.language) assert.equal(settings.get().language, saved.language);
   }
 });
+
+test('harbour display names persist without changing the original session identity', t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'office-settings-names-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const settings = createSettings(dir);
+  assert.equal(settings.get().nameStyle, 'classic');
+  settings.set({ nameStyle: 'harbour' });
+  assert.equal(createSettings(dir).get().nameStyle, 'harbour');
+  for (const nameStyle of ['custom', '', true, null, {}]) assert.throws(() => settings.set({nameStyle}), /name style/);
+  assert.equal(settings.get().nameStyle, 'harbour');
+});

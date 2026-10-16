@@ -6,7 +6,7 @@ const {createSettings}=require('./lib/settings.cjs');
 const {createSessionStore}=require('./lib/session-store.cjs');
 const {createCodexMonitor}=require('./lib/codex-monitor.cjs');
 const {createObserverBridge}=require('./lib/observer-bridge.cjs');
-const {createDemo}=require('./lib/demo.cjs');
+const {createDemo,isDemoAction}=require('./lib/demo.cjs');
 const {getProvider}=require('./lib/provider-catalog.cjs');
 const {withNativeLock}=require('./lib/native-lock.cjs');
 
@@ -53,7 +53,7 @@ app.whenReady().then(()=>{
   bind('snapshot',current);bind('settings',()=>settings.get());
   bind('set-settings',patch=>{const next=settings.set(patch);applySettings();return next;});
   bind('mode',value=>{if(!['live','demo'].includes(value))throw new Error('Invalid mode');if(value==='live')demo.action('pause');mode=value;if(value==='demo')demo.action('play');broadcast();return current();});
-  bind('demo',action=>{if(mode!=='demo')throw new Error('请先进入演示模式');if(!['play','pause','reset','advance'].includes(action))throw new Error('Invalid demo action');demo.action(action);broadcast();return current();});
+  bind('demo',action=>{if(mode!=='demo')throw new Error('请先进入演示模式');if(!isDemoAction(action))throw new Error('Invalid demo action');demo.action(action);broadcast();return current();});
   bind('connect',async provider=>{if(!getProvider(provider))throw new Error('Unknown provider');const result=await bridge.connect(provider);broadcast();return result;});
   bind('disconnect',async provider=>{if(!getProvider(provider))throw new Error('Unknown provider');const result=await bridge.disconnect(provider);broadcast();return result;});
   bind('displays',()=>screen.getAllDisplays().map(d=>({id:d.id,label:d.label||`${d.size.width}×${d.size.height}`,width:d.size.width,height:d.size.height,primary:d.id===screen.getPrimaryDisplay().id})));
