@@ -23,6 +23,23 @@
     hand: `<g class="ap-question-card"><path fill="#897249" d="M39 94h30v27H39Z"/><path fill="#eee0bb" d="M41 96h26v23H41Z"/><path fill="#b3a27c" d="M46 102h16v2H46Zm0 6h12v2H46Z"/><path fill="#d3b27d" d="M50 92h9v5h-9Z"/></g>`,
     puzzled: `<g class="ap-problem-sheet"><path fill="#9b7b59" d="M39 91h28v30H39Z"/><path fill="#eddfbc" d="M41 93h24v26H41Z"/><path stroke="#b8a17b" d="M46 98h14m-14 5h10m-10 5h14"/><path fill="#b87857" d="M51 111h3v4h-3Zm0 5h3v2h-3Z"/></g><g class="ap-question"><path fill="#dfc491" d="M112 52h10v3h3v7h-3v3h-4v4h-3v-7h5v-6h-5v3h-3Zm3 20h4v4h-4Z"/></g>`
   });
+  // Small work objects carry no task contents, percentages, or success marks.
+  const PEN = '<g class="ap-annotation-pen"><path fill="#b69251" d="m103 87 3 1-12 26-3-1Z"/><path fill="#554b39" d="m91 113 3 1-5 5Z"/><path fill="#d6b49a" d="m103 85 4 1-1 3-4-1Z"/></g>';
+  const CARD = '<g class="ap-second-card"><path fill="#9caa8c" d="M108 90h26v32h-26Z"/><path fill="#f1e6c7" d="M110 92h22v28h-22Z"/><path stroke="#b7a178" d="M114 98h14m-14 6h10m-10 6h14m-14 6h8"/></g>';
+  const RULER = '<g class="ap-straightedge"><path fill="#d4be88" d="M48 108h58v6H48Z"/><path stroke="#8f825d" d="M53 108v4m7-4v2m7-2v4m7-4v2m7-2v4m7-4v2m7-2v4m7-4v2"/></g>';
+  const EXTRA = Object.freeze({
+    'read-annotate': PEN, 'read-compare': CARD,
+    'search-index': '<g class="ap-index-fan"><path fill="#9eab8e" d="m103 95 21-4 6 28-21 4Z"/><path fill="#cebc8c" d="m109 91 22 2-2 29-22-2Z"/><path fill="#f0e0b7" d="M109 96h24v25h-24Z"/><path fill="#ac9e77" d="M113 101h15v2h-15Zm0 6h10v2h-10Zm0 6h15v2h-15Z"/><path fill="#bf8a68" d="M113 92h8v5h-8Z"/></g>',
+    'search-compare': CARD,
+    'code-pointer': '<g class="ap-mouse"><path fill="#d3c79f" d="M115 112h9v3h2v10h-13v-10h2Z"/><path stroke="#8c8769" d="M120 114v5"/><path fill="#87977d" d="M119 115h2v3h-2Z"/></g>',
+    'design-swatches': '<g class="ap-colour-fan"><path fill="#c79a77" d="m43 98 13-5 10 25-13 5Z"/><path fill="#86a59b" d="m51 94 14 1-2 28-14-1Z"/><path fill="#b6bc86" d="m63 95 13 5-10 25-13-5Z"/><path fill="#f0ddb0" d="M55 118h3v3h-3Z"/></g>',
+    'design-ruler': RULER,
+    'test-inspect': '<g class="ap-inspection-lens"><path fill="#685840" d="m119 87 3-2 9 14-3 2Z"/><path fill="#d8c38e" d="M107 67h15v4h4v14h-4v4h-15v-4h-4V71h4Z"/><path fill="#a3c0ad" fill-opacity=".7" d="M108 71h13v13h-13Z"/><path fill="#ece5bd" d="M109 72h3v3h-3Z"/></g>',
+    'build-align': RULER,
+    'build-blueprint': '<g class="ap-blueprint"><path fill="#9ab4ab" d="M103 75h31v35h-31Z"/><path stroke="#e3ead2" fill="none" d="M108 81h20v21h-20Zm0 7h20m-13-7v21m-7-7h20"/><path fill="#c1d0b7" d="M106 105h25v2h-25Z"/></g>',
+    'run-keyboard': '<g class="ap-command-keys"><path fill="#80765a" d="M44 111h61l5 13H39Z"/><path fill="#c6bd97" d="M46 114h56v3H46Zm-3 5h62v3H43Z"/><path stroke="#8c886d" d="M53 114v3m9-3v3m9-3v3m9-3v3m9-3v3m9-3v3"/></g>',
+    'error-review': CARD
+  });
 
   function create({ actorNode, body, session = {} } = {}) {
     if (!Model) throw new Error('Avatar performance model must load before its renderer.');
@@ -48,19 +65,77 @@
     body.append(layer);
     let last = null;
     let destroyed = false;
+    // One bounded clock per supported kind (eleven maximum), only for this
+    // actor identity. Brief tool bouts cannot erase accumulated thinking time.
+    const visibleClocks = new Map();
+    let clockIdentity = '', lastNow = null;
+    const bridges = new Set();
+    let ghost = null;
+    const view = document.defaultView;
+    const joints = () => typeof svg.querySelectorAll === 'function' ? [...svg.querySelectorAll('.ap-upper,.ap-eyes,.ap-arm,.ap-foot')] : [];
+    function stopBridge() {
+      for (const motion of bridges) motion.cancel();
+      bridges.clear();
+      if (ghost) { ghost.remove(); ghost = null; }
+    }
+    function animate(node, frames) {
+      if (typeof node.animate !== 'function') return;
+      const motion = node.animate(frames, { duration: 180, easing: 'cubic-bezier(.23,1,.32,1)' });
+      bridges.add(motion);
+      motion.finished.catch(() => {}).finally(() => bridges.delete(motion));
+      return motion;
+    }
+    function capture() {
+      if (!view || typeof view.getComputedStyle !== 'function') return [];
+      return joints().map(node => ({ node, transform: view.getComputedStyle(node).transform }));
+    }
+    function retainProps() {
+      if (!view || !last || !last.active || typeof back.cloneNode !== 'function') return null;
+      const copy = back.cloneNode(true);
+      const originals = [back, ...back.querySelectorAll('*')];
+      const copies = [copy, ...copy.querySelectorAll('*')];
+      originals.forEach((node, index) => {
+        const style = view.getComputedStyle(node);
+        copies[index].style.setProperty('animation', 'none', 'important');
+        copies[index].style.transform = style.transform;
+        copies[index].style.opacity = style.opacity;
+      });
+      return copy;
+    }
 
     function update(value = session, options = {}) {
       if (destroyed) return Model.plan({}, {});
       session = value;
-      const plan = Model.plan(session, options);
+      const base = Model.plan(session, options);
+      const now = Number.isFinite(options.now) ? options.now : null;
+      // Credit only the kind that was actually visible since the previous
+      // update. Other kinds, hidden intervals and quiet modes never catch up
+      // from wall time. Returning to a kind resumes its own accumulated clock.
+      const identity = JSON.stringify([session.provider, session.id || session.sessionId]);
+      if (identity !== clockIdentity) {
+        visibleClocks.clear(); clockIdentity = identity; lastNow = null;
+      }
+      if (now !== null && lastNow !== null && last && last.active && last.animate && Model.PROGRAMS[last.kind]) {
+        visibleClocks.set(last.kind, (visibleClocks.get(last.kind) || 0) + Math.max(0, now - lastNow));
+      }
+      lastNow = now === null ? null : Math.max(lastNow === null ? now : lastNow, now);
+      const visibleElapsed = visibleClocks.get(base.kind) || 0;
+      const plan = Model.plan(session, { ...options, visibleElapsed });
+      const changed = !last || last.program !== plan.program || last.kind !== plan.kind;
+      const blend = changed && plan.active && plan.animate;
+      const before = blend ? capture() : [];
+      const oldProps = blend ? retainProps() : null;
+      if (changed || !plan.animate) stopBridge();
       // No DOM writes for unchanged snapshots: animation timelines stay alive.
-      if (!last || last.kind !== plan.kind) {
+      if (changed) {
         // The hands must stay above their held objects: putting the laptop or
         // folio in front would hide the new wrist choreography completely.
-        back.innerHTML = plan.active ? PROPS[plan.kind] || '' : '';
+        back.innerHTML = plan.active ? (PROPS[plan.kind] || '') + (EXTRA[plan.program] || '') : '';
         front.innerHTML = '';
         layer.dataset.kind = plan.kind;
+        layer.dataset.program = plan.program;
         actorNode.dataset.performance = plan.kind;
+        actorNode.dataset.performanceProgram = plan.program;
       }
       if (!last || last.key !== plan.key) {
         layer.dataset.variant = String(plan.variant);
@@ -71,14 +146,29 @@
         layer.hidden = !plan.active;
         body.classList.toggle('has-avatar-performance', plan.active);
       }
+      if (blend) {
+        for (const item of before) {
+          const target = view.getComputedStyle(item.node).transform;
+          if (item.transform !== target) animate(item.node, [{ transform: item.transform }, { transform: target }]);
+        }
+        animate(back, [{ opacity: 0, transform: 'translateY(2px)' }, { opacity: 1, transform: 'translateY(0)' }]);
+        if (oldProps) {
+          ghost = oldProps; front.append(oldProps);
+          const fading = animate(oldProps, [{ opacity: 1 }, { opacity: 0 }]);
+          if (fading) fading.finished.catch(() => {}).finally(() => { oldProps.remove(); if (ghost === oldProps) ghost = null; });
+        }
+      }
       last = plan;
       return plan;
     }
     function destroy() {
       if (destroyed) return;
       destroyed = true;
+      stopBridge();
+      visibleClocks.clear();
       body.classList.remove('has-avatar-performance');
       delete actorNode.dataset.performance;
+      delete actorNode.dataset.performanceProgram;
       layer.remove();
       last = null;
     }

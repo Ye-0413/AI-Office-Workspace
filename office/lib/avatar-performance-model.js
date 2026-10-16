@@ -9,6 +9,19 @@
   'use strict';
   const ASSET = 'clawd-static-base.svg';
   const KINDS = Object.freeze({ reading: 'folio', searching: 'lens', planning: 'notebook', coding: 'keyboard', designing: 'drafting', testing: 'probe', building: 'assembly', running: 'console', 'waiting-tool': 'listening', 'waiting-user': 'hand', error: 'puzzled' });
+  const PROGRAMS = Object.freeze(Object.fromEntries(Object.entries({
+    folio: ['read-turn', 'read-annotate', 'read-compare'],
+    lens: ['search-sweep', 'search-index', 'search-compare'],
+    notebook: ['plan-chin', 'plan-pencil', 'plan-map', 'plan-temple'],
+    keyboard: ['code-burst', 'code-pointer', 'code-review'],
+    drafting: ['design-brush', 'design-swatches', 'design-ruler'],
+    probe: ['test-measure', 'test-notes', 'test-inspect'],
+    assembly: ['build-wrench', 'build-align', 'build-blueprint'],
+    console: ['run-watch', 'run-notes', 'run-keyboard'],
+    listening: ['wait-chin', 'wait-listen'],
+    hand: ['ask-raised', 'ask-card'],
+    puzzled: ['error-scratch', 'error-review']
+  }).map(([kind, programs]) => [kind, Object.freeze(programs)])));
   const text = value => typeof value === 'string' ? value : '';
   function hash(value) {
     let result = 2166136261;
@@ -18,7 +31,7 @@
   function plan(input, options = {}) {
     const session = input && typeof input === 'object' ? input : {};
     const identity = JSON.stringify([text(session.provider), text(session.id) || text(session.sessionId)]);
-    const inactive = reason => ({ active: false, animate: false, kind: 'none', variant: 0, key: identity + '/' + reason, asset: null, reason, phaseOffset: 0 });
+    const inactive = reason => ({ active: false, animate: false, kind: 'none', program: '', programIndex: 0, programMs: 0, variant: 0, key: identity + '/' + reason, asset: null, reason, phaseOffset: 0 });
     // Lifecycle, safety, and explicit user feedback each keep one owner.
     if (session.closed || session.status === 'closed') return inactive('closed');
     if (session.disconnected || session.status === 'stale' || options.stale) return inactive('stale');
@@ -31,12 +44,16 @@
     if (!kind) return inactive('unclassified');
     const seed = hash(identity + '/' + activity);
     const animate = !options.reducedMotion && !options.lowPower;
-    return { active: true, animate, kind, variant: seed % 3,
-      key: identity + '/' + kind + '/' + (seed % 3), asset: ASSET,
+    const programMs = 18000 + seed % 6001;
+    const elapsed = Number.isFinite(options.visibleElapsed) ? Math.max(0, options.visibleElapsed) : 0;
+    const programIndex = (seed % PROGRAMS[kind].length + Math.floor(elapsed / programMs)) % PROGRAMS[kind].length;
+    const program = PROGRAMS[kind][programIndex];
+    return { active: true, animate, kind, program, programIndex, programMs, variant: seed % 3,
+      key: identity + '/' + kind + '/' + (seed % 3) + '/' + program, asset: ASSET,
       reason: options.reducedMotion ? 'reduced-motion' : options.lowPower ? 'low-power' : 'observed-' + activity,
       // A static phase offset gives every actor its own rhythm without timers,
       // Math.random(), or restarting a performance at each metadata snapshot.
       phaseOffset: -(seed % 9600) };
   }
-  return Object.freeze({ plan, KINDS, ASSET });
+  return Object.freeze({ plan, KINDS, PROGRAMS, ASSET });
 });

@@ -65,6 +65,29 @@ test('metadata, heartbeats, title edits and ordinary snapshots cannot restart a 
   assert.notEqual(Model.plan(fixture('reading', { id: 'provider:prefix/a' })).key, Model.plan(fixture('reading', { id: 'provider:prefix/b' })).key);
 });
 
+test('all 31 programs are reachable in real activities and rotate only on supplied visible work time', () => {
+  const all = new Set();
+  for (const activity of Object.keys(Model.KINDS)) {
+    const value = fixture(activity), first = Model.plan(value);
+    const expected = Model.PROGRAMS[first.kind];
+    assert.ok(first.programMs >= 18000 && first.programMs <= 24000);
+    const seen = new Set();
+    for (let index = 0; index < expected.length; index += 1) {
+      const plan = Model.plan(value, { visibleElapsed: first.programMs * index });
+      assert.equal(plan.kind, first.kind, 'rotation cannot turn one observed activity into another');
+      assert.equal(plan.asset, first.asset);
+      assert.equal(plan.reason, first.reason);
+      assert.notEqual(plan.program, Model.plan(value, { visibleElapsed: first.programMs * (index + 1) }).program);
+      assert.doesNotMatch(plan.program, /success|pass|complete|retry|sleep/);
+      seen.add(plan.program); all.add(plan.program);
+    }
+    assert.deepEqual([...seen].sort(), [...expected].sort());
+    assert.equal(Model.plan(value, { visibleElapsed: first.programMs - 1 }).program, first.program);
+    assert.equal(Model.plan(value, { now: 1e12 }).program, first.program, 'wall time alone does not rotate programs');
+  }
+  assert.equal(all.size, 31);
+});
+
 function rendererFixture() {
   let writes = 0;
   const document = { createElement: () => node(), createElementNS: () => node() };
@@ -87,11 +110,11 @@ function rendererFixture() {
 test('renderer keeps timelines and the articulated rig stable over identical native snapshots', () => {
   const { renderer, actorNode, body, writes } = rendererFixture();
   const value = fixture('coding');
-  const plan = renderer.update(value);
+  const plan = renderer.update(value, { now: 0 });
   assert.equal(plan.kind, 'keyboard');
   assert.equal(body.classList.contains('has-avatar-performance'), true);
   const previousWrites = writes();
-  for (let index = 0; index < 100; index += 1) renderer.update({ ...value, title: String(index), lastEventAt: index * 2000 }, { now: index * 2000 });
+  for (let index = 0; index < 100; index += 1) renderer.update({ ...value, title: String(index), lastEventAt: index * 100 }, { now: index * 100 });
   assert.equal(writes(), previousWrites, 'no attribute, prop, phase or style write may reset CSS timelines');
   assert.equal(actorNode.dataset.performance, 'keyboard');
   renderer.update(value, { walking: true });
@@ -105,6 +128,60 @@ test('renderer keeps timelines and the articulated rig stable over identical nat
   assert.equal(body.classList.contains('has-avatar-performance'), false);
   assert.equal(body.child.removed, true);
   assert.equal(actorNode.dataset.performance, undefined);
+});
+
+test('local visible-time rotation pauses through hidden, walking and quiet periods without per-actor timers', () => {
+  const { renderer, actorNode } = rendererFixture();
+  const value = fixture('planning');
+  const first = renderer.update(value, { now: 0 });
+  renderer.update(value, { now: first.programMs - 2 });
+  renderer.update(value, { now: first.programMs - 1, hidden: true });
+  assert.equal(renderer.update(value, { now: 3600000 }).program, first.program, 'hidden hour is not visible activity');
+  const second = renderer.update(value, { now: 3600002 });
+  assert.notEqual(second.program, first.program);
+  assert.equal(actorNode.dataset.performanceProgram, second.program);
+  renderer.update(value, { now: 3600003, walking: true });
+  assert.equal(renderer.update(value, { now: 7200000 }).program, second.program, 'walking time belongs to navigation');
+  renderer.update(value, { now: 7200001, lowPower: true });
+  renderer.update(value, { now: 1e8, lowPower: true });
+  assert.equal(renderer.update(value, { now: 2e8 }).program, second.program, 'low power stops the program clock');
+  const coding = renderer.update(fixture('coding'), { now: 2e8 + 1 });
+  assert.equal(coding.program, Model.plan(fixture('coding')).program, 'a genuinely changed activity starts its own clock');
+  const source = fs.readFileSync(path.join(__dirname, '../renderer/avatar-performance.js'), 'utf8');
+  assert.doesNotMatch(source, /\b(?:setTimeout|setInterval|requestAnimationFrame)\s*\(/);
+});
+
+test('short planning bouts accumulate across coding while both kind clocks remain independent', () => {
+  const { renderer } = rendererFixture();
+  const planning = fixture('planning'), coding = fixture('coding');
+  const first = renderer.update(planning, { now: 0 });
+  const firstCode = Model.plan(coding);
+  const planningBout = Math.ceil(first.programMs / 4);
+  let now = 0, returned;
+  for (let bout = 0; bout < 4; bout += 1) {
+    now += planningBout;
+    assert.equal(renderer.update(coding, { now }).program, firstCode.program, 'brief coding starts/resumes its own unexpired program');
+    now += 1200;
+    returned = renderer.update(planning, { now });
+    assert.equal(returned.program, Model.plan(planning, { visibleElapsed: planningBout * (bout + 1) }).program,
+      'planning resumes its visible total rather than resetting or counting the coding interval');
+  }
+  assert.notEqual(returned.program, first.program, 'four individually short thinking bouts still produce a fresh planning action');
+  const savedPlanningProgram = returned.program;
+  assert.equal(renderer.update(coding, { now }).program, firstCode.program);
+  now += firstCode.programMs - 4800 + 1;
+  assert.notEqual(renderer.update(coding, { now }).program, firstCode.program, 'the separate coding clock reaches its own threshold');
+  assert.equal(renderer.update(planning, { now }).program, savedPlanningProgram, 'a longer coding bout does not advance planning');
+});
+
+test('a different full identity clears all kind clocks rather than inheriting the previous actor history', () => {
+  const { renderer } = rendererFixture();
+  const planning = fixture('planning');
+  const first = renderer.update(planning, { now: 0 });
+  assert.notEqual(renderer.update(planning, { now: first.programMs + 1 }).program, first.program);
+  const other = fixture('planning', { id: 'codex:another-complete-id' });
+  assert.equal(renderer.update(other, { now: first.programMs + 2 }).program, Model.plan(other).program);
+  assert.equal(renderer.update(planning, { now: first.programMs + 3 }).program, first.program, 'switching back is a new identity, not an unbounded identity cache');
 });
 
 test('rendered props are original code and reference the isolated source once without copying its SVG', () => {

@@ -9,6 +9,7 @@
 
   const WORLD = Object.freeze({ width: 1280, height: 720 });
   const CAPACITY = 5;
+  const ALL_ROOMS = '__office_all_projects__';
   const ZONES = Object.freeze({
     library: { name: '资料书架', x: 19, y: 44, seats: [[19, 44], [30, 46], [7, 44], [30, 70], [15, 83]] },
     board: { name: '构思白板', x: 47, y: 43, seats: [[45, 43], [59, 43], [31, 44], [72, 44], [30, 70]] },
@@ -52,6 +53,7 @@
   const timestamp = (value) => typeof value === 'number' ? value : (Date.parse(value) || 0);
   const distance = (a, b) => Math.hypot(a.x - b.x, (a.y - b.y) * WORLD.height / WORLD.width);
   const projectKey = (session) => String(session.projectPath || session.projectName || '__unassigned__');
+  const inRoom = (session, roomKey) => roomKey === ALL_ROOMS || projectKey(session) === roomKey;
   const isClosed = (session) => session.closed === true || session.status === 'closed';
   const needsAttention = (session) => !isClosed(session) && (session.attention === true || session.activity === 'waiting-user' || session.activity === 'error');
 
@@ -170,16 +172,12 @@
     return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans'));
   }
 
-  // Prefer a room with observed occupants unless the user deliberately chose
-  // another existing room. Retired history alone must not trap auto-selection.
+  // The unfiltered overview exposes independent sessions across projects.
+  // A deliberate project filter survives the settings/live-snapshot race.
   function chooseRoom(rooms, present, { current = '', explicit = false } = {}) {
     const keys = new Set(rooms.map(room => room.key));
-    if (explicit && current && (!rooms.length || keys.has(current))) return { key: current, explicit: true };
-    const occupied = new Set(present.filter(session => !isClosed(session)).map(projectKey));
-    const key = occupied.has(current) && keys.has(current) ? current
-      : rooms.find(room => occupied.has(room.key))?.key
-        || (keys.has(current) ? current : rooms[0]?.key) || current || '';
-    return { key, explicit: false };
+    if (explicit && current && (current === ALL_ROOMS || !rooms.length || keys.has(current))) return { key: current, explicit: true };
+    return { key: ALL_ROOMS, explicit: false };
   }
 
   // A whole observed family shares its root's page, including nested helpers.
@@ -207,16 +205,28 @@
     return result;
   }
 
-  function pageSessions(sessions, roomKey, page = 0, preferredId = '') {
-    const room = sessions.filter((session) => projectKey(session) === roomKey && !isClosed(session));
+  function pageSessions(sessions, roomKey, page = 0, preferredId = '', options = {}) {
+    const room = sessions.filter((session) => inRoom(session, roomKey) && !isClosed(session));
     const rootIdsBySession = familyRoots(room);
+    const suppressedIds = options && options.suppressedIds;
+    const suppressed = session => Boolean(suppressedIds && typeof suppressedIds.has === 'function' && suppressedIds.has(session.id));
+    const eligibleFamilies = new Set(room.filter(session => !suppressed(session)).map(session => rootIdsBySession.get(session.id)));
     // An orphan helper remains observable as its own task until its parent appears.
-    const roots = room.filter(session => rootIdsBySession.get(session.id) === session.id);
+    // Store snapshots are ordered by last activity; a heartbeat must not move
+    // an independent root to another page or hide a different same-provider root.
+    // A suppressed orphan may still anchor a working descendant's page group,
+    // but an entirely absorbed family must not consume an empty root slot.
+    const roots = room.filter(session => rootIdsBySession.get(session.id) === session.id && eligibleFamilies.has(session.id))
+      .sort((a, b) => String(a.id).localeCompare(String(b.id)));
     const pages = Math.max(1, Math.ceil(roots.length / CAPACITY));
     const current = Math.max(0, Math.min(pages - 1, finite(page)));
-    const visible = roots.slice(current * CAPACITY, (current + 1) * CAPACITY);
-    const rootIds = new Set(visible.map((session) => session.id));
-    const helpers = room.filter(session => !rootIds.has(session.id) && rootIds.has(rootIdsBySession.get(session.id)));
+    const pageHeads = roots.slice(current * CAPACITY, (current + 1) * CAPACITY);
+    const visible = pageHeads.filter(session => !suppressed(session));
+    const rootIds = new Set(pageHeads.map((session) => session.id));
+    // Preserve full ancestry before suppressing absorbed idle bodies. Removing
+    // a cached parent earlier would promote its working descendant to a root.
+    const helpers = room.filter(session => !rootIds.has(session.id) && rootIds.has(rootIdsBySession.get(session.id))
+      && !suppressed(session));
     helpers.sort((a, b) => Number(b.id === preferredId) - Number(a.id === preferredId) || Number(needsAttention(b)) - Number(needsAttention(a)) || String(a.id).localeCompare(String(b.id)));
     // Three temporary helpers fit while retaining normal-size readable main tasks.
     const shownHelpers = helpers.slice(0, 3);
@@ -322,5 +332,5 @@
     return chars.length > length ? chars.slice(0, length).join('') + '…' : title;
   }
 
-  return { WORLD, CAPACITY, ZONES, SPECS, OBSTACLES, timestamp, distance, projectKey, providerName, identityName, createIdentityRegistry, isClosed, needsAttention, activitySpec, roomsFor, chooseRoom, pageSessions, assignSeats, route, segmentHitsRect, shortTitle };
+  return { WORLD, CAPACITY, ALL_ROOMS, ZONES, SPECS, OBSTACLES, timestamp, distance, projectKey, inRoom, providerName, identityName, createIdentityRegistry, isClosed, needsAttention, activitySpec, roomsFor, chooseRoom, pageSessions, assignSeats, route, segmentHitsRect, shortTitle };
 });

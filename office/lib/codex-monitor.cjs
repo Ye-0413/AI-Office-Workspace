@@ -71,18 +71,24 @@ function createCodexMonitor({ homeDir = os.homedir(), codexHome, onEvent, now = 
     const eventId = 'codex-rollout-' + createHash('sha256').update(JSON.stringify([id, t.turnId, event, extras.toolCallId, rawEvent, at, position])).digest('hex').slice(0, 24);
     return { id, eventId, provider: 'codex', sessionId: t.sessionId,
       ...(t.subagentId ? { subagentId: t.subagentId } : {}), ...(t.parentId ? { parentId: t.parentId } : {}),
-      ...(t.turnId ? { turnId: t.turnId } : {}), ...(t.projectPath ? { projectPath: t.projectPath } : {}),
+      ...(t.turnId ? { turnId: t.turnId } : {}), ...(event === 'turn-start' && t.turnAt > 0 ? { turnStartedAt: t.turnAt } : {}),
+      ...(t.projectPath ? { projectPath: t.projectPath } : {}),
       title: t.title || (t.subagentId ? 'Codex 协作任务' : 'Codex 任务'),
       at, event, activity, summary: ({ planning: '任务正在推进', coding: '正在修改代码', reading: '正在读取资料', searching: '正在检索', testing: '正在运行测试', building: '正在构建', running: '正在执行工具', 'waiting-tool': '等待工具结果', 'waiting-user': '等待你的输入', idle: '本轮已停下' })[activity] || '观察到任务活动',
       evidence: { source: 'codex-jsonl', rawEvent, confidence: 'rollout-derived' }, ...extras };
   }
   function publish(t, event) {
     const watermark = watermarks.get(event.id);
-    if (watermark && event.at < watermark.at - 1000) return;
+    const newerTurn = watermark?.turnId && event.turnId && watermark.turnId !== event.turnId
+      && watermark.turnAt > 0 && t.turnAt > watermark.turnAt;
+    if (watermark?.turnId && event.turnId && watermark.turnId !== event.turnId
+      && t.turnAt > 0 && watermark.turnAt > t.turnAt) return;
+    if (watermark && !newerTurn && event.at < watermark.at - 1000) return;
     if (watermark?.closedTurn && event.turnId === watermark.closedTurn && event.event !== 'metadata') return;
-    if (watermark && watermark.at > event.at && event.event === 'turn-start') return;
+    if (watermark && !newerTurn && watermark.at > event.at && event.event === 'turn-start') return;
     watermarks.delete(event.id);
-    watermarks.set(event.id, { at: Math.max(event.at, watermark?.at || 0), closedTurn: ['turn-end', 'interrupted'].includes(event.event) ? event.turnId : watermark?.closedTurn });
+    watermarks.set(event.id, { at: newerTurn ? event.at : Math.max(event.at, watermark?.at || 0), closedTurn: ['turn-end', 'interrupted'].includes(event.event) ? event.turnId : watermark?.closedTurn,
+      turnId: event.turnId || watermark?.turnId, turnAt: t.turnAt || (event.turnId === watermark?.turnId ? watermark?.turnAt : 0) });
     while (watermarks.size > 256) watermarks.delete(watermarks.keys().next().value);
     try { onEvent(event); stats.events += 1; } catch (error) { stats.error = `Event receiver: ${text(error.message, 160)}`; }
   }
@@ -95,7 +101,11 @@ function createCodexMonitor({ homeDir = os.homedir(), codexHome, onEvent, now = 
     const nativeId = fileThreadId(t.file) || ident(payload.id);
     const sid = ident(payload.session_id) || nativeId;
     if (!sid) return;
-    const isChild = !!parent && nativeId && nativeId !== parent;
+    // A user-created fork may retain ancestry/source metadata from another
+    // thread. Its explicit native role owns classification: a user thread is
+    // an independent root, not a helper of the copied source. Legacy metadata
+    // without a declared role can still use the original parent/spawn fields.
+    const isChild = payload.thread_source !== 'user' && !!parent && nativeId && nativeId !== parent;
     const root = isChild && sid !== nativeId ? sid : parent;
     t.nativeId = nativeId || sid;
     t.sessionId = isChild ? root : nativeId || sid;
@@ -137,8 +147,12 @@ function createCodexMonitor({ homeDir = os.homedir(), codexHome, onEvent, now = 
     const end = key === 'event_msg:task_complete' || key === 'event_msg:turn_aborted';
     if (start) {
       if (at !== null && (at < t.turnAt || at < t.lastAt - 1000)) return;
-      if (ownTurn !== t.turnId || !t.open) { t.tools.clear(); t.ended = false; }
-      t.turnId = ownTurn; t.turnAt = at || 0; t.open = true; t.activity = 'planning';
+      if (t.ended && ownTurn && ownTurn === t.turnId) return;
+      if (ownTurn !== t.turnId || !t.open) { t.tools.clear(); t.ended = false; t.endedAt = 0; t.turnAt = at || 0; }
+      // Repeated start records cannot promote an old open turn past a newer
+      // turn in another Desktop rollout by changing its original start time.
+      if (!t.turnAt) t.turnAt = at || 0;
+      t.turnId = ownTurn; t.open = true; t.activity = 'planning';
     } else if (ownTurn && t.turnId && ownTurn !== t.turnId) return;
     else if (ownTurn && !t.turnId && !t.ended) { t.turnId = ownTurn; }
     if (row.type === 'turn_context') {
@@ -167,6 +181,7 @@ function createCodexMonitor({ homeDir = os.homedir(), codexHome, onEvent, now = 
       event = makeEvent(t, 'tool-end', t.activity, at, key,
         { toolCallId: callId, toolName: pending.toolName, outcome: outcomeOf(p.output) }, pos);
     } else if (end) {
+      if (t.ended) return;
       // This is Codex's explicit turn terminal, not a generic hook Stop. A
       // bounded reader may have skipped an oversized output line. Close only
       // already-observed calls from this turn with an UNKNOWN result; terminal
@@ -182,13 +197,12 @@ function createCodexMonitor({ homeDir = os.homedir(), codexHome, onEvent, now = 
           }, `${pos}:terminal:${pending.toolCallId}`));
         }
       }
-      t.ended = true; t.open = false; t.tools.clear(); t.activity = 'idle';
+      t.ended = true; t.endedAt = at || 0; t.open = false; t.tools.clear(); t.activity = 'idle';
       event = makeEvent(t, key.endsWith('turn_aborted') ? 'interrupted' : 'turn-end', 'idle', at, key, {}, pos);
     } else if (PROGRESS.has(key)) {
-      if (!t.ended) {
-        t.open = true; t.activity ||= 'planning';
-        event = makeEvent(t, 'metadata', t.activity, at, key, { summary: '观察到模型活动' }, pos);
-      }
+      if (t.ended) return;
+      t.open = true; t.activity ||= 'planning';
+      event = makeEvent(t, 'metadata', t.activity, at, key, { summary: '观察到模型活动' }, pos);
     } else {
       if (!['event_msg:token_count', 'token_usage_record', 'event_msg:item_completed', 'response_item:message'].includes(key)) {
         stats.unknownRecords += 1;
@@ -227,7 +241,7 @@ function createCodexMonitor({ homeDir = os.homedir(), codexHome, onEvent, now = 
   function attach(file, stat) {
     const t = { file, identity: `${stat.dev}:${stat.ino}`, offset: 0, hasMetadata: false,
       sessionId: null, subagentId: null, parentId: null, title: '', projectPath: '',
-      turnId: null, turnAt: 0, open: false, ended: false, tools: new Map(), activity: null,
+      turnId: null, turnAt: 0, open: false, ended: false, endedAt: 0, tools: new Map(), activity: null,
       lastAt: 0, lastEvent: null, discarding: false, internal: false,
       nativeId: null, ordinal: 0, historyBoundary: null, ownsHistory: true, createdAt: null };
     const head = read(file, 0, Math.min(stat.size, LIMITS.head));
@@ -250,11 +264,26 @@ function createCodexMonitor({ homeDir = os.homedir(), codexHome, onEvent, now = 
   }
   function snapshotEvents(t) {
     if (!t.hasMetadata || t.internal || !t.lastEvent || t.lastAt < now() - LIMITS.fresh || t.ended || !t.open) return [];
-    // Startup must never replay an old question or completion as a new request.
-    if ([...t.tools.values()].some(e => e.event === 'waiting-user')) return [];
+    const pending = [...t.tools.values()];
+    const waiting = pending.filter(event => event.event === 'waiting-user');
+    if (waiting.length) {
+      // Restore only a genuinely observed, still-unreturned native input call.
+      // A newer heartbeat cannot make an old/undated question fresh. No prompt
+      // body, new request, approval or outcome is synthesized by attachment.
+      const freshWaiting = new Set(waiting.filter(event => Number.isFinite(event.at) && event.at >= now() - LIMITS.fresh));
+      if (!freshWaiting.size) return [];
+      const tools = pending.filter(event => Number.isFinite(event.at) && (event.event !== 'waiting-user' || freshWaiting.has(event)))
+        .sort((a, b) => a.at - b.at);
+      const at = Math.min(t.turnAt || Infinity, ...tools.map(event => event.at));
+      const evidence = { source: 'codex-jsonl', rawEvent: 'rollout:restored-wait-snapshot', confidence: 'restored-wait', restored: true, snapshot: 'restored-wait' };
+      return [makeEvent(t, 'turn-start', 'planning', at, evidence.rawEvent, { summary: '恢复正在进行的任务状态', evidence }, 'restored-wait-snapshot'),
+        ...tools.map(event => ({ ...event, eventId: `${event.eventId}-snapshot`,
+          evidence: { ...event.evidence, restored: true, snapshot: event.event === 'waiting-user' ? 'restored-wait' : 'sustained-tool',
+            ...(event.event === 'waiting-user' ? { confidence: 'restored-wait' } : {}) } }))];
+    }
     const at = t.lastAt;
     return [makeEvent(t, 'turn-start', t.activity || 'planning', at, 'rollout:sustained-snapshot', { summary: '恢复正在进行的任务状态' }, 'snapshot'),
-      ...[...t.tools.values()].map(e => ({ ...e, at, eventId: `${e.eventId}-snapshot` }))];
+      ...pending.map(e => ({ ...e, at, eventId: `${e.eventId}-snapshot` }))];
   }
   function discoverHistory(discovered) {
     if (!historyWalker && now() < historyNextScanAt) return;
@@ -360,14 +389,28 @@ function createCodexMonitor({ homeDir = os.homedir(), codexHome, onEvent, now = 
         if (!t.sessionId) continue;
         const id = actorKey('codex', t.sessionId, t.subagentId);
         const current = latest.get(id);
-        if (!current || t.lastAt >= current.lastAt) latest.set(id, t);
+        const distinctKnownTurns = current && t.turnId && current.turnId && t.turnId !== current.turnId
+          && t.turnAt > 0 && current.turnAt > 0 && t.turnAt !== current.turnAt;
+        if (!current || (distinctKnownTurns ? t.turnAt > current.turnAt : t.lastAt >= current.lastAt)) latest.set(id, t);
       }
       for (const t of attached) {
         const id = t.sessionId && actorKey('codex', t.sessionId, t.subagentId);
         if (!id || latest.get(id) !== t) continue;
         const watermark = watermarks.get(id);
-        if (watermark && watermark.at >= t.lastAt) continue;
-        if (t.ended) { watermarks.set(id, { at: t.lastAt, closedTurn: t.turnId }); continue; }
+        const newerTurn = watermark?.turnId && t.turnId && watermark.turnId !== t.turnId
+          && watermark.turnAt > 0 && t.turnAt > watermark.turnAt;
+        if (watermark && !newerTurn && watermark.at >= t.lastAt) continue;
+        if (t.ended) {
+          // This repairs an already observed older turn's state; it does not
+          // replay a historical completion or create an unknown idle actor.
+          if (newerTurn && t.endedAt >= t.turnAt && t.endedAt > 0) {
+            publish(t, makeEvent(t, 'metadata', 'idle', t.endedAt, 'rollout:ended-turn-snapshot', {
+              turnStartedAt: t.turnAt, turnEndedAt: t.endedAt, supersedesTurnId: watermark.turnId,
+              evidence: { source: 'codex-jsonl', rawEvent: 'rollout:ended-turn-snapshot', confidence: 'rollout-derived', restored: true, snapshot: 'ended-turn' },
+            }, 'ended-turn-snapshot'));
+          }
+          watermarks.set(id, { at: t.lastAt, closedTurn: t.turnId, turnId: t.turnId, turnAt: t.turnAt }); continue;
+        }
         for (const event of snapshotEvents(t)) publish(t, event);
       }
       while (tracked.size > LIMITS.files) tracked.delete(tracked.keys().next().value);

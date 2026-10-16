@@ -113,4 +113,4 @@ app.whenReady().then(async()=>{
   assert.deepEqual(errors,[]);
   checks.push('closing a whole family absorbs its clones before the main agent leaves');
   console.log(JSON.stringify({ok:true,checks,errors}));
-}).catch(error=>{console.error(error);process.exitCode=1;}).finally(()=>{clearTimeout(guard);win?.destroy();fs.rmSync(profile,{recursive:true,force:true});app.quit();});
+}).catch(error=>{console.error(error);process.exitCode=1;}).finally(()=>{clearTimeout(guard);win?.destroy();fs.rmSync(profile,{recursive:true,force:true});app.exit(process.exitCode||0);});

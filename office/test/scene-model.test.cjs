@@ -113,16 +113,18 @@ test('an orphan child stays visible instead of disappearing until its parent arr
   assert.equal(page.visible[0].id, 'child');
 });
 
-test('automatic room selection follows observed occupants while explicit room choices survive idle history and initial loading', () => {
+test('automatic room selection exposes all projects while explicit filters survive initial loading', () => {
   const retired = task('old', 'idle', { status: 'idle', projectPath: '/a', projectName: 'A' });
   const active = task('new', 'coding', { projectPath: '/b', projectName: 'B' });
   const rooms = Scene.roomsFor([retired, active]);
-  assert.deepEqual(Scene.chooseRoom(rooms, [active]), { key: '/b', explicit: false });
-  assert.deepEqual(Scene.chooseRoom(rooms, [active], { current: '/a' }), { key: '/b', explicit: false });
+  assert.deepEqual(Scene.chooseRoom(rooms, [active]), { key: Scene.ALL_ROOMS, explicit: false });
+  assert.deepEqual(Scene.chooseRoom(rooms, [active], { current: '/a' }), { key: Scene.ALL_ROOMS, explicit: false });
   assert.deepEqual(Scene.chooseRoom(rooms, [active], { current: '/a', explicit: true }), { key: '/a', explicit: true });
   assert.deepEqual(Scene.chooseRoom([], [], { current: '/a', explicit: true }), { key: '/a', explicit: true }, 'the settings/live-snapshot race must preserve the pending saved choice');
-  assert.deepEqual(Scene.chooseRoom(rooms, [active], { current: '/gone', explicit: true }), { key: '/b', explicit: false }, 'a vanished saved project must not hide available work');
-  assert.deepEqual(Scene.chooseRoom(rooms, [retired, active], { current: '/b' }), { key: '/b', explicit: false }, 'new arrivals elsewhere must not shuffle an occupied automatic room');
+  assert.deepEqual(Scene.chooseRoom(rooms, [active], { current: '/gone', explicit: true }), { key: Scene.ALL_ROOMS, explicit: false }, 'a vanished saved project must not hide available work');
+  assert.deepEqual(Scene.chooseRoom(rooms, [retired, active], { current: '/b' }), { key: Scene.ALL_ROOMS, explicit: false });
+  assert.deepEqual(Scene.chooseRoom([], []), { key: Scene.ALL_ROOMS, explicit: false });
+  assert.deepEqual(Scene.chooseRoom(rooms, [active], { current: Scene.ALL_ROOMS, explicit: true }), { key: Scene.ALL_ROOMS, explicit: true });
 });
 
 test('nested helper families stay on their root page and a selected descendant participates in helper overflow', () => {
@@ -144,10 +146,132 @@ test('nested helper families stay on their root page and a selected descendant p
 test('cyclic and orphaned parent links retain a deterministic visible family without unbounded traversal', () => {
   const sessions = [task('b', 'coding', { parentId: 'a' }), task('a', 'coding', { parentId: 'b' }), task('c', 'reading', { parentId: 'a' }), task('self', 'planning', { parentId: 'self' }), task('orphan', 'testing', { parentId: 'missing' })];
   const page = Scene.pageSessions(sessions, '/projects/mini-office');
-  assert.deepEqual(page.roots.map(session => session.id), ['a', 'self', 'orphan']);
+  assert.deepEqual(page.roots.map(session => session.id), ['a', 'orphan', 'self']);
   assert.equal(new Set(page.visible.map(session => session.id)).size, 5);
   assert.equal(page.rootIdsBySession.get('c'), 'a');
   assert.equal(Scene.pageSessions([...sessions].reverse(), '/projects/mini-office').rootIdsBySession.get('b'), 'a');
+});
+
+test('the overview shows independent same-provider roots from different projects without changing project filters', () => {
+  const first = task('codex:one', 'reading', { projectPath: '/one', projectName: 'One' });
+  const second = task('codex:two', 'testing', { projectPath: '/two', projectName: 'Two' });
+  const sessions = [first, second];
+  const overview = Scene.pageSessions(sessions, Scene.ALL_ROOMS);
+  assert.deepEqual(overview.roots.map(session => session.id), [first.id, second.id]);
+  assert.deepEqual(overview.visible.map(session => session.id), [first.id, second.id]);
+  assert.deepEqual(Scene.pageSessions(sessions, '/one').visible.map(session => session.id), [first.id]);
+  assert.deepEqual(Scene.pageSessions(sessions, '/two').visible.map(session => session.id), [second.id]);
+  assert.equal(Scene.inRoom(first, Scene.ALL_ROOMS), true);
+  assert.equal(Scene.inRoom(first, '/two'), false);
+  assert.equal(Scene.roomsFor(sessions).length, 2, 'source project rooms remain available for deliberate filtering');
+  assert.equal(new Set([...Scene.assignSeats(overview.visible).values()].map(seat => seat.x + ':' + seat.y)).size, 2);
+});
+
+test('overview root pages remain stable when new activity reorders more than five same-provider sessions', () => {
+  const sessions = Array.from({ length: 8 }, (_, index) => task('codex:root-' + index, 'coding', {
+    projectPath: index % 2 ? '/one' : '/two', lastEventAt: index + 1,
+  }));
+  const ids = (input, page) => Scene.pageSessions(input, Scene.ALL_ROOMS, page).visible.map(session => session.id);
+  const first = ids(sessions, 0), second = ids(sessions, 1);
+  assert.equal(first.length, Scene.CAPACITY);
+  assert.equal(second.length, sessions.length - Scene.CAPACITY);
+  assert.equal(new Set([...first, ...second]).size, sessions.length);
+  const next = [...sessions].reverse().map((session, index) => ({ ...session, lastEventAt: 1000 + index, activity: 'reading' }));
+  assert.deepEqual(ids(next, 0), first);
+  assert.deepEqual(ids(next, 1), second);
+  assert.equal(Scene.pageSessions(next, Scene.ALL_ROOMS, 99).page, 1);
+});
+
+test('repeated turns retain one main actor per actual Codex session across project rooms', () => {
+  const { createSessionStore } = require('../lib/session-store.cjs');
+  const { normalizeEvent } = require('../lib/provider-events.cjs');
+  let now = 1000;
+  const store = createSessionStore({ now: () => now });
+  const emit = (session_id, turn_id, cwd, hook_event_name) => store.ingest(normalizeEvent('codex', {
+    session_id, turn_id, cwd, hook_event_name,
+  }, { receivedAt: now++, source: 'hook' }));
+  emit('one', 'one-first-turn', '/one', 'UserPromptSubmit');
+  emit('two', 'two-first-turn', '/two', 'UserPromptSubmit');
+  emit('one', 'one-first-turn', '/one', 'Stop');
+  emit('one', 'one-second-turn', '/one', 'UserPromptSubmit');
+  const sessions = store.snapshot(), page = Scene.pageSessions(sessions, Scene.ALL_ROOMS);
+  assert.equal(sessions.length, 2);
+  assert.deepEqual(page.roots.map(session => session.id), ['codex:one', 'codex:two']);
+  assert.equal(page.visible.filter(session => session.provider === 'codex').length, 2);
+  assert.equal(page.roots.find(session => session.sessionId === 'one').turnId, 'one-second-turn');
+});
+
+test('absorbed idle helpers cannot consume scene slots needed by observed working helpers', () => {
+  const root = task('root');
+  const idle = id => task(id, 'idle', { parentId: root.id, status: 'idle', activeTools: 0 });
+  const sessions = [root, idle('a'), idle('b'), idle('c'), task('z', 'testing', { parentId: root.id, activeTools: 1 })];
+  const page = Scene.pageSessions(sessions, Scene.ALL_ROOMS, 0, '', { suppressedIds: new Set(['a', 'b', 'c']) });
+  assert.deepEqual(page.visible.map(session => session.id), ['root', 'z']);
+  assert.equal(page.helperOverflow, 0, 'absorbed bodies are not reported as hidden working helpers');
+  assert.equal(page.rootIdsBySession.get('a'), root.id, 'suppression changes presentation rather than identity or ancestry');
+  assert.equal(sessions.length, 5);
+});
+
+test('a working descendant of a suppressed parent stays attached to its real root across projects', () => {
+  const root = task('root', 'planning', { projectPath: '/root-project' });
+  const parent = task('parent', 'idle', { parentId: root.id, status: 'idle', activeTools: 0, projectPath: '/helper-project' });
+  const nested = task('nested', 'coding', { parentId: parent.id, projectPath: '/helper-project' });
+  const page = Scene.pageSessions([nested, parent, root], Scene.ALL_ROOMS, 0, '', { suppressedIds: new Set([parent.id]) });
+  assert.deepEqual(page.roots.map(session => session.id), [root.id]);
+  assert.deepEqual(page.visible.map(session => session.id), [root.id, nested.id]);
+  assert.equal(page.rootIdsBySession.get(nested.id), root.id);
+  assert.equal(page.rootIdsBySession.get(parent.id), root.id);
+  assert.equal(nested.parentId, parent.id);
+});
+
+test('absorbed orphan bodies after their root closes cannot force other main agents onto a mostly empty second page', () => {
+  const closedRoot = task('ended-root', 'idle', { closed: true, status: 'closed' });
+  const absorbed = ['a', 'b', 'c'].map(id => task(id, 'idle', {
+    parentId: closedRoot.id, status: 'idle', activeTools: 0,
+  }));
+  const activeRoots = ['z1', 'z2', 'z3'].map(id => task(id, 'coding'));
+  // Closed roots are absent from visual attendance; idle child rows retain
+  // their grace period even though their bodies were already absorbed.
+  const present = [...absorbed, ...activeRoots];
+  const page = Scene.pageSessions(present, Scene.ALL_ROOMS, 0, '', {
+    suppressedIds: new Set(absorbed.map(session => session.id)),
+  });
+  assert.equal(page.pages, 1);
+  assert.deepEqual(page.roots.map(session => session.id), activeRoots.map(session => session.id));
+  assert.deepEqual(page.visible.map(session => session.id), activeRoots.map(session => session.id));
+  assert.equal(page.helperOverflow, 0);
+  for (const orphan of absorbed) assert.equal(page.rootIdsBySession.get(orphan.id), orphan.id, 'full source ancestry is retained even for a suppressed family');
+});
+
+test('a suppressed orphan head keeps a selectable virtual page group for working descendants without drawing a false main agent', () => {
+  const head = task('z-absorbed-parent', 'idle', { parentId: 'ended-root', status: 'idle', activeTools: 0 });
+  const nested = task('z-working-child', 'testing', { parentId: head.id });
+  const otherRoots = Array.from({ length: 5 }, (_, index) => task('main-' + index));
+  const sessions = [nested, head, ...otherRoots], options = { suppressedIds: new Set([head.id]) };
+  const first = Scene.pageSessions(sessions, Scene.ALL_ROOMS, 0, '', options);
+  assert.equal(first.pages, 2);
+  assert.deepEqual(first.visible.map(session => session.id), otherRoots.map(session => session.id));
+  const mainId = first.rootIdsBySession.get(nested.id);
+  assert.equal(mainId, head.id);
+  const rootIndex = first.roots.findIndex(session => session.id === mainId);
+  const selected = Scene.pageSessions(sessions, Scene.ALL_ROOMS, Math.floor(rootIndex / Scene.CAPACITY), nested.id, options);
+  assert.deepEqual(selected.visible.map(session => session.id), [nested.id]);
+  assert.equal(selected.visible[0].parentId, head.id, 'the visible descendant stays a real helper');
+  assert.equal(selected.rootIdsBySession.get(nested.id), head.id);
+  assert.equal(selected.visible.some(session => session.id === head.id), false);
+  assert.equal(selected.helperOverflow, 0);
+});
+
+test('roster page lookup uses the same suppressed family groups as the rendered overview', () => {
+  const absorbed = ['a', 'b', 'c'].map(id => task(id, 'idle', { parentId: 'ended-root', status: 'idle', activeTools: 0 }));
+  const mains = Array.from({ length: 10 }, (_, index) => task('main-' + index));
+  const sessions = [...absorbed, ...mains], options = { suppressedIds: new Set(absorbed.map(session => session.id)) };
+  const family = Scene.pageSessions(sessions, Scene.ALL_ROOMS, 0, '', options);
+  const selectedId = 'main-4', mainId = family.rootIdsBySession.get(selectedId);
+  const page = Math.floor(family.roots.findIndex(session => session.id === mainId) / Scene.CAPACITY);
+  assert.equal(page, 0);
+  const selected = Scene.pageSessions(sessions, Scene.ALL_ROOMS, page, selectedId, options);
+  assert.equal(selected.visible.some(session => session.id === selectedId), true);
 });
 
 test('cozy identity names depend on the complete provider and actor ID, never task descriptions or activity', () => {

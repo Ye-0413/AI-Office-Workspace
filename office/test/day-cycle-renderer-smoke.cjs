@@ -32,4 +32,4 @@ app.whenReady().then(async()=>{
   assert.equal(await run(`getComputedStyle(document.querySelector('.harbour-ferry')).animationPlayState`),'paused');
   for(const size of [[960,540],[1280,720]]){win.setContentSize(...size);await wait(100);assert.equal(await run(`(()=>{const r=document.getElementById('day-clock').getBoundingClientRect();return r.left>=0&&r.right<=innerWidth})()`),true);}
   assert.deepEqual(errors,[]);console.log(JSON.stringify({ok:true,phases:5,checks:['real clock during preview','time select persistence','one active crossfade surface','no synthetic actors','keyboard focus','reset to now','bilingual labels','reduced motion','responsive clock'],errors}));
-}).catch(error=>{console.error(error);process.exitCode=1;}).finally(()=>{win?.destroy();app.quit();fs.rmSync(dir,{recursive:true,force:true});});
+}).catch(error=>{console.error(error);process.exitCode=1;}).finally(()=>{win?.destroy();fs.rmSync(dir,{recursive:true,force:true});app.exit(process.exitCode||0);});

@@ -21,7 +21,7 @@ const checks = [];
 const invokeCalls = [];
 const task = (id, activity, patch = {}) => ({ id, provider: 'codex', sessionId: id, title: ({ a: '修复登录', b: '检查构建', c: '调整界面' })[id] || id, projectPath: '/fixture/office', projectName: 'Fixture Office', activity, status: 'active', lastEventAt: Date.now() - 60000, toolName: '', summary: 'native renderer fixture', evidence: { source: 'official-hook', rawEvent: 'PreToolUse', confidence: 'high' }, activeTools: 1, attention: false, disconnected: false, closed: false, events: [], ...patch });
 const evaluate = source => win.webContents.executeJavaScript(source, true);
-async function check(name, fn) { await fn(); checks.push(name); }
+async function check(name, fn) { try { await fn(); checks.push(name); } catch(error) { error.message = name + ': ' + error.message; throw error; } }
 async function capture(name) {
   if (!process.env.MINI_OFFICE_PREVIEW_DIR) return;
   fs.mkdirSync(process.env.MINI_OFFICE_PREVIEW_DIR, { recursive: true });
@@ -60,18 +60,18 @@ app.whenReady().then(async () => {
     assert.equal(await evaluate(`document.getElementById('page-empty').hidden`), true);
     await send([]);
   });
-  await check('startup and automatic room selection follow observed occupants instead of an empty historical room', async () => {
+  await check('startup and automatic overview retain observed occupants across project rooms', async () => {
     const history = task('room-history', 'idle', { status: 'idle', activeTools: 0, projectPath: '/fixture/a-history', projectName: 'A History' });
     const busy = task('room-busy', 'waiting-user', { projectPath: '/fixture/z-busy', projectName: 'Z Busy', attention: true });
     snapshot = { ...snapshot, sessions: [history, busy] };
     win.reload();
     await wait(300);
-    assert.equal(await evaluate(`document.getElementById('project-select').value`), '/fixture/z-busy');
+    assert.equal(await evaluate(`document.getElementById('project-select').value`), Scene.ALL_ROOMS);
     assert.equal(await evaluate(`document.querySelectorAll('.actor[data-session-id="room-busy"]').length`), 1);
     await send([history]);
     await wait(300);
     await send([history, busy]);
-    assert.equal(await evaluate(`document.getElementById('project-select').value`), '/fixture/z-busy', 'an automatic empty room must follow new observed work');
+    assert.equal(await evaluate(`document.getElementById('project-select').value`), Scene.ALL_ROOMS, 'an unfiltered office must not hide work in another project');
   });
   await check('a deliberate empty-room choice persists across snapshots and reload while other-room attention stays reachable', async () => {
     await evaluate(`document.getElementById('project-select').value='/fixture/a-history';document.getElementById('project-select').dispatchEvent(new Event('change',{bubbles:true}))`);
@@ -270,6 +270,7 @@ app.whenReady().then(async () => {
   for (let index = 0; index < 7; index += 1) sessions.push(task('child:' + index, 'reading', { parentId: 'parent', subagentId: 'child:' + index }));
   sessions.push(task('other-room', 'waiting-user', { projectPath: '/fixture/website', projectName: 'Website', attention: true }));
   await send(sessions);
+  await evaluate(`document.getElementById('project-select').value='/fixture/office';document.getElementById('project-select').dispatchEvent(new Event('change',{bubbles:true}))`);
   await check('overflow helpers are discoverable and selecting one gives it a physical place', async () => {
     await evaluate(`document.getElementById('roster-button').click()`);
     assert.equal(await evaluate(`document.querySelectorAll('.roster-row').length`), 8);
@@ -366,7 +367,7 @@ app.whenReady().then(async () => {
   await check('real work immediately takes priority and a departing visitor cannot restart old chatter', async () => {
     await send([task('visitor-interrupt','coding')]);
     assert.equal(await evaluate(`document.querySelectorAll('.actor[data-session-id="visitor-interrupt"]').length`),1);
-    assert.equal(await evaluate(`document.querySelector('.visitor .actor-bubble').dataset.show`),'false');
+    assert.equal(await evaluate(`document.querySelector('.visitor .actor-bubble')?.dataset.show==='true'`),false,'real work must silence visitor chatter even if its visual body has already left');
     await wait(2700);assert.equal(await evaluate(`document.querySelectorAll('.visitor').length`),0);
     await wait(1000);assert.equal(await evaluate(`document.querySelectorAll('.visitor').length`),0);
     await evaluate(`document.getElementById('settings-button').click();document.getElementById('setting-idleVisitor').click();document.getElementById('settings-dialog').close()`);await wait(100);assert.equal(settings.idleVisitor,false);

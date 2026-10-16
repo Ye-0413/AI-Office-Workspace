@@ -51,4 +51,4 @@ app.whenReady().then(async()=>{
   if(process.env.MINI_OFFICE_PREVIEW_DIR){fs.mkdirSync(process.env.MINI_OFFICE_PREVIEW_DIR,{recursive:true});fs.writeFileSync(path.join(process.env.MINI_OFFICE_PREVIEW_DIR,'harbour-crew.png'),(await win.webContents.capturePage()).toPNG());}
   win.reload();await wait(300);assert.equal(await run(`document.querySelector('.actor-title').textContent`),p.aliasZh,'Chinese aliases survive remount even with legacy classic settings');
   assert.deepEqual(errors,[]);console.log(JSON.stringify({ok:true,checks:['live event identities','locale-selected bilingual aliases regardless of legacy settings','original title and identity retained','local greet without provider calls','persistence','no mode or story API'],errors}));
-}).catch(error=>{console.error(error);process.exitCode=1;}).finally(()=>{win?.destroy();app.quit();fs.rmSync(dir,{recursive:true,force:true});});
+}).catch(error=>{console.error(error);process.exitCode=1;}).finally(()=>{win?.destroy();fs.rmSync(dir,{recursive:true,force:true});app.exit(process.exitCode||0);});

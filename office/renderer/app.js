@@ -89,6 +89,7 @@
   function persona(session) { return window.OfficeAgentPersona.forSession(session); }
   function displayName(session) { const p = persona(session); return language === 'en' ? p.aliasEn : p.aliasZh; }
   function cloneSummary(session) { return I18n.t(language, 'family.clonesSummary', cloneLedger.stats(session.id)); }
+  function archiveCount() { return selectedProject === Scene.ALL_ROOMS ? Math.min(3, [...archivedTurns.values()].reduce((sum, count) => sum + count, 0)) : archivedTurns.get(selectedProject) || 0; }
   function keepsakeIcon(session) { return ({teacup:'♨',paperboat:'⛵',bookmark:'▤',lantern:'✧',leaf:'❧',pebble:'◇',bell:'♧',pencil:'✎',shell:'⌁',star:'✦',acorn:'♧',ribbon:'⋈'})[persona(session).keepsake] || '✦'; }
   function reduced() { return settings.reducedMotion || mediaReduce.matches; }
   function quietSprites() { return reduced() || settings.lowPower || document.hidden; }
@@ -117,7 +118,7 @@
     return value || '事件来源未提供';
   }
   function confidenceName(confidence) {
-    const names = { high: '明确事件', medium: '基于工具类型判断', low: '活动尚不确定', exact: '明确事件', inferred: '基于工具类型判断', unknown: '活动尚不确定' };
+    const names = { high: '明确事件', medium: '基于工具类型判断', low: '活动尚不确定', exact: '明确事件', inferred: '基于工具类型判断', unknown: '活动尚不确定', 'restored-wait': '恢复的等待状态' };
     return names[confidence] || (Number.isFinite(confidence) ? '判断依据 ' + Math.round(confidence * 100) + '%' : '查看原始事件核对');
   }
   function refreshScale() {
@@ -376,7 +377,7 @@
     addEffect('delivery', actor.position, { x: 83, y: 71 });
     const key = Scene.projectKey(actor.session);
     archivedTurns.set(key, Math.min(3, (archivedTurns.get(key) || 0) + 1));
-    $('archive-stack').dataset.count = String(archivedTurns.get(selectedProject) || 0);
+    $('archive-stack').dataset.count = String(archiveCount());
     if (!await delay(actor, quietSprites() ? 100 : 900, serial)) return;
     const seat = actor.target;
     if (!await move(actor, seat, serial)) return;
@@ -662,7 +663,7 @@
       if (actor.retireRequested && next && !Scene.isClosed(next) && visibleIds.has(actor.id)) {
         actor.retireRequested = null; actor.holdingFamily = false; actor.node.dataset.cloneHold = 'false';
       }
-      if ((next && Scene.isClosed(next) || retiringIds.has(actor.id) || attendance.leaving.includes(actor.id) || actor.retireRequested) && Scene.projectKey(next || actor.session) === selectedProject) {
+      if ((next && Scene.isClosed(next) || retiringIds.has(actor.id) || attendance.leaving.includes(actor.id) || actor.retireRequested) && Scene.inRoom(next || actor.session, selectedProject)) {
         actor.session = next || actor.session; actor.spec = Scene.activitySpec(actor.session); updateActorLabel(actor);
         depart(actor, !Scene.isClosed(actor.session)).catch(showError);
       }
@@ -765,14 +766,13 @@
     for (const actor of actors.values()) if (!actor.motion && !actor.departing && !actor.spec.stale) activeZones.add(actor.spec.zone);
     for (const prop of world.querySelectorAll('[data-zone-prop]')) prop.dataset.active = String(activeZones.has(prop.dataset.zoneProp));
     for (const label of world.querySelectorAll('[data-zone-label]')) label.dataset.active = String(activeZones.has(label.dataset.zoneLabel));
-    $('archive-stack').dataset.count = String(archivedTurns.get(selectedProject) || 0);
+    $('archive-stack').dataset.count = String(archiveCount());
   }
   function selectSession(id) {
     const session = snapshot.sessions.find((item) => item.id === id);
     if (!session) return;
-    const roomKey = Scene.projectKey(session);
-    if (roomKey !== selectedProject) switchRoom(roomKey, false);
-    const family = Scene.pageSessions(attendance.present, roomKey);
+    if (!Scene.inRoom(session, selectedProject)) switchRoom(Scene.projectKey(session), false);
+    const family = Scene.pageSessions(attendance.present, selectedProject, 0, '', {suppressedIds: restedClones});
     const roots = family.roots;
     const mainId = family.rootIdsBySession.get(session.id) || session.id;
     const index = roots.findIndex((item) => item.id === mainId);
@@ -870,7 +870,7 @@
   }
   function renderRoster() {
     const fragment = document.createDocumentFragment();
-    const sessions = snapshot.sessions.filter((session) => !Scene.isClosed(session) && Scene.projectKey(session) === selectedProject);
+    const sessions = snapshot.sessions.filter((session) => !Scene.isClosed(session) && Scene.inRoom(session, selectedProject));
     for (const session of Family.build(sessions).ordered) {
       const spec = Scene.activitySpec(session);
       const row = element('button', 'roster-row');
@@ -903,12 +903,15 @@
     roomSelectionExplicit = roomChoice.explicit;
     if (roomBefore && roomBefore !== selectedProject) { clearActors(); page = 0; }
     const options = document.createDocumentFragment();
+    const overview = element('option', 'project-option', I18n.t(language, 'room.overview', {count: rooms.reduce((sum, room) => sum + room.roots, 0)}));
+    overview.value = Scene.ALL_ROOMS;
+    options.append(overview);
     for (const room of rooms) {
       const option = element('option', 'project-option', I18n.t(language, 'room.option', {name:room.name,count:room.roots}) + (room.helpers ? I18n.t(language,'room.helpersSuffix',{count:room.helpers}) : '') + (room.attention ? I18n.t(language,'room.attentionSuffix',{count:room.attention}) : ''));
       option.value = room.key;
       options.append(option);
     }
-    if (selectedProject && !rooms.some((room) => room.key === selectedProject)) {
+    if (selectedProject && selectedProject !== Scene.ALL_ROOMS && !rooms.some((room) => room.key === selectedProject)) {
       const option = element('option', 'project-option', I18n.t(language,'room.quietOption',{name:selectedProject.split(/[\\/]/).filter(Boolean).pop()}));
       option.value = selectedProject;
       options.append(option);
@@ -916,19 +919,22 @@
     $('project-select').replaceChildren(options);
     $('project-select').value = selectedProject;
     $('room-switcher').hidden = !rooms.length;
-    currentPage = Scene.pageSessions(attendance.present, selectedProject, page, selectedSession);
-    currentPage.visible = currentPage.visible.filter(session => !restedClones.has(session.id) || Clones.isActive(session));
+    currentPage = Scene.pageSessions(attendance.present, selectedProject, page, selectedSession, {suppressedIds: restedClones});
     page = currentPage.page;
     reconcileActors();
     const alive = snapshot.sessions.filter((session) => !Scene.isClosed(session));
-    const allRoomSessions = alive.filter((session) => Scene.projectKey(session) === selectedProject);
-    const roomSessions = attendance.present.filter((session) => Scene.projectKey(session) === selectedProject);
+    const allRoomSessions = alive.filter((session) => Scene.inRoom(session, selectedProject));
+    const roomSessions = attendance.present.filter((session) => Scene.inRoom(session, selectedProject) && !restedClones.has(session.id));
     const localAttention = roomSessions.filter(Scene.needsAttention);
-    const otherAttention = alive.filter((session) => Scene.projectKey(session) !== selectedProject && Scene.needsAttention(session));
+    const otherAttention = alive.filter((session) => !Scene.inRoom(session, selectedProject) && Scene.needsAttention(session));
+    const outsideRoots = attendance.present.filter(session => !session.parentId && !Scene.inRoom(session, selectedProject)).length;
+    $('all-projects').hidden = !outsideRoots;
+    text($('all-projects'), I18n.t(language, 'room.showAll', {count: outsideRoots}));
+    $('all-projects').title = I18n.t(language, 'room.showAll', {count: outsideRoots});
     const helpers = roomSessions.filter((session) => session.parentId).length;
     const rootCount = roomSessions.length - helpers;
     const quiet = roomSessions.filter((session) => session.status === 'stale' || session.disconnected).length;
-    $('page-empty').hidden = roomSessions.length > 0 || !attendance.present.some((session) => Scene.projectKey(session) !== selectedProject);
+    $('page-empty').hidden = roomSessions.length > 0 || !attendance.present.some((session) => !Scene.inRoom(session, selectedProject));
     $('other-attention').hidden = !otherAttention.length;
     text($('other-attention'), '其他房间 ' + otherAttention.length + ' 项待处理');
     $('attention-jump').hidden = !localAttention.length;
@@ -973,7 +979,7 @@
     if (persist) saveSettings({ selectedProject: key });
   }
   function jumpAttention(outside = false) {
-    const candidates = snapshot.sessions.filter((session) => Scene.needsAttention(session) && (outside ? Scene.projectKey(session) !== selectedProject : Scene.projectKey(session) === selectedProject));
+    const candidates = snapshot.sessions.filter((session) => Scene.needsAttention(session) && (outside ? !Scene.inRoom(session, selectedProject) : Scene.inRoom(session, selectedProject)));
     if (!candidates.length) return;
     const index = candidates.findIndex((session) => session.id === selectedSession);
     selectSession(candidates[(index + 1) % candidates.length].id);
@@ -1065,6 +1071,7 @@
   $('inspect-helper').addEventListener('click', () => { const id = $('inspect-helper').dataset.parentId; if (id) selectSession(id); });
   $('dismiss-error').addEventListener('click', () => { $('error-message').hidden = true; });
   $('project-select').addEventListener('change', (event) => switchRoom(event.target.value));
+  $('all-projects').addEventListener('click', () => switchRoom(Scene.ALL_ROOMS));
   $('other-attention').addEventListener('click', () => jumpAttention(true));
   $('attention-jump').addEventListener('click', () => jumpAttention(false));
   $('page-prev').addEventListener('click', () => { page = Math.max(0, page - 1); clearActors(); render(); });
@@ -1126,7 +1133,7 @@
     if (document.hidden) return;
     scenery.update(settings, language);
     renderInspector();
-    const roomSessions = snapshot.sessions.filter((session) => Scene.projectKey(session) === selectedProject && !Scene.isClosed(session));
+    const roomSessions = snapshot.sessions.filter((session) => Scene.inRoom(session, selectedProject) && !Scene.isClosed(session));
     const recent = roomSessions.reduce((latest, session) => Math.max(latest, Scene.timestamp(session.lastEventAt)), 0);
     text($('signal-summary'), recent ? timeAgo(recent) : '');
   }, 12000);

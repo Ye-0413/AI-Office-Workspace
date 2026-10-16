@@ -88,10 +88,34 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
     const id = actorId(event);
     const atValue = typeof event.at === 'string' ? Date.parse(event.at) : Number(event.at);
     const at = Number.isFinite(atValue) ? atValue : now();
+    // A bounded rollout snapshot is emitted at its latest observed activity,
+    // but may also carry the original native turn-start time. Keep those two
+    // clocks separate so a late old-turn heartbeat cannot fence a newer turn.
+    const turnStartAt = event.event === 'turn-start' && event.evidence?.source === 'codex-jsonl'
+      && Number.isFinite(event.turnStartedAt) && event.turnStartedAt > 0 && event.turnStartedAt <= at
+      ? event.turnStartedAt : at;
     const key = event.eventId ? `${id}:${event.eventId}` : null;
     if (key && seen.has(key)) return false;
     let s = sessions.get(id);
     const metadata = event.event === 'metadata';
+    const endedSnapshot = metadata && event.evidence?.snapshot === 'ended-turn';
+    if (endedSnapshot) {
+      // Only a trusted, positively newer native turn can replace stale state.
+      // Attachment must never conjure completed history or override a newer
+      // native Hook owner. Preserve original source clocks, even if the old
+      // turn wrote a later heartbeat in another rollout.
+      if (!s || s.closed || event.provider !== 'codex' || event.evidence?.source !== 'codex-jsonl'
+        || event.evidence.rawEvent !== 'rollout:ended-turn-snapshot' || event.evidence.restored !== true
+        || !event.turnId || !s.turnId || event.turnId === s.turnId || event.supersedesTurnId !== s.turnId
+        || s.closedTurns.has(event.turnId) || !(s.turnStartedAt > 0)
+        || !Number.isFinite(event.turnStartedAt) || event.turnStartedAt <= s.turnStartedAt
+        || !Number.isFinite(event.turnEndedAt) || event.turnEndedAt < event.turnStartedAt
+        || !Number.isFinite(atValue) || event.turnEndedAt !== at) return false;
+      if (s.hookReceivedAt !== null) {
+        const sameOrUnknownTurn = !s.hookTurnId || event.turnId === s.hookTurnId;
+        if ((sameOrUnknownTurn && now() - s.hookReceivedAt <= HOOK_LEASE_MS) || at < s.hookAt) return false;
+      }
+    }
     // SessionEnd is a native lifecycle fact about the session, not a result
     // belonging to a particular turn. Its carried turn/timestamp may be old
     // when the client tears down an idle thread. Rollout fallback never owns
@@ -125,11 +149,13 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
     const correlatedFallbackResult = isFallback(event) && event.event === 'tool-end'
       && event.turnId && event.turnId === s.turnId && pendingTool && at >= pendingTool.startedAt;
     const supplementalResult = correlatedFallbackResult && at < s.lastEventAt;
+    const advancesKnownTurn = event.event === 'turn-start' && event.turnId && s.turnId
+      && event.turnId !== s.turnId && s.turnStartedAt > 0 && turnStartAt > s.turnStartedAt;
     if (s.closed && !starts && !metadata && !nativeSessionEnd) return false;
     if (event.turnId && s.closedTurns.has(event.turnId) && !metadata && !nativeSessionEnd && !nativeSubagentEnd) return false;
     if (!metadata && !nativeSessionEnd && event.turnId && s.turnId && event.turnId !== s.turnId && event.event !== 'turn-start') return false;
-    if (event.event === 'turn-start' && event.turnId !== s.turnId && at < s.turnStartedAt) return false;
-    if (!metadata && !nativeSessionEnd && !nativeSubagentEnd && !correlatedFallbackResult && at < s.lastEventAt - 2000) return false;
+    if (event.event === 'turn-start' && event.turnId !== s.turnId && turnStartAt < s.turnStartedAt) return false;
+    if (!metadata && !nativeSessionEnd && !nativeSubagentEnd && !correlatedFallbackResult && !advancesKnownTurn && at < s.lastEventAt - 2000) return false;
     // Official hooks have a bounded primary lease, not permanent ownership:
     // if a hook disappears, a fresh real rollout record may repair that turn.
     // Expiration itself changes no activity and never implies completion.
@@ -156,6 +182,25 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
       if (event.parentId) s.parentId = event.parentId;
     }
     if (metadata) {
+      if (endedSnapshot) {
+        boundedAdd(s.closedTurns, s.turnId); boundedAdd(s.closedTurns, event.turnId);
+        discardDeferred(s);
+        s.tools.clear(); s.completedTools.clear(); s.waits.clear(); s.externalPending = false;
+        s.turnId = event.turnId; s.turnStartedAt = event.turnStartedAt; s.turnOpen = false;
+        s.lastEventAt = at; s.status = 'idle'; s.activity = 'idle'; s.attention = false;
+        s.toolName = ''; s.summary = String(event.summary || '').slice(0, 240); s.evidence = event.evidence;
+        delete s.turnCompletedAt;
+        // Real children retain independent work. This internal pending state
+        // settles without a turn-end timestamp or a completion animation.
+        s.pendingEnd = activeChildren(s.id) ? 'observed-ended' : null;
+        s.pendingEndAt = s.pendingEnd ? at : 0;
+        retainPendingState(s);
+        if (s.parentId) {
+          const parent = sessions.get(s.parentId);
+          if (parent) { settle(parent, at); retainPendingState(parent); }
+        }
+        prune(false); emit(); return true;
+      }
       const elicitationResolved = event.evidence?.rawEvent === 'ElicitationResult'
         && [...s.waits.values()].some(wait => wait.rawEvent === 'Elicitation' && (!event.toolCallId || event.toolCallId === wait.callId));
       if (elicitationResolved) {
@@ -182,12 +227,12 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
       if (s.turnId !== event.turnId || !s.turnOpen) {
         discardDeferred(s);
         s.tools.clear(); s.completedTools.clear(); s.waits.clear(); s.pendingEnd = null; s.pendingEndAt = 0; s.externalPending = false;
-        s.turnStartedAt = at;
+        s.turnStartedAt = turnStartAt;
       }
       s.turnId = event.turnId || null; s.turnOpen = true;
       delete s.turnCompletedAt;
     }
-    s.lastEventAt = Math.max(s.lastEventAt, at);
+    s.lastEventAt = advancesKnownTurn ? at : Math.max(s.lastEventAt, at);
     if (!supplementalResult) {
       s.evidence = event.evidence || s.evidence;
       s.summary = String(event.summary || '').slice(0, 240);

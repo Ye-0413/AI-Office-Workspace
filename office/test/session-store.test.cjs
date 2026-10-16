@@ -37,6 +37,70 @@ test('new turn fences late terminal/tool events and bounded duplicate IDs', () =
   assert.equal(store.ingest(event('tool-end', { turnId: 'old', toolCallId: 'a' })), false);
   assert.equal(store.snapshot()[0].activity, 'coding'); assert.equal(store.snapshot()[0].activeTools, 1);
 });
+test('a positively newer native rollout turn owns its clock despite a late old-turn heartbeat', () => {
+  const store = createSessionStore({ now: () => 200000 });
+  const fallback = { source: 'codex-jsonl', rawEvent: 'rollout:sustained-snapshot' };
+  store.ingest(event('turn-start', { turnId: 'old', at: 100000, turnStartedAt: 50000, evidence: fallback }));
+  store.ingest(event('tool-start', { turnId: 'old', at: 100010, toolCallId: 'old-read', activity: 'reading', evidence: fallback }));
+  store.ingest(event('metadata', { turnId: 'old', at: 199000, evidence: { source: 'codex-jsonl', rawEvent: 'event_msg:agent_reasoning' } }));
+  assert.equal(store.snapshot()[0].lastEventAt, 199000);
+  assert.equal(store.ingest(event('turn-start', { turnId: 'new', at: 150000, turnStartedAt: 120000, evidence: fallback })), true);
+  assert.equal(store.ingest(event('tool-start', { turnId: 'new', at: 150010, toolCallId: 'new-edit', activity: 'coding', evidence: fallback })), true);
+  const session = store.snapshot()[0];
+  assert.equal(session.turnId, 'new'); assert.equal(session.activity, 'coding');
+  assert.equal(session.activeTools, 1); assert.equal(session.lastEventAt, 150010);
+  assert.equal(store.ingest(event('tool-start', { turnId: 'old', at: 201000, toolCallId: 'late-old-call', evidence: fallback })), false);
+  assert.equal(store.ingest(event('turn-start', { turnId: 'old', at: 202000, turnStartedAt: 50000, evidence: fallback })), false);
+  assert.equal(store.ingest(event('tool-start', { turnId: 'new', at: 140000, toolCallId: 'stale-same-turn', evidence: fallback })), false);
+  assert.equal(store.snapshot()[0].activeTools, 1);
+});
+test('a trusted ended-turn state snapshot keeps real children active without a completion cue', () => {
+  const store = createSessionStore({ now: () => 200000 });
+  const fallback = { source: 'codex-jsonl', rawEvent: 'rollout:restored-wait-snapshot' };
+  store.ingest(event('turn-start', { turnId: 'old', at: 50000, evidence: fallback }));
+  store.ingest(event('waiting-user', { turnId: 'old', at: 70000, toolCallId: 'old-wait', activity: 'waiting-user', evidence: fallback }));
+  store.ingest(event('subagent-start', { subagentId: 'child', parentId: 'codex:one', at: 190000, turnId: 'child-turn' }));
+  store.ingest(event('tool-start', { subagentId: 'child', parentId: 'codex:one', at: 190010, turnId: 'child-turn', toolCallId: 'child-test', activity: 'testing' }));
+  const restored = event('metadata', { turnId: 'new-ended', supersedesTurnId: 'old', at: 160000,
+    turnStartedAt: 120000, turnEndedAt: 160000, activity: 'idle',
+    evidence: { source: 'codex-jsonl', rawEvent: 'rollout:ended-turn-snapshot', restored: true, snapshot: 'ended-turn' } });
+  assert.equal(store.ingest(restored), true); assert.equal(store.ingest(restored), false);
+  let parent = store.snapshot().find(s => !s.parentId), child = store.snapshot().find(s => s.parentId);
+  assert.equal(parent.turnId, 'new-ended'); assert.equal(parent.activeTools, 0); assert.equal(parent.attention, false);
+  assert.equal(parent.status, 'active'); assert.equal(parent.activity, 'waiting-tool'); assert.equal(parent.closed, false);
+  assert.equal(parent.turnCompletedAt, undefined); assert.equal(child.activity, 'testing'); assert.equal(child.activeTools, 1);
+  store.ingest(event('tool-end', { subagentId: 'child', turnId: 'child-turn', toolCallId: 'child-test', at: 200010 }));
+  assert.equal(store.snapshot().find(s => !s.parentId).status, 'active');
+  store.ingest(event('turn-end', { subagentId: 'child', turnId: 'child-turn', at: 200020, activity: 'idle' }));
+  parent = store.snapshot().find(s => !s.parentId);
+  assert.equal(parent.status, 'idle'); assert.equal(parent.activity, 'idle'); assert.equal(parent.turnCompletedAt, undefined);
+  assert.equal(store.ingest(event('turn-start', { turnId: 'old', at: 200030, turnStartedAt: 50000, evidence: fallback })), false);
+});
+test('ended-turn restoration rejects unknown history, invalid chronology and newer Hook ownership', () => {
+  const valid = { turnId: 'new-ended', supersedesTurnId: 'old', at: 160000, turnStartedAt: 120000, turnEndedAt: 160000,
+    evidence: { source: 'codex-jsonl', rawEvent: 'rollout:ended-turn-snapshot', restored: true, snapshot: 'ended-turn' } };
+  const unknown = createSessionStore({ now: () => 200000 });
+  assert.equal(unknown.ingest(event('metadata', valid)), false); assert.equal(unknown.snapshot().length, 0);
+  for (const invalid of [
+    { turnStartedAt: 50000 }, { turnEndedAt: 119999, at: 119999 }, { at: 170000 },
+    { supersedesTurnId: 'other' }, { turnId: 'old' },
+    { evidence: { ...valid.evidence, source: 'hook' } }, { evidence: { ...valid.evidence, restored: false } },
+  ]) {
+    const store = createSessionStore({ now: () => 200000 });
+    store.ingest(event('turn-start', { turnId: 'old', at: 50000, evidence: { source: 'codex-jsonl' } }));
+    store.ingest(event('waiting-user', { turnId: 'old', at: 70000, toolCallId: 'q', activity: 'waiting-user', evidence: { source: 'codex-jsonl' } }));
+    assert.equal(store.ingest(event('metadata', { ...valid, ...invalid })), false);
+    assert.equal(store.snapshot()[0].attention, true); assert.equal(store.snapshot()[0].turnId, 'old');
+  }
+  const store = createSessionStore({ now: () => 200000 });
+  store.ingest(event('turn-start', { turnId: 'old', at: 50000 }));
+  store.ingest(event('tool-start', { turnId: 'old', at: 190000, toolCallId: 'native-progress', activity: 'testing' }));
+  assert.equal(store.ingest(event('metadata', valid)), false);
+  assert.equal(store.snapshot()[0].activity, 'testing'); assert.equal(store.snapshot()[0].activeTools, 1);
+  store.ingest(event('turn-start', { turnId: 'newer-native', at: 195000 }));
+  assert.equal(store.ingest(event('metadata', { ...valid, supersedesTurnId: 'newer-native' })), false);
+  assert.equal(store.snapshot()[0].turnId, 'newer-native');
+});
 test('official hooks own their turn over stale JSONL; a newer fallback turn may enter', () => {
   const store = createSessionStore({ now: () => 2000 });
   store.ingest(event('turn-start', { turnId: 't1' }));
