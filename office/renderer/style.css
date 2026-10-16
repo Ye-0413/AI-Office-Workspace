@@ -166,12 +166,12 @@
 @media(max-width:1050px){.inspect-persona small{display:none}.room-status-copy{flex-shrink:1}}
 @media(max-width:800px){.room-status-copy{max-width:150px}.inspect-persona{padding:7px 9px}.inspector-actions .button{min-height:30px;padding:5px 8px}}
 
-/* A small timber clock rests on the back cabinet, within the room perspective. */
-.day-clock{position:absolute;left:54.1%;top:21.5%;z-index:5;width:136px;height:67px;padding:6px 9px 5px;border:3px solid #66472e;border-radius:4px;color:#f3e3b9;background:repeating-linear-gradient(0deg,#b8956412 0 1px,transparent 1px 4px),linear-gradient(120deg,#936d43,#725333);box-shadow:inset 0 1px 0 #c9a56e,inset 0 -2px 0 #4e3825,0 3px 3px #2d211b73;cursor:pointer;isolation:isolate}
-.day-clock::before{content:"";position:absolute;inset:16px 7px 13px;border:1px solid #302f25;background:linear-gradient(#34372e,#444538);box-shadow:inset 0 2px 4px #171b1b66;z-index:-1}
-.clock-label{display:flex;align-items:center;justify-content:space-between;color:#f4dbac;font-size:7px;letter-spacing:.15em;line-height:10px;font-weight:600}.day-clock-icon{font-size:9px;letter-spacing:0;color:#edcb86}
-.day-clock time{display:block;font-size:34px;line-height:33px;font-weight:550;font-variant-numeric:tabular-nums;letter-spacing:.025em;text-shadow:0 1px 0 #1f2924;white-space:nowrap;color:#e8edca}
-#day-phase{display:block;color:#f3dcad;font-size:8px;line-height:10px;letter-spacing:.07em;white-space:nowrap}
+/* A timber timepiece and daily ledger occupy the back wall, above the walkway. */
+.day-clock{position:absolute;left:47.65%;top:9.9%;z-index:5;width:216px;height:92px;padding:7px 12px 6px;border:3px solid #66472e;border-radius:4px;color:#f3e3b9;background:repeating-linear-gradient(0deg,#b8956412 0 1px,transparent 1px 4px),linear-gradient(120deg,#936d43,#725333);box-shadow:inset 0 1px 0 #c9a56e,inset 0 -2px 0 #4e3825,0 3px 3px #2d211b73;cursor:pointer;isolation:isolate}
+.day-clock::before{content:"";position:absolute;inset:21px 8px 17px;border:1px solid #302f25;background:linear-gradient(#34372e,#444538);box-shadow:inset 0 2px 4px #171b1b66;z-index:-1}
+.clock-label{display:flex;align-items:center;justify-content:space-between;color:#f4dbac;font-size:10px;letter-spacing:.12em;line-height:14px;font-weight:600}.day-clock-icon{font-size:12px;letter-spacing:0;color:#edcb86}
+.day-clock time{display:block;font-size:51px;line-height:50px;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:.025em;text-shadow:0 1px 0 #1f2924;white-space:nowrap;color:#fff2c4}
+#day-phase{display:block;color:#f3dcad;font-size:10px;line-height:12px;letter-spacing:.07em;white-space:nowrap}
 .clock-feet{position:absolute;left:9px;right:9px;bottom:-6px;height:4px;border-left:7px solid #403025;border-right:7px solid #403025;pointer-events:none}
 .day-clock:focus-visible{outline:3px solid #f6d68b;outline-offset:4px}
 .observation-status{display:flex;align-items:center;gap:6px;padding:0 7px;color:#f3e4c4;font-size:10px;white-space:nowrap}.observation-status .mode-dot{background:#ccd4ab}
@@ -182,3 +182,7 @@
 @media(prefers-contrast:more){.day-clock time{color:#fff8da}}
 
 .actor-bubble::after{left:var(--bubble-tail-x,48%)}
+
+.activity-stats{position:absolute;left:36.72%;top:9.9%;z-index:5;width:130px;height:92px;padding:7px 10px;border:2px solid #8c7048;border-radius:4px;color:#3e503e;background:repeating-linear-gradient(0deg,#8c704808 0 1px,transparent 1px 4px),linear-gradient(110deg,#f8e9c8,#e5d1a5);box-shadow:inset 0 1px 0 #fff6d9,0 3px 4px #2d211b66;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.stats-label{font-size:10px;line-height:14px;letter-spacing:.025em;font-weight:650;white-space:nowrap}.activity-stats strong{font-size:34px;line-height:36px;font-weight:700;font-variant-numeric:tabular-nums;color:#304e48}.stats-detail{display:flex;gap:6px;align-items:center;justify-content:center;font-size:8px;line-height:16px;white-space:nowrap;color:#5b624a}.activity-stats[data-error="true"] strong{color:#8c503c}
+.agent-size-control{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:none;width:155px}.agent-size-control output{font-size:12px;font-variant-numeric:tabular-nums;color:#614b30}.settings-dialog .agent-size-control input[type="range"]{width:155px;height:18px;accent-color:#806843;cursor:pointer}

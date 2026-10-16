@@ -1,4 +1,4 @@
-/* Decorative harbour personas. Never infer skills, task progress, or provider evidence. */
+/* Decorative cultural personas. Never infer skills, task progress, or provider evidence. */
 (function (root, factory) {
   'use strict';
   const api = factory();
@@ -7,59 +7,59 @@
 })(typeof globalThis === 'object' ? globalThis : this, function () {
   'use strict';
 
-  // Append to these authored pools only when deliberately versioning the mapping.
-  // Keeping this separate from Scene.identityName preserves every v1 identity.
-  const first = [
-    ['海风', 'Seabreeze'], ['潮汐', 'Tidal'], ['渡轮', 'Ferry'], ['灯塔', 'Lighthouse'],
-    ['海盐', 'Seasalt'], ['珊瑚', 'Coral'], ['贝壳', 'Seashell'], ['浪花', 'Seafoam'],
-    ['白帆', 'Sailcloth'], ['海湾', 'Harbour'], ['涟漪', 'Ripple'], ['礁石', 'Reef'],
-    ['银滩', 'Silverbeach'], ['沙洲', 'Sandbar'], ['海蓝', 'Seablue'], ['远航', 'Voyage'],
-    ['晨雾', 'Morningmist'], ['曙光', 'Dawn'], ['朝露', 'Dewdrop'], ['晴空', 'Bluesky'],
-    ['午阳', 'Sunbeam'], ['暮光', 'Twilight'], ['晚霞', 'Sunset'], ['月湾', 'Moonbay'],
-    ['星河', 'Starlight'], ['夜蓝', 'Nightblue'], ['暖雨', 'Warmrain'], ['微云', 'Cloudlet'],
-    ['虹彩', 'Rainbow'], ['霜蓝', 'Frostblue'], ['春潮', 'Springtide'], ['秋光', 'Autumn'],
-    ['桂花', 'Osmanthus'], ['山茶', 'Camellia'], ['茉莉', 'Jasmine'], ['白兰', 'Magnolia'],
-    ['木棉', 'Kapok'], ['榕荫', 'Banyan'], ['青竹', 'Bamboo'], ['银杏', 'Ginkgo'],
-    ['蕨叶', 'Fern'], ['松针', 'Pine'], ['枫糖', 'Maple'], ['苔绿', 'Moss'],
-    ['紫藤', 'Wisteria'], ['荷香', 'Lotus'], ['柳芽', 'Willow'], ['桃枝', 'Peach'],
-    ['普洱', 'Puer'], ['乌龙', 'Oolong'], ['抹茶', 'Matcha'], ['焙茶', 'Hojicha'],
-    ['奶茶', 'Milktea'], ['柠茶', 'Lemontea'], ['蜜糖', 'Honey'], ['姜糖', 'Ginger'],
-    ['芝麻', 'Sesame'], ['杏仁', 'Almond'], ['可可', 'Cocoa'], ['肉桂', 'Cinnamon'],
-    ['薄荷', 'Mint'], ['香草', 'Vanilla'], ['豆蔻', 'Cardamom'], ['橙皮', 'Orangepeel'],
-    ['翠玉', 'Jade'], ['琥珀', 'Amber'], ['靛蓝', 'Indigo'], ['赭石', 'Ochre'],
-    ['月白', 'Moonwhite'], ['青瓷', 'Celadon'], ['铜光', 'Copper'], ['绒蓝', 'Velvetblue'],
-    ['珠光', 'Pearlglow'], ['暖金', 'Warmgold'], ['石墨', 'Graphite'], ['玫粉', 'Rosepink'],
-    ['墨绿', 'Evergreen'], ['雪松', 'Cedar'], ['奶白', 'Cream'], ['莓红', 'Berryred'],
-    ['山径', 'Hillpath'], ['溪流', 'Brook'], ['石阶', 'Stonestep'], ['竹篱', 'Bamboofence'],
-    ['花墟', 'Flowerstall'], ['山岚', 'Hillmist'], ['树影', 'Leafshade'], ['小岛', 'Islet'],
-    ['茶寮', 'Teahouse'], ['纸窗', 'Paperwindow'], ['雨巷', 'Rainlane'], ['书页', 'Pageleaf'],
-    ['风铃', 'Windchime'], ['石墙', 'Stonewall'], ['瓷瓦', 'Rooftile'], ['木窗', 'Woodframe'],
-    ['菠萝', 'Pineapple'], ['椰丝', 'Coconut'], ['芋香', 'Taro'], ['红豆', 'Azuki'],
-    ['栗子', 'Chestnut'], ['燕麦', 'Oat'], ['柚子', 'Yuzu'], ['青梅', 'Greenplum'],
-    ['桑葚', 'Mulberry'], ['杏桃', 'Apricot'], ['石榴', 'Pomegranate'], ['蓝莓', 'Blueberry'],
-    ['荔枝', 'Lychee'], ['龙眼', 'Longan'], ['山楂', 'Hawthorn'], ['金桔', 'Kumquat'],
-    ['纸鹤', 'Papercrane'], ['雨点', 'Raindrop'], ['光斑', 'Dapple'], ['轻雪', 'Snowflake'],
-    ['流萤', 'Firefly'], ['星砂', 'Starsand'], ['云絮', 'Cloudwisp'], ['虹桥', 'Rainbowbridge'],
-    ['晨钟', 'Daybell'], ['萤石', 'Fluorite'], ['风筝', 'Kite'], ['月石', 'Moonstone'],
-    ['暖灯', 'Lamplight'], ['棉云', 'Cottoncloud'], ['晚风', 'Eveningbreeze'], ['晴雨', 'Sunshower']
+  // Pool changes deliberately version the nickname mapping. Scene.identityName
+  // and the separate English mapping retain every original identity.
+  // Chinese v2 is independently authored: 256 epithets × 128 mythic,
+  // celestial and classical objects = 32,768 four-character combinations.
+  // English v1 stays independent and retains its original natural aliases.
+  // A nickname is decorative; real IDs, family ancestry and work evidence win.
+  const chineseFirst = Object.freeze([
+    '青霄 赤霄 紫霄 碧落 云阙 云岫 云岚 云霄 流云 霁云 凌云 天游 扶摇 乘风 御风 追风 玄风 清风 朔风 回风 霁风 长风 太初 太虚 太清 上清 玉清 澄空 净空 霄汉 云汉 霞举',
+    '流光 扶光 曦光 晨光 玄光 灵光 明光 曜光 凝光 霞光 霜光 星芒 映雪 流霞 晴岚 朝霞 暮霞 丹霞 碧霞 紫霞 烟霞 烟岚 霜华 雪霁 霁色 清晖 银辉 皓辉 朗照 澄辉 虹霓 逸光',
+    '玄墨 玄青 玄素 玄苍 玄玉 玄羽 玄渊 玄霜 青冥 青玄 青岚 青芜 青璇 青璧 青萝 青岑 丹青 丹霄 丹枫 丹砂 丹羽 丹阙 丹华 丹心 朱墨 朱华 朱颜 朱晖 素月 素雪 素锦 素心',
+    '昆仑 蓬莱 瀛洲 方丈 岱舆 员峤 瑶台 琼楼 玉京 玉阙 紫府 碧城 灵台 灵墟 灵岩 灵境 空山 远岫 苍梧 沧海 扶桑 汤谷 若木 建木 归墟 弱水 流沙 赤水 青丘 云梦 梦泽 沧溟',
+    '兰亭 墨池 墨韵 墨香 墨华 墨羽 墨染 墨痕 锦书 锦瑟 锦云 锦绣 书海 书林 书山 砚边 松烟 徽墨 龙文 凤章 龙章 鸿文 华章 逸兴 雅韵 古意 清音 余音 希声 琴心 剑气 剑影',
+    '凌霜 傲雪 映月 揽月 踏月 逐日 追日 观星 问天 问道 望远 乘云 御剑 横空 破晓 凌波 临渊 听澜 听雨 听松 听风 观澜 见山 寻幽 探微 怀瑾 握瑜 含章 藏锋 凝霜 流火 飞羽',
+    '清和 清微 清远 清越 清漪 清泠 清晏 清寂 澄明 澄心 澄怀 澄江 澄霄 静渊 静岚 静川 静玄 宁渊 宁川 宁霄 逸尘 逸云 逸风 逸舟 无尘 无垢 无涯 无相 逍遥 自在 抱朴 归真',
+    '春泽 春晖 春晏 春山 夏木 夏云 秋水 秋岚 秋澄 秋鸿 冬藏 冬青 寒江 寒烟 寒星 寒玉 夕照 晚照 晓霁 晓岚 月华 月影 月照 月隐 星澜 星野 星霭 星垂 天青 天启 天极 天纵'
+  ].join(' ').split(' '));
+  const chineseSecond = Object.freeze([
+    '青鸾 烛龙 白泽 麒麟 玄武 朱雀 应龙 黄龙 苍龙 螭龙 螣蛇 鲲鹏 重明 毕方 九尾 陆吾',
+    '英招 开明 乘黄 夫诸 天禄 辟邪 獬豸 貔貅 狻猊 狴犴 螭吻 嘲风 蒲牢 囚牛 赑屃 睚眦',
+    '望舒 羲和 常羲 嫦娥 女娲 伏羲 夸父 精卫 句芒 蓐收 祝融 共工 后土 飞廉 屏翳 河伯',
+    '天枢 天璇 天玑 天权 玉衡 开阳 瑶光 北辰 太微 紫微 天市 文昌 天钺 天魁 参商 南斗',
+    '长庚 启明 岁星 荧惑 镇星 辰星 太白 太阴 斗柄 星槎 星舟 星盘 星图 星罗 辰宿 璇玑',
+    '云笺 素笺 锦笺 玉笺 青简 竹简 金简 玉简 松砚 龙砚 凤砚 古砚 霜毫 紫毫 玉笔 银钩',
+    '瑶琴 古琴 鸣琴 七弦 长笛 洞箫 玉箫 陶埙 笙歌 编钟 霓裳 流觞 龙泉 干将 莫邪 承影',
+    '青锋 玉璧 玉璜 玉璋 琼枝 瑶华 琼英 嘉木 芳洲 汀兰 杜若 蘅芜 玉珩 碧玺 灵犀 天章'
+  ].join(' ').split(' '));
+  const englishFirst = [
+    'Seabreeze', 'Tidal', 'Ferry', 'Lighthouse', 'Seasalt', 'Coral', 'Seashell', 'Seafoam',
+    'Sailcloth', 'Harbour', 'Ripple', 'Reef', 'Silverbeach', 'Sandbar', 'Seablue', 'Voyage',
+    'Morningmist', 'Dawn', 'Dewdrop', 'Bluesky', 'Sunbeam', 'Twilight', 'Sunset', 'Moonbay',
+    'Starlight', 'Nightblue', 'Warmrain', 'Cloudlet', 'Rainbow', 'Frostblue', 'Springtide', 'Autumn',
+    'Osmanthus', 'Camellia', 'Jasmine', 'Magnolia', 'Kapok', 'Banyan', 'Bamboo', 'Ginkgo',
+    'Fern', 'Pine', 'Maple', 'Moss', 'Wisteria', 'Lotus', 'Willow', 'Peach',
+    'Puer', 'Oolong', 'Matcha', 'Hojicha', 'Milktea', 'Lemontea', 'Honey', 'Ginger',
+    'Sesame', 'Almond', 'Cocoa', 'Cinnamon', 'Mint', 'Vanilla', 'Cardamom', 'Orangepeel',
+    'Jade', 'Amber', 'Indigo', 'Ochre', 'Moonwhite', 'Celadon', 'Copper', 'Velvetblue',
+    'Pearlglow', 'Warmgold', 'Graphite', 'Rosepink', 'Evergreen', 'Cedar', 'Cream', 'Berryred',
+    'Hillpath', 'Brook', 'Stonestep', 'Bamboofence', 'Flowerstall', 'Hillmist', 'Leafshade', 'Islet',
+    'Teahouse', 'Paperwindow', 'Rainlane', 'Pageleaf', 'Windchime', 'Stonewall', 'Rooftile', 'Woodframe',
+    'Pineapple', 'Coconut', 'Taro', 'Azuki', 'Chestnut', 'Oat', 'Yuzu', 'Greenplum',
+    'Mulberry', 'Apricot', 'Pomegranate', 'Blueberry', 'Lychee', 'Longan', 'Hawthorn', 'Kumquat',
+    'Papercrane', 'Raindrop', 'Dapple', 'Snowflake', 'Firefly', 'Starsand', 'Cloudwisp', 'Rainbowbridge',
+    'Daybell', 'Fluorite', 'Kite', 'Moonstone', 'Lamplight', 'Cottoncloud', 'Eveningbreeze', 'Sunshower'
   ];
-  const second = [
-    ['小獭', 'Otter'], ['小雀', 'Sparrow'], ['小鹭', 'Egret'], ['小鸥', 'Gull'],
-    ['小鹿', 'Fawn'], ['小狐', 'Fox'], ['小熊', 'Bear'], ['小兔', 'Bunny'],
-    ['小猫', 'Kitten'], ['小鲸', 'Whale'], ['小豚', 'Dolphin'], ['小龟', 'Turtle'],
-    ['小蛙', 'Frog'], ['小狸', 'Raccoon'], ['小鸮', 'Owl'], ['小雁', 'Goose'],
-    ['小燕', 'Swallow'], ['小鸽', 'Pigeon'], ['小鹬', 'Sandpiper'], ['小鹪', 'Wren'],
-    ['小貂', 'Marten'], ['小鼬', 'Ferret'], ['小猬', 'Hedgehog'], ['小鼠', 'Dormouse'],
-    ['茶壶', 'Kettle'], ['茶盏', 'Teacup'], ['瓷勺', 'Spoon'], ['糖罐', 'Sugarpot'],
-    ['布丁', 'Pudding'], ['奶冻', 'Custard'], ['曲奇', 'Cookie'], ['松饼', 'Waffle'],
-    ['小挞', 'Tartlet'], ['汤圆', 'Dumpling'], ['麻薯', 'Mochi'], ['软糖', 'Gumdrop'],
-    ['面包', 'Bun'], ['吐司', 'Toast'], ['豆包', 'Beanbun'], ['蛋卷', 'Wafer'],
-    ['小灯', 'Lantern'], ['书签', 'Bookmark'], ['纸船', 'Paperboat'], ['邮票', 'Stamp'],
-    ['纽扣', 'Button'], ['线团', 'Yarnball'], ['口袋', 'Pocket'], ['围巾', 'Scarf'],
-    ['铃铛', 'Bell'], ['小鼓', 'Drum'], ['彩笔', 'Crayon'], ['风车', 'Pinwheel'],
-    ['橡果', 'Acorn'], ['松果', 'Pinecone'], ['豆芽', 'Sprout'], ['花苞', 'Bud'],
-    ['小菇', 'Mushroom'], ['羽毛', 'Feather'], ['小石', 'Pebble'], ['小舟', 'Skiff'],
-    ['贝珠', 'Pearl'], ['小帆', 'Sail'], ['墨点', 'Inkdrop'], ['小窝', 'Nook']
+  const englishSecond = [
+    'Otter', 'Sparrow', 'Egret', 'Gull', 'Fawn', 'Fox', 'Bear', 'Bunny',
+    'Kitten', 'Whale', 'Dolphin', 'Turtle', 'Frog', 'Raccoon', 'Owl', 'Goose',
+    'Swallow', 'Pigeon', 'Sandpiper', 'Wren', 'Marten', 'Ferret', 'Hedgehog', 'Dormouse',
+    'Kettle', 'Teacup', 'Spoon', 'Sugarpot', 'Pudding', 'Custard', 'Cookie', 'Waffle',
+    'Tartlet', 'Dumpling', 'Mochi', 'Gumdrop', 'Bun', 'Toast', 'Beanbun', 'Wafer',
+    'Lantern', 'Bookmark', 'Paperboat', 'Stamp', 'Button', 'Yarnball', 'Pocket', 'Scarf',
+    'Bell', 'Drum', 'Crayon', 'Pinwheel', 'Acorn', 'Pinecone', 'Sprout', 'Bud',
+    'Mushroom', 'Feather', 'Pebble', 'Skiff', 'Pearl', 'Sail', 'Inkdrop', 'Nook'
   ];
   const traits = [
     ['把书签夹得很整齐', 'Keeps every bookmark in a neat row'],
@@ -136,13 +136,16 @@
   function forSession(session) {
     const value = session && typeof session === 'object' ? session : {};
     const key = JSON.stringify([canonicalProvider(value.provider), String(value.id || value.sessionId || '')]);
-    const head = first[hash(key, 0x811c9dc5) % first.length];
-    const tail = second[hash(key, 0x9e3779b9) % second.length];
+    const headHash = hash(key, 0x811c9dc5), tailHash = hash(key, 0x9e3779b9);
+    const chineseHead = chineseFirst[headHash % chineseFirst.length];
+    const chineseTail = chineseSecond[tailHash % chineseSecond.length];
+    const englishHead = englishFirst[headHash % englishFirst.length];
+    const englishTail = englishSecond[tailHash % englishSecond.length];
     const trait = traits[hash(key, 0x85ebca6b) % traits.length];
     const greeting = greetings[hash(key, 0xc2b2ae35) % greetings.length];
     const signoff = signoffs[hash(key, 0x27d4eb2f) % signoffs.length];
     return Object.freeze({
-      aliasZh: head[0] + tail[0], aliasEn: head[1] + ' ' + tail[1],
+      aliasZh: chineseHead + chineseTail, aliasEn: englishHead + ' ' + englishTail,
       traitZh: trait[0], traitEn: trait[1],
       greetingZh: greeting[0], greetingEn: greeting[1],
       keepsake: keepsakes[hash(key, 0x165667b1) % keepsakes.length],
@@ -150,5 +153,5 @@
     });
   }
 
-  return Object.freeze({ version: 1, forSession });
+  return Object.freeze({ version: 2, forSession });
 });

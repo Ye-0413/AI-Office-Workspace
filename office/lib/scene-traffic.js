@@ -1,0 +1,289 @@
+/* Pure visual traffic reservations. No DOM, clocks, provider actions or timers. */
+(function (root, factory) {
+  'use strict';
+  const api = factory(typeof module === 'object' && module.exports ? require('./scene-model.js') : root.OfficeScene);
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.OfficeSceneTraffic = api;
+})(typeof globalThis === 'object' ? globalThis : this, function (Scene) {
+  'use strict';
+
+  const EPS = 1e-7;
+  const point = value => value && Number.isFinite(value.x) && Number.isFinite(value.y) ? { x: value.x, y: value.y } : null;
+  const same = (a, b) => Math.abs(a.x - b.x) < EPS && Math.abs(a.y - b.y) < EPS;
+  const inside = (p, r) => p.x > r.x1 - EPS && p.x < r.x2 + EPS && p.y > r.y1 - EPS && p.y < r.y2 + EPS;
+  const intersects = (a, b, gapX = 0, gapY = gapX) => a.x1 < b.x2 + gapX && a.x2 > b.x1 - gapX && a.y1 < b.y2 + gapY && a.y2 > b.y1 - gapY;
+  // Shared actor geometry is affine along a straight leg: both its foot and
+  // depth scale interpolate linearly. Intersect the four overlap time ranges,
+  // rather than sampling frames and possibly missing a fast crossing.
+  function sweptOverlap(from, to, other, gapX, gapY) {
+    let enter = 0, exit = 1;
+    for (const [a, b] of [
+      [from.x2 + gapX - other.x1, to.x2 + gapX - other.x1],
+      [other.x2 + gapX - from.x1, other.x2 + gapX - to.x1],
+      [from.y2 + gapY - other.y1, to.y2 + gapY - other.y1],
+      [other.y2 + gapY - from.y1, other.y2 + gapY - to.y1],
+    ]) {
+      const delta = b - a;
+      if (Math.abs(delta) < EPS) { if (a <= EPS) return false; }
+      else if (delta > 0) enter = Math.max(enter, (EPS - a) / delta);
+      else exit = Math.min(exit, (EPS - a) / delta);
+      if (enter >= exit - EPS) return false;
+    }
+    return true;
+  }
+
+  function createCoordinator(options = {}) {
+    const world = options.world || Scene.WORLD;
+    const bounds = options.bounds || Scene.actorBounds;
+    if (typeof bounds !== 'function') throw new TypeError('Traffic requires shared actorBounds geometry');
+    const legalPoint = options.legalPoint || Scene.legalActorPoint || (() => true);
+    const baseRoute = options.route || Scene.route;
+    const distance = options.distance || Scene.distance;
+    const obstacles = options.obstacles || Scene.OBSTACLES || [];
+    const reservedRects = (options.reservedRects || []).map((b, i) => ({ id: `reserved:${i}`, reserved: true,
+      bounds: { x1: b.left * 100 / world.width, x2: b.right * 100 / world.width,
+        y1: b.top * 100 / world.height, y2: b.bottom * 100 / world.height } }));
+    const gap = Number.isFinite(options.gap) ? Math.max(0, options.gap) : 8;
+    const limit = Math.max(2, Math.min(64, Math.floor(options.limit) || 16));
+    const actors = new Map(), requests = new Map();
+    let active = null, sequence = 0, revision = 0, cached = null, invalid = false;
+
+    function rect(p, actor) {
+      const b = bounds(p, actor);
+      return { x1: b.left * 100 / world.width, x2: b.right * 100 / world.width,
+        y1: b.top * 100 / world.height, y2: b.bottom * 100 / world.height };
+    }
+    const gapX = gap * 100 / world.width, gapY = gap * 100 / world.height;
+    function changed() { revision += 1; cached = null; }
+    function sync(values) {
+      const next = new Map();
+      invalid = !Array.isArray(values) || values.length > limit;
+      for (const value of Array.isArray(values) ? values.slice(0, limit) : []) {
+        const position = point(value?.position);
+        if (!value?.id || !position || next.has(String(value.id))) { invalid = true; continue; }
+        const scale = Number.isFinite(value.scale) ? value.scale : 1;
+        next.set(String(value.id), { id: String(value.id), position, helper: Boolean(value.helper), scale, canYield: value.canYield !== false });
+      }
+      const signature = JSON.stringify([...next.values()].sort((a, b) => a.id.localeCompare(b.id)));
+      if (signature !== sync.signature || invalid !== sync.invalid) { sync.signature = signature; sync.invalid = invalid; changed(); }
+      actors.clear(); for (const [id, actor] of next) actors.set(id, actor);
+      for (const id of requests.keys()) if (!actors.has(id)) requests.delete(id);
+      if (active && !actors.has(active.id)) active = null;
+      return !invalid;
+    }
+    function request(id, target, opts = {}) {
+      id = String(id);
+      const to = point(target), actor = actors.get(id);
+      if (!actor || !to || invalid || (!requests.has(id) && requests.size >= limit)) return false;
+      const overlaps = [...new Set((Array.isArray(opts.overlapIds) ? opts.overlapIds : []).map(String))].filter(other => other !== id).sort();
+      const old = requests.get(id);
+      if (old && same(old.target, to) && old.instant === Boolean(opts.instant) && JSON.stringify(old.overlapIds) === JSON.stringify(overlaps)) return true;
+      if (active?.id === id) return false; // Cancel with the rendered position before retargeting.
+      requests.set(id, { id, target: to, instant: Boolean(opts.instant), overlapIds: overlaps, order: ++sequence, yielded: false });
+      changed(); return true;
+    }
+    function exempt(r, other, a, b) {
+      if (other.reserved || !r.overlapIds.includes(other.id)) return false;
+      const start = actors.get(r.id).position;
+      // A straight segment can leave/enter this convex envelope only once.
+      // Other segments still avoid the parent after a deliberate clone split.
+      return (same(a, start) && inside(a, other)) || (same(b, r.target) && inside(b, other));
+    }
+    function targetBlockers(r, target = r.target) {
+      const moving = actors.get(r.id), destination = rect(target, moving);
+      return [...actors.values()].filter(other => other.id !== r.id && !(same(target, r.target) && r.overlapIds.includes(other.id))
+        && intersects(destination, rect(other.position, other), gapX, gapY)).map(other => other.id)
+        .concat(reservedRects.filter(other => intersects(destination, other.bounds, 400 / world.width, 400 / world.height)).map(other => other.id));
+    }
+    function findPath(r, target = r.target, temporary = false) {
+      const actor = actors.get(r.id), start = actor.position;
+      if (!legalPoint(start, actor) || !legalPoint(target, actor) || targetBlockers(r, target).length) return null;
+      if (same(start, target)) return [start];
+      if (r.instant && !temporary) return [start, target];
+      // Depth changes during walking. The largest envelope in the rendered
+      // world conservatively bounds every intermediate scale, including tags.
+      const samples = [0, 50, 100].map(y => {
+        const b = rect({ x: 0, y }, actor);
+        return { left: -b.x1, right: b.x2, top: y - b.y1, bottom: b.y2 - y };
+      });
+      const extent = Object.fromEntries(['left', 'right', 'top', 'bottom'].map(key => [key, Math.max(...samples.map(s => s[key]))]));
+      const blockers = [...actors.values()].filter(other => other.id !== r.id).map(other => {
+        const b = rect(other.position, other);
+        return { id: other.id, bounds: b, gapX, gapY, x1: b.x1 - extent.right - gapX, x2: b.x2 + extent.left + gapX,
+          y1: b.y1 - extent.bottom - gapY, y2: b.y2 + extent.top + gapY };
+      }).concat(reservedRects.map(other => ({ ...other, gapX: 400 / world.width, gapY: 400 / world.height,
+        x1: other.bounds.x1 - extent.right - 400 / world.width, x2: other.bounds.x2 + extent.left + 400 / world.width,
+        y1: other.bounds.y1 - extent.bottom - 400 / world.height, y2: other.bounds.y2 + extent.top + 400 / world.height })));
+      const clear = (a, b) => !obstacles.some(o => Scene.segmentHitsRect(a, b, o, .8))
+        && !blockers.some(o => sweptOverlap(rect(a, actor), rect(b, actor), o.bounds, o.gapX, o.gapY) && !exempt(r, o, a, b));
+      const pathClear = path => path.length > 1 && same(path[0], start) && same(path.at(-1), target)
+        && path.every((p, i) => legalPoint(p, actor) && (!i || clear(path[i - 1], p)));
+      const original = baseRoute(start, target);
+      if (pathClear(original)) return original.map(p => ({ ...p }));
+      const nodes = [start, target];
+      const add = p => {
+        if (!legalPoint(p, actor) || blockers.some(o => inside(p, o)) || nodes.some(n => same(n, p))) return;
+        nodes.push(p);
+      };
+      for (const o of blockers) for (const x of [o.x1 - .15, o.x2 + .15]) for (const y of [o.y1 - .15, o.y2 + .15]) add({ x, y });
+      for (const o of obstacles) for (const x of [o.x1 - 1, o.x2 + 1]) for (const y of [o.y1 - 1, o.y2 + 1]) add({ x, y });
+      for (const p of original) add(p);
+      // Boundary lanes also allow routing around an actor envelope whose
+      // expanded corners extend outside the visible world.
+      for (const x of [4, 12, 25, 50, 75, 88, 96]) for (const y of [40.7, 41, 44, 72, 76, 77, 80, 86]) add({ x, y });
+      const costs = nodes.map(() => Infinity), previous = nodes.map(() => -1), visited = new Set();
+      costs[0] = 0;
+      while (visited.size < nodes.length) {
+        let at = -1;
+        for (let i = 0; i < nodes.length; i += 1) if (!visited.has(i) && (at < 0 || costs[i] < costs[at] - EPS)) at = i;
+        if (at < 0 || !Number.isFinite(costs[at])) break;
+        if (at === 1) {
+          const result = [];
+          for (let i = 1; i >= 0; i = previous[i]) result.unshift({ ...nodes[i] });
+          return result;
+        }
+        visited.add(at);
+        for (let i = 0; i < nodes.length; i += 1) {
+          if (visited.has(i) || !clear(nodes[at], nodes[i])) continue;
+          const cost = costs[at] + distance(nodes[at], nodes[i]);
+          if (cost < costs[i] - EPS) { costs[i] = cost; previous[i] = at; }
+        }
+      }
+      return null;
+    }
+    function cycleFrom(r) {
+      const visit = (id, path) => {
+        if (path.includes(id)) return id === r.id ? path : null;
+        const current = requests.get(id);
+        if (current) for (const other of targetBlockers(current)) {
+          const cycle = visit(other, path.concat(id)); if (cycle) return cycle;
+        }
+        return null;
+      };
+      for (const id of targetBlockers(r)) { const cycle = visit(id, [r.id]); if (cycle) return cycle; }
+      return null;
+    }
+    function cycleCanFinish(r, holding, cycle) {
+      const original = new Map([...actors.values()].map(actor => [actor.id, actor.position]));
+      try {
+        actors.get(r.id).position = holding;
+        const remaining = [...requests.values()], done = new Set();
+        for (let pass = 0; pass < remaining.length; pass += 1) {
+          let progress = false;
+          for (const candidate of remaining) {
+            if (done.has(candidate.id)) continue;
+            if (candidate.waitFor && requests.has(candidate.waitFor) && !done.has(candidate.waitFor)) continue;
+            if (findPath(candidate)) { actors.get(candidate.id).position = candidate.target; done.add(candidate.id); progress = true; }
+          }
+          if (cycle.every(id => done.has(id))) return true;
+          if (!progress) break;
+        }
+        return false;
+      } finally { for (const [id, position] of original) actors.get(id).position = position; }
+    }
+    function holdingPath(r, cycle) {
+      const actor = actors.get(r.id), candidates = [];
+      for (const y of [40.7, 41, 44, 48, 52, 56, 60, 64, 68, 72, 76, 77, 80, 84, 86]) for (let x = 4; x <= 96; x += 4) {
+        const p = { x, y };
+        if (distance(actor.position, p) < 3 || !legalPoint(p, actor) || targetBlockers(r, p).length) continue;
+        const b = rect(p, actor);
+        if ([...requests.values()].some(other => other.id !== r.id && intersects(b, rect(other.target, actors.get(other.id)), gapX, gapY))) continue;
+        candidates.push(p);
+      }
+      candidates.sort((a, b) => distance(actor.position, a) - distance(actor.position, b) || a.y - b.y || a.x - b.x);
+      for (const p of candidates.slice(0, 64)) {
+        const path = findPath(r, p, true);
+        if (path && cycleCanFinish(r, p, cycle)) return path;
+      }
+      return null;
+    }
+    function cooperativeYield(blocked) {
+      if (requests.size >= limit || blocked.cooperative || blocked.overlapIds.length) return null;
+      const candidates = [...actors.values()].filter(actor => actor.id !== blocked.id && actor.canYield && !requests.has(actor.id))
+        .sort((a, b) => distance(a.position, actors.get(blocked.id).position) - distance(b.position, actors.get(blocked.id).position) || a.id.localeCompare(b.id));
+      for (const actor of candidates) {
+        // Positive geometric evidence: removing this exact stationary body
+        // opens the queued path. Do not move unrelated workers speculatively.
+        actors.delete(actor.id);
+        let opens;
+        try { opens = findPath(blocked); } finally { actors.set(actor.id, actor); }
+        if (!opens) continue;
+        const yielding = { id: actor.id, target: { ...actor.position }, instant: blocked.instant,
+          overlapIds: [], order: sequence + 1, yielded: false, cooperative: true, waitFor: blocked.id };
+        requests.set(actor.id, yielding);
+        const path = holdingPath(yielding, [blocked.id, actor.id]);
+        if (path) { yielding.order = ++sequence; return { request: yielding, path, temporary: true }; }
+        requests.delete(actor.id);
+      }
+      return null;
+    }
+    function selection() {
+      if (cached?.revision === revision) return cached.value;
+      const ordered = [...requests.values()].sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+      let value = null;
+      for (const r of ordered) {
+        if (r.cooperative && requests.has(r.waitFor)) continue;
+        const path = findPath(r);
+        if (path) { value = { request: r, path, temporary: false }; break; }
+      }
+      if (!value) for (const r of ordered) {
+        if (r.cooperative) continue;
+        const cycle = !r.yielded && cycleFrom(r);
+        if (!cycle) continue;
+        const path = holdingPath(r, cycle);
+        if (path) { value = { request: r, path, temporary: true }; break; }
+      }
+      if (!value) for (const r of ordered) { value = cooperativeYield(r); if (value) break; }
+      cached = { revision, value }; return value;
+    }
+    function reserve(chosen) {
+      const r = chosen.request, id = r.id;
+      if (chosen.path.length === 1) {
+        requests.delete(id); changed(); return { kind: 'arrived', id, target: { ...r.target }, yielding: Boolean(r.cooperative) };
+      }
+      active = { id, token: ++sequence, target: { ...chosen.path.at(-1) }, temporary: chosen.temporary };
+      return { kind: 'move', ...active, instant: r.instant, yielding: Boolean(r.cooperative),
+        path: chosen.path.map(p => ({ ...p })) };
+    }
+    function next(id) {
+      id = String(id);
+      if (invalid) return { kind: 'wait', reason: 'invalid-scene' };
+      if (!requests.has(id) || !actors.has(id)) return { kind: 'cancelled' };
+      if (active) return { kind: 'wait', reason: 'reserved', by: active.id };
+      const chosen = selection();
+      if (!chosen) return { kind: 'wait', reason: 'blocked' };
+      if (chosen.request.id !== id) return { kind: 'wait', reason: 'queued', by: chosen.request.id };
+      return reserve(chosen);
+    }
+    function nextAny() {
+      if (invalid) return { kind: 'wait', reason: 'invalid-scene' };
+      if (active) return { kind: 'wait', reason: 'reserved', by: active.id };
+      if (!requests.size) return { kind: 'idle' };
+      const chosen = selection();
+      return chosen ? reserve(chosen) : { kind: 'wait', reason: 'blocked' };
+    }
+    function finish(id, token, actualPoint) {
+      id = String(id);
+      if (!active || active.id !== id || active.token !== token) return false;
+      const actor = actors.get(id), position = point(actualPoint) || active.target;
+      if (actor) actor.position = { ...position };
+      const r = requests.get(id);
+      if (r && active.temporary) r.yielded = true;
+      else if (r && same(position, r.target)) requests.delete(id);
+      active = null; changed(); return true;
+    }
+    function cancel(id, actualPoint) {
+      id = String(id);
+      const actor = actors.get(id), position = point(actualPoint);
+      if (actor && position) actor.position = position;
+      const removed = requests.delete(id);
+      if (active?.id === id) active = null;
+      if (removed || position) changed();
+      return removed;
+    }
+    function clear() { actors.clear(); requests.clear(); active = null; invalid = false; sync.signature = null; changed(); }
+    function state() { return { active: active ? { ...active, target: { ...active.target } } : null, queued: requests.size, actors: actors.size, invalid }; }
+    return Object.freeze({ sync, request, next, nextAny, finish, cancel, clear, state });
+  }
+  return Object.freeze({ createCoordinator });
+});

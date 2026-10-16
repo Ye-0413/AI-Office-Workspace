@@ -2,6 +2,14 @@
 
 A local macOS playground for watching independent AI sessions inhabit a tiny office. Designed for a five-inch 1280×720 secondary display.
 
+## 角色辨识、大小与每日活动
+
+每个当前主 Agent 家族有独立的身体颜色，分身使用同色系；名牌保留组号和真实父子关系，超过八个同时出现的家族时可用组号继续辨识。中文昵称由神话、山海、星宿与文房意象组成 32,768 种四字组合，英文模式使用独立英文昵称。昵称只影响工作室显示，不改原始会话。
+
+「房间偏好 → Agent 大小」可在 65%–135% 间缩放角色和名牌。座位按完整显示包络安排；人数较多时分页，走动通过排队和临时让位避让其他角色。影分身出现和归位时，与主 Agent 短暂重合属于有意的分身效果。
+
+背墙显示醒目的香港时间和「今日活跃 Agent」，按香港自然日对实际观察到有活动的主 Agent、分身分别去重；同一身份执行多轮只计一次。统计保存在本机，重启后保留，香港午夜开始新一天。它统计应用观察到的活动，不会回扫整天历史，也不代表所有打开的聊天窗口；纯元信息、装饰访客与未被接受的事件不计入。磁盘只保存日期与哈希身份，不保存任务内容，最多保留十四天。
+
 ## 公开源码版准备
 
 公开仓库不含受限角色素材和原图标。先运行 `npm ci`，再执行 `node scripts/prepare-local-artwork.cjs --from /absolute/path/to/original-project`，核验并导入你有权使用的本地素材。随后运行测试、启动或构建。
@@ -60,7 +68,9 @@ Tool starts, correlated results, user input, child agents, turn endings and sess
 
 An unanswered question keeps its attention state while parallel tools continue. If a waiting event has no reliable call identifier, an unrelated result cannot prove it was answered: the last observed wait remains until an explicit new turn, interruption, session closure or matching elicitation response. A stale source is labeled as a lost signal.
 
-Open the room preferences to move the window to a secondary display. Use the native green window control or the Display menu to enter full screen. You can change evening lighting, rain, reduced motion and low-power behavior.
+Open the room preferences to move the window to a secondary display. Use the native green window control or the Display menu to enter full screen. You can preview Hong Kong daylight, change rain, use reduced motion or low-power behavior, and scale agents with their nameplates from 65% to 135%. Family body colours and numbered badges preserve real root/helper relationships. Layout reserves complete character and nameplate envelopes; movement queues and temporary yielding avoid occupied bodies. Brief clone split/merge overlap is intentional.
+
+The larger Hong Kong clock sits beside a daily activity ledger. It counts distinct observed active identities per Hong Kong calendar day, with separate main-agent and clone counts. Repeated turns count once and app restarts retain the day. It does not rescan the entire day or enumerate every open chat window. Private local persistence stores dates and hashed identities, retains at most fourteen days, and excludes decorative visitors, plain metadata and rejected events.
 
 ## Local data and credits
 

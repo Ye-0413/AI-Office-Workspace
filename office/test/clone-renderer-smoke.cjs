@@ -16,7 +16,7 @@ let snapshot={mode:'live',sessions:[],connections:[],now:Date.now()};
 const task=(id,activity='coding',patch={})=>({id,sessionId:id,provider:'codex',title:'检查真实任务状态',projectPath:'/fixture/clone-observation',activity,status:'active',activeTools:1,lastEventAt:Date.now(),evidence:{source:'hook',rawEvent:'PreToolUse',confidence:'high'},events:[],...patch});
 const root=task('clone-root','planning',{activeTools:0});
 const child=(id,activity='reading',patch={})=>task(id,activity,{parentId:root.id,...patch});
-const evaluate=source=>win.webContents.executeJavaScript(source,true);
+const evaluate=source=>win.webContents.executeJavaScript(source,true).catch(error=>{throw new Error(error.message+" [fixture expression: "+source+"]");});
 const actor=id=>`document.querySelector('.actor[data-session-id="${id}"]')`;
 async function send(sessions){snapshot={...snapshot,sessions,now:Date.now()};win.webContents.send('office:snapshot',snapshot);await wait(60);}
 async function until(source,message,limit=16000){const end=Date.now()+limit;while(Date.now()<end){if(await evaluate(source))return;await wait(80);}throw new Error(message);}
@@ -37,6 +37,7 @@ app.whenReady().then(async()=>{
   await evaluate(`window.cloneDoorOpens=0;window.cloneDoorObserver=new MutationObserver(()=>{if(document.getElementById('studio-door').dataset.open==='true')window.cloneDoorOpens++});window.cloneDoorObserver.observe(document.getElementById('studio-door'),{attributes:true,attributeFilter:['data-open']});`);
   await reduced(false);
   const first=child('clone-first');await send([root,first]);
+  await until(`${actor(first.id)}?.dataset.cloneOrigin===${JSON.stringify(root.id)}`, 'the queued clone must begin at its root');
   const birth=await evaluate(`(()=>{const node=${actor(first.id)},parent=${actor(root.id)},a=new DOMMatrixReadOnly(getComputedStyle(node).transform),b=new DOMMatrixReadOnly(getComputedStyle(parent).transform);return{phase:node.dataset.clonePhase,origin:node.dataset.cloneOrigin,distance:Math.hypot(a.m41-b.m41,a.m42-b.m42),door:document.getElementById('studio-door').dataset.open}})()`);
   assert.equal(birth.origin,root.id);assert.ok(['splitting','working'].includes(birth.phase));assert.ok(birth.distance<20,JSON.stringify(birth));assert.equal(birth.door,'false');
   await capture('clone-splitting');
@@ -54,6 +55,7 @@ app.whenReady().then(async()=>{
   await reduced(true);
   const reopened={...first,turnId:'second-observed-turn',lastEventAt:Date.now()};
   await send([root,reopened]);
+  await until(`${actor(first.id)}?.dataset.cloneOrigin===${JSON.stringify(root.id)}`, 'queued reopened clone must split from its root');
   assert.equal(await evaluate(`${actor(first.id)}.dataset.cloneOrigin`),root.id,'an absorbed identity must split from the main body again on real reopening');
   assert.match(await evaluate(`${actor(root.id)}.querySelector('.actor-relation').textContent`),/1 活跃.*累计 1/);
   const completed={...reopened,status:'idle',activity:'idle',activeTools:0,turnCompletedAt:Date.now()};
@@ -66,6 +68,7 @@ app.whenReady().then(async()=>{
   assert.match(await evaluate(`${actor(root.id)}.querySelector('.actor-relation').textContent`),/0 活跃.*累计 1/);
   const nextTurn={...reopened,turnId:'third-observed-turn',lastEventAt:Date.now()};
   await send([root,nextTurn]);
+  await until(`${actor(first.id)}?.dataset.cloneOrigin===${JSON.stringify(root.id)}`, 'queued reopened clone must split from its root');
   assert.equal(await evaluate(`${actor(first.id)}.dataset.cloneOrigin`),root.id);
   assert.match(await evaluate(`${actor(root.id)}.querySelector('.actor-relation').textContent`),/1 活跃.*累计 1/);
   await send([root,{...nextTurn,status:'closed',closed:true,activeTools:0,activity:'idle'}]);
@@ -73,6 +76,7 @@ app.whenReady().then(async()=>{
   checks.push('a real completed turn absorbs an open native session; repeated snapshots stay absorbed and new work splits again');
   const a=child('clone-a','coding'),b=child('clone-b','testing');await send([root,a,b]);
   const nested=child('clone-nested','searching',{parentId:a.id});await send([root,a,b,nested]);
+  await until(`${actor(nested.id)}?.dataset.cloneOrigin===${JSON.stringify(root.id)}`, 'queued nested clone must split from its root');
   assert.equal(await evaluate(`${actor(nested.id)}.dataset.cloneOrigin`),root.id);
   assert.equal(await evaluate(`document.querySelector('.helper-thread[data-child-id="${nested.id}"]').dataset.parentId`),a.id,'relationship lines must preserve the real immediate parent even when motion originates from the main body');
   assert.match(await evaluate(`${actor(root.id)}.querySelector('.actor-relation').textContent`),/3 活跃.*累计 4/);

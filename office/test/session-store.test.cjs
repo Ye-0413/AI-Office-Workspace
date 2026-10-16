@@ -37,6 +37,23 @@ test('new turn fences late terminal/tool events and bounded duplicate IDs', () =
   assert.equal(store.ingest(event('tool-end', { turnId: 'old', toolCallId: 'a' })), false);
   assert.equal(store.snapshot()[0].activity, 'coding'); assert.equal(store.snapshot()[0].activeTools, 1);
 });
+test('accepted-event subscribers observe facts after acceptance, including deferred replay, and can unsubscribe', () => {
+  let time = 100000;
+  const store = createSessionStore({ now: () => time }), accepted = [], snapshots = [];
+  assert.throws(() => store.onAccepted(null), /Callback/);
+  const unsubscribe = store.onAccepted(e => { accepted.push(e); snapshots.push(store.snapshot()); e.evidence.source = 'mutated-listener-copy'; });
+  const start = event('session-start', { turnId: 't', at: time });
+  assert.equal(store.ingest(start), true); assert.equal(accepted.length, 1);
+  assert.equal(store.ingest(start), false); assert.equal(accepted.length, 1);
+  time += 10;
+  const tool = event('tool-start', { turnId: 't', toolCallId: 'deferred', at: time, activity: 'testing', evidence: { source: 'codex-jsonl' } });
+  assert.equal(store.ingest(tool), false); assert.equal(accepted.length, 1);
+  time += 11000; store.prune();
+  assert.equal(accepted.length, 2); assert.equal(accepted[1].eventId, tool.eventId); assert.equal(accepted[1].at, tool.at);
+  assert.equal(snapshots[1][0].activity, 'testing'); assert.equal(store.snapshot()[0].evidence.source, 'codex-jsonl');
+  assert.equal(store.ingest(tool), false); store.prune(); assert.equal(accepted.length, 2);
+  unsubscribe(); store.ingest(event('metadata', { at: time })); assert.equal(accepted.length, 2);
+});
 test('a positively newer native rollout turn owns its clock despite a late old-turn heartbeat', () => {
   const store = createSessionStore({ now: () => 200000 });
   const fallback = { source: 'codex-jsonl', rawEvent: 'rollout:sustained-snapshot' };

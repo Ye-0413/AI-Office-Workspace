@@ -357,3 +357,92 @@ test('identity registries are bounded to 2048 entries and live/demo instances ca
   assert.equal(live.get(current), name);
   assert.equal(demo.get(current), name, 'same identity derives the same name even across independent registries');
 });
+
+const CLOCK_RESERVED = [{ left: 470, top: 65, right: 830, bottom: 170 }];
+function assertReadableLayout(page, options) {
+  assert.equal(page.layoutFits, true);
+  assert.equal(page.seats.size, page.visible.length);
+  for (const session of page.visible) {
+    const seat = page.seats.get(session.id), actor = { ...options, helper: Boolean(session.parentId) };
+    assert.ok(Scene.legalActorPoint(seat, actor), 'body/tag must fit viewport and avoid reserved display: ' + session.id);
+    for (const other of page.visible) if (other.id !== session.id) assert.equal(Scene.actorsOverlap(seat, actor,
+      page.seats.get(other.id), { ...options, helper: Boolean(other.parentId) }), false, session.id + ' and ' + other.id);
+  }
+}
+
+test('screen-space envelopes match renderer depth, helper and user scales around anchored feet', () => {
+  const point = { x: 50, y: 78 };
+  for (const helper of [false, true]) for (const scale of [.65, 1, 1.35]) {
+    const expectedScale = (.76 + point.y / 500) * (helper ? .84 : 1) * scale;
+    assert.equal(Scene.actorScale(point, { helper, scale }), expectedScale);
+    const bounds = Scene.actorBounds(point, { helper, scale }), raw = Scene.ACTOR_FOOTPRINT[helper ? 'helper' : 'root'];
+    assert.ok(Math.abs(bounds.left - (640 - raw.left * expectedScale)) < 1e-8);
+    assert.ok(Math.abs(bounds.bottom - (561.6 + raw.bottom * expectedScale)) < 1e-8);
+    assert.equal(Scene.legalActorPoint({ x: 2, y: 78 }, { helper, scale }), false);
+    assert.equal(Scene.legalActorPoint({ x: 42, y: 55 }, { helper, scale }), false, 'furniture feet remain excluded');
+  }
+  assert.equal(Scene.actorScale(point, { scale: Infinity }), Scene.actorScale(point));
+});
+
+test('five main actors and three helpers fit readable envelopes at every supported size with a large clock', () => {
+  const sessions = Array.from({ length: 5 }, (_, index) => task('root-' + index));
+  sessions.push(...Array.from({ length: 3 }, (_, index) => task('helper-' + index, 'testing', { parentId: 'root-0' })));
+  const original = structuredClone(sessions);
+  for (const scale of [.65, .8, 1, 1.15, 1.35]) {
+    const options = { scale, reservedRects: CLOCK_RESERVED };
+    const page = Scene.pageSessions(sessions, Scene.ALL_ROOMS, 0, '', options);
+    assert.equal(page.capacity, 5);
+    assert.equal(page.visible.length, 8);
+    assertReadableLayout(page, options);
+    const repeated = Scene.pageSessions(sessions.slice().reverse(), Scene.ALL_ROOMS, 0, '', { ...options, previousSeats: page.seats });
+    assert.deepEqual([...repeated.seats].sort(), [...page.seats].sort(), 'a snapshot must not shuffle valid bodies');
+  }
+  assert.deepEqual(sessions, original, 'layout never mutates observed state');
+});
+
+test('size changes relayout unsafe old envelopes while preserving a selected legal actor when space permits', () => {
+  const sessions = Array.from({ length: 5 }, (_, index) => task('main-' + index));
+  const first = Scene.pageSessions(sessions, Scene.ALL_ROOMS, 0, '', { scale: .65, reservedRects: CLOCK_RESERVED });
+  const options = { scale: 1.35, reservedRects: CLOCK_RESERVED, previousSeats: first.seats };
+  const enlarged = Scene.pageSessions(sessions, Scene.ALL_ROOMS, 0, '', options);
+  assertReadableLayout(enlarged, options);
+  const selected = Scene.pageSessions(sessions.concat(task('a-new-arrival')), Scene.ALL_ROOMS, 0, 'main-4', {
+    scale: 1.35, reservedRects: CLOCK_RESERVED, previousSeats: enlarged.seats,
+  });
+  assert.ok(selected.visible.some(session => session.id === 'main-4'), 'new ID sorting cannot page away a selected root');
+  assert.deepEqual(selected.seats.get('main-4'), enlarged.seats.get('main-4'));
+});
+
+test('a smaller visual viewport reduces page capacity while keeping every root and selected helper accessible', () => {
+  const sessions = Array.from({ length: 9 }, (_, index) => task('root-' + index));
+  sessions.push(...Array.from({ length: 5 }, (_, index) => task('helper-' + index, 'reading', { parentId: 'root-8' })));
+  const options = { scale: 1.35, viewport: { left: 12, top: 390, right: 1268, bottom: 662 } };
+  const first = Scene.pageSessions(sessions, Scene.ALL_ROOMS, 0, '', options);
+  assert.ok(first.capacity < Scene.CAPACITY);
+  assertReadableLayout(first, options);
+  const observed = new Set();
+  for (let index = 0; index < first.pages; index += 1) {
+    const page = Scene.pageSessions(sessions, Scene.ALL_ROOMS, index, '', options);
+    assertReadableLayout(page, options);
+    for (const session of page.visible) if (!session.parentId) observed.add(session.id);
+  }
+  assert.equal(observed.size, 9, 'adaptive pages retain all independent sessions');
+  const selected = Scene.pageSessions(sessions, Scene.ALL_ROOMS, 0, 'helper-4', options);
+  assert.ok(selected.visible.some(session => session.id === 'helper-4'));
+  assert.equal(selected.rootIdsBySession.get('helper-4'), 'root-8');
+  assertReadableLayout(selected, options);
+});
+
+test('a temporarily reserved entrance retains five root slots and keeps overflowing helpers selectable', () => {
+  const sessions = Array.from({ length: 5 }, (_, index) => task('root-' + index));
+  sessions.push(...Array.from({ length: 3 }, (_, index) => task('helper-' + index, 'testing', { parentId: 'root-0' })));
+  for (const scale of [.65, 1, 1.35]) {
+    const options = { scale, reservedRects: CLOCK_RESERVED.concat(Scene.actorBounds({ x: 87, y: 78 }, { scale })) };
+    const page = Scene.pageSessions(sessions, Scene.ALL_ROOMS, 0, 'helper-2', options);
+    assert.equal(page.capacity, 5, 'temporarily yielding the doorway must not change the root page divisor');
+    assert.equal(page.pages, 1);
+    assert.equal(page.visible.filter(session => !session.parentId).length, 5);
+    assert.ok(page.visible.some(session => session.id === 'helper-2'));
+    assertReadableLayout(page, options);
+  }
+});

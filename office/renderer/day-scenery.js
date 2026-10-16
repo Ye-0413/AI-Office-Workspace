@@ -41,6 +41,21 @@
     // Give each preview its own surface. Even repeated changes mid-fade keep
     // the current presentation values, without repainting an outgoing sky.
     views.forEach((view, index) => paint(view, root.OfficeDayCycle.at(Date.now(), {sceneTime:modes[index]})));
+    function updateClock(settings, language, now = Date.now(), state = root.OfficeDayCycle.at(now, settings)) {
+      const clock = document.getElementById('hk-clock');
+      clock.textContent = state.clock;
+      clock.dateTime = new Date(now).toISOString();
+      const [hour, minute] = state.clock.split(':').map(Number);
+      document.querySelector('.wall-hour').style.transform = 'rotate(' + ((hour % 12) * 30 + minute / 2) + 'deg)';
+      document.querySelector('.wall-minute').style.transform = 'rotate(' + (minute * 6) + 'deg)';
+      const label = language === 'en' ? state.labelEn : state.labelZh;
+      document.getElementById('day-phase').textContent = label + (state.preview ? (language === 'en' ? ' · Preview' : ' · 预览') : '');
+      const button = document.getElementById('day-clock');
+      button.setAttribute('aria-label', (language === 'en' ? 'Hong Kong time ' : '香港时间 ') + state.clock + ' · ' + label + (state.preview ? (language === 'en' ? ', time preview' : '，时段预览') : ''));
+      button.querySelector('.day-clock-icon').textContent = state.night ? '☾' : '☀';
+      document.getElementById('day-reset').hidden = !state.preview;
+      return state;
+    }
     function update(settings, language, now = Date.now()) {
       const state = root.OfficeDayCycle.at(now, settings);
       office.dataset.dayPhase = state.phase;
@@ -55,22 +70,11 @@
       world.style.setProperty('--door-sky-top', state.skyTop);
       world.style.setProperty('--door-city', state.skyline);
       world.querySelector('.door-window-lights').style.opacity = state.windowGlow;
-      const clock = document.getElementById('hk-clock');
-      clock.textContent = state.clock;
-      clock.dateTime = new Date(now).toISOString();
-      const [hour, minute] = state.clock.split(':').map(Number);
-      document.querySelector('.wall-hour').style.transform = 'rotate(' + ((hour % 12) * 30 + minute / 2) + 'deg)';
-      document.querySelector('.wall-minute').style.transform = 'rotate(' + (minute * 6) + 'deg)';
-      const label = language === 'en' ? state.labelEn : state.labelZh;
-      document.getElementById('day-phase').textContent = label + (state.preview ? (language === 'en' ? ' · Preview' : ' · 预览') : '');
-      const button = document.getElementById('day-clock');
-      button.setAttribute('aria-label', (language === 'en' ? 'Hong Kong time ' : '香港时间 ') + state.clock + ' · ' + label + (state.preview ? (language === 'en' ? ', time preview' : '，时段预览') : ''));
-      button.querySelector('.day-clock-icon').textContent = state.night ? '☾' : '☀';
-      document.getElementById('day-reset').hidden = !state.preview;
+      updateClock(settings, language, now, state);
       if (first) { layer.dataset.ready = 'true'; first = false; }
       return state;
     }
-    return { update, destroy() { layer.replaceChildren(); } };
+    return { update, updateClock, destroy() { layer.replaceChildren(); } };
   }
   root.OfficeDayScenery = Object.freeze({ create });
 })(window);

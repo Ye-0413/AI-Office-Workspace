@@ -11,7 +11,7 @@ const { normalizeEvent } = require('../lib/provider-events.cjs');
 
 // Run the production Electron entry point with only native surfaces and external
 // observers replaced. The actual settings, adapters and lifecycle store run.
-async function startMain(t) {
+async function startMain(t, { now } = {}) {
   const mainFile = path.join(__dirname, '../main.cjs');
   const requireFromMain = createRequire(mainFile);
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'office-live-runtime-'));
@@ -63,6 +63,8 @@ async function startMain(t) {
       };
       if (name === './lib/codex-monitor.cjs') return { createCodexMonitor: observer('monitor') };
       if (name === './lib/observer-bridge.cjs') return { createObserverBridge: observer('bridge') };
+      if (name === './lib/session-store.cjs' && now) return { createSessionStore: options => requireFromMain(name).createSessionStore({ ...options, now }) };
+      if (name === './lib/activity-stats.cjs' && now) return { createActivityStats: options => requireFromMain(name).createActivityStats({ ...options, now }) };
       return requireFromMain(name);
     },
   };
@@ -81,6 +83,8 @@ test('startup observes live sessions only and exposes no synthetic mode through 
   let snapshot = runtime.invoke('snapshot');
   assert.equal(snapshot.mode, 'live');
   assert.deepEqual(snapshot.sessions, []);
+  assert.equal(snapshot.activityStats.total, 0);
+  assert.equal(snapshot.activityStats.timeZone, 'Asia/Hong_Kong');
   assert.equal(Object.hasOwn(snapshot, 'demo'), false);
   assert.equal(runtime.handlers.has('office:mode'), false);
   assert.equal(runtime.handlers.has('office:demo'), false);
@@ -112,6 +116,9 @@ test('hook and read-only monitor events feed the real store while attention rema
   const snapshot = runtime.invoke('snapshot');
   assert.equal(snapshot.mode, 'live');
   assert.equal(snapshot.sessions.length, 2);
+  assert.equal(snapshot.activityStats.total, 2);
+  assert.equal(snapshot.activityStats.roots, 2);
+  assert.equal(snapshot.activityStats.helpers, 0);
   const waiting = snapshot.sessions.find(session => session.sessionId === 'real-session');
   assert.equal(waiting.id, 'codex:real-session');
   assert.equal(waiting.projectPath, task.cwd);
@@ -124,6 +131,42 @@ test('hook and read-only monitor events feed the real store while attention rema
   assert.equal(runtime.invoke('snapshot').sessions.find(session => session.sessionId === 'real-session').activity, 'waiting-user');
   assert.ok(runtime.sends.some(send => send.channel === 'office:snapshot' && send.snapshot.sessions.length === 2));
   assert.deepEqual(runtime.observations.bridge.connects, []);
+});
+
+test('daily activity follows accepted identities rather than repeated turns or rejected observations', async t => {
+  const runtime = await startMain(t);
+  const emit = raw => runtime.observations.bridge.options.onEvent(normalizeEvent('codex', raw, {receivedAt:Date.now(),source:'hook'}));
+  const base={session_id:'daily-root',turn_id:'first',cwd:'/fixture/daily'};
+  emit({...base,hook_event_name:'UserPromptSubmit'});
+  emit({...base,hook_event_name:'PreToolUse',tool_name:'Bash',tool_use_id:'one',tool_input:{command:'npm test'}});
+  emit({...base,hook_event_name:'PreToolUse',tool_name:'Bash',tool_use_id:'one',tool_input:{command:'npm test'}});
+  assert.equal(runtime.invoke('snapshot').activityStats.total,1);
+  emit({...base,hook_event_name:'SubagentStart',agent_id:'child'});
+  const stats=runtime.invoke('snapshot').activityStats;
+  assert.equal(stats.total,2);assert.equal(stats.roots,1);assert.equal(stats.helpers,1);
+  assert.equal(Object.hasOwn(stats,'agents'),false);
+  assert.deepEqual(runtime.observations.bridge.connects,[]);
+});
+
+test('a positive rollout record accepted by internal deferred replay reaches daily stats exactly once', async t => {
+  let time = Date.now();
+  const runtime = await startMain(t, { now: () => time });
+  const base = { session_id: 'deferred-daily', turn_id: 'same-turn' };
+  const sessionStart = normalizeEvent('codex', { ...base, hook_event_name: 'SessionStart' }, { receivedAt: time, source: 'hook' });
+  assert.equal(runtime.observations.bridge.options.onEvent(sessionStart), true);
+  assert.equal(runtime.invoke('snapshot').activityStats.total, 0, 'SessionStart alone is not positive work');
+  time += 10;
+  const toolStart = normalizeEvent('codex', { ...base, hook_event_name: 'PreToolUse', tool_name: 'Bash', tool_use_id: 'real-call', tool_input: { command: 'npm test' } }, { receivedAt: time, source: 'codex-jsonl' });
+  assert.equal(runtime.observations.monitor.options.onEvent(toolStart), false);
+  assert.equal(runtime.invoke('snapshot').activityStats.total, 0, 'queued evidence has not yet been accepted');
+  time += 11000;
+  [...runtime.timers.values()].find(timer => timer.delay === 5000).callback();
+  let snapshot = runtime.invoke('snapshot');
+  assert.equal(snapshot.sessions[0].activity, 'testing'); assert.equal(snapshot.sessions[0].activeTools, 1);
+  assert.equal(snapshot.activityStats.total, 1); assert.equal(snapshot.activityStats.roots, 1);
+  assert.equal(runtime.observations.monitor.options.onEvent(toolStart), false);
+  [...runtime.timers.values()].find(timer => timer.delay === 5000).callback();
+  snapshot = runtime.invoke('snapshot'); assert.equal(snapshot.activityStats.total, 1);
 });
 
 test('the sandbox bridge offers live observation, settings and local actions without mode/story controls', async () => {

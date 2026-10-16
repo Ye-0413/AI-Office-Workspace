@@ -65,6 +65,10 @@
   });
 
   const phrases = [
+    ['今日活跃 Agent', 'Agents active today'],
+    ['按香港日期统计实际观察到的 Agent，同一会话多轮只计一次；主 Agent 与分身分别去重，重启后保留。', 'Unique agents observed active per Hong Kong day. Repeated turns count once; main agents and clones are counted separately and retained after restart.'],
+    ['Agent 大小', 'Agent size'],
+    ['同步调整角色与名牌，房间自动安排间距。', 'Scale characters and nameplates together. Spacing adjusts automatically.'],
     ['恢复的等待状态', 'Restored observed wait'],
     ['分身出现', 'Clone appearing'],
     ['结束分身', 'Releasing clone'],

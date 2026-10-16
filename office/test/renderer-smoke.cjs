@@ -21,6 +21,11 @@ const checks = [];
 const invokeCalls = [];
 const task = (id, activity, patch = {}) => ({ id, provider: 'codex', sessionId: id, title: ({ a: '修复登录', b: '检查构建', c: '调整界面' })[id] || id, projectPath: '/fixture/office', projectName: 'Fixture Office', activity, status: 'active', lastEventAt: Date.now() - 60000, toolName: '', summary: 'native renderer fixture', evidence: { source: 'official-hook', rawEvent: 'PreToolUse', confidence: 'high' }, activeTools: 1, attention: false, disconnected: false, closed: false, events: [], ...patch });
 const evaluate = source => win.webContents.executeJavaScript(source, true);
+async function until(source, message, milliseconds = 24000) {
+  const end = Date.now() + milliseconds;
+  while (Date.now() < end) { if (await evaluate(source)) return; await wait(40); }
+  throw new Error(message);
+}
 async function check(name, fn) { try { await fn(); checks.push(name); } catch(error) { error.message = name + ': ' + error.message; throw error; } }
 async function capture(name) {
   if (!process.env.MINI_OFFICE_PREVIEW_DIR) return;
@@ -151,7 +156,7 @@ app.whenReady().then(async () => {
 
   sessions = sessions.map(session => session.id === 'a' ? { ...session, activity: 'coding', lastEventAt: Date.now() } : session);
   await send(sessions);
-  await wait(1150);
+  await until(`document.querySelector('.actor[data-session-id="a"]').dataset.walking==='true'`, 'the changed activity must acquire a safe walking reservation');
   await check('a changed activity starts an actual character route', async () => {
     assert.equal(await evaluate(`document.querySelector('.actor[data-session-id="a"]').dataset.walking`), 'true');
   });
@@ -166,7 +171,7 @@ app.whenReady().then(async () => {
   });
   sessions = sessions.map(session => session.id === 'a' ? { ...session, status: 'active', disconnected: false, lastEventAt: Date.now() } : session);
   await send(sessions);
-  await wait(1150);
+  await until(`document.querySelector('.actor[data-session-id="a"]').dataset.walking==='true'`, 'fresh evidence must resume a safe walking route');
   await check('fresh evidence resumes the same activity route after a signal interruption', async () => {
     assert.equal(await evaluate(`document.querySelector('.actor[data-session-id="a"]').dataset.walking`), 'true');
   });
@@ -332,6 +337,7 @@ app.whenReady().then(async () => {
     assert.equal(await evaluate(`document.getElementById('inspect-title').textContent`), 'family-grandchild');
   });
   await check('family colors, parent names, arrows and tree indentation remain visible with reduced motion', async () => {
+    await until(`document.querySelectorAll('.helper-thread').length===2`, 'both safely materialized nested helpers must have their real ancestry links');
     const relation = await evaluate(`(()=>{const root=document.querySelector('.actor[data-session-id="family-root:5"]'),child=document.querySelector('.actor[data-session-id="family-child"]'),grand=document.querySelector('.actor[data-session-id="family-grandchild"]');return{root:root.querySelector('.actor-relation').textContent,child:child.querySelector('.actor-relation').textContent,grand:grand.querySelector('.actor-relation').textContent,colors:[root,child,grand].map(n=>n.style.getPropertyValue('--family-color')),links:document.querySelectorAll('.helper-thread').length,linksVisible:getComputedStyle(document.getElementById('helper-links')).display};})()`);
     assert.match(relation.root,/分身 2 活跃.*累计 2/);assert.match(relation.child,/协助/);assert.match(relation.grand,/协助/);assert.equal(new Set(relation.colors).size,1);assert.equal(relation.links,2);assert.notEqual(relation.linksVisible,'none');
     await evaluate(`document.getElementById('inspect-helper').click()`);

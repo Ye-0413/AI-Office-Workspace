@@ -4,6 +4,7 @@ const path=require('node:path');
 const fs=require('node:fs');
 const {createSettings}=require('./lib/settings.cjs');
 const {createSessionStore}=require('./lib/session-store.cjs');
+const {createActivityStats}=require('./lib/activity-stats.cjs');
 const {createCodexMonitor}=require('./lib/codex-monitor.cjs');
 const {mergeObservationHealth}=require('./lib/observation-health.cjs');
 const {createObserverBridge}=require('./lib/observer-bridge.cjs');
@@ -14,14 +15,15 @@ app.setName('AI Mini Office');
 if(process.env.MINI_OFFICE_DATA_DIR){fs.mkdirSync(process.env.MINI_OFFICE_DATA_DIR,{recursive:true,mode:0o700});app.setPath('userData',path.resolve(process.env.MINI_OFFICE_DATA_DIR));}
 if(!app.requestSingleInstanceLock()){app.quit();}
 else {
-let win=null,settings,liveStore,monitor,bridge,pruneTimer=null,refreshTimer=null,ready=false;
+let win=null,settings,liveStore,activityStats,monitor,bridge,pruneTimer=null,refreshTimer=null,ready=false;
 const rendererErrors=[];
 function current(){
   const liveSessions=liveStore.snapshot();
   const monitorStatus=monitor.status(),connections=bridge.getConnections().map(c=>mergeObservationHealth(c,monitorStatus,liveSessions));
-  return{mode:'live',now:Date.now(),sessions:liveSessions,connections,monitor:{running:monitorStatus.running,error:monitorStatus.error||null},version:app.getVersion(),packaged:app.isPackaged};
+  return{mode:'live',now:Date.now(),sessions:liveSessions,activityStats:activityStats.snapshot(),connections,monitor:{running:monitorStatus.running,error:monitorStatus.error||null},version:app.getVersion(),packaged:app.isPackaged};
 }
 function broadcast(){if(win&&!win.isDestroyed()&&ready)win.webContents.send('office:snapshot',current());}
+function observe(event){return liveStore.ingest(event);}
 function applySettings(){if(win&&!win.isDestroyed()){win.setAlwaysOnTop(settings.get().alwaysOnTop);win.setTitle(settings.get().language==='en'?'Little Studio':'小小工作室');refreshMenu();}}
 function refreshMenu(){const en=settings.get().language==='en';const label=(zh,english)=>en?english:zh;Menu.setApplicationMenu(Menu.buildFromTemplate([{label:app.name,submenu:[{role:'about'},{type:'separator'},{label:label('显示办公室','Show studio'),click:()=>win.show()},{type:'separator'},{role:'quit'}]},{label:label('编辑','Edit'),submenu:[{role:'undo'},{role:'redo'},{type:'separator'},{role:'cut'},{role:'copy'},{role:'paste'},{role:'selectAll'}]},{label:label('显示','View'),submenu:[{role:'togglefullscreen'},{role:'minimize'},{role:'zoom'}]}]));}
 function moveToDisplay(id){const display=screen.getAllDisplays().find(d=>d.id===id);if(!display)throw new Error('显示器已断开');const area=display.workArea;win.setFullScreen(false);win.setBounds({x:area.x,y:area.y,width:Math.min(1280,area.width),height:Math.min(720,area.height)});settings.set({displayId:id});win.show();return{id:display.id};}
@@ -29,9 +31,9 @@ function bind(name,handler){ipcMain.handle('office:'+name,(event,...args)=>{if(!
 async function writeSmokeReport(){
   const out=process.env.MINI_OFFICE_SMOKE_REPORT;
   if(!out)return;
-  const report={at:new Date().toISOString(),platform:process.platform,arch:process.arch,packaged:app.isPackaged,version:app.getVersion(),preloadReady:ready,rendererErrors,sessions:liveStore.snapshot().map(s=>({id:s.id,parentId:s.parentId,provider:s.provider,activity:s.activity,status:s.status,child:!!s.parentId})),assetChecks:{room:fs.existsSync(path.join(__dirname,'assets','office-room.jpg')),typing:fs.existsSync(path.join(__dirname,'assets','avatars','clawd-working-typing.svg'))},monitor:monitor.status()};
+  const report={at:new Date().toISOString(),platform:process.platform,arch:process.arch,packaged:app.isPackaged,version:app.getVersion(),preloadReady:ready,rendererErrors,activityStats:activityStats.snapshot(),sessions:liveStore.snapshot().map(s=>({id:s.id,parentId:s.parentId,provider:s.provider,activity:s.activity,status:s.status,child:!!s.parentId})),assetChecks:{room:fs.existsSync(path.join(__dirname,'assets','office-room.jpg')),typing:fs.existsSync(path.join(__dirname,'assets','avatars','clawd-working-typing.svg'))},monitor:monitor.status()};
   if(win&&!win.isDestroyed()&&ready){
-    try{report.scene=await win.webContents.executeJavaScript("({actors:[...document.querySelectorAll('.actor')].map(node=>({id:node.dataset.sessionId,helper:node.dataset.helper==='true',phase:node.dataset.phase,walking:node.dataset.walking==='true'})),quiet:document.getElementById('office').dataset.quiet==='true',mode:document.getElementById('office').dataset.mode,project:document.getElementById('project-select').value,providerRows:document.querySelectorAll('.provider-row').length})");}
+    try{report.scene=await win.webContents.executeJavaScript("({actors:[...document.querySelectorAll('.actor')].map(node=>({id:node.dataset.sessionId,helper:node.dataset.helper==='true',phase:node.dataset.phase,walking:node.dataset.walking==='true',visible:getComputedStyle(node).visibility!=='hidden'&&Number(getComputedStyle(node).opacity)>0})),quiet:document.getElementById('office').dataset.quiet==='true',mode:document.getElementById('office').dataset.mode,project:document.getElementById('project-select').value,providerRows:document.querySelectorAll('.provider-row').length})");}
     catch(error){report.sceneError=String(error.message).slice(0,200);}
   }
   fs.writeFileSync(out,JSON.stringify(report,null,2)+'\n',{mode:0o600});
@@ -39,9 +41,11 @@ async function writeSmokeReport(){
 app.on('second-instance',()=>{if(win){if(win.isMinimized())win.restore();win.show();win.focus();}});
 app.whenReady().then(()=>{
   settings=createSettings(app.getPath('userData'));
+  activityStats=createActivityStats({dataDir:app.getPath('userData')});
   liveStore=createSessionStore({staleMs:180000});
-  monitor=createCodexMonitor({onEvent:event=>liveStore.ingest(event)});
-  bridge=createObserverBridge({dataDir:app.getPath('userData'),appRoot:__dirname,electronPath:process.execPath,withNativeLock,onEvent:event=>liveStore.ingest(event)});
+  liveStore.onAccepted(event=>activityStats.record(event));
+  monitor=createCodexMonitor({onEvent:observe});
+  bridge=createObserverBridge({dataDir:app.getPath('userData'),appRoot:__dirname,electronPath:process.execPath,withNativeLock,onEvent:observe});
   liveStore.onChange(()=>broadcast());
   win=new BrowserWindow({width:1280,height:720,minWidth:800,minHeight:450,title:'AI Mini Office',backgroundColor:'#251d17',titleBarStyle:'hiddenInset',autoHideMenuBar:true,webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,webSecurity:true}});
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
@@ -65,5 +69,5 @@ app.whenReady().then(()=>{
   win.on('closed',()=>{win=null;});
 }).catch(error=>{console.error('[AI Mini Office]',error);app.quit();});
 app.on('window-all-closed',()=>app.quit());
-app.on('before-quit',()=>{ready=false;if(pruneTimer)clearInterval(pruneTimer);if(refreshTimer)clearInterval(refreshTimer);monitor?.stop();bridge?.stop();});
+app.on('before-quit',()=>{ready=false;if(pruneTimer)clearInterval(pruneTimer);if(refreshTimer)clearInterval(refreshTimer);monitor?.stop();bridge?.stop();activityStats?.close();});
 }

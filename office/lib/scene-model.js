@@ -10,6 +10,14 @@
   const WORLD = Object.freeze({ width: 1280, height: 720 });
   const CAPACITY = 5;
   const ALL_ROOMS = '__office_all_projects__';
+  const ACTOR_GAP = 12;
+  const ACTOR_VIEWPORT = Object.freeze({ left: 12, top: 72, right: 1268, bottom: 662 });
+  // Local CSS pixels around the actor's feet. This includes the clipped body,
+  // all three name-tag lines, its family border and the selected keepsake.
+  const ACTOR_FOOTPRINT = Object.freeze({
+    root: Object.freeze({ left: 112, right: 120, top: 132, bottom: 78 }),
+    helper: Object.freeze({ left: 116, right: 124, top: 132, bottom: 76 }),
+  });
   const ZONES = Object.freeze({
     library: { name: '资料书架', x: 19, y: 44, seats: [[19, 44], [30, 46], [7, 44], [30, 70], [15, 83]] },
     board: { name: '构思白板', x: 47, y: 43, seats: [[45, 43], [59, 43], [31, 44], [72, 44], [30, 70]] },
@@ -56,6 +64,34 @@
   const inRoom = (session, roomKey) => roomKey === ALL_ROOMS || projectKey(session) === roomKey;
   const isClosed = (session) => session.closed === true || session.status === 'closed';
   const needsAttention = (session) => !isClosed(session) && (session.attention === true || session.activity === 'waiting-user' || session.activity === 'error');
+
+  const agentScale = value => Math.max(.65, Math.min(1.35, Number.isFinite(Number(value)) && Number(value) > 0 ? Number(value) : 1));
+  function actorScale(point, { helper = false, scale = 1 } = {}) {
+    return (.76 + finite(point && point.y) / 500) * (helper ? .84 : 1) * agentScale(scale);
+  }
+  function actorBounds(point, options = {}) {
+    const footprint = options.helper ? ACTOR_FOOTPRINT.helper : ACTOR_FOOTPRINT.root;
+    const scale = actorScale(point, options), x = finite(point && point.x) * WORLD.width / 100, y = finite(point && point.y) * WORLD.height / 100;
+    const left = x - footprint.left * scale, right = x + footprint.right * scale;
+    const top = y - footprint.top * scale, bottom = y + footprint.bottom * scale;
+    return { left, top, right, bottom, width: right - left, height: bottom - top };
+  }
+  function boundsOverlap(a, b, gap = ACTOR_GAP) {
+    const clearance = Math.max(0, finite(gap));
+    return a.left < b.right + clearance - 1e-7 && a.right > b.left - clearance + 1e-7
+      && a.top < b.bottom + clearance - 1e-7 && a.bottom > b.top - clearance + 1e-7;
+  }
+  function actorsOverlap(a, aOptions, b, bOptions, gap = ACTOR_GAP) {
+    return boundsOverlap(actorBounds(a, aOptions), actorBounds(b, bOptions), gap);
+  }
+  function legalActorPoint(point, options = {}) {
+    if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y) || point.x < 5 || point.x > 95 || point.y < 40.7 || point.y > 86) return false;
+    if (OBSTACLES.some(rect => inside(point, rect, .6))) return false;
+    const bounds = actorBounds(point, options), viewport = options.viewport || ACTOR_VIEWPORT;
+    if (bounds.left < viewport.left - 1e-7 || bounds.right > viewport.right + 1e-7 || bounds.top < viewport.top - 1e-7 || bounds.bottom > viewport.bottom + 1e-7) return false;
+    return !(options.reservedRects || []).some(rect => rect && [rect.left, rect.top, rect.right, rect.bottom].every(Number.isFinite)
+      && boundsOverlap(bounds, rect, 4));
+  }
 
   function providerName(provider) {
     const id = String(provider || '').toLowerCase();
@@ -218,19 +254,45 @@
     // but an entirely absorbed family must not consume an empty root slot.
     const roots = room.filter(session => rootIdsBySession.get(session.id) === session.id && eligibleFamilies.has(session.id))
       .sort((a, b) => String(a.id).localeCompare(String(b.id)));
-    const pages = Math.max(1, Math.ceil(roots.length / CAPACITY));
-    const current = Math.max(0, Math.min(pages - 1, finite(page)));
-    const pageHeads = roots.slice(current * CAPACITY, (current + 1) * CAPACITY);
-    const visible = pageHeads.filter(session => !suppressed(session));
-    const rootIds = new Set(pageHeads.map((session) => session.id));
-    // Preserve full ancestry before suppressing absorbed idle bodies. Removing
-    // a cached parent earlier would promote its working descendant to a root.
-    const helpers = room.filter(session => !rootIds.has(session.id) && rootIds.has(rootIdsBySession.get(session.id))
-      && !suppressed(session));
-    helpers.sort((a, b) => Number(b.id === preferredId) - Number(a.id === preferredId) || Number(needsAttention(b)) - Number(needsAttention(a)) || String(a.id).localeCompare(String(b.id)));
-    // Three temporary helpers fit while retaining normal-size readable main tasks.
-    const shownHelpers = helpers.slice(0, 3);
-    return { page: current, pages, roots, rootIdsBySession, visible: visible.concat(shownHelpers), helperOverflow: Math.max(0, helpers.length - shownHelpers.length), hidden: Math.max(0, room.length - visible.length - shownHelpers.length) };
+    let result, pageCapacity = CAPACITY;
+    const hasHelpers = room.some(session => !suppressed(session) && rootIdsBySession.get(session.id) !== session.id);
+    // Capacity is a property of the available room, never of which page was
+    // visited first. Reserve one helper when families exist so roster selection
+    // cannot create a different page divisor and skip independent roots.
+    while (pageCapacity > 1) {
+      const probe = Array.from({ length: pageCapacity }, (_, index) => ({ id: '__layout-root-' + index, activity: 'coding' }));
+      if (hasHelpers) probe.push({ id: '__layout-helper', parentId: probe[0].id, activity: 'coding' });
+      if (assignSeats(probe, new Map(), options).fits) break;
+      pageCapacity -= 1;
+    }
+    // Reserve the same readable envelopes used by rendering and walking. If a
+    // larger scale or overlay reduces space, change pages rather than stack bodies.
+    {
+      const capacity = pageCapacity;
+      const pages = Math.max(1, Math.ceil(roots.length / capacity));
+      let current = Math.max(0, Math.min(pages - 1, Math.floor(finite(page))));
+      const preferredRoot = rootIdsBySession.get(preferredId);
+      const selectedIndex = roots.findIndex(session => session.id === preferredRoot);
+      if (selectedIndex >= 0) current = Math.floor(selectedIndex / capacity);
+      const pageHeads = roots.slice(current * capacity, (current + 1) * capacity);
+      const mains = pageHeads.filter(session => !suppressed(session));
+      const rootIds = new Set(pageHeads.map(session => session.id));
+      // Keep full ancestry before hiding cached bodies; nested helpers retain
+      // their original parent even when that parent is only a virtual group.
+      const helpers = room.filter(session => !rootIds.has(session.id) && rootIds.has(rootIdsBySession.get(session.id)) && !suppressed(session));
+      helpers.sort((a, b) => Number(b.id === preferredId) - Number(a.id === preferredId) || Number(needsAttention(b)) - Number(needsAttention(a)) || String(a.id).localeCompare(String(b.id)));
+      const minimumHelpers = helpers.some(session => session.id === preferredId) ? 1 : 0;
+      for (let count = Math.min(3, helpers.length); count >= minimumHelpers; count -= 1) {
+        const visible = mains.concat(helpers.slice(0, count));
+        const seats = assignSeats(visible, options.previousSeats || new Map(), { ...options, preferredId });
+        result = { page: current, pages, roots, rootIdsBySession, visible, capacity, helperCapacity: count, seats,
+          helperOverflow: Math.max(0, helpers.length - count), hidden: Math.max(0, room.length - visible.length), layoutFits: seats.fits };
+        if (seats.fits) return result;
+      }
+    }
+    // An overlay can occupy the entire room. Keep every source task and page
+    // selectable, but explicitly report that no body has safe visual space.
+    return { ...result, visible: [], seats: new Map(), hidden: room.length, layoutFits: false };
   }
 
   function hash(value) {
@@ -239,36 +301,111 @@
     return result >>> 0;
   }
 
-  function assignSeats(sessions, previous = new Map()) {
-    const result = new Map();
-    const occupied = [];
-    const ordered = sessions.slice().sort((a, b) => (a.parentId ? 1 : 0) - (b.parentId ? 1 : 0) || String(a.id).localeCompare(String(b.id)));
-    for (const session of ordered) {
-      const spec = activitySpec(session);
-      const old = previous.get(session.id);
-      if (spec.stale && old) {
-        result.set(session.id, { ...old, stale: true });
-        occupied.push(old);
-        continue;
-      }
-      let candidates = ZONES[spec.zone].seats.map(([x, y]) => ({ x, y }));
-      if (session.parentId && result.has(session.parentId)) {
-        const parent = result.get(session.parentId);
-        // Helpers may work at their own furniture; when sharing a station they stand beside it.
-        if (parent.zone === spec.zone) candidates = [{ x: parent.x + 8, y: parent.y - 3 }, { x: parent.x - 8, y: parent.y - 3 }, ...candidates];
-      }
-      const starting = hash(session.id) % Math.min(2, candidates.length);
-      if (starting) candidates = candidates.slice(starting).concat(candidates.slice(0, starting));
-      if (old && old.zone === spec.zone) candidates.unshift({ x: old.x, y: old.y });
-      const legal = (point) => point.x >= 5 && point.x <= 95 && point.y >= 40 && point.y <= 86 && !OBSTACLES.some((rect) => inside(point, rect, .6));
-      const score = (point) => occupied.reduce((minimum, other) => Math.min(minimum, distance(point, other)), 100);
-      let point = candidates.find((candidate) => legal(candidate) && score(candidate) >= (session.parentId ? 6 : 10));
-      if (!point) point = candidates.filter(legal).sort((a, b) => score(b) - score(a))[0] || { x: 49, y: 84 };
-      const seat = { ...point, zone: spec.zone, depth: .76 + point.y / 500, helper: Boolean(session.parentId) };
-      occupied.push(seat);
-      result.set(session.id, seat);
+  function assignSeats(sessions, previous = new Map(), options = {}) {
+    const gap = Number.isFinite(options.gap) ? Math.max(0, options.gap) : ACTOR_GAP;
+    const descriptors = sessions.map(session => {
+      const old = previous.get(session.id), spec = activitySpec(session);
+      const zone = spec.stale && old ? old.zone : spec.zone;
+      return { session, old, spec, zone, helper: Boolean(session.parentId), scale: agentScale(options.scale) };
+    }).sort((a, b) => Number(b.session.id === options.preferredId) - Number(a.session.id === options.preferredId)
+      || Number(a.helper) - Number(b.helper) || String(a.session.id).localeCompare(String(b.session.id)));
+    const safe = (point, actor, placed) => legalActorPoint(point, { ...options, ...actor })
+      && !placed.some(other => actorsOverlap(point, actor, other.point, other.actor, gap));
+    const finish = placed => {
+      const seats = new Map(placed.map(({ actor, point }) => [actor.session.id, {
+        x: point.x, y: point.y, zone: actor.zone, depth: .76 + point.y / 500, helper: actor.helper,
+        ...(actor.spec.stale ? { stale: true } : {}),
+      }]));
+      // Map metadata avoids a second, divergent fit check in callers.
+      Object.defineProperties(seats, { fits: { value: placed.length === sessions.length }, unplacedIds: {
+        value: descriptors.filter(actor => !seats.has(actor.session.id)).map(actor => actor.session.id),
+      } });
+      return seats;
+    };
+    const placed = [];
+    for (const actor of descriptors) {
+      const candidates = ZONES[actor.zone].seats.map(([x, y]) => ({ x, y }));
+      const offset = hash(actor.session.id) % Math.min(2, candidates.length);
+      if (offset) candidates.push(...candidates.splice(0, offset));
+      if (actor.old && (actor.spec.stale || actor.old.zone === actor.zone)) candidates.unshift(actor.old);
+      const target = candidates[0];
+      const alternatives = [];
+      for (const y of [41, 42.5, 44, 46, 70, 73, 76, 78, 80, 82, 84]) for (let x = 7; x <= 94; x += 3) alternatives.push({ x, y });
+      alternatives.sort((a, b) => distance(a, target) - distance(b, target) || a.y - b.y || a.x - b.x);
+      const point = candidates.concat(alternatives).find(point => safe(point, actor, placed));
+      if (!point) break;
+      placed.push({ actor, point });
     }
-    return result;
+    if (placed.length === descriptors.length) return finish(placed);
+
+    // Two pedestrian rows give a bounded, deterministic packing fallback. Full
+    // rectangles are justified across the viewport; helpers can clear a central
+    // clock at the upper row while larger main agents occupy the outer lanes.
+    const viewport = options.viewport || ACTOR_VIEWPORT;
+    const rows = actors => {
+      if (!actors.length) return [[]];
+      const entries = actors.map(actor => {
+        const y = actor.row === 0 ? (actor.helper ? 42.5 : 41) : 78;
+        const bounds = actorBounds({ x: 0, y }, actor);
+        return { actor, y, bounds };
+      });
+      const width = entries.reduce((sum, entry) => sum + entry.bounds.width, 0);
+      const ranges = [[viewport.left, viewport.right]];
+      // A temporarily reserved doorway may occupy one end of a pedestrian
+      // row. Pack into the remaining interval instead of wasting that whole
+      // row or changing a root's page just because an arrival needs space.
+      for (const rect of options.reservedRects || []) if (rect && entries.some(entry => entry.bounds.top < rect.bottom + 4 && entry.bounds.bottom > rect.top - 4)) {
+        ranges.push([viewport.left, Math.min(viewport.right, rect.left - 4)], [Math.max(viewport.left, rect.right + 4), viewport.right]);
+      }
+      return ranges.filter(([left, right]) => right - left - width >= gap * (entries.length - 1) - 1e-7).map(([left, right]) => {
+        const free = right - left - width;
+        const spacing = entries.length > 1 ? free / (entries.length - 1) : 0;
+        let x = entries.length === 1 ? (left + right - width) / 2 : left;
+        return entries.map(entry => {
+          const point = { x: (x - entry.bounds.left) * 100 / WORLD.width, y: entry.y };
+          x += entry.bounds.width + spacing;
+          return { actor: entry.actor, point };
+        });
+      });
+    };
+    let solution = null;
+    const permutations = (remaining, order, split) => {
+      if (solution) return;
+      if (!remaining.length) {
+        const top = rows(order.slice(0, split).map(actor => ({ ...actor, row: 0 })));
+        const bottom = rows(order.slice(split).map(actor => ({ ...actor, row: 1 })));
+        for (const upper of top) for (const lower of bottom) {
+          const candidate = upper.concat(lower), checked = [];
+          let valid = true;
+          for (const entry of candidate) { if (!safe(entry.point, entry.actor, checked)) { valid = false; break; } checked.push(entry); }
+          if (!valid) continue;
+          // A deliberate selection is allowed to retain its old position whenever
+          // the same complete layout remains legal with that body anchored there.
+          const selected = candidate.find(entry => entry.actor.session.id === options.preferredId && entry.actor.old);
+          if (selected && safe(selected.actor.old, selected.actor, candidate.filter(entry => entry !== selected))) selected.point = selected.actor.old;
+          solution = candidate;
+          return;
+        }
+        return;
+      }
+      const triedFootprints = new Set();
+      for (let index = 0; index < remaining.length; index += 1) {
+        // IDs and observed activities do not change an envelope. Equivalent
+        // permutations need only one fit check, bounding the eight-body search
+        // by root/helper arrangements rather than 8! identical rectangles.
+        const footprint = remaining[index].helper ? 'helper' : 'root';
+        if (triedFootprints.has(footprint)) continue;
+        triedFootprints.add(footprint);
+        permutations(remaining.slice(0, index).concat(remaining.slice(index + 1)), order.concat(remaining[index]), split);
+        if (solution) break;
+      }
+    };
+    if (descriptors.length <= 8) {
+      const splitOrder = Array.from({ length: Math.min(4, descriptors.length) + 1 }, (_, index) => index)
+        .filter(split => descriptors.length - split <= 4).sort((a, b) => Math.abs(a - descriptors.length / 2) - Math.abs(b - descriptors.length / 2));
+      for (const split of splitOrder) { permutations(descriptors, [], split); if (solution) break; }
+    }
+    return finish(solution || placed);
   }
 
   function inside(point, rect, margin = 0) {
@@ -332,5 +469,5 @@
     return chars.length > length ? chars.slice(0, length).join('') + '…' : title;
   }
 
-  return { WORLD, CAPACITY, ALL_ROOMS, ZONES, SPECS, OBSTACLES, timestamp, distance, projectKey, inRoom, providerName, identityName, createIdentityRegistry, isClosed, needsAttention, activitySpec, roomsFor, chooseRoom, pageSessions, assignSeats, route, segmentHitsRect, shortTitle };
+  return { WORLD, CAPACITY, ALL_ROOMS, ZONES, SPECS, OBSTACLES, ACTOR_GAP, ACTOR_VIEWPORT, ACTOR_FOOTPRINT, actorScale, actorBounds, boundsOverlap, actorsOverlap, legalActorPoint, timestamp, distance, projectKey, inRoom, providerName, identityName, createIdentityRegistry, isClosed, needsAttention, activitySpec, roomsFor, chooseRoom, pageSessions, assignSeats, route, segmentHitsRect, shortTitle };
 });

@@ -9,6 +9,7 @@ const DEFERRED_GLOBAL = 1024;
 function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 100 } = {}) {
   const sessions = new Map();
   const listeners = new Set();
+  const acceptedListeners = new Set();
   const seen = new Map();
   const deferred = new Map();
   const deferredReplay = Symbol('observed-fallback-record');
@@ -21,6 +22,7 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
     while (set.size > limit) set.delete(set.values().next().value);
   };
   const emit = () => { for (const listener of listeners) { try { listener(snapshot()); } catch {} } };
+  const accepted = event => { for (const listener of acceptedListeners) { try { listener({ ...event, evidence: { ...event.evidence } }); } catch {} } };
   const actorId = event => `${event.provider}:${encodeURIComponent(event.sessionId)}${event.subagentId ? `:${encodeURIComponent(event.subagentId)}` : ''}`;
   const isFallback = event => /jsonl|rollout/.test(event.evidence?.source || '');
   const isHook = event => /hook|upstream/.test(event.evidence?.source || '') && !isFallback(event);
@@ -199,7 +201,7 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
           const parent = sessions.get(s.parentId);
           if (parent) { settle(parent, at); retainPendingState(parent); }
         }
-        prune(false); emit(); return true;
+        prune(false); accepted(event); emit(); return true;
       }
       const elicitationResolved = event.evidence?.rawEvent === 'ElicitationResult'
         && [...s.waits.values()].some(wait => wait.rawEvent === 'Elicitation' && (!event.toolCallId || event.toolCallId === wait.callId));
@@ -219,7 +221,7 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
         s.lastEventAt = Math.max(s.lastEventAt, at);
       }
       settle(s, at); retainPendingState(s);
-      prune(false); emit(); return true;
+      prune(false); accepted(event); emit(); return true;
     }
     if (isHook(event)) { s.hookAt = Math.max(s.hookAt, at); s.hookReceivedAt = now(); s.hookTurnId = event.turnId || s.turnId; }
     if (event.event === 'turn-start' || (!s.turnId && event.turnId && !terminal.has(event.event))) {
@@ -313,7 +315,7 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
       summary: s.summary, toolName: event.toolName || '', outcome: event.outcome,
       evidence: event.evidence || {} });
     s.events = s.events.slice(-12);
-    prune(false); emit();
+    prune(false); accepted(event); emit();
     return true;
   }
 
@@ -368,7 +370,10 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
     return changed;
   }
   return { ingest, snapshot, prune, clear() { sessions.clear(); seen.clear(); deferred.clear(); emit(); },
-    onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); } };
+    onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+    // Includes a real deferred record accepted during prune; neither queueing,
+    // stale/duplicate rejection nor lease expiration alone emits an event.
+    onAccepted(fn) { if (typeof fn !== 'function') throw new TypeError('Callback required'); acceptedListeners.add(fn); return () => acceptedListeners.delete(fn); } };
 }
 
 module.exports = { createSessionStore };
