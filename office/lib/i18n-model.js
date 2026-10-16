@@ -460,7 +460,26 @@
     ['人工输入等待已结束', 'Human input wait ended'],
     ['工具已返回', 'Tool returned']
   ];
-  const copy = new Map([...phrases,...connectionPhrases]);
+  const usagePhrases = [
+    ['使用记录', 'Usage history'], ['关闭使用记录', 'Close usage history'],
+    ['使用概览', 'Usage overview'], ['历史记录分页', 'Agent history pages'], ['事件时间线分页', 'Event timeline pages'],
+    ['留在本机的工作足迹', 'Work footprints, kept on this Mac'],
+    ['这里只统计本机已观测的 Agent 活动，不代表 token 或费用；应用关闭期间不计时，历史记录不会重新进入房间。', 'Only agent activity observed on this Mac is counted, not tokens or cost. Time while the app is closed is excluded; history never re-enters the room.'],
+    ['时间范围', 'Date range'], ['近 7 天', 'Last 7 days'], ['近 30 天', 'Last 30 days'], ['全部时间', 'All time'], ['自选日期', 'Custom dates'],
+    ['AI 工具', 'AI tool'], ['全部工具', 'All tools'], ['角色关系', 'Relationship'], ['全部角色', 'All agents'], ['主 Agent', 'Main agents'], ['分身', 'Clones'],
+    ['开始日期（香港）', 'From (Hong Kong)'], ['结束日期（香港）', 'To (Hong Kong)'], ['刷新', 'Refresh'],
+    ['Agent 历史', 'Agent history'], ['上一页', 'Previous'], ['下一页', 'Next'], ['事件时间线', 'Event timeline'], ['收起', 'Collapse'],
+    ['以下时间均为香港时间 · Asia/Hong_Kong', 'All times are Hong Kong time · Asia/Hong_Kong'],
+    ['导出 CSV', 'Export CSV'], ['打开日志文件夹', 'Open log folder'],
+    ['记录保存在本机；此面板只展示身份、关系与活动元数据，不展示对话正文或提示词。', 'Records stay on this Mac. This panel shows identity, relationships and activity metadata, without conversation text or prompts.']
+  ];
+  const setupPhrases = [
+    ['一键初始化本机工具','Set up local tools in one click'], ['一键初始化','Initialize tools'], ['重试失败项','Retry failures'],
+    ['查看逐项结果','Per-tool results'],
+    ['自动识别已有 AI 工具，逐项安装或更新观察配置，并保留原有配置。未检测到的工具会跳过；信任确认仍在原工具中完成。','Detect existing AI tools, then install or update observation configuration while preserving current settings. Undetected tools are skipped; trust is confirmed in the original tool.'],
+    ['配置完成不等于已收到真实活动；下方详情会说明信任、重启或新会话要求。','Configuration does not confirm live activity. Details below show trust, restart or new-session requirements.']
+  ];
+  const copy = new Map([...phrases,...connectionPhrases,...usagePhrases,...setupPhrases]);
   const connectionChinese = new Map(connectionPhrases.map(([zh,en])=>[en,zh]));
   for (const [zh, en] of Object.values(keys)) if (!zh.includes('{') && zh !== en) copy.set(zh, en);
   const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);

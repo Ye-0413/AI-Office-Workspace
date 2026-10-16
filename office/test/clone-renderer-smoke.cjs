@@ -38,8 +38,8 @@ app.whenReady().then(async()=>{
   await reduced(false);
   const first=child('clone-first');await send([root,first]);
   await until(`${actor(first.id)}?.dataset.cloneOrigin===${JSON.stringify(root.id)}`, 'the queued clone must begin at its root');
-  const birth=await evaluate(`(()=>{const node=${actor(first.id)},parent=${actor(root.id)},a=new DOMMatrixReadOnly(getComputedStyle(node).transform),b=new DOMMatrixReadOnly(getComputedStyle(parent).transform);return{phase:node.dataset.clonePhase,origin:node.dataset.cloneOrigin,distance:Math.hypot(a.m41-b.m41,a.m42-b.m42),door:document.getElementById('studio-door').dataset.open}})()`);
-  assert.equal(birth.origin,root.id);assert.ok(['splitting','working'].includes(birth.phase));assert.ok(birth.distance<20,JSON.stringify(birth));assert.equal(birth.door,'false');
+  const birth=await evaluate(`(()=>{const node=${actor(first.id)},parent=${actor(root.id)},firstFrame=node.getAnimations().flatMap(animation=>animation.effect.getKeyframes()).find(frame=>typeof frame.transform==='string'),a=new DOMMatrixReadOnly(firstFrame?.transform||node.style.transform),b=new DOMMatrixReadOnly(getComputedStyle(parent).transform);return{phase:node.dataset.clonePhase,origin:node.dataset.cloneOrigin,startDistance:Math.hypot(a.m41-b.m41,a.m42-b.m42),door:document.getElementById('studio-door').dataset.open}})()`);
+  assert.equal(birth.origin,root.id);assert.ok(['splitting','working'].includes(birth.phase));assert.ok(birth.startDistance<.1,JSON.stringify(birth));assert.equal(birth.door,'false');
   await capture('clone-splitting');
   await until(`${actor(first.id)}?.dataset.clonePhase==='working'&&${actor(first.id)}?.dataset.walking!=='true'`,'the new clone must finish its route');
   assert.match(await evaluate(`${actor(root.id)}.querySelector('.actor-relation').textContent`),/1 活跃.*累计 1/);

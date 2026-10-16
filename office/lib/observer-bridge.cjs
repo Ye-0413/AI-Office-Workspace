@@ -8,6 +8,8 @@ const { createClaudeHookOperations } = require('../src/claude-hook-operations.js
 const { actorKey } = require('./provider-events.cjs');
 const { inspectHermes, mutateHermes } = require('./hermes-observer.cjs');
 const { PROVIDER_IDS, getProvider } = require('./provider-catalog.cjs');
+const { enrichConnections } = require('./provider-detection.cjs');
+const { isObserverCommandTemplate } = require('./observer-command-owner.cjs');
 const { createUpstreamIntegrations, EVENTS: UPSTREAM_EVENTS } = require('./upstream-integrations.cjs');
 const { PROVIDERS: PLUGIN_PROVIDERS, inspectPlugin, mutatePlugin } = require('./plugin-integrations.cjs');
 const { PROVIDERS: SPECIAL_PROVIDERS, EVENTS: SPECIAL_EVENTS, inspectSpecial, mutateSpecial } = require('./special-integrations.cjs');
@@ -247,7 +249,7 @@ function createObserverBridge(options = {}) {
   const integrations=createUpstreamIntegrations({homeDir,env,readConfig,commandOptions,buildCommand:(provider,event)=>buildObserverCommand(commandOptions,provider,event)});
 
   function commands(provider) { return new Set(EVENTS[provider].map(event => buildObserverCommand(commandOptions, provider, event))); }
-  function owned(entry, provider) { return object(entry) && typeof entry.command === 'string' && commands(provider).has(entry.command); }
+  function owned(entry, provider) { return object(entry) && typeof entry.command === 'string' && (commands(provider).has(entry.command) || isObserverCommandTemplate(entry.command, { provider, events: EVENTS[provider] })); }
 
   function countInstalled(provider, snapshot) {
     const hooks = snapshot.value.hooks;
@@ -448,7 +450,7 @@ function createObserverBridge(options = {}) {
     timer.unref?.();
   }
   function stop() { running = false; if (timer) clearInterval(timer); timer = null; positions.clear(); }
-  return { start, stop, getConnections: () => PROVIDERS.map(connection), connect: provider => mutate(provider, true), disconnect: provider => mutate(provider, false) };
+  return { start, stop, getConnections: () => enrichConnections(PROVIDERS.map(connection), { homeDir, env }), connect: provider => mutate(provider, true), disconnect: provider => mutate(provider, false) };
 }
 
 module.exports = { createObserverBridge, buildObserverCommand, MARKER, EVENTS };

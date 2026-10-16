@@ -8,6 +8,7 @@ const Family=require('../lib/family-model.js');
 const root=path.resolve(__dirname,'..'),scratch=fs.mkdtempSync(path.join(os.tmpdir(),'office-family-colour-'));
 // Screenshot RGB must not inherit the host monitor's display profile.
 app.commandLine.appendSwitch('force-color-profile','srgb');
+app.commandLine.appendSwitch('force-device-scale-factor','1');
 app.setPath('userData',path.join(scratch,'profile'));app.disableHardwareAcceleration();
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));let win;
 const guard=setTimeout(()=>app.exit(1),20000);

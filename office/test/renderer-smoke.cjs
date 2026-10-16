@@ -27,6 +27,7 @@ async function until(source, message, milliseconds = 24000) {
   throw new Error(message);
 }
 async function check(name, fn) { try { await fn(); checks.push(name); } catch(error) { error.message = name + ': ' + error.message; throw error; } }
+async function assertSeparated(){const hits=await evaluate(`(()=>{const boxes=[...document.querySelectorAll('.actor')].filter(n=>getComputedStyle(n).visibility!=='hidden').map(n=>{const a=n.querySelector('.character-body').getBoundingClientRect(),b=n.querySelector('.nameplate').getBoundingClientRect();return{id:n.dataset.sessionId,left:Math.min(a.left,b.left),right:Math.max(a.right,b.right),top:Math.min(a.top,b.top),bottom:Math.max(a.bottom,b.bottom)};});return boxes.flatMap((a,i)=>boxes.slice(i+1).filter(b=>a.left<b.right-1&&b.left<a.right-1&&a.top<b.bottom-1&&b.top<a.bottom-1).map(b=>[a.id,b.id]));})()`);assert.deepEqual(hits,[],'paged family bodies and nameplates must remain physically separate');}
 async function capture(name) {
   if (!process.env.MINI_OFFICE_PREVIEW_DIR) return;
   fs.mkdirSync(process.env.MINI_OFFICE_PREVIEW_DIR, { recursive: true });
@@ -42,6 +43,7 @@ function bind(name, handler) { ipcMain.handle('office:' + name, (_event, ...args
 app.whenReady().then(async () => {
   bind('snapshot', () => snapshot);
   bind('settings', () => settings);
+  bind('setup-status', () => ({ running: false, rows: [], totals: { configured: 0, failed: 0, skipped: 0, pending: 0 } }));
   bind('set-settings', patch => { settings = { ...settings, ...patch }; return settings; });
   bind('connect', () => ({ ok: true, message: 'fixture only' }));
   bind('displays', () => [{ id: 1, label: 'Fixture display', width: 1280, height: 720, primary: true }]);
@@ -182,7 +184,7 @@ app.whenReady().then(async () => {
   await check('a short tool burst cannot send a thinking actor along an obsolete route or restart its thinking animation', async () => {
     sessions = sessions.map(session => session.id === 'b' ? {...session,activity:'planning',activeTools:0,lastEventAt:Date.now()} : session);
     await send(sessions);
-    await wait(1200);
+    await until(`(()=>{const n=document.querySelector('.actor[data-session-id="b"]');if(!n||n.dataset.walking==='true'||['queued','yielding','moving'].includes(n.dataset.traffic))return false;const m=new DOMMatrixReadOnly(getComputedStyle(n).transform);return OfficeScene.stationCompatible({x:m.m41/12.8,y:m.m42/7.2},'board');})()`,'the thinking baseline must finish its earlier bench-to-board route before testing a short tool burst');
     const initial = await evaluate(`(()=>{const actor=document.querySelector('.actor[data-session-id="b"]');return{transform:actor.style.transform,src:actor.querySelector('img').src,phase:actor.dataset.phase};})()`);
     assert.equal(initial.phase, 'planning/think');
     sessions = sessions.map(session => session.id === 'b' ? {...session,activity:'running',activeTools:1,lastEventAt:Date.now()} : session);
@@ -330,11 +332,20 @@ app.whenReady().then(async () => {
     family.push(task('family-child','reading',{parentId:'family-root:5'}),task('family-grandchild','testing',{parentId:'family-child'}));
     await send(family);
     assert.equal(await evaluate(`document.querySelectorAll('.actor[data-session-id="family-grandchild"]').length`), 0);
+    while(await evaluate(`!document.getElementById('page-prev').disabled`)){await evaluate(`document.getElementById('page-prev').click()`);await wait(80);}
+    const [,pageCount]=await evaluate(`document.getElementById('page-label').textContent.match(/\\d+/g).map(Number)`),pages=[],seen=new Set();
+    for(let index=0;index<pageCount;index++){
+      const current=await evaluate(`[...document.querySelectorAll('.actor[data-helper="false"]')].map(n=>n.dataset.sessionId).sort()`);assert.ok(current.length>0);
+      for(const id of current){assert.equal(seen.has(id),false,'a main family cannot occupy two pages');seen.add(id);}pages.push(current);await assertSeparated();
+      if(index<pageCount-1){assert.equal(await evaluate(`document.getElementById('page-next').disabled`),false);await evaluate(`document.getElementById('page-next').click()`);await wait(80);}
+    }
+    assert.deepEqual([...seen].sort(),family.filter(session=>!session.parentId).map(session=>session.id).sort(),'adaptive pages expose all six independent roots exactly once');
     await evaluate(`document.getElementById('roster-button').click();[...document.querySelectorAll('.roster-row')].find(row=>row.textContent.includes('family-grandchild')).click()`);
     assert.equal(await evaluate(`document.querySelectorAll('.actor[data-session-id="family-root:5"]').length`), 1);
     assert.equal(await evaluate(`document.querySelectorAll('.actor[data-session-id="family-grandchild"]').length`), 1);
-    assert.match(await evaluate(`document.getElementById('page-label').textContent`), /^2\s*\/\s*2/);
+    assert.deepEqual((await evaluate(`document.getElementById('page-label').textContent.match(/\\d+/g).map(Number)`)).slice(0,2),[pages.findIndex(page=>page.includes('family-root:5'))+1,pageCount]);
     assert.equal(await evaluate(`document.getElementById('inspect-title').textContent`), 'family-grandchild');
+    await assertSeparated();
   });
   await check('family colors, parent names, arrows and tree indentation remain visible with reduced motion', async () => {
     await until(`document.querySelectorAll('.helper-thread').length===2`, 'both safely materialized nested helpers must have their real ancestry links');

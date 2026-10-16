@@ -11,6 +11,7 @@
   const CAPACITY = 5;
   const ALL_ROOMS = '__office_all_projects__';
   const ACTOR_GAP = 12;
+  const RESERVED_GAP = 4;
   const ACTOR_VIEWPORT = Object.freeze({ left: 12, top: 72, right: 1268, bottom: 662 });
   const CLOCK_RESERVED = Object.freeze([Object.freeze({ left: 470, top: 65, right: 830, bottom: 175 })]);
   // Local CSS pixels around the actor's feet. This includes the clipped body,
@@ -21,7 +22,7 @@
   });
   const ZONES = Object.freeze({
     library: { name: '资料书架', x: 19, y: 44, seats: [[19, 44], [30, 46], [7, 44], [30, 70], [15, 83]] },
-    board: { name: '构思白板', x: 47, y: 43, seats: [[45, 43], [59, 43], [31, 44], [72, 44], [30, 70]] },
+    board: { name: '构思白板', x: 47, y: 43, seats: [[45, 43], [59, 43], [32, 46.5], [50, 46.5], [69, 46.5]] },
     bench: { name: '构建实验台', x: 81, y: 45, seats: [[81, 45], [94, 45], [69, 44], [71, 69], [92, 82]] },
     desk: { name: '代码工位', x: 48, y: 72, seats: [[42, 70], [60, 72], [28, 81], [77, 83], [49, 86]] },
     sofa: { name: '咖啡休息角', x: 16, y: 79, seats: [[12, 80], [27, 84], [43, 84], [59, 84], [75, 84]] },
@@ -30,6 +31,24 @@
     lobby: { name: '观察位', x: 74, y: 83, seats: [[74, 83], [89, 85], [60, 85], [45, 84], [30, 85]] },
     exit: { name: '工作室门口', x: 92.5, y: 82, seats: [[92.5, 82]] }
   });
+  // Foot positions belong to the artwork's actual work areas. A crowded
+  // library cannot borrow the build bench merely to keep five bodies visible.
+  const STATION_AREAS = Object.freeze({
+    library: { x1: 6.5, x2: 31.5, y1: 40.7, y2: 46.5 },
+    board: { x1: 32, x2: 69.5, y1: 42.5, y2: 46.5 },
+    bench: { x1: 70, x2: 94, y1: 40.7, y2: 46.5 },
+    desk: { x1: 30, x2: 73, y1: 69, y2: 82 },
+    sofa: { x1: 7, x2: 29, y1: 76, y2: 84 },
+    front: { x1: 30, x2: 73, y1: 78, y2: 84 },
+    archive: { x1: 75, x2: 94, y1: 76, y2: 84 },
+    lobby: { x1: 54, x2: 78, y1: 76, y2: 84 },
+    exit: { x1: 84, x2: 94, y1: 76, y2: 84 },
+  });
+  function stationCompatible(point, zone) {
+    const area = STATION_AREAS[zone];
+    return Boolean(area && point && point.x >= area.x1 - 1e-7 && point.x <= area.x2 + 1e-7
+      && point.y >= area.y1 - 1e-7 && point.y <= area.y2 + 1e-7);
+  }
 
   const SPECS = Object.freeze({
     reading: { zone: 'library', label: '读代码', verb: '查阅资料', asset: 'clawd-idle-reading.svg', prop: 'book' },
@@ -71,11 +90,18 @@
     return (.76 + finite(point && point.y) / 500) * (helper ? .84 : 1) * agentScale(scale);
   }
   function actorBounds(point, options = {}) {
-    const footprint = options.helper ? ACTOR_FOOTPRINT.helper : ACTOR_FOOTPRINT.root;
+    const measured = options.footprint;
+    const footprint = measured && ['left', 'right', 'top', 'bottom'].every(key => Number.isFinite(measured[key]) && measured[key] >= 0)
+      ? measured : options.helper ? ACTOR_FOOTPRINT.helper : ACTOR_FOOTPRINT.root;
     const scale = actorScale(point, options), x = finite(point && point.x) * WORLD.width / 100, y = finite(point && point.y) * WORLD.height / 100;
     const left = x - footprint.left * scale, right = x + footprint.right * scale;
     const top = y - footprint.top * scale, bottom = y + footprint.bottom * scale;
     return { left, top, right, bottom, width: right - left, height: bottom - top };
+  }
+  function actorReservation(point, options = {}) {
+    const bounds = actorBounds(point, options), padding = Math.max(0, ACTOR_GAP - RESERVED_GAP);
+    return { left: bounds.left - padding, right: bounds.right + padding, top: bounds.top - padding, bottom: bounds.bottom + padding,
+      ...(options.ownerId ? { ownerId: options.ownerId } : {}) };
   }
   function boundsOverlap(a, b, gap = ACTOR_GAP) {
     const clearance = Math.max(0, finite(gap));
@@ -90,8 +116,8 @@
     if (OBSTACLES.some(rect => inside(point, rect, .6))) return false;
     const bounds = actorBounds(point, options), viewport = options.viewport || ACTOR_VIEWPORT;
     if (bounds.left < viewport.left - 1e-7 || bounds.right > viewport.right + 1e-7 || bounds.top < viewport.top - 1e-7 || bounds.bottom > viewport.bottom + 1e-7) return false;
-    return !(options.reservedRects || []).some(rect => rect && [rect.left, rect.top, rect.right, rect.bottom].every(Number.isFinite)
-      && boundsOverlap(bounds, rect, 4));
+    return !(options.reservedRects || []).some(rect => rect && (!rect.ownerId || rect.ownerId !== (options.id || options.session?.id))
+      && [rect.left, rect.top, rect.right, rect.bottom].every(Number.isFinite) && boundsOverlap(bounds, rect, RESERVED_GAP));
   }
 
   function providerName(provider) {
@@ -261,9 +287,22 @@
     // visited first. Reserve one helper when families exist so roster selection
     // cannot create a different page divisor and skip independent roots.
     while (pageCapacity > 1) {
-      const probe = Array.from({ length: pageCapacity }, (_, index) => ({ id: '__layout-root-' + index, activity: 'coding' }));
-      if (hasHelpers) probe.push({ id: '__layout-helper', parentId: probe[0].id, activity: 'coding' });
-      if (assignSeats(probe, new Map(), options).fits) break;
+      let fits = true;
+      for (let start = 0; start < roots.length; start += pageCapacity) {
+        const heads = roots.slice(start, start + pageCapacity);
+        const ids = new Set(heads.map(session => session.id));
+        const probe = heads.filter(session => !suppressed(session));
+        if (hasHelpers) {
+          const helper = room.filter(session => !suppressed(session) && !ids.has(session.id) && ids.has(rootIdsBySession.get(session.id)))
+            .sort((a, b) => {
+              const bounds = session => actorBounds({ x: 50, y: 78 }, { helper: true, scale: options.scale, footprint: options.footprints?.get(session.id) });
+              return bounds(b).width - bounds(a).width || String(a.id).localeCompare(String(b.id));
+            })[0];
+          if (helper) probe.push(helper);
+        }
+        if (!assignSeats(probe, new Map(), options).fits) { fits = false; break; }
+      }
+      if (fits) break;
       pageCapacity -= 1;
     }
     // Reserve the same readable envelopes used by rendering and walking. If a
@@ -307,10 +346,14 @@
     const descriptors = sessions.map(session => {
       const old = previous.get(session.id), spec = activitySpec(session);
       const zone = spec.stale && old ? old.zone : spec.zone;
-      return { session, old, spec, zone, helper: Boolean(session.parentId), scale: agentScale(options.scale) };
-    }).sort((a, b) => Number(b.session.id === options.preferredId) - Number(a.session.id === options.preferredId)
+      return { session, old, spec, zone, helper: Boolean(session.parentId), scale: agentScale(options.scale), footprint: options.footprints?.get(session.id), entering: Boolean(options.entryIds?.has(session.id)) };
+    }).sort((a, b) => Number(b.entering) - Number(a.entering) || Number(b.session.id === options.preferredId) - Number(a.session.id === options.preferredId)
       || Number(a.helper) - Number(b.helper) || String(a.session.id).localeCompare(String(b.session.id)));
-    const safe = (point, actor, placed) => legalActorPoint(point, { ...options, ...actor })
+    // A larger body may need another seat in its work area, never a coding
+    // station on the back wall. This constraint applies to seats, not walks.
+    const foreground = actor => ['desk', 'sofa', 'front', 'archive', 'lobby', 'exit'].includes(actor.zone);
+    const safe = (point, actor, placed) => stationCompatible(point, actor.zone)
+      && legalActorPoint(point, { ...options, ...actor })
       && !placed.some(other => actorsOverlap(point, actor, other.point, other.actor, gap));
     const finish = placed => {
       const seats = new Map(placed.map(({ actor, point }) => [actor.session.id, {
@@ -331,9 +374,15 @@
       if (actor.old && (actor.spec.stale || actor.old.zone === actor.zone)) candidates.unshift(actor.old);
       const target = candidates[0];
       const alternatives = [];
-      for (const y of [41, 42.5, 44, 46, 70, 73, 76, 78, 80, 82, 84]) for (let x = 7; x <= 94; x += 3) alternatives.push({ x, y });
+      for (const y of [40.7, 41, 42.5, 44, 46, 46.5, 70, 73, 76, 78, 80, 82, 84]) for (let x = 7; x <= 94; x += 3) alternatives.push({ x, y });
       alternatives.sort((a, b) => distance(a, target) - distance(b, target) || a.y - b.y || a.x - b.x);
-      const point = candidates.concat(alternatives).find(point => safe(point, actor, placed));
+      const choices = candidates.concat(alternatives);
+      if (actor.entering) {
+        const entrance = options.entryPoint || { x: 87, y: 78 };
+        choices.sort((a, b) => distance(a, entrance) - distance(b, entrance) || b.x - a.x);
+        if (actor.old && actor.old.zone === actor.zone) choices.unshift(actor.old);
+      }
+      const point = choices.find(point => safe(point, actor, placed));
       if (!point) break;
       placed.push({ actor, point });
     }
@@ -346,28 +395,35 @@
     const rows = actors => {
       if (!actors.length) return [[]];
       const entries = actors.map(actor => {
-        const y = actor.row === 0 ? (actor.helper ? 42.5 : 41) : 78;
+        const y = actor.row === 0 ? (actor.zone === 'board' ? 46.5 : actor.helper ? 42.5 : 43) : 78;
         const bounds = actorBounds({ x: 0, y }, actor);
         return { actor, y, bounds };
       });
-      const width = entries.reduce((sum, entry) => sum + entry.bounds.width, 0);
-      const ranges = [[viewport.left, viewport.right]];
-      // A temporarily reserved doorway may occupy one end of a pedestrian
-      // row. Pack into the remaining interval instead of wasting that whole
-      // row or changing a root's page just because an arrival needs space.
-      for (const rect of options.reservedRects || []) if (rect && entries.some(entry => entry.bounds.top < rect.bottom + 4 && entry.bounds.bottom > rect.top - 4)) {
-        ranges.push([viewport.left, Math.min(viewport.right, rect.left - 4)], [Math.max(viewport.left, rect.right + 4), viewport.right]);
+      let cursor = viewport.left;
+      const result = [];
+      for (const entry of entries) {
+        const area = STATION_AREAS[entry.actor.zone];
+        let left = Math.max(cursor, viewport.left, area.x1 * WORLD.width / 100 + entry.bounds.left);
+        // Skip reserved clock/door rectangles while preserving the station's
+        // foot range. No borrowing a different artwork zone to finish a row.
+        for (let pass = 0; pass <= (options.reservedRects || []).length; pass += 1) {
+          const rect = (options.reservedRects || []).find(rect => (!rect.ownerId || rect.ownerId !== entry.actor.session.id)
+            && entry.bounds.top < rect.bottom + 4 && entry.bounds.bottom > rect.top - 4
+            && left < rect.right + 4 && left + entry.bounds.width > rect.left - 4);
+          if (!rect) break;
+          left = rect.right + 4;
+        }
+        let point = { x: (left - entry.bounds.left) * 100 / WORLD.width, y: entry.y };
+        // Large board actors clear the clock only in the narrow aisles beside
+        // and between desks. Scan legal feet inside this station, never move a
+        // planning task into the bookshelf or the build bench to make it fit.
+        while (point.x <= area.x2 && !legalActorPoint(point, { ...options, ...entry.actor })) {
+          point = { x: point.x + .25, y: entry.y }; left += .25 * WORLD.width / 100;
+        }
+        if (left + entry.bounds.width > viewport.right + 1e-7 || !stationCompatible(point, entry.actor.zone)) return [];
+        result.push({ actor: entry.actor, point }); cursor = left + entry.bounds.width + gap;
       }
-      return ranges.filter(([left, right]) => right - left - width >= gap * (entries.length - 1) - 1e-7).map(([left, right]) => {
-        const free = right - left - width;
-        const spacing = entries.length > 1 ? free / (entries.length - 1) : 0;
-        let x = entries.length === 1 ? (left + right - width) / 2 : left;
-        return entries.map(entry => {
-          const point = { x: (x - entry.bounds.left) * 100 / WORLD.width, y: entry.y };
-          x += entry.bounds.width + spacing;
-          return { actor: entry.actor, point };
-        });
-      });
+      return [result];
     };
     let solution = null;
     const permutations = (remaining, order, split) => {
@@ -394,7 +450,8 @@
         // IDs and observed activities do not change an envelope. Equivalent
         // permutations need only one fit check, bounding the eight-body search
         // by root/helper arrangements rather than 8! identical rectangles.
-        const footprint = remaining[index].helper ? 'helper' : 'root';
+        const actor = remaining[index];
+        const footprint = JSON.stringify([actor.helper, actor.zone, actor.entering, actor.footprint || null]);
         if (triedFootprints.has(footprint)) continue;
         triedFootprints.add(footprint);
         permutations(remaining.slice(0, index).concat(remaining.slice(index + 1)), order.concat(remaining[index]), split);
@@ -402,8 +459,9 @@
       }
     };
     if (descriptors.length <= 8) {
-      const splitOrder = Array.from({ length: Math.min(4, descriptors.length) + 1 }, (_, index) => index)
-        .filter(split => descriptors.length - split <= 4).sort((a, b) => Math.abs(a - descriptors.length / 2) - Math.abs(b - descriptors.length / 2));
+      const splitOrder = Array.from({ length: descriptors.length + 1 }, (_, index) => index)
+        .filter(split => split <= descriptors.filter(actor => !foreground(actor)).length)
+        .sort((a, b) => Math.abs(a - descriptors.length / 2) - Math.abs(b - descriptors.length / 2));
       for (const split of splitOrder) { permutations(descriptors, [], split); if (solution) break; }
     }
     return finish(solution || placed);
@@ -470,5 +528,5 @@
     return chars.length > length ? chars.slice(0, length).join('') + '…' : title;
   }
 
-  return { WORLD, CAPACITY, ALL_ROOMS, ZONES, SPECS, OBSTACLES, ACTOR_GAP, ACTOR_VIEWPORT, CLOCK_RESERVED, ACTOR_FOOTPRINT, actorScale, actorBounds, boundsOverlap, actorsOverlap, legalActorPoint, timestamp, distance, projectKey, inRoom, providerName, identityName, createIdentityRegistry, isClosed, needsAttention, activitySpec, roomsFor, chooseRoom, pageSessions, assignSeats, route, segmentHitsRect, shortTitle };
+  return { WORLD, CAPACITY, ALL_ROOMS, ZONES, STATION_AREAS, stationCompatible, SPECS, OBSTACLES, ACTOR_GAP, ACTOR_VIEWPORT, CLOCK_RESERVED, ACTOR_FOOTPRINT, actorScale, actorBounds, actorReservation, boundsOverlap, actorsOverlap, legalActorPoint, timestamp, distance, projectKey, inRoom, providerName, identityName, createIdentityRegistry, isClosed, needsAttention, activitySpec, roomsFor, chooseRoom, pageSessions, assignSeats, route, segmentHitsRect, shortTitle };
 });

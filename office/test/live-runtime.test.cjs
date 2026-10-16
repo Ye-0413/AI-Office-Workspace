@@ -11,10 +11,10 @@ const { normalizeEvent } = require('../lib/provider-events.cjs');
 
 // Run the production Electron entry point with only native surfaces and external
 // observers replaced. The actual settings, adapters and lifecycle store run.
-async function startMain(t, { now } = {}) {
+async function startMain(t, { now, dataDir: requestedDataDir } = {}) {
   const mainFile = path.join(__dirname, '../main.cjs');
   const requireFromMain = createRequire(mainFile);
-  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'office-live-runtime-'));
+  const dataDir = requestedDataDir || fs.mkdtempSync(path.join(os.tmpdir(), 'office-live-runtime-'));
   const handlers = new Map(), timers = new Map(), sends = [], observations = {};
   let window, menu, timerId = 0;
   const app = new EventEmitter();
@@ -38,13 +38,13 @@ async function startMain(t, { now } = {}) {
   const ipcMain = new EventEmitter();
   ipcMain.handle = (channel, handler) => handlers.set(channel, handler);
   const observer = name => options => {
-    observations[name] = { options, starts: 0, stops: 0, connects: [], disconnects: [] };
+    observations[name] = { options, starts: 0, stops: 0, connects: [], disconnects: [], connections: [{ provider: 'codex', installed: false, watching: false, detail: 'read-only' }] };
     const state = observations[name];
     return {
       start: () => state.starts++, stop: () => state.stops++,
       status: () => ({ running: true }),
-      getConnections: () => [{ provider: 'codex', installed: false, watching: false, detail: 'read-only' }],
-      connect: async provider => { state.connects.push(provider); return { status: 'ok', provider }; },
+      getConnections: () => state.connections,
+      connect: async provider => { state.connects.push(provider); if(state.connectImpl)return state.connectImpl(provider); const row=state.connections.find(row=>row.provider===provider);if(row)row.installed=true;return { status: 'ok', provider, installed: true }; },
       disconnect: async provider => { state.disconnects.push(provider); return { status: 'ok', provider }; },
     };
   };
@@ -65,6 +65,7 @@ async function startMain(t, { now } = {}) {
       if (name === './lib/observer-bridge.cjs') return { createObserverBridge: observer('bridge') };
       if (name === './lib/session-store.cjs' && now) return { createSessionStore: options => requireFromMain(name).createSessionStore({ ...options, now }) };
       if (name === './lib/activity-stats.cjs' && now) return { createActivityStats: options => requireFromMain(name).createActivityStats({ ...options, now }) };
+      if (name === './lib/usage-log.cjs' && now) return { createUsageLog: options => requireFromMain(name).createUsageLog({ ...options, now }) };
       return requireFromMain(name);
     },
   };
@@ -73,7 +74,7 @@ async function startMain(t, { now } = {}) {
   assert.ok(window, 'production startup created its window');
   t.after(() => { app.emit('before-quit'); fs.rmSync(dataDir, { recursive: true, force: true }); });
   return {
-    app, window, menu, handlers, timers, sends, observations, ipcMain,
+    app, window, menu, handlers, timers, sends, observations, ipcMain, dataDir,
     invoke: (name, ...args) => handlers.get('office:' + name)({ sender: window.webContents }, ...args),
   };
 }
@@ -185,7 +186,7 @@ test('the sandbox bridge offers live observation, settings and local actions wit
     window: { addEventListener: (name, listener) => domListeners.set(name, listener) },
   }, { filename: preloadFile });
   assert.ok(Object.isFrozen(exposed));
-  assert.deepEqual(Object.keys(exposed).sort(), ['connectProvider', 'disconnectProvider', 'getSettings', 'getSnapshot', 'listDisplays', 'moveToDisplay', 'onSnapshot', 'openSource', 'setSettings'].sort());
+  assert.deepEqual(Object.keys(exposed).sort(), ['connectProvider', 'disconnectProvider', 'getSettings', 'getSnapshot', 'listDisplays', 'moveToDisplay', 'onSnapshot', 'openSource', 'setSettings', 'getUsageHistory', 'getUsageEvents', 'getUsageStatus', 'exportUsageHistory', 'openUsageFolder', 'getProviderSetup', 'initializeProviders'].sort());
   await exposed.getSnapshot();
   assert.deepEqual(calls, [['office:snapshot']]);
   const snapshots = [], unsubscribe = exposed.onSnapshot(value => snapshots.push(value));
@@ -196,4 +197,71 @@ test('the sandbox bridge offers live observation, settings and local actions wit
   assert.throws(() => exposed.onSnapshot(null), /Callback required/);
   domListeners.get('DOMContentLoaded')();
   assert.deepEqual(calls.at(-1), ['office:preload-ready']);
+  await exposed.getUsageHistory({role:'helper'});
+  assert.deepEqual(calls.at(-1), ['office:usage-history',{role:'helper'}]);
+  await exposed.getUsageEvents({id:'codex:real-session'});
+  assert.deepEqual(calls.at(-1), ['office:usage-events',{id:'codex:real-session'}]);
+});
+
+test('accepted usage persists across main-process restarts without reviving historical actors', async t => {
+  let time = Date.parse('2026-10-17T01:00:00Z');
+  const runtime = await startMain(t,{now:()=>time});
+  const base = {session_id:'persisted-main',turn_id:'turn-1',cwd:'/fixture/persistent'};
+  const first = normalizeEvent('codex',{...base,hook_event_name:'UserPromptSubmit',prompt:'SECRET prompt must not enter usage storage'}, {receivedAt:time,source:'hook'});
+  assert.equal(runtime.observations.bridge.options.onEvent(first),true);
+  time += 1000;
+  const helper = normalizeEvent('codex',{...base,hook_event_name:'SubagentStart',agent_id:'persistent-helper'}, {receivedAt:time,source:'hook'});
+  assert.equal(runtime.observations.bridge.options.onEvent(helper),true);
+  time += 5000;
+  [...runtime.timers.values()].find(timer=>timer.delay===5000).callback();
+  const history = runtime.invoke('usage-history',{});
+  assert.equal(history.ok,true); assert.equal(history.totals.agents,2);
+  assert.equal(history.totals.roots,1); assert.equal(history.totals.helpers,1);
+  assert.ok(history.totals.activeMs>=5000);
+  assert.equal(runtime.invoke('usage-status').available,true);
+  assert.equal(runtime.invoke('snapshot').usageLog.available,true);
+  assert.doesNotMatch(JSON.stringify(history),/SECRET prompt/);
+  for(const name of ['usage-history','usage-events','usage-status','usage-export','usage-open-folder']) {
+    assert.throws(()=>runtime.handlers.get('office:'+name)({sender:{}},{}),/Unexpected IPC sender/);
+  }
+  assert.throws(()=>runtime.invoke('usage-history',{from:'2026-02-30'}),/Invalid usage/);
+  const recordedEvents=history.totals.events;
+  runtime.app.emit('before-quit');
+  time += 86400000;
+  const restored=await startMain(t,{now:()=>time,dataDir:runtime.dataDir});
+  assert.deepEqual(restored.invoke('snapshot').sessions,[],'history is not a new live observation');
+  const saved=restored.invoke('usage-history',{});
+  assert.equal(saved.totals.agents,2); assert.equal(saved.totals.events,recordedEvents);
+  const duration=saved.totals.activeMs;
+  [...restored.timers.values()].find(timer=>timer.delay===5000).callback();
+  assert.equal(restored.invoke('usage-history',{}).totals.activeMs,duration,'offline interval is not billed as work');
+  restored.observations.bridge.options.onEvent(first);
+  restored.observations.bridge.options.onEvent(helper);
+  const replayed=restored.invoke('usage-history',{});
+  assert.equal(replayed.totals.events,recordedEvents,'repeated rollout facts remain idempotent after restart');
+  assert.equal(replayed.totals.activeMs,duration);
+  assert.deepEqual(restored.observations.bridge.connects,[]);
+});
+
+test('one-click setup shares the real bridge and excludes simultaneous individual configuration', async t => {
+  const runtime=await startMain(t),bridge=runtime.observations.bridge;
+  assert.equal(runtime.invoke('snapshot').setup.running,false);
+  assert.deepEqual(bridge.connects,[],'loading the studio does not initialize user tools');
+  bridge.connections=[{provider:'codex',available:true,installed:false,watching:false},{provider:'claude-code',available:true,installed:false,watching:false}];
+  let release;
+  bridge.connectImpl=()=>new Promise(resolve=>{release=resolve;});
+  const single=runtime.invoke('connect','codex');
+  assert.throws(()=>runtime.invoke('setup-initialize',{}),/already running/);
+  release({status:'ok',installed:true}); await single; delete bridge.connectImpl;
+  const batch=runtime.invoke('setup-initialize',{});
+  assert.equal(runtime.invoke('setup-status').running,true);
+  const blockedDisconnect=runtime.invoke('disconnect','codex'),blockedConnect=runtime.invoke('connect','claude-code');
+  await Promise.all([assert.rejects(blockedDisconnect,/already running/),assert.rejects(blockedConnect,/already running/)]);
+  const result=await batch;
+  assert.equal(result.totals.configured,2);assert.equal(result.totals.failed,0);
+  assert.equal(result.running,false);
+  assert.equal(bridge.connects[0],'codex');assert.deepEqual(bridge.connects.slice(1).sort(),['claude-code','codex']);
+  assert.deepEqual(bridge.disconnects,[]);
+  for(const name of ['setup-status','setup-initialize'])assert.throws(()=>runtime.handlers.get('office:'+name)({sender:{}},{}),/Unexpected IPC sender/);
+  assert.throws(()=>runtime.invoke('setup-initialize',{command:'arbitrary'}),/Invalid setup options/);
 });

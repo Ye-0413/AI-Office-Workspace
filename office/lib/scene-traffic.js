@@ -62,7 +62,9 @@
         const position = point(value?.position);
         if (!value?.id || !position || next.has(String(value.id))) { invalid = true; continue; }
         const scale = Number.isFinite(value.scale) ? value.scale : 1;
-        next.set(String(value.id), { id: String(value.id), position, helper: Boolean(value.helper), scale, canYield: value.canYield !== false });
+        const footprint = value.footprint && ['left','right','top','bottom'].every(key => Number.isFinite(value.footprint[key]) && value.footprint[key] >= 0)
+          ? Object.fromEntries(['left','right','top','bottom'].map(key => [key, value.footprint[key]])) : undefined;
+        next.set(String(value.id), { id: String(value.id), position, helper: Boolean(value.helper), scale, footprint, canYield: value.canYield !== false });
       }
       const signature = JSON.stringify([...next.values()].sort((a, b) => a.id.localeCompare(b.id)));
       if (signature !== sync.signature || invalid !== sync.invalid) { sync.signature = signature; sync.invalid = invalid; changed(); }

@@ -1,6 +1,8 @@
 /* Original sprites keep their props/eyes. Articulated props are never filtered. */
 .family-filter-defs{position:absolute;width:0;height:0;overflow:hidden;pointer-events:none}
 .family-appearance .family-tint-source,.family-appearance .character-body>img,.family-appearance .clone-echo img{filter:var(--family-body-filter)}
-.family-appearance .ap-torso,.family-appearance .ap-arm,.family-appearance .ap-foot{filter:var(--family-body-filter)}
+.family-appearance .ap-torso,.family-appearance .ap-foot{filter:var(--family-body-filter)}
+.family-appearance .ap-arm>use{filter:var(--family-hand-filter)}
+.family-hand-outline{fill:none;stroke:var(--family-hand-edge);stroke-width:1.5;stroke-linejoin:miter;stroke-miterlimit:2;shape-rendering:geometricPrecision;pointer-events:none}
 .family-badge{position:absolute;right:3px;top:1px;min-width:19px;height:10px;padding:0 2px;border:1px solid #fff1ce;border-radius:4px;color:#253029;background:var(--family-color);box-shadow:0 1px 2px #35281f40;font:700 8px/8px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:0;text-align:center;white-space:nowrap;pointer-events:none}
 .family-badge[data-helper="true"]{background:linear-gradient(#ffffff24,#ffffff24),var(--family-color);font-weight:600}

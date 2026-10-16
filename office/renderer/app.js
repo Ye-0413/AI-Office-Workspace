@@ -19,6 +19,8 @@
   const settingsDefaults = { rain: false, night: false, sceneTime: 'auto', agentScale: 1, reducedMotion: false, lowPower: false, idleVisitor: true, sound: false, selectedProject: '', language: 'zh' };
   let settings = { ...settingsDefaults };
   let language = 'zh';
+  const usageHistory = window.OfficeUsageHistory?.create({ bridge, getLanguage: () => language });
+  const setupAssistant = window.OfficeSetupAssistant?.create({ bridge, getLanguage: () => language });
   const scenery = window.OfficeDayScenery.create({ office, world, layer: $('window-scenery') });
   const attendanceModel = Attendance.createAttendance();
   const cloneLedger = Clones.createLedger();
@@ -30,6 +32,8 @@
     legalPoint: (point, actor) => Scene.legalActorPoint(point, { ...actor, reservedRects: CLOCK_RESERVED }) });
   const trafficWaiters = new Map();
   let trafficTimer = 0;
+  let blockedTrafficTimer = 0;
+  let blockedTraffic = null;
   let reflowPending = false;
   let entranceLane = false;
   let entranceRenderScheduled = false;
@@ -45,6 +49,9 @@
   let selectedSession = '';
   let page = 0;
   let seats = new Map();
+  const actorFootprints = new Map();
+  const footprintCache = new Map();
+  const protectedEntrances = new Map();
   let rooms = [];
   let currentPage = { page: 0, pages: 1, roots: [], visible: [], hidden: 0, helperOverflow: 0 };
   let frameTimer = 0;
@@ -71,6 +78,8 @@
     for (const item of staticAttributes) if (item.node.isConnected) item.node.setAttribute(item.name, tr(item.original));
     $('language-button').textContent = language === 'en' ? '中文' : 'EN';
     $('language-button').setAttribute('aria-label', language === 'en' ? 'Switch to Chinese' : '切换到 English');
+    usageHistory?.updateLanguage();
+    setupAssistant?.updateLanguage();
   }
   function openDoor() {
     $('studio-door').dataset.open = 'true';
@@ -141,8 +150,16 @@
     return 'translate3d(' + (point.x * 12.8).toFixed(2) + 'px,' + (point.y * 7.2).toFixed(2) + 'px,0) scale(' + Scene.actorScale(point, { helper, scale: settings.agentScale }).toFixed(4) + ')';
   }
   function sceneOptions() {
-    return { suppressedIds: restedClones, scale: settings.agentScale,
-      reservedRects: entranceLane ? CLOCK_RESERVED.concat(Scene.actorBounds(ENTRY_POINT, { scale: settings.agentScale })) : CLOCK_RESERVED, previousSeats: seats };
+    // Keep the entrance clear even before an arrival. A temporary reservation
+    // changed the page divisor halfway through an entrance at large sizes.
+    const rootFootprints = attendance.present.filter(session => !session.parentId && Scene.inRoom(session, selectedProject)).map(session => actorFootprints.get(session.id)).filter(Boolean);
+    const footprint = rootFootprints.length ? Object.fromEntries(['left','right','top','bottom'].map(key => [key, Math.max(...rootFootprints.map(value => value[key]))])) : undefined;
+    const entryIds = new Set(attendance.present.filter(session => !session.parentId && (actors.get(session.id)?.entranceActive
+      || actors.get(session.id)?.entryPending && !actors.get(session.id)?.restoreEntry
+      || snapshotReceived > 1 && !observedIds.has(session.id))).map(session => session.id));
+    return { suppressedIds: restedClones, scale: settings.agentScale, footprints: actorFootprints, entryIds, entryPoint: ENTRY_POINT,
+      reservedRects: CLOCK_RESERVED.concat(Scene.actorReservation(ENTRY_POINT, { scale: settings.agentScale, footprint }),
+        [...protectedEntrances].map(([id, point]) => Scene.actorReservation(point, { ...actorGeometry(actors.get(id)), ownerId: id }))), previousSeats: seats };
   }
   function updateEntranceLane() {
     const needsLane = actor => !actor.helper && !reduced() && !document.hidden && (actor.entryPending && !actor.restoreEntry || actor.entranceActive);
@@ -156,10 +173,105 @@
       render();
     });
   }
-  function actorGeometry(actor) { return { helper: actor.helper, scale: settings.agentScale }; }
+  function actorGeometry(actor) { return { helper: actor.helper, scale: settings.agentScale, footprint: actorFootprints.get(actor.id) }; }
+  function measureActorFootprints(sessions) {
+    const frameScale = world.getBoundingClientRect().width / Scene.WORLD.width;
+    if (!frameScale) return;
+    const liveIds = new Set(sessions.map(session => session.id));
+    for (const id of actorFootprints.keys()) if (!liveIds.has(id) && !actors.has(id)) actorFootprints.delete(id);
+    let grew = false;
+    for (const session of sessions) {
+      const parent = familyGraph.byId.get(session.parentId) || actors.get(session.parentId)?.session;
+      const relation = parent ? I18n.t(language, 'identity.parent', { name: displayName(parent) })
+        : session.parentId ? tr('子任务 · 父任务未在场') : cloneSummary(session);
+      const labels = [...new Set([tr(Scene.activitySpec(session).label), tr(Director.plan(session, { now: Date.now(), language }).label),
+        tr('会话已结束'), tr('这一轮已歇下'), tr(session.parentId ? '结束分身' : '等分身归位'),
+        actors.get(session.id)?.state.textContent].filter(Boolean))];
+      const name = displayName(session), provider = tr(session.provider === 'claude-code' ? 'Claude' : Scene.providerName(session.provider));
+      const key = JSON.stringify([Boolean(session.parentId), language, name, relation, provider, labels]);
+      let footprint = footprintCache.get(key);
+      if (!footprint) {
+        // Measure the same CSS and text as the real plate before choosing a
+        // page. Artwork stays inside the fixed body canvas; no sprite sampling.
+        const node = element('div', 'actor');
+        node.dataset.helper = String(Boolean(session.parentId)); node.dataset.hasFamily = 'true'; node.dataset.selected = 'true';
+        node.style.cssText = 'visibility:hidden;pointer-events:none;transform:translate3d(0,0,0)';
+        const button = element('button', 'actor-button'), body = element('span', 'character-body'), plate = element('span', 'nameplate');
+        const subline = element('span', 'actor-subline'), state = element('span', 'actor-state');
+        const providerNode = element('span', 'actor-provider', provider); providerNode.dataset.provider = String(session.provider).toLowerCase();
+        subline.append(providerNode, state);
+        plate.append(element('span','actor-title',name), element('span','actor-relation',relation), subline,
+          element('span','actor-keepsake',keepsakeIcon(session)), element('span','family-badge','88'));
+        button.append(body, plate); node.append(button); actorsLayer.append(node);
+        const origin = node.getBoundingClientRect();
+        footprint = { left: 0, right: 0, top: 0, bottom: 0 };
+        for (const label of labels) {
+          state.textContent = label;
+          for (const part of [body, plate, ...plate.children, ...subline.children]) {
+            const rect = part.getBoundingClientRect();
+            footprint.left = Math.max(footprint.left, (origin.left - rect.left) / frameScale);
+            footprint.right = Math.max(footprint.right, (rect.right - origin.left) / frameScale);
+            footprint.top = Math.max(footprint.top, (origin.top - rect.top) / frameScale);
+            footprint.bottom = Math.max(footprint.bottom, (rect.bottom - origin.top) / frameScale);
+          }
+        }
+        node.remove();
+        // Covers the walking body's 3px/1deg bob, focus/shadow edges and
+        // the one-pixel family hand outline, throughout each reserved walk.
+        footprint = Object.fromEntries(Object.entries(footprint).map(([key,value]) => [key, Math.ceil(value) + 6]));
+        if (footprintCache.size >= 2048) footprintCache.clear();
+        footprintCache.set(key, footprint);
+      }
+      const previous = actorFootprints.get(session.id);
+      if (previous && actors.has(session.id) && ['left','right','top','bottom'].some(key => footprint[key] > previous[key] + .5)) grew = true;
+      actorFootprints.set(session.id, footprint);
+    }
+    if (grew) {
+      protectEnteringActors();
+      for (const actor of actors.values()) cancelAction(actor);
+      traffic.clear(); reflowPending = true;
+    }
+  }
   function transitCaption(actor, yielding = false) {
-    actor.state.textContent = Scene.needsAttention(actor.session) ? tr(Scene.activitySpec(actor.session).label)
-      : yielding ? language === 'en' ? 'Making room' : '让一让' : language === 'en' ? 'Waiting for a clear path' : '等候通道';
+    // Traffic describes the body, not the observed session. A coding agent
+    // keeps coding while its route is queued or it temporarily makes room.
+    actor.node.dataset.trafficHint = yielding ? 'yielding' : 'queued';
+    if (!actor.departing && !cloneBusy(actor) && !actor.holdingFamily) {
+      if (!actor.motion) finishAtStation(actor);
+      else text(actor.state, Director.plan(actor.session, { now: Date.now(), language }).label || actor.spec.label);
+    }
+  }
+  function clearTrafficBlock() {
+    clearTimeout(blockedTrafficTimer); blockedTrafficTimer = 0; blockedTraffic = null;
+  }
+  function protectEnteringActors() {
+    for (const actor of actors.values()) if (!actor.helper && actor.entranceActive && !actor.entryPending && !actor.departing) protectedEntrances.set(actor.id, currentPosition(actor));
+  }
+  function reflowBlockedTraffic() {
+    clearTrafficBlock();
+    protectEnteringActors();
+    for (const actor of [...actors.values()]) {
+      const reason = actor.returnReason;
+      const parent = actor.helper && actor.departing ? cloneAncestor(actor) : null;
+      const retiring = actor.departing || actor.retireRequested;
+      cancelAction(actor);
+      if (retiring) {
+        if (actor.helper) finishCloneReturn(actor, parent, reason || (Scene.isClosed(actor.session) ? 'ended' : 'resting'));
+        else { openDoor(); removeActor(actor.id); }
+      }
+    }
+    traffic.clear();
+    reflowPending = true;
+    // Re-run the same collision-safe layout and page selection. This changes
+    // only visual attendance; real activity, ancestry and counts remain intact.
+    render();
+  }
+  function trackTrafficBlock() {
+    const signature = JSON.stringify([...trafficWaiters].map(([id, pending]) => [id, pending.target.x, pending.target.y]).sort());
+    const now = performance.now();
+    if (!blockedTraffic || blockedTraffic.signature !== signature) blockedTraffic = { signature, since: now };
+    if (now - blockedTraffic.since >= 650) { reflowBlockedTraffic(); return; }
+    if (!blockedTrafficTimer) blockedTrafficTimer = setTimeout(() => { blockedTrafficTimer = 0; pumpTraffic(); }, 680);
   }
   function visibleActors() { return [...actors.values()].filter(actor => !actor.entryPending); }
   function syncTraffic() {
@@ -185,7 +297,7 @@
     if (destroyed) return;
     let progressed = false;
     syncTraffic();
-    if (!traffic.state().active && !traffic.state().queued) {
+    if (!traffic.state().active && !traffic.state().queued && ![...actors.values()].some(actor => actor.defer || actor.queuedSeat)) {
       for (const actor of actors.values()) if (actor.entryPending) {
         const parent = actor.helper ? cloneAncestor(actor) : null;
         const instantEntry = reduced() || document.hidden;
@@ -214,7 +326,10 @@
         actor.node.dataset.traffic = 'queued';
         transitCaption(actor);
       }
+      if (reservation.reason === 'blocked' || reservation.reason === 'invalid-scene') trackTrafficBlock();
+      else clearTrafficBlock();
     } else if (reservation.kind === 'arrived' || reservation.kind === 'move') {
+      clearTrafficBlock();
       const id = reservation.id, actor = actors.get(id), pending = trafficWaiters.get(id);
       if (!actor || actor.entryPending) { traffic.cancel(id); return; }
       if (reservation.kind === 'arrived') {
@@ -242,7 +357,7 @@
           queueTraffic();
         }).catch(error => { traffic.cancel(id, currentPosition(actor)); actor.yielding = false; pending?.resolve(false); showError(error); queueTraffic(); });
       }
-    }
+    } else clearTrafficBlock();
     // A blocked room sleeps until a movement completes, a request changes or
     // a real snapshot arrives. Do not burn a permanent polling loop at rest.
     if (progressed) { renderHelperLinks(); updateProps(); }
@@ -304,6 +419,7 @@
   function cancelAction(actor) {
     actor.serial += 1;
     actor.yielding = false;
+    delete actor.node.dataset.trafficHint;
     const pendingMove = trafficWaiters.get(actor.id);
     if (pendingMove) { trafficWaiters.delete(actor.id); pendingMove.resolve(false); }
     traffic.cancel(actor.id, currentPosition(actor));
@@ -415,7 +531,8 @@
     text(actor.carry, '≡');
     setPose(actor, carrying ? 'clawd-working-carrying.svg' : 'clawd-static-base.svg');
     if (yielding) transitCaption(actor, true);
-    else text(actor.state, actor.clonePhase === 'returning' ? completedCloneReturn(actor.returnReason) ? '结束分身' : '分身暂歇' : '前往' + Scene.ZONES[target.zone || actor.spec.zone].name);
+    else text(actor.state, actor.clonePhase === 'returning' ? completedCloneReturn(actor.returnReason) ? '结束分身' : '分身暂歇'
+      : Director.plan(actor.session, { now: Date.now(), language }).label || actor.spec.label);
     const points = [];
     let traveled = 0;
     for (let index = 0; index < path.length; index += 1) {
@@ -444,9 +561,7 @@
     return true;
   }
   function finishAtStation(actor) {
-    if (trafficWaiters.has(actor.id)) return;
-    if (actor.yielding) { transitCaption(actor, true); return; }
-    if (cloneBusy(actor)) return;
+    if (cloneBusy(actor) || actor.departing || actor.motion) return;
     if (actor.holdingFamily) { setPose(actor, 'clawd-static-base.svg'); text(actor.state, '等分身归位'); return; }
     actor.spec = Scene.activitySpec(actor.session);
     actor.node.dataset.walking = 'false';
@@ -482,6 +597,7 @@
     actor.justEntered = false;
     if (!await move(actor, seat, serial, ['reading', 'searching'].includes(actor.session.activity))) return;
     actor.entranceActive = false;
+    protectedEntrances.delete(actor.id);
     updateEntranceLane();
     finishAtStation(actor);
     const phrase = { library: '找找这里的线索', board: '把思路理一理', desk: '开始动手', bench: '看看运行结果', front: '需要你看一下', sofa: '等下一项工作' }[seat.zone];
@@ -516,6 +632,7 @@
     const seat = actor.target;
     if (!await move(actor, seat, serial)) return;
     actor.entranceActive = false;
+    protectedEntrances.delete(actor.id);
     updateEntranceLane();
     actor.completing = false;
     finishAtStation(actor);
@@ -647,7 +764,7 @@
     actor.departing = true;
     const serial = cancelAction(actor);
     actor.node.dataset.attention = 'false';
-    text(actor.state, inactive ? '出去歇一会儿' : '会话结束，收拾一下');
+    text(actor.state, inactive ? '这一轮已歇下' : '会话已结束');
     say(actor, inactive ? '有新工作再回来' : '这次先收工啦', 2200);
     if (!await move(actor, doorPoint(actor), serial, false)) return;
     openDoor();
@@ -774,6 +891,7 @@
     if (actor.appearance) actor.appearance.destroy();
     actor.node.remove();
     actors.delete(id);
+    protectedEntrances.delete(id);
     updateEntranceLane();
     renderHelperLinks();
     if (selectedSession === id) { selectedSession = ''; $('inspector').hidden = true; }
@@ -833,6 +951,14 @@
       if (actor.entryPending) { actor.target = seat; continue; }
       if (reflowPending) {
         cancelAction(actor);
+        if (!actor.helper && actor.entranceActive) {
+          // Keep a newcomer at its actual doorway/interrupted position.
+          // Other bodies have safe seats around its protected envelope; the
+          // newcomer must still physically walk into the room after reflow.
+          actor.target = seat;
+          settle(actor, seat, true).catch(showError);
+          continue;
+        }
         actor.position = { x: seat.x, y: seat.y }; actor.target = seat;
         actor.entranceActive = false;
         actor.node.style.transform = actorTransform(actor.position, actor.helper);
@@ -957,8 +1083,10 @@
     $('inspect-keepsake').textContent = keepsakeIcon(session);
     $('greet-agent').disabled = !actor || actor.departing || Boolean(spec.stale) || cloneBusy(actor) || actor.holdingFamily;
     text($('inspect-title'), session.title || '未命名任务');
-    text($('inspect-location'), attendance.retired.includes(session.id) || restedClones.has(session.id) ? session.parentId ? '分身暂歇' : '门外休息' : actor && actor.motion ? '前往' + Scene.ZONES[(actor.target || spec).zone].name
-      : actor && actor.node?.dataset.traffic === 'queued' ? language === 'en' ? 'Waiting for a clear path' : '等候通道' : Scene.ZONES[spec.zone].name);
+    const makingRoom = actor && (actor.yielding || actor.node?.dataset.traffic === 'queued');
+    text($('inspect-location'), attendance.retired.includes(session.id) || restedClones.has(session.id) ? session.parentId ? '分身暂歇' : '门外休息'
+      : makingRoom ? (language === 'en' ? 'Temporarily making room · ' : '临时让路 · ') + tr(Scene.ZONES[(actor.target || spec).zone].name)
+        : actor && actor.motion ? '前往' + Scene.ZONES[(actor.target || spec).zone].name : Scene.ZONES[spec.zone].name);
     text($('inspect-summary'), session.summary || spec.verb);
     text($('inspect-state'), spec.label);
     text($('inspect-signal'), timeAgo(session.lastEventAt));
@@ -1009,13 +1137,13 @@
       copy.append(name, status, detail);
       const button = element('button', 'button button-paper', connection.installed ? '移除配置' : '连接');
       button.type = 'button';
-      button.disabled = mutationPending;
+      button.disabled = mutationPending || Boolean(snapshot.setup?.running);
       button.addEventListener('click', () => connect(provider, Boolean(connection.installed)));
       if (provider === 'hermes' && connection.installed) {
         const actions = element('span','provider-actions');
         const reload = element('button','button button-paper','重新加载');
         reload.type = 'button';
-        reload.disabled = mutationPending;
+        reload.disabled = mutationPending || Boolean(snapshot.setup?.running);
         reload.addEventListener('click', () => connect('hermes', false));
         actions.append(reload,button);
         row.append(icon,copy,actions);
@@ -1059,6 +1187,7 @@
       .map(session => cloneLedger.rootFor(session.id) || familyGraph.info.get(session.id)?.rootId || session.id);
     paletteRegistry.update(openFamilies);
     familyGraph = Family.build(snapshot.sessions, { registry: paletteRegistry });
+    measureActorFootprints(attendance.present);
     const roomBefore = selectedProject;
     rooms = Scene.roomsFor(snapshot.sessions);
     const roomChoice = Scene.chooseRoom(rooms, attendance.present, { current: selectedProject, explicit: roomSelectionExplicit });
@@ -1139,6 +1268,8 @@
     if (!next || !Array.isArray(next.sessions)) return;
     snapshotReceived += 1;
     snapshot = { ...next, mode: 'live', sessions: next.sessions.filter((session) => session && typeof session.id === 'string'), connections: Array.isArray(next.connections) ? next.connections : [] };
+    usageHistory?.updateStatus(snapshot.usageLog);
+    setupAssistant?.update(snapshot.setup);
     render();
   }
   async function refreshSnapshot() { const next = await call('getSnapshot'); if (next) receive(next); }
@@ -1165,6 +1296,7 @@
     const nextScale = Number.isFinite(requestedScale) && requestedScale > 0 ? Math.max(.65, Math.min(1.35, requestedScale)) : 1;
     const scaleChanged = oldScale !== nextScale;
     if (scaleChanged) {
+      protectEnteringActors();
       // Capture physical positions before changing the transform scale.
       for (const actor of [...actors.values()]) {
         const returning = actor.helper && actor.departing;
@@ -1219,8 +1351,9 @@
     } catch (error) { applySettings(previous); showError(error); }
   }
   async function connect(provider, remove = false) {
-    if (mutationPending) return;
+    if (mutationPending || snapshot.setup?.running) return;
     mutationPending = true;
+    setupAssistant?.setProviderBusy(true);
     renderConnections();
     text($('connection-result'), (remove ? '正在移除 ' : '正在连接 ') + Scene.providerName(provider) + (remove ? ' 观察配置…' : '…'));
     try {
@@ -1229,7 +1362,7 @@
       text($('connection-result'), message);
       await refreshSnapshot();
     } catch (error) { text($('connection-result'), error.message); showError(error); }
-    finally { mutationPending = false; renderConnections(); }
+    finally { mutationPending = false; setupAssistant?.setProviderBusy(false); renderConnections(); }
   }
   function openDialog(id) {
     const dialog = $(id);
@@ -1335,12 +1468,15 @@
   const secondsTimer = setInterval(() => { if (!document.hidden) scenery.updateClock(settings, language); }, 1000);
   window.addEventListener('beforeunload', () => {
     destroyed = true;
+    usageHistory?.dispose();
+    setupAssistant?.dispose();
     visitor.destroy();
     scenery.destroy();
     clearInterval(clockTimer);
     clearInterval(secondsTimer);
     cancelAnimationFrame(frameTimer);
     clearTimeout(trafficTimer);
+    clearTrafficBlock();
     clearTimeout(doorTimer);
     clearActors();
     performanceClocks.clear();

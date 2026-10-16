@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="avatar-performance.css">
   <link rel="stylesheet" href="clone-motion.css">
   <link rel="stylesheet" href="family-appearance.css">
+  <link rel="stylesheet" href="setup-assistant.css">
   <script defer src="../lib/provider-labels.js"></script>
   <script defer src="../lib/scene-model.js"></script>
   <script defer src="../lib/scene-traffic.js"></script>
@@ -27,6 +28,8 @@
   <script defer src="../lib/day-cycle.js"></script>
   <script defer src="day-scenery.js"></script>
   <script defer src="idle-visitor.js"></script>
+  <script defer src="usage-history.js"></script>
+  <script defer src="setup-assistant.js"></script>
   <script defer src="app.js"></script>
 </head>
 <body>
@@ -69,7 +72,7 @@
     <header class="topbar">
       <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i></span><span>小小工作室</span><span class="brand-sub">AI MINI OFFICE</span></div>
       <div id="room-switcher" class="room-switcher" hidden><label for="project-select" class="sr-only">项目房间</label><select id="project-select" aria-label="项目房间"></select><button id="all-projects" class="attention-button" type="button" hidden></button><button id="other-attention" class="attention-button" type="button" hidden></button></div>
-      <div class="top-actions"><button id="language-button" class="language-button" type="button" aria-label="切换到 English">EN</button><span class="observation-status"><span class="mode-dot" aria-hidden="true"></span><span>实时观察</span></span><button id="connections-button" type="button" class="icon-button" aria-label="连接 AI 工具" title="连接 AI 工具"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3v5m8-5v5M6 8h12v3a6 6 0 0 1-6 6v4m-6-13v3a6 6 0 0 0 6 6"/></svg><span id="connection-count" class="connection-count">0</span></button><button id="settings-button" type="button" class="icon-button" aria-label="房间偏好与显示器" title="房间偏好与显示器"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/><circle cx="12" cy="12" r="5"/></svg></button></div>
+      <div class="top-actions"><button id="language-button" class="language-button" type="button" aria-label="切换到 English">EN</button><span class="observation-status"><span class="mode-dot" aria-hidden="true"></span><span>实时观察</span></span><button id="usage-history-button" type="button" class="icon-button" aria-label="使用记录" title="使用记录"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7v5h5M4.4 12a8 8 0 1 0 2-6M12 7v5l3 2"/></svg></button><button id="connections-button" type="button" class="icon-button" aria-label="连接 AI 工具" title="连接 AI 工具"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3v5m8-5v5M6 8h12v3a6 6 0 0 1-6 6v4m-6-13v3a6 6 0 0 0 6 6"/></svg><span id="connection-count" class="connection-count">0</span></button><button id="settings-button" type="button" class="icon-button" aria-label="房间偏好与显示器" title="房间偏好与显示器"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/><circle cx="12" cy="12" r="5"/></svg></button></div>
     </header>
 
     <div id="error-message" class="error-message" role="alert" hidden><span></span><button id="dismiss-error" type="button" aria-label="关闭错误提示">×</button></div>
@@ -91,6 +94,7 @@
     <dialog id="connections-dialog" class="office-dialog connections-dialog" aria-labelledby="connections-title">
       <div class="dialog-header"><div><span class="dialog-eyebrow">让伙伴们入驻</span><h2 id="connections-title">连接 AI 工具</h2></div><button type="button" class="dialog-close" data-close-dialog aria-label="关闭连接面板">×</button></div>
       <p class="dialog-intro">每个独立任务成为一个角色。工具事件决定它去哪里、做什么；审批与回答继续在原工具完成。</p>
+      <section id="setup-assistant" class="setup-assistant" aria-label="一键初始化本机工具"><div class="setup-heading"><strong data-setup-copy="title">一键初始化本机工具</strong><div class="setup-actions"><button id="setup-initialize" type="button" class="button button-warm" data-setup-copy="run">一键初始化</button><button id="setup-retry" type="button" class="button button-paper" data-setup-copy="retry" hidden>重试失败项</button></div></div><p class="setup-description" data-setup-copy="description">自动识别已有 AI 工具，逐项安装或更新观察配置，并保留原有配置。未检测到的工具会跳过；信任确认仍在原工具中完成。</p><p id="setup-summary" class="setup-summary" role="status" aria-live="polite"></p><details id="setup-results" class="setup-results" hidden><summary data-setup-copy="results">查看逐项结果</summary><ul id="setup-result-list"></ul><p class="setup-description" data-setup-copy="note">配置完成不等于已收到真实活动；下方详情会说明信任、重启或新会话要求。</p></details></section>
       <label class="sr-only" for="provider-search">搜索 AI 工具</label><input id="provider-search" class="provider-search" type="search" placeholder="搜索 AI 工具…" autocomplete="off" spellcheck="false">
       <div id="provider-connections" class="provider-connections"></div>
       <p class="dialog-footnote">Codex 的官方 hooks 需要在 Codex 中审核信任后才会生效。已有会话的日志可作为只读补充；无法判断的事件会显示“观察中”。</p>
@@ -101,6 +105,25 @@
       <div class="dialog-header"><div><span class="dialog-eyebrow">每项任务都有自己的位置</span><h2 id="roster-title">房间里的伙伴</h2></div><button type="button" class="dialog-close" data-close-dialog aria-label="关闭伙伴列表">×</button></div>
       <p class="dialog-intro">同一工具的独立 session 分别入驻。选择任务，可以在房间中找到它。</p>
       <div id="roster-list" class="roster-list"></div>
+    </dialog>
+
+    <dialog id="usage-history-dialog" class="office-dialog usage-history-dialog" aria-labelledby="usage-history-title" aria-describedby="usage-history-scope">
+      <div class="dialog-header"><div><span class="dialog-eyebrow" data-usage-copy="eyebrow">留在本机的工作足迹</span><h2 id="usage-history-title" data-usage-copy="title">使用记录</h2></div><button id="usage-history-close" type="button" class="dialog-close" aria-label="关闭使用记录">×</button></div>
+      <p id="usage-history-scope" class="dialog-intro" data-usage-copy="scope">这里只统计本机已观测的 Agent 活动，不代表 token 或费用；应用关闭期间不计时，历史记录不会重新进入房间。</p>
+      <div class="usage-filters">
+        <label><span data-usage-copy="range">时间范围</span><select id="usage-range"><option value="7" data-usage-copy="days7">近 7 天</option><option value="30" data-usage-copy="days30">近 30 天</option><option value="all" data-usage-copy="allTime">全部时间</option><option value="custom" data-usage-copy="custom">自选日期</option></select></label>
+        <label><span data-usage-copy="provider">AI 工具</span><select id="usage-provider"><option value="" data-usage-copy="allProviders">全部工具</option></select></label>
+        <label><span data-usage-copy="role">角色关系</span><select id="usage-role"><option value="all" data-usage-copy="allRoles">全部角色</option><option value="root" data-usage-copy="roots">主 Agent</option><option value="helper" data-usage-copy="helpers">分身</option></select></label>
+      </div>
+      <div id="usage-dates" class="usage-dates"><label><span data-usage-copy="from">开始日期（香港）</span><input id="usage-from" type="date"></label><label><span data-usage-copy="to">结束日期（香港）</span><input id="usage-to" type="date"></label><button id="usage-refresh" type="button" class="button button-paper" data-usage-copy="refresh">刷新</button></div>
+      <div id="usage-feedback" class="usage-feedback" role="status" aria-live="polite"></div>
+      <dl id="usage-overview" class="usage-overview" aria-label="使用概览"></dl>
+      <div class="usage-section-heading"><h3 data-usage-copy="history">Agent 历史</h3><span id="usage-count"></span></div>
+      <div id="usage-history-list" class="usage-history-list" aria-busy="false"></div>
+      <nav class="usage-pagination" aria-label="历史记录分页"><button id="usage-prev" type="button" class="button button-paper" data-usage-copy="previous" disabled>上一页</button><span id="usage-page" role="status"></span><button id="usage-next" type="button" class="button button-paper" data-usage-copy="next" disabled>下一页</button></nav>
+      <section id="usage-timeline-section" class="usage-timeline-section" aria-labelledby="usage-timeline-title" hidden><div class="usage-section-heading"><div><h3 id="usage-timeline-title" data-usage-copy="timeline">事件时间线</h3><span id="usage-selected-name"></span></div><button id="usage-timeline-close" type="button" class="button button-paper" data-usage-copy="closeTimeline">收起</button></div><p class="usage-timezone" data-usage-copy="timeZone">以下时间均为香港时间 · Asia/Hong_Kong</p><div id="usage-timeline-feedback" class="usage-feedback" role="status"></div><ol id="usage-timeline" class="usage-timeline" aria-busy="false"></ol><nav class="usage-pagination" aria-label="事件时间线分页"><button id="usage-event-prev" type="button" class="button button-paper" data-usage-copy="previous" disabled>上一页</button><span id="usage-event-page" role="status"></span><button id="usage-event-next" type="button" class="button button-paper" data-usage-copy="next" disabled>下一页</button></nav></section>
+      <div class="usage-actions"><button id="usage-export" type="button" class="button button-paper" data-usage-copy="export">导出 CSV</button><button id="usage-open-folder" type="button" class="button button-paper" data-usage-copy="folder">打开日志文件夹</button><span id="usage-storage-state"></span></div>
+      <p class="dialog-footnote" data-usage-copy="privacy">记录保存在本机；此面板只展示身份、关系与活动元数据，不展示对话正文或提示词。</p>
     </dialog>
 
     <dialog id="settings-dialog" class="office-dialog settings-dialog" aria-labelledby="settings-title">

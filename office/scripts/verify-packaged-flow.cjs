@@ -109,9 +109,20 @@ async function run() {
       expectActor('cursor:flow-cursor', 'building', 'active', 'bench');
       assert.equal(expectActor('claude-code:flow-claude', 'waiting-user', 'waiting', 'front').attention, true);
       assert.equal(expectActor('codex:flow-a:helper-a', 'waiting-tool', 'active', 'bench').parentId, 'codex:flow-a');
-      const visible = Scene.pageSessions(store.snapshot(), project).visible;
-      assert.equal(visible.length, 5);
-      assert.equal(Scene.assignSeats(visible).size, 5);
+      const inProject = store.snapshot().filter(session => Scene.inRoom(session, project) && !Scene.isClosed(session));
+      assert.equal(inProject.length, 5);
+      // The two build roots and their helper cannot borrow the library to
+      // manufacture a five-body page. Every identity must remain reachable.
+      for (const session of inProject) {
+        const selected = Scene.pageSessions(store.snapshot(), project, 0, session.id);
+        assert.ok(selected.visible.some(item => item.id === session.id), session.id + ' must be selectable');
+        assert.equal(selected.seats.fits, true);
+        for (const item of selected.visible) assert.ok(Scene.stationCompatible(selected.seats.get(item.id), Scene.activitySpec(item).zone), item.id + ' must use its own station');
+        for (let i = 0; i < selected.visible.length; i++) for (let j = i + 1; j < selected.visible.length; j++) {
+          const a = selected.visible[i], b = selected.visible[j];
+          assert.equal(Scene.actorsOverlap(selected.seats.get(a.id), { helper: !!a.parentId }, selected.seats.get(b.id), { helper: !!b.parentId }), false);
+        }
+      }
     });
 
     await check('Stop waits for tools and children; other sessions cannot release an unrelated question', async () => {

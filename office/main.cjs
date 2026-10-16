@@ -1,10 +1,13 @@
 'use strict';
-const {app,BrowserWindow,ipcMain,Menu,screen,shell}=require('electron');
+const {app,BrowserWindow,ipcMain,Menu,screen,shell,dialog}=require('electron');
 const path=require('node:path');
 const fs=require('node:fs');
 const {createSettings}=require('./lib/settings.cjs');
 const {createSessionStore}=require('./lib/session-store.cjs');
 const {createActivityStats}=require('./lib/activity-stats.cjs');
+const {createUsageLog}=require('./lib/usage-log.cjs');
+const {createUsageApi}=require('./lib/usage-api.cjs');
+const {createSetupManager}=require('./lib/setup-manager.cjs');
 const {createCodexMonitor}=require('./lib/codex-monitor.cjs');
 const {mergeObservationHealth}=require('./lib/observation-health.cjs');
 const {createObserverBridge}=require('./lib/observer-bridge.cjs');
@@ -15,12 +18,12 @@ app.setName('AI Mini Office');
 if(process.env.MINI_OFFICE_DATA_DIR){fs.mkdirSync(process.env.MINI_OFFICE_DATA_DIR,{recursive:true,mode:0o700});app.setPath('userData',path.resolve(process.env.MINI_OFFICE_DATA_DIR));}
 if(!app.requestSingleInstanceLock()){app.quit();}
 else {
-let win=null,settings,liveStore,activityStats,monitor,bridge,pruneTimer=null,refreshTimer=null,ready=false;
+let win=null,settings,liveStore,activityStats,usageLog,usageApi,setupManager,monitor,bridge,pruneTimer=null,refreshTimer=null,ready=false,providerMutation=false;
 const rendererErrors=[];
 function current(){
   const liveSessions=liveStore.snapshot();
   const monitorStatus=monitor.status(),connections=bridge.getConnections().map(c=>mergeObservationHealth(c,monitorStatus,liveSessions));
-  return{mode:'live',now:Date.now(),sessions:liveSessions,activityStats:activityStats.snapshot(),connections,monitor:{running:monitorStatus.running,error:monitorStatus.error||null},version:app.getVersion(),packaged:app.isPackaged};
+  return{mode:'live',now:Date.now(),sessions:liveSessions,activityStats:activityStats.snapshot(),usageLog:usageLog.status(),setup:setupManager.snapshot(),connections,monitor:{running:monitorStatus.running,error:monitorStatus.error||null},version:app.getVersion(),packaged:app.isPackaged};
 }
 function broadcast(){if(win&&!win.isDestroyed()&&ready)win.webContents.send('office:snapshot',current());}
 function observe(event){return liveStore.ingest(event);}
@@ -31,7 +34,7 @@ function bind(name,handler){ipcMain.handle('office:'+name,(event,...args)=>{if(!
 async function writeSmokeReport(){
   const out=process.env.MINI_OFFICE_SMOKE_REPORT;
   if(!out)return;
-  const report={at:new Date().toISOString(),platform:process.platform,arch:process.arch,packaged:app.isPackaged,version:app.getVersion(),preloadReady:ready,rendererErrors,activityStats:activityStats.snapshot(),sessions:liveStore.snapshot().map(s=>({id:s.id,parentId:s.parentId,provider:s.provider,activity:s.activity,status:s.status,child:!!s.parentId})),assetChecks:{room:fs.existsSync(path.join(__dirname,'assets','office-room.jpg')),typing:fs.existsSync(path.join(__dirname,'assets','avatars','clawd-working-typing.svg'))},monitor:monitor.status()};
+  const report={at:new Date().toISOString(),platform:process.platform,arch:process.arch,packaged:app.isPackaged,version:app.getVersion(),preloadReady:ready,rendererErrors,activityStats:activityStats.snapshot(),usageLog:usageLog.status(),sessions:liveStore.snapshot().map(s=>({id:s.id,parentId:s.parentId,provider:s.provider,activity:s.activity,status:s.status,child:!!s.parentId})),assetChecks:{room:fs.existsSync(path.join(__dirname,'assets','office-room.jpg')),typing:fs.existsSync(path.join(__dirname,'assets','avatars','clawd-working-typing.svg'))},monitor:monitor.status()};
   if(win&&!win.isDestroyed()&&ready){
     try{report.scene=await win.webContents.executeJavaScript("({actors:[...document.querySelectorAll('.actor')].map(node=>({id:node.dataset.sessionId,helper:node.dataset.helper==='true',phase:node.dataset.phase,walking:node.dataset.walking==='true',visible:getComputedStyle(node).visibility!=='hidden'&&Number(getComputedStyle(node).opacity)>0})),quiet:document.getElementById('office').dataset.quiet==='true',mode:document.getElementById('office').dataset.mode,project:document.getElementById('project-select').value,providerRows:document.querySelectorAll('.provider-row').length})");}
     catch(error){report.sceneError=String(error.message).slice(0,200);}
@@ -42,10 +45,13 @@ app.on('second-instance',()=>{if(win){if(win.isMinimized())win.restore();win.sho
 app.whenReady().then(()=>{
   settings=createSettings(app.getPath('userData'));
   activityStats=createActivityStats({dataDir:app.getPath('userData')});
+  usageLog=createUsageLog({dataDir:app.getPath('userData'),staleMs:180000});
+  usageApi=createUsageApi({log:usageLog,openFolder:folder=>shell.openPath(folder),chooseExport:defaultPath=>dialog.showSaveDialog(win,{title:settings.get().language==='en'?'Export observed Agent usage':'导出已观测 Agent 使用记录',defaultPath,filters:[{name:'CSV',extensions:['csv']}],properties:['createDirectory','showOverwriteConfirmation']})});
   liveStore=createSessionStore({staleMs:180000});
-  liveStore.onAccepted(event=>activityStats.record(event));
+  liveStore.onAccepted(event=>{activityStats.record(event);usageLog.record(event,liveStore.snapshot());});
   monitor=createCodexMonitor({onEvent:observe});
   bridge=createObserverBridge({dataDir:app.getPath('userData'),appRoot:__dirname,electronPath:process.execPath,withNativeLock,onEvent:observe});
+  setupManager=createSetupManager({getConnections:()=>bridge.getConnections(),connect:provider=>bridge.connect(provider),onChange:broadcast});
   liveStore.onChange(()=>broadcast());
   win=new BrowserWindow({width:1280,height:720,minWidth:800,minHeight:450,title:'AI Mini Office',backgroundColor:'#251d17',titleBarStyle:'hiddenInset',autoHideMenuBar:true,webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,webSecurity:true}});
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
@@ -54,9 +60,17 @@ app.whenReady().then(()=>{
   ipcMain.on('office:preload-ready',event=>{if(event.sender!==win.webContents)return;ready=true;broadcast();setTimeout(writeSmokeReport,1500);});
   ipcMain.on('office:renderer-error',(event,message)=>{if(event.sender===win.webContents){rendererErrors.push(String(message).slice(0,300));writeSmokeReport();}});
   bind('snapshot',current);bind('settings',()=>settings.get());
+  bind('usage-history',filters=>usageApi.history(filters));
+  bind('usage-events',filters=>usageApi.events(filters));
+  bind('usage-status',()=>usageApi.status());
+  bind('usage-export',filters=>usageApi.export(filters));
+  bind('usage-open-folder',()=>usageApi.openFolder());
+  bind('setup-status',()=>setupManager.snapshot());
+  bind('setup-initialize',options=>{if(providerMutation)throw new Error('A provider configuration change is already running');return setupManager.run(options);});
   bind('set-settings',patch=>{const next=settings.set(patch);applySettings();return next;});
-  bind('connect',async provider=>{if(!getProvider(provider))throw new Error('Unknown provider');const result=await bridge.connect(provider);broadcast();return result;});
-  bind('disconnect',async provider=>{if(!getProvider(provider))throw new Error('Unknown provider');const result=await bridge.disconnect(provider);broadcast();return result;});
+  async function configureProvider(provider,remove){if(!getProvider(provider))throw new Error('Unknown provider');if(setupManager.running||providerMutation)throw new Error('A provider configuration change is already running');providerMutation=true;try{return await bridge[remove?'disconnect':'connect'](provider);}finally{providerMutation=false;broadcast();}}
+  bind('connect',provider=>configureProvider(provider,false));
+  bind('disconnect',provider=>configureProvider(provider,true));
   bind('displays',()=>screen.getAllDisplays().map(d=>({id:d.id,label:d.label||`${d.size.width}×${d.size.height}`,width:d.size.width,height:d.size.height,primary:d.id===screen.getPrimaryDisplay().id})));
   bind('move-display',id=>{if(!Number.isInteger(id))throw new Error('Invalid display');return moveToDisplay(id);});
   bind('open-source',async id=>{if(typeof id!=='string'||id.length>512)throw new Error('Invalid session');const session=liveStore.snapshot().find(s=>s.id===id);if(!session||!path.isAbsolute(session.projectPath||''))throw new Error('该会话没有可打开的本地项目');const stat=await fs.promises.stat(session.projectPath);if(!stat.isDirectory())throw new Error('项目目录不存在');const error=await shell.openPath(session.projectPath);if(error)throw new Error(error);return{opened:true};});
@@ -64,10 +78,10 @@ app.whenReady().then(()=>{
   const displayId=settings.get().displayId;if(displayId!==null&&screen.getAllDisplays().some(d=>d.id===displayId))moveToDisplay(displayId);
   win.loadFile(path.join(__dirname,'renderer','index.html')).catch(error=>{rendererErrors.push(error.message);writeSmokeReport();});
   if(process.env.MINI_OFFICE_SMOKE_REPORT&&process.env.MINI_OFFICE_SMOKE_EXIT_MS){const delay=Number(process.env.MINI_OFFICE_SMOKE_EXIT_MS);if(Number.isFinite(delay)&&delay>=3000&&delay<=30000)setTimeout(async()=>{await writeSmokeReport();app.quit();},delay);}
-  pruneTimer=setInterval(()=>{liveStore.prune();broadcast();},5000);
+  pruneTimer=setInterval(()=>{liveStore.prune();usageLog.reconcile(liveStore.snapshot());broadcast();},5000);
   refreshTimer=setInterval(()=>broadcast(),2000);
   win.on('closed',()=>{win=null;});
 }).catch(error=>{console.error('[AI Mini Office]',error);app.quit();});
 app.on('window-all-closed',()=>app.quit());
-app.on('before-quit',()=>{ready=false;if(pruneTimer)clearInterval(pruneTimer);if(refreshTimer)clearInterval(refreshTimer);monitor?.stop();bridge?.stop();activityStats?.close();});
+app.on('before-quit',()=>{ready=false;if(pruneTimer)clearInterval(pruneTimer);if(refreshTimer)clearInterval(refreshTimer);monitor?.stop();bridge?.stop();usageLog?.close();activityStats?.close();});
 }

@@ -17,6 +17,22 @@ const task=(id,project,patch={})=>({id:'codex:'+id,sessionId:id,provider:'codex'
 const evaluate=source=>win.webContents.executeJavaScript(source,true);
 const actor=id=>`document.querySelector('.actor[data-session-id="${id}"]')`;
 const ids=()=>evaluate(`[...document.querySelectorAll('.actor[data-helper="false"]')].map(node=>node.dataset.sessionId).sort()`);
+const pageNumbers=()=>evaluate(`document.getElementById('page-label').textContent.match(/\\d+/g).map(Number)`);
+async function clearSelection(){await evaluate(`document.getElementById('close-inspector').click()`);await wait(60);}
+async function selectRoster(session){await evaluate(`document.getElementById('roster-button').click();[...document.querySelectorAll('.roster-row')].find(row=>row.querySelector('.roster-task').textContent===${JSON.stringify(session.title)}).click()`);await until(`(()=>{const n=${actor(session.id)};return n&&getComputedStyle(n).visibility!=='hidden'})()`,'roster must materialize '+session.id);assert.equal(await evaluate(`document.getElementById('inspect-title').textContent`),session.title);}
+async function assertNoOverlap(){const hits=await evaluate(`(()=>{const boxes=[...document.querySelectorAll('.actor')].filter(n=>getComputedStyle(n).visibility!=='hidden').map(n=>{const a=n.querySelector('.character-body').getBoundingClientRect(),b=n.querySelector('.nameplate').getBoundingClientRect();return{id:n.dataset.sessionId,left:Math.min(a.left,b.left),right:Math.max(a.right,b.right),top:Math.min(a.top,b.top),bottom:Math.max(a.bottom,b.bottom)};});return boxes.flatMap((a,i)=>boxes.slice(i+1).filter(b=>a.left<b.right-1&&b.left<a.right-1&&a.top<b.bottom-1&&b.top<a.bottom-1).map(b=>[a.id,b.id]));})()`);assert.deepEqual(hits,[],'every paged body and nameplate has a separate physical place');}
+async function rootPages(expected){
+  await clearSelection();while(await evaluate(`!document.getElementById('page-prev').disabled`)){await evaluate(`document.getElementById('page-prev').click()`);await wait(80);}
+  const [,pages]=await pageNumbers(),result=[],seen=new Set();assert.ok(pages>=1);
+  for(let index=0;index<pages;index++){
+    assert.deepEqual((await pageNumbers()).slice(0,2),[index+1,pages]);const current=await ids();assert.ok(current.length>0,'a page cannot hide all main agents');
+    for(const id of current){assert.ok(expected.includes(id),'unexpected main agent '+id);assert.equal(seen.has(id),false,'a main agent cannot occupy two pages');seen.add(id);}result.push(current);await assertNoOverlap();
+    assert.equal(await evaluate(`document.getElementById('page-next').disabled`),index===pages-1);
+    if(index<pages-1){await evaluate(`document.getElementById('page-next').click()`);await wait(80);}
+  }
+  assert.deepEqual([...seen].sort(),[...expected].sort(),'paging must expose every independent identity exactly once');
+  while(await evaluate(`!document.getElementById('page-prev').disabled`)){await evaluate(`document.getElementById('page-prev').click()`);await wait(80);}return result;
+}
 async function send(sessions){snapshot={...snapshot,sessions,now:Date.now()};win.webContents.send('office:snapshot',snapshot);await wait(100);}
 async function until(source,message){const end=Date.now()+6000;while(Date.now()<end){if(await evaluate(source))return;await wait(60);}throw new Error(message);}
 async function choose(key){await evaluate(`(()=>{const select=document.getElementById('project-select');select.value=${JSON.stringify(key)};select.dispatchEvent(new Event('change',{bubbles:true}));})()`);await wait(100);}
@@ -54,24 +70,22 @@ app.whenReady().then(async()=>{
   checks.push('explicit project filters survive reload, expose other main agents, and can return to overview; selecting a task preserves overview');
   const many=Array.from({length:7},(_,index)=>task('page-'+index,index%2?'one':'two'));
   await send(many);
-  const firstPage=many.slice(0,5).map(item=>item.id);
   await until(`document.querySelectorAll('.actor[data-session-id^="codex:parallel"]').length===0`,'the previous roots must retire');
-  assert.deepEqual(await ids(),firstPage);
+  const initialPages=await rootPages(many.map(item=>item.id)),firstPage=initialPages[0];
   await send([...many].reverse().map((item,index)=>({...item,lastEventAt:Date.now()+index})));
   assert.deepEqual(await ids(),firstPage,'heartbeats must not shuffle roots between pages');
-  await evaluate(`document.getElementById('page-next').click()`);
-  assert.deepEqual(await ids(),many.slice(5).map(item=>item.id));
-  await evaluate(`document.getElementById('roster-button').click();[...document.querySelectorAll('.roster-row')].find(row=>row.textContent.includes('page-0')).click()`);
-  assert.equal(await evaluate(`document.getElementById('project-select').value`),Scene.ALL_ROOMS);
+  assert.deepEqual(await rootPages(many.map(item=>item.id)),initialPages,'heartbeat ordering cannot change any page');
+  for(const session of many){await selectRoster(session);assert.equal(await evaluate(`document.getElementById('project-select').value`),Scene.ALL_ROOMS);await assertNoOverlap();}
+  await selectRoster(many[0]);
   assert.deepEqual(await ids(),firstPage);
-  await evaluate(`document.getElementById('close-inspector').click()`);
-  checks.push('more than five same-provider roots have stable pages and roster navigation reveals the correct overview page');
+  await clearSelection();
+  checks.push('crowded same-provider roots have stable adaptive pages; every identity is reachable once by paging and by roster');
   const root=task('family-root','one',{activity:'planning',activeTools:0});
   const child=(name,patch={})=>task(name,'one',{parentId:root.id,...patch});
   const resting=['a','b','c'].map(id=>child(id));
   await send([root,...resting]);
   await until(`document.querySelectorAll('.actor[data-session-id^="codex:page-"]').length===0`,'old overview pages must retire');
-  assert.equal(await evaluate(`document.querySelectorAll('.actor[data-helper="true"]').length`),3);
+  for(const session of resting){await selectRoster(session);assert.equal(await evaluate(`${actor(session.id)}.dataset.helper`),'true');await assertNoOverlap();}await clearSelection();
   const completed=resting.map(item=>({...item,activity:'idle',status:'idle',activeTools:0,turnCompletedAt:Date.now()}));
   await send([root,...completed]);
   assert.equal(await evaluate(`document.querySelectorAll('.actor[data-helper="true"]').length`),0);
@@ -90,11 +104,11 @@ app.whenReady().then(async()=>{
   const closedFamily=[root,live,nested].map(item=>({...item,status:'closed',closed:true,activity:'idle',activeTools:0}));
   await send([...many,...completed,...closedFamily]);
   await until(`!${actor(root.id)}`,'closed root must leave after its remaining children return');
-  assert.deepEqual(await ids(),firstPage,'absorbed orphan helpers must not consume main-agent page slots after their root ends');
-  await evaluate(`document.getElementById('roster-button').click();[...document.querySelectorAll('.roster-row')].find(row=>row.textContent.includes('page-4')).click()`);
+  assert.deepEqual(await rootPages(many.map(item=>item.id)),initialPages,'absorbed orphan helpers must not consume main-agent page slots after their root ends');
+  await selectRoster(many[4]);
   assert.equal(await evaluate(`!!${actor(many[4].id)}`),true,'roster navigation must use the same suppressed-family pagination as rendering');
-  assert.match(await evaluate(`document.getElementById('page-label').textContent`),/^1\s*\/\s*2/);
-  await evaluate(`document.getElementById('close-inspector').click()`);
+  const selectedPage=initialPages.findIndex(page=>page.includes(many[4].id))+1;assert.deepEqual((await pageNumbers()).slice(0,2),[selectedPage,initialPages.length]);
+  await clearSelection();
   checks.push('cached idle orphans cannot displace real main agents or send roster selection to an incorrect page');
   await send(roots);
   await until(`document.querySelectorAll('.actor[data-session-id^="codex:page-"]').length===0`,'previous paged roots must settle');

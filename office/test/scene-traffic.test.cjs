@@ -37,6 +37,40 @@ test('stationary bodies and their full name-tag envelopes cause a real detour', 
   const plan = traffic.next('a');
   assert.ok(plan.path.length > 2); verifyPath(plan, a, [b]);
 });
+
+test('traffic retains each measured CSS footprint and replans when a label grows', () => {
+  const small={left:30,right:30,top:45,bottom:20}, large={left:200,right:200,top:110,bottom:90};
+  const a=actor('measured-mover',15,80,{footprint:small}), b=actor('measured-blocker',50,65,{footprint:small});
+  const traffic=coordinator({bounds:Scene.actorBounds,legalPoint:()=>true});
+  traffic.sync([a,b]);traffic.request(a.id,{x:85,y:80});
+  let plan=traffic.next(a.id);assert.equal(plan.kind,'move');assert.equal(plan.path.length,2);
+  traffic.cancel(a.id,a.position);b.footprint=large;
+  traffic.sync([a,b]);traffic.request(a.id,{x:85,y:80});plan=traffic.next(a.id);
+  assert.equal(plan.kind,'move');assert.ok(plan.path.length>2,'a larger measured tag must invalidate the straight path');
+  for(let leg=1;leg<plan.path.length;leg++) for(let step=0;step<=200;step++) {
+    const from=plan.path[leg-1],to=plan.path[leg],point={x:from.x+(to.x-from.x)*step/200,y:from.y+(to.y-from.y)*step/200};
+    assert.equal(Scene.actorsOverlap(point,a,b.position,b,8),false);
+  }
+});
+
+test('a normal entrance-side new main walks past the same three mixed-station bodies at 100 and 135 percent', () => {
+  for(const scale of [1,1.35]) {
+    const sessions=['coding','testing','reading','coding'].map((activity,index)=>({id:['myth-0','myth-1','myth-2','new-arrival'][index],activity}));
+    const footprint={left:83,right:83,top:135,bottom:77},entry={x:87,y:78};
+    const options={scale,entryIds:new Set(['new-arrival']),footprints:new Map(sessions.map(session=>[session.id,footprint])),reservedRects:Scene.CLOCK_RESERVED.concat(Scene.actorReservation(entry,{scale,footprint}))};
+    const page=Scene.pageSessions(sessions,Scene.ALL_ROOMS,0,'',options);
+    const actors=sessions.map(session=>({id:session.id,position:session.id==='new-arrival'?entry:page.seats.get(session.id),scale,footprint}));
+    const traffic=Traffic.createCoordinator({gap:Scene.ACTOR_GAP,reservedRects:Scene.CLOCK_RESERVED,legalPoint:(p,a)=>Scene.legalActorPoint(p,{...a,reservedRects:Scene.CLOCK_RESERVED})});
+    traffic.sync(actors);traffic.request('new-arrival',page.seats.get('new-arrival'));
+    const plan=traffic.nextAny();assert.equal(plan.kind,'move');assert.equal(plan.id,'new-arrival');assert.ok(plan.path.length>=2);assert.equal(plan.instant,false);
+    for(let leg=1;leg<plan.path.length;leg++)for(let step=0;step<=300;step++) {
+      const from=plan.path[leg-1],to=plan.path[leg],point={x:from.x+(to.x-from.x)*step/300,y:from.y+(to.y-from.y)*step/300};
+      assert.equal(Scene.legalActorPoint(point,{scale,footprint,reservedRects:Scene.CLOCK_RESERVED}),true);
+      for(const other of actors.filter(actor=>actor.id!=='new-arrival'))assert.equal(Scene.actorsOverlap(point,{scale,footprint},other.position,other,Scene.ACTOR_GAP),false);
+    }
+    assert.equal(traffic.finish(plan.id,plan.token,plan.target),true);assert.equal(traffic.state().queued,0);
+  }
+});
 test('an unobstructed body-only lane still detours around a name tag below another actor', () => {
   const traffic = coordinator(), a = actor('a', 15, 75), b = actor('b', 50, 65);
   const middle = bounds({ x: 50, y: 75 }, a), blocker = bounds(b.position, b);

@@ -9,6 +9,13 @@ contextBridge.exposeInMainWorld('office',Object.freeze({
   disconnectProvider:provider=>invoke('disconnect',provider),
   listDisplays:()=>invoke('displays'),moveToDisplay:id=>invoke('move-display',id),
   openSource:id=>invoke('open-source',id),
+  getUsageHistory:filters=>invoke('usage-history',filters),
+  getUsageEvents:filters=>invoke('usage-events',filters),
+  getUsageStatus:()=>invoke('usage-status'),
+  exportUsageHistory:filters=>invoke('usage-export',filters),
+  openUsageFolder:()=>invoke('usage-open-folder'),
+  getProviderSetup:()=>invoke('setup-status'),
+  initializeProviders:options=>invoke('setup-initialize',options),
 }));
 window.addEventListener('DOMContentLoaded',()=>ipcRenderer.send('office:preload-ready'),{once:true});
 window.addEventListener('error',event=>ipcRenderer.send('office:renderer-error',String(event.message).slice(0,300)));

@@ -19,18 +19,24 @@ test('each observed activity has a physical station; quiet and stale never mean 
   assert.equal(stale.label, '信号暂未更新');
 });
 
-test('five concurrent sessions of the same provider retain independent identities and seats', () => {
+test('same-provider sessions retain independent identities and reachable compatible seats at every station', () => {
   for (const activity of Object.keys(Scene.SPECS)) {
     const sessions = Array.from({ length: 5 }, (_, index) => task('codex:' + index, activity));
-    const page = Scene.pageSessions(sessions, '/projects/mini-office');
-    assert.equal(page.visible.length, 5);
-    const seats = Scene.assignSeats(page.visible);
-    assert.equal(new Set([...seats.values()].map((seat) => seat.x + ':' + seat.y)).size, 5, activity);
-    for (const [id, seat] of seats) for (const [otherId, other] of seats) {
-      if (id !== otherId) assert.ok(Scene.distance(seat, other) >= 9.9, activity + ' ' + id + ' and ' + otherId + ' would overlap');
+    const first = Scene.pageSessions(sessions, '/projects/mini-office'), seen = new Set();
+    for (let index = 0; index < first.pages; index += 1) {
+      const page = Scene.pageSessions(sessions, '/projects/mini-office', index);
+      assert.equal(page.layoutFits, true, activity);
+      const seats = page.seats;
+      assert.equal(new Set([...seats.values()].map(seat => seat.x + ':' + seat.y)).size, page.visible.length);
+      for (const session of page.visible) {
+        seen.add(session.id);
+        assert.ok(Scene.stationCompatible(seats.get(session.id), Scene.activitySpec(session).zone), activity);
+        for (const other of page.visible) if (session.id !== other.id) assert.equal(Scene.actorsOverlap(seats.get(session.id), {}, seats.get(other.id), {}), false);
+      }
+      const repeated = Scene.assignSeats([...page.visible].reverse(), seats);
+      for (const [id, seat] of seats) assert.deepEqual(repeated.get(id), seat, 'snapshot ordering must preserve valid seats');
     }
-    const repeated = Scene.assignSeats([...page.visible].reverse(), seats);
-    for (const [id, seat] of seats) assert.deepEqual(repeated.get(id), seat, 'snapshot reordering must not make characters shuffle');
+    assert.equal(seen.size, 5, activity + ' pagination must retain every actual session');
   }
 });
 
@@ -63,9 +69,9 @@ test('project rooms and overflow retain all attention counts', () => {
   assert.equal(main.attention, 1);
   assert.equal(website.attention, 1);
   const all = new Set();
-  for (let page = 0; page < 3; page += 1) for (const session of Scene.pageSessions(sessions, main.key, page).visible) all.add(session.id);
+  for (let page = 0; page < Scene.pageSessions(sessions, main.key).pages; page += 1) for (const session of Scene.pageSessions(sessions, main.key, page).visible) all.add(session.id);
   assert.equal(all.size, 11, 'pagination must not lose sessions');
-  assert.equal(Scene.pageSessions(sessions, main.key, 100).page, 2);
+  assert.equal(Scene.pageSessions(sessions, main.key, 100).page, Scene.pageSessions(sessions, main.key).pages - 1);
   assert.equal(Scene.pageSessions(sessions, main.key, -10).page, 0);
 });
 
@@ -131,13 +137,13 @@ test('nested helper families stay on their root page and a selected descendant p
   const roots = Array.from({ length: 6 }, (_, index) => task('root:' + index));
   const sessions = [...roots, task('child', 'coding', { parentId: 'root:5' }), task('grandchild', 'testing', { parentId: 'child' }), task('great-grandchild', 'reading', { parentId: 'grandchild' }), task('overflow', 'reading', { parentId: 'great-grandchild' })];
   const first = Scene.pageSessions(sessions, '/projects/mini-office');
-  assert.equal(first.visible.length, 5);
+  assert.equal(first.visible.length, first.capacity);
   assert.equal(first.helperOverflow, 0);
   const second = Scene.pageSessions(sessions, '/projects/mini-office', 1, 'overflow');
   assert.equal(second.roots.length, 6);
-  assert.equal(second.visible.length, 4, 'one root and at most three total helpers');
+  assert.ok(second.visible.length <= second.capacity + 3, 'roots and at most three total helpers');
   assert.equal(second.helperOverflow, 1);
-  assert.equal(second.hidden, 6, 'five roots on another page plus one overflow helper');
+  assert.equal(second.hidden, sessions.length - second.visible.length);
   assert.ok(second.visible.some(session => session.id === 'overflow'));
   assert.equal(second.rootIdsBySession.get('overflow'), 'root:5');
   assert.equal(second.rootIdsBySession.get('grandchild'), 'root:5');
@@ -173,13 +179,14 @@ test('overview root pages remain stable when new activity reorders more than fiv
   }));
   const ids = (input, page) => Scene.pageSessions(input, Scene.ALL_ROOMS, page).visible.map(session => session.id);
   const first = ids(sessions, 0), second = ids(sessions, 1);
-  assert.equal(first.length, Scene.CAPACITY);
-  assert.equal(second.length, sessions.length - Scene.CAPACITY);
-  assert.equal(new Set([...first, ...second]).size, sessions.length);
-  const next = [...sessions].reverse().map((session, index) => ({ ...session, lastEventAt: 1000 + index, activity: 'reading' }));
+  const pages = Scene.pageSessions(sessions, Scene.ALL_ROOMS).pages;
+  assert.equal(first.length, Scene.pageSessions(sessions, Scene.ALL_ROOMS).capacity);
+  const seen = new Set(Array.from({length:pages}, (_, page) => ids(sessions,page)).flat());
+  assert.equal(seen.size, sessions.length);
+  const next = [...sessions].reverse().map((session, index) => ({ ...session, lastEventAt: 1000 + index, activity: 'coding' }));
   assert.deepEqual(ids(next, 0), first);
   assert.deepEqual(ids(next, 1), second);
-  assert.equal(Scene.pageSessions(next, Scene.ALL_ROOMS, 99).page, 1);
+  assert.equal(Scene.pageSessions(next, Scene.ALL_ROOMS, 99).page, pages - 1);
 });
 
 test('repeated turns retain one main actor per actual Codex session across project rooms', () => {
@@ -250,13 +257,13 @@ test('a suppressed orphan head keeps a selectable virtual page group for working
   const sessions = [nested, head, ...otherRoots], options = { suppressedIds: new Set([head.id]) };
   const first = Scene.pageSessions(sessions, Scene.ALL_ROOMS, 0, '', options);
   assert.equal(first.pages, 2);
-  assert.deepEqual(first.visible.map(session => session.id), otherRoots.map(session => session.id));
+  assert.deepEqual(first.visible.map(session => session.id), otherRoots.slice(0,first.capacity).map(session => session.id));
   const mainId = first.rootIdsBySession.get(nested.id);
   assert.equal(mainId, head.id);
   const rootIndex = first.roots.findIndex(session => session.id === mainId);
-  const selected = Scene.pageSessions(sessions, Scene.ALL_ROOMS, Math.floor(rootIndex / Scene.CAPACITY), nested.id, options);
-  assert.deepEqual(selected.visible.map(session => session.id), [nested.id]);
-  assert.equal(selected.visible[0].parentId, head.id, 'the visible descendant stays a real helper');
+  const selected = Scene.pageSessions(sessions, Scene.ALL_ROOMS, Math.floor(rootIndex / first.capacity), nested.id, options);
+  assert.ok(selected.visible.some(session => session.id === nested.id));
+  assert.equal(selected.visible.find(session=>session.id===nested.id).parentId, head.id, 'the visible descendant stays a real helper');
   assert.equal(selected.rootIdsBySession.get(nested.id), head.id);
   assert.equal(selected.visible.some(session => session.id === head.id), false);
   assert.equal(selected.helperOverflow, 0);
@@ -304,7 +311,7 @@ test('identity registry names stay fixed across snapshots, activities, project r
   const names = new Map(sessions.map(session => [session.id, registry.get(session)]));
   const changed = sessions.slice().reverse().map(session => ({ ...session, activity: 'waiting-user', title: 'a new title', projectPath: '/another-room' }));
   registry.register(changed);
-  for (let page = 0; page < 3; page += 1) {
+  for (let page = 0; page < Scene.pageSessions(changed, '/another-room').pages; page += 1) {
     for (const session of Scene.pageSessions(changed, '/another-room', page).visible) assert.equal(registry.get(session), names.get(session.id));
   }
   registry.register([]);
@@ -363,10 +370,11 @@ function assertReadableLayout(page, options) {
   assert.equal(page.layoutFits, true);
   assert.equal(page.seats.size, page.visible.length);
   for (const session of page.visible) {
-    const seat = page.seats.get(session.id), actor = { ...options, helper: Boolean(session.parentId) };
+    const seat = page.seats.get(session.id), actor = { ...options, helper: Boolean(session.parentId), footprint: options.footprints?.get(session.id) };
+    assert.ok(Scene.stationCompatible(seat,seat.zone), 'seat must stay at its artwork work area: ' + session.id);
     assert.ok(Scene.legalActorPoint(seat, actor), 'body/tag must fit viewport and avoid reserved display: ' + session.id);
     for (const other of page.visible) if (other.id !== session.id) assert.equal(Scene.actorsOverlap(seat, actor,
-      page.seats.get(other.id), { ...options, helper: Boolean(other.parentId) }), false, session.id + ' and ' + other.id);
+      page.seats.get(other.id), { ...options, helper: Boolean(other.parentId), footprint: options.footprints?.get(other.id) }), false, session.id + ' and ' + other.id);
   }
 }
 
@@ -384,16 +392,25 @@ test('screen-space envelopes match renderer depth, helper and user scales around
   assert.equal(Scene.actorScale(point, { scale: Infinity }), Scene.actorScale(point));
 });
 
-test('five main actors and three helpers fit readable envelopes at every supported size with a large clock', () => {
+test('supported sizes retain readable work areas and every root through adaptive pages', () => {
   const sessions = Array.from({ length: 5 }, (_, index) => task('root-' + index));
   sessions.push(...Array.from({ length: 3 }, (_, index) => task('helper-' + index, 'testing', { parentId: 'root-0' })));
   const original = structuredClone(sessions);
   for (const scale of [.65, .8, 1, 1.15, 1.35]) {
     const options = { scale, reservedRects: CLOCK_RESERVED };
     const page = Scene.pageSessions(sessions, Scene.ALL_ROOMS, 0, '', options);
-    assert.equal(page.capacity, 5);
-    assert.equal(page.visible.length, 8);
+    assert.ok(page.capacity >= 1 && page.capacity <= 5);
     assertReadableLayout(page, options);
+    const seen = new Set();
+    for (let index = 0; index < page.pages; index += 1) {
+      const group = Scene.pageSessions(sessions, Scene.ALL_ROOMS, index, '', options);
+      assertReadableLayout(group, options);
+      for (const session of group.visible) if (!session.parentId) { seen.add(session.id); assert.ok(group.seats.get(session.id).y >= 69, 'coding never falls back to rear cabinets'); }
+    }
+    assert.equal(seen.size, 5);
+    const helper = Scene.pageSessions(sessions, Scene.ALL_ROOMS, 0, 'helper-2', options);
+    assert.ok(helper.visible.some(session => session.id === 'helper-2'));
+    assertReadableLayout(helper, options);
     const repeated = Scene.pageSessions(sessions.slice().reverse(), Scene.ALL_ROOMS, 0, '', { ...options, previousSeats: page.seats });
     assert.deepEqual([...repeated.seats].sort(), [...page.seats].sort(), 'a snapshot must not shuffle valid bodies');
   }
@@ -404,7 +421,7 @@ test('size changes relayout unsafe old envelopes while preserving a selected leg
   const sessions = Array.from({ length: 5 }, (_, index) => task('main-' + index));
   const first = Scene.pageSessions(sessions, Scene.ALL_ROOMS, 0, '', { scale: .65, reservedRects: CLOCK_RESERVED });
   const options = { scale: 1.35, reservedRects: CLOCK_RESERVED, previousSeats: first.seats };
-  const enlarged = Scene.pageSessions(sessions, Scene.ALL_ROOMS, 0, '', options);
+  const enlarged = Scene.pageSessions(sessions, Scene.ALL_ROOMS, 0, 'main-4', options);
   assertReadableLayout(enlarged, options);
   const selected = Scene.pageSessions(sessions.concat(task('a-new-arrival')), Scene.ALL_ROOMS, 0, 'main-4', {
     scale: 1.35, reservedRects: CLOCK_RESERVED, previousSeats: enlarged.seats,
@@ -415,7 +432,7 @@ test('size changes relayout unsafe old envelopes while preserving a selected leg
 
 test('a smaller visual viewport reduces page capacity while keeping every root and selected helper accessible', () => {
   const sessions = Array.from({ length: 9 }, (_, index) => task('root-' + index));
-  sessions.push(...Array.from({ length: 5 }, (_, index) => task('helper-' + index, 'reading', { parentId: 'root-8' })));
+  sessions.push(...Array.from({ length: 5 }, (_, index) => task('helper-' + index, 'coding', { parentId: 'root-8' })));
   const options = { scale: 1.35, viewport: { left: 12, top: 390, right: 1268, bottom: 662 } };
   const first = Scene.pageSessions(sessions, Scene.ALL_ROOMS, 0, '', options);
   assert.ok(first.capacity < Scene.CAPACITY);
@@ -433,16 +450,104 @@ test('a smaller visual viewport reduces page capacity while keeping every root a
   assertReadableLayout(selected, options);
 });
 
-test('a temporarily reserved entrance retains five root slots and keeps overflowing helpers selectable', () => {
+test('a reserved entrance adapts density without losing roots or selectable helpers', () => {
   const sessions = Array.from({ length: 5 }, (_, index) => task('root-' + index));
   sessions.push(...Array.from({ length: 3 }, (_, index) => task('helper-' + index, 'testing', { parentId: 'root-0' })));
   for (const scale of [.65, 1, 1.35]) {
     const options = { scale, reservedRects: CLOCK_RESERVED.concat(Scene.actorBounds({ x: 87, y: 78 }, { scale })) };
     const page = Scene.pageSessions(sessions, Scene.ALL_ROOMS, 0, 'helper-2', options);
-    assert.equal(page.capacity, 5, 'temporarily yielding the doorway must not change the root page divisor');
-    assert.equal(page.pages, 1);
-    assert.equal(page.visible.filter(session => !session.parentId).length, 5);
+    assert.ok(page.capacity >= 1 && page.capacity <= 5);
+    const ids = new Set();
+    for (let index = 0; index < page.pages; index += 1) for (const session of Scene.pageSessions(sessions, Scene.ALL_ROOMS, index, '', options).visible) if (!session.parentId) ids.add(session.id);
+    assert.equal(ids.size, 5);
     assert.ok(page.visible.some(session => session.id === 'helper-2'));
     assertReadableLayout(page, options);
   }
+});
+
+test('measured CSS envelopes share the foot anchor and large coding layouts stay in front of furniture', () => {
+  const sessions = Array.from({length:7}, (_, index) => task('measured-' + index));
+  const footprint = {left:80,right:80,top:132,bottom:74};
+  const footprints = new Map(sessions.map(session => [session.id, footprint]));
+  for (const scale of [.65,1,1.35]) {
+    const options = {scale,footprints,reservedRects:CLOCK_RESERVED.concat(Scene.actorBounds({x:87,y:78},{scale,footprint}))};
+    const seen = new Set();
+    const first = Scene.pageSessions(sessions,Scene.ALL_ROOMS,0,'',options);
+    assert.equal(first.capacity, scale === 1.35 ? 3 : scale === 1 ? 4 : 5);
+    for (let page = 0; page < first.pages; page += 1) {
+      const result = Scene.pageSessions(sessions,Scene.ALL_ROOMS,page,'',options);
+      assertReadableLayout(result,options);
+      for (const session of result.visible) { seen.add(session.id); assert.ok(result.seats.get(session.id).y>=69); }
+    }
+    assert.equal(seen.size,7);
+    const selected = Scene.pageSessions(sessions,Scene.ALL_ROOMS,0,'measured-6',options);
+    assert.ok(selected.visible.some(session=>session.id==='measured-6'));
+    const point = selected.seats.get('measured-6'), bounds = Scene.actorBounds(point,{scale,footprint});
+    assert.ok(Math.abs((bounds.left+bounds.right)/2-point.x*12.8)<1e-7);
+    assert.ok(Math.abs(bounds.bottom-point.y*7.2-74*Scene.actorScale(point,{scale}))<1e-7);
+  }
+});
+
+test('unsafe rear-wall seats from older large-size layouts are repaired without changing observed activity', () => {
+  const session=task('old-seat'), old=new Map([[session.id,{x:10,y:41,zone:'desk'}]]);
+  const seat=Scene.assignSeats([session],old,{scale:1.35}).get(session.id);
+  assert.ok(seat.y>=69);
+  assert.equal(seat.zone,'desk');assert.equal(session.activity,'coding');
+});
+
+test('crowded reading, building and coding tasks never borrow another artwork station', () => {
+  for (const activity of ['reading','planning','building','coding','idle']) for (const scale of [1,1.35]) {
+    const sessions=Array.from({length:5},(_,index)=>task(activity+'-'+index,activity));
+    const footprints=new Map(sessions.map(session=>[session.id,{left:83,right:83,top:135,bottom:80}]));
+    const options={scale,footprints,reservedRects:CLOCK_RESERVED};
+    const first=Scene.pageSessions(sessions,Scene.ALL_ROOMS,0,'',options),seen=new Set();
+    for(let page=0;page<first.pages;page++) {
+      const result=Scene.pageSessions(sessions,Scene.ALL_ROOMS,page,'',options);assertReadableLayout(result,options);
+      for(const session of result.visible) {
+        seen.add(session.id);const seat=result.seats.get(session.id);
+        if(activity==='reading')assert.ok(seat.x<=31.5,'readers must remain by the left bookshelf');
+        if(activity==='coding')assert.ok(seat.x>=30&&seat.x<=73,'coders must remain by the central desks');
+        if(activity==='building')assert.ok(seat.x>=70,'builders must remain at the right bench');
+      }
+    }
+    assert.equal(seen.size,5,'all observed tasks remain reachable through pages');
+  }
+});
+
+test('maximum-size planning helpers remain selectable beside their true root in a crowded board family', () => {
+  const roots=Array.from({length:8},(_,index)=>task('board-root-'+index,'planning'));
+  const helpers=['a','b'].map(id=>task('board-helper-'+id,'planning',{parentId:roots[0].id}));
+  const sessions=roots.concat(helpers),footprint={left:95,right:95,top:135,bottom:80};
+  const options={scale:1.35,footprints:new Map(sessions.map(session=>[session.id,footprint])),reservedRects:CLOCK_RESERVED.concat(Scene.actorBounds({x:87,y:78},{scale:1.35,footprint}))};
+  for(const helper of helpers) {
+    const result=Scene.pageSessions(sessions,Scene.ALL_ROOMS,0,helper.id,options);
+    assertReadableLayout(result,options);
+    assert.ok(result.visible.some(session=>session.id===helper.id));
+    assert.ok(result.visible.some(session=>session.id===roots[0].id));
+    assert.equal(result.rootIdsBySession.get(helper.id),roots[0].id);
+    assert.equal(helper.parentId,roots[0].id);
+  }
+});
+
+test('normal main arrivals get an entrance-side compatible seat and the reserved door clears the actor gap at every scale', () => {
+  const sessions=['coding','testing','reading','coding'].map((activity,index)=>task(['myth-0','myth-1','myth-2','new-arrival'][index],activity));
+  const footprint={left:83,right:83,top:135,bottom:77},entry={x:87,y:78};
+  for(const scale of [1,1.35]) {
+    const options={scale,footprints:new Map(sessions.map(session=>[session.id,footprint])),reservedRects:CLOCK_RESERVED.concat(Scene.actorReservation(entry,{scale,footprint}))};
+    const initial=Scene.pageSessions(sessions.slice(0,3),Scene.ALL_ROOMS,0,'',options);
+    const result=Scene.pageSessions(sessions,Scene.ALL_ROOMS,0,'myth-0',{...options,entryIds:new Set(['new-arrival']),previousSeats:initial.seats});
+    assertReadableLayout(result,options);assert.equal(result.visible.length,4);
+    assert.ok(result.seats.get('new-arrival').x>=67,'a newcomer must not be assigned across the existing coder');
+    for(const session of result.visible) assert.equal(Scene.actorsOverlap(entry,{scale,footprint},result.seats.get(session.id),{scale,footprint}),false,'reserved entry must match actual traffic clearance');
+    if(scale===1)assert.deepEqual(result.seats.get('myth-0'),initial.seats.get('myth-0'),'keep an existing safe seat when feasible');
+    else assert.ok(result.seats.get('myth-0').x<60,'the old coder makes space on the left for a larger arrival');
+  }
+});
+
+test('a protected reflow entrance reserves its actual body for other actors without preventing its own next step', () => {
+  const session=task('new-arrival'),point={x:80,y:78},footprint={left:83,right:83,top:135,bottom:77};
+  const reservedRects=[Scene.actorReservation(point,{scale:1,footprint,ownerId:session.id})];
+  assert.equal(Scene.legalActorPoint(point,{session,footprint,reservedRects}),true);
+  assert.equal(Scene.legalActorPoint(point,{session:task('other'),footprint,reservedRects}),false);
+  assert.equal(Scene.legalActorPoint(point,{id:session.id,footprint,reservedRects}),true);
 });
