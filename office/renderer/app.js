@@ -18,6 +18,7 @@
   const archivedTurns = new Map();
   const settingsDefaults = { rain: false, night: false, sceneTime: 'auto', sceneVenue: 'workshop', sceneTheme: 'auto', sceneWeather: 'auto', agentScale: 1, reducedMotion: false, lowPower: false, idleVisitor: true, sound: false, selectedProject: '', language: 'zh' };
   let settings = { ...settingsDefaults };
+  let settingsRequest = 0;
   let language = 'zh';
   const usageHistory = window.OfficeUsageHistory?.create({ bridge, getLanguage: () => language });
   const setupAssistant = window.OfficeSetupAssistant?.create({ bridge, getLanguage: () => language });
@@ -75,7 +76,7 @@
   const venueStage = window.OfficeVenueStage?.create({ office, world, topbar: document.querySelector('.topbar'), getState: sceneContext,
     onSelectVenue: id => saveSettings({ sceneVenue: id }), onInteraction: payload => social?.trigger(payload) });
   const festivalStage = window.OfficeFestivalStage?.create({ office, world, topbar: document.querySelector('.topbar'), getState: sceneContext,
-    onSelectTheme: id => saveSettings({ sceneTheme: id }), onSelectWeather: id => saveSettings({ sceneWeather: id }), onInteraction: payload => { themeEnvironment?.trigger(payload); social?.trigger(payload); } });
+    onSelectTheme: (id,meta) => { venueStage?.update({ ...sceneContext(), theme: id, instant: meta?.source === 'keyboard' }); return saveSettings({ sceneTheme: id }); }, onSelectWeather: id => saveSettings({ sceneWeather: id }), onInteraction: payload => { themeEnvironment?.trigger(payload); social?.trigger(payload); } });
 
   office.dataset.festivals = String(Boolean(festivalStage));
 
@@ -1352,13 +1353,18 @@
     render();
   }
   async function saveSettings(patch) {
+    const request = ++settingsRequest;
     const previous = settings;
     applySettings({ ...settings, ...patch });
     try {
       const saved = await call('setSettings', patch);
+      if (destroyed || request !== settingsRequest) return;
       if (saved && typeof saved === 'object') applySettings(saved);
       text($('settings-result'), '已保存到这台 Mac。');
-    } catch (error) { applySettings(previous); showError(error); }
+    } catch (error) {
+      if (destroyed || request !== settingsRequest) return;
+      applySettings(previous); showError(error);
+    }
   }
   async function connect(provider, remove = false) {
     if (mutationPending || snapshot.setup?.running) return;
@@ -1456,11 +1462,12 @@
     catch (error) { showError(error); }
   }
   const receivedAtStart = snapshotReceived;
+  const settingsAtStart = settingsRequest;
   Promise.all([call('getSettings'), call('getSnapshot')]).then(([savedSettings, initial]) => {
     // Settings can arrive after the first live push. Apply the saved deliberate
     // room choice once, without mistaking future automatic choices for intent.
     selectedProject = Scene.ALL_ROOMS;
-    applySettings(savedSettings || settingsDefaults);
+    if (settingsRequest === settingsAtStart) applySettings(savedSettings || settingsDefaults);
     if (snapshotReceived === receivedAtStart) receive(initial);
     else render();
   }).catch((error) => { showError(error); applySettings(settings); render(); });
@@ -1473,7 +1480,7 @@
     const recent = roomSessions.reduce((latest, session) => Math.max(latest, Scene.timestamp(session.lastEventAt)), 0);
     text($('signal-summary'), recent ? timeAgo(recent) : '');
   }, 12000);
-  const secondsTimer = setInterval(() => { if (!document.hidden) { scenery.updateClock(settings, language); festivalStage?.update(sceneContext()); themeEnvironment?.update(sceneContext()); social?.tick(); } }, 1000);
+  const secondsTimer = setInterval(() => { if (!document.hidden) { scenery.updateClock(settings, language); festivalStage?.update(sceneContext()); themeEnvironment?.update(sceneContext()); venueStage?.refreshArtwork(); social?.tick(); } }, 1000);
   window.addEventListener('beforeunload', () => {
     destroyed = true;
     usageHistory?.dispose();

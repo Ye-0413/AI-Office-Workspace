@@ -1,4 +1,4 @@
-/* A local, decorative harbour. It never changes observed agent state. */
+/* Local window light and a decorative harbour. Never changes agent state. */
 (function (root) {
   'use strict';
   function artwork(id) {
@@ -28,9 +28,28 @@
       layer.append(view);
       return view;
     });
+    // Full room paintings already contain their own outdoor scene. The door
+    // gets the same bounded, transparent light as the main glass, with a
+    // separate surface per phase so an interrupted preview never repaints an
+    // outgoing gradient. These surfaces have no animation loop or timer.
+    const door = world.querySelector('.door-window');
+    const doorViews = modes.map(mode => {
+      const view = document.createElement('i');
+      view.className = 'door-theme-wash';
+      view.dataset.time = mode;
+      view.setAttribute('aria-hidden', 'true');
+      if (door) door.append(view);
+      return view;
+    });
     let first = true;
-    function paint(view, state) {
+    function paintLight(view, state) {
       for (const key of ['skyTop', 'skyBottom', 'water', 'skyline']) view.style.setProperty('--' + key, state[key]);
+      // Preserve at least 80% of the painted scene even in the darkest phase.
+      const shade = Number.isFinite(state.roomShade) ? state.roomShade : 0;
+      view.style.setProperty('--theme-wash-alpha', String(Math.min(.2, Math.max(.045, .045 + shade * .36))));
+    }
+    function paint(view, state) {
+      paintLight(view, state);
       view.querySelector('.harbour-sun').style.transform = `translate(${state.sunX * 2}px,${state.sunY * 3.3}px)`;
       view.querySelector('.harbour-sun').style.opacity = state.sunOpacity;
       view.querySelector('.harbour-moon').style.opacity = state.moonOpacity;
@@ -40,7 +59,11 @@
     }
     // Give each preview its own surface. Even repeated changes mid-fade keep
     // the current presentation values, without repainting an outgoing sky.
-    views.forEach((view, index) => paint(view, root.OfficeDayCycle.at(Date.now(), {sceneTime:modes[index]})));
+    views.forEach((view, index) => {
+      const state = root.OfficeDayCycle.at(Date.now(), {sceneTime:modes[index]});
+      paint(view, state);
+      paintLight(doorViews[index], state);
+    });
     function updateClock(settings, language, now = Date.now(), state = root.OfficeDayCycle.at(now, settings)) {
       const clock = document.getElementById('hk-clock');
       clock.textContent = state.clock;
@@ -65,8 +88,8 @@
       office.dataset.night = String(state.night);
       office.dataset.timePreview = String(state.preview);
       const mode = state.preview ? state.phase : 'auto';
-      if (!state.preview) paint(views[0], state);
-      for (const view of views) view.dataset.visible = String(view.dataset.time === mode);
+      if (!state.preview) { paint(views[0], state); paintLight(doorViews[0], state); }
+      for (const view of [...views, ...doorViews]) view.dataset.visible = String(view.dataset.time === mode);
       world.querySelector('.scene-night').style.opacity = state.roomShade;
       world.querySelector('.scene-lamplight').style.opacity = state.lamplight;
       world.style.setProperty('--door-sky', state.skyBottom);
@@ -77,7 +100,7 @@
       if (first) { layer.dataset.ready = 'true'; first = false; }
       return state;
     }
-    return { update, updateClock, destroy() { layer.replaceChildren(); } };
+    return { update, updateClock, destroy() { layer.replaceChildren(); for (const view of doorViews) view.remove(); } };
   }
   root.OfficeDayScenery = Object.freeze({ create });
 })(window);

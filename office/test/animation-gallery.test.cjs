@@ -52,4 +52,6 @@ test('seasonal gallery covers every real theme with at least 31 distinct animate
  assert.equal(Object.keys(manifest.sourceHashes||{}).length,4,'the gallery must identify the actual four rendering sources');
  const gif=inspectGif(fs.readFileSync(path.join(gallery,'overview.gif')));assert.equal(gif.frames,41);assert.ok(gif.uniqueImages>=31);assert.equal(gif.loop,0);
  for(const name of ['overview.png','rooms.png']){const bytes=fs.readFileSync(path.join(gallery,name));assert.equal(bytes.toString('hex',0,8),'89504e470d0a1a0a');assert.ok(bytes.length>10000);}
+ assert.equal(manifest.rooms.completePaintings,43);assert.equal(createHash('sha256').update(fs.readFileSync(path.join(gallery,'rooms.png'))).digest('hex'),manifest.rooms.sha256);
+ for(const [name,hash]of Object.entries(manifest.rooms.sourceHashes))assert.equal(createHash('sha256').update(fs.readFileSync(path.join(repo,name))).digest('hex'),hash,'re-export complete rooms after changing '+name);
 });

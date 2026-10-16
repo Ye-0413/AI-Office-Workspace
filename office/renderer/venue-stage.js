@@ -127,8 +127,10 @@
     for(const venue of model.CATALOG){const option=node('option','');option.value=venue.id;select.append(option);}
     chooser.append(label,select); topbar.insertBefore(chooser,topbar.querySelector('.room-switcher') || topbar.querySelector('.top-actions'));
     const records=new Map(), surfaces=new Set(), animations=new Set(), pendingImages=new Set();
-    let state={venue:model.DEFAULT_VENUE,language:'zh',reducedMotion:false,lowPower:false,hidden:false,dayPhase:'morning'}, destroyed=false, artGeneration=0, paintedVenue='', requestedVenue='', selectionSource='pointer', lastFeedback=null;
-    const artMotions=new Map();
+    let state={venue:model.DEFAULT_VENUE,language:'zh',reducedMotion:false,lowPower:false,hidden:false,dayPhase:'morning'}, destroyed=false, artGeneration=0, paintedArtwork='', requestedArtwork='', selectionSource='pointer', lastFeedback=null;
+    const artMotions=new Map(), artTargets=new Map();
+    const artworkFor=venue=>root.OfficeSceneArtwork?.resolve(state)||{key:venue.id,venue:venue.id,id:null,background:venue.background,altZh:venue.subtitleZh,altEn:venue.subtitleEn};
+    const describeArt=art=>language()==='en'?art.altEn:art.altZh;
     const language=()=>state.language==='en'?'en':'zh';
     const copy=()=>COPY[language()];
     const quiet=()=>Boolean(state.reducedMotion||state.lowPower||state.hidden);
@@ -218,7 +220,8 @@
         stage.append(widget);records.set(item.id,record);
       }
     }
-    function cancelArt(preserve=false){for(const [surface,effect]of artMotions){if(preserve)surface.style.opacity=getComputedStyle(surface).opacity;effect.cancel();animations.delete(effect);}artMotions.clear();}
+    function cancelArtSurface(surface,preserve=false){const effect=artMotions.get(surface);if(!effect)return;if(preserve)surface.style.opacity=getComputedStyle(surface).opacity;effect.cancel();animations.delete(effect);artMotions.delete(surface);artTargets.delete(surface);}
+    function cancelArt(preserve=false){for(const surface of [...artMotions.keys()])cancelArtSurface(surface,preserve);}
     function discardSurfaces(except){for(const surface of surfaces)if(surface!==except){surface.remove();surfaces.delete(surface);}}
     async function loadImage(image,path){
       pendingImages.add(image);
@@ -227,32 +230,42 @@
     }
     async function paint(venue,instant){
       if(!originalArt)return;
-      const generation=++artGeneration,path=venue.background;
-      requestedVenue=venue.id;
-      if(paintedVenue===venue.id&&!surfaces.size){originalArt.alt=language()==='en'?venue.subtitleEn:venue.subtitleZh;stage.dataset.artState='ready';chooser.dataset.artState='ready';select.setAttribute('aria-busy','false');return;}
+      const art=artworkFor(venue),generation=++artGeneration,path=art.background;
+      requestedArtwork=art.key;
+      if(paintedArtwork===art.key&&!surfaces.size){originalArt.alt=describeArt(art);stage.dataset.artState='ready';chooser.dataset.artState='ready';select.setAttribute('aria-busy','false');return;}
       stage.dataset.artState='loading';chooser.dataset.artState='loading';select.setAttribute('aria-busy','true');
-      const incoming=node('img','venue-art-buffer');incoming.alt='';incoming.draggable=false;incoming.setAttribute('aria-hidden','true');incoming.dataset.venue=venue.id;
+      const incoming=node('img','venue-art-buffer');incoming.alt='';incoming.draggable=false;incoming.setAttribute('aria-hidden','true');incoming.dataset.venue=venue.id;incoming.dataset.artworkKey=art.key;
       if(!await loadImage(incoming,path)){if(!destroyed&&generation===artGeneration){stage.dataset.artState='error';chooser.dataset.artState='error';select.setAttribute('aria-busy','false');say('loadError');}return;}
       if(destroyed||generation!==artGeneration)return;
-      // Three reusable pictures retain the exact visible mix on interruption.
-      // Every alpha retargets from its computed value; none is forced opaque.
-      // The bound is the venue count, even during an indefinitely rapid switch.
-      let surface=[...surfaces].find(item=>item.dataset.venue===venue.id);
+      // Reuse the exact picture, including its current alpha on re-entry.
+      // An already outgoing picture keeps its original finite fade deadline;
+      // rapid theme choices cannot repeatedly extend its lifetime.
+      let surface=[...surfaces].find(item=>item.dataset.artworkKey===art.key);
       if(!surface){surface=incoming;surface.style.opacity='0';([...surfaces].at(-1)||originalArt).after(surface);surfaces.add(surface);}
-      cancelArt(true);
       const effects=[];
       for(const item of surfaces){
         const alpha=item===surface?1:0;
-        if(instant||quiet()||!item.animate){item.style.opacity=String(alpha);continue;}
+        if(!instant&&!quiet()&&item!==surface&&artTargets.get(item)===0)continue;
+        cancelArtSurface(item,true);
+        if(instant||quiet()||!item.animate){item.style.opacity=String(alpha);if(!alpha){item.remove();surfaces.delete(item);}continue;}
         const effect=item.animate([{opacity:Number(getComputedStyle(item).opacity)},{opacity:alpha}],{duration:250,easing:OUT,fill:'forwards'});
-        artMotions.set(item,effect);animations.add(effect);effects.push(effect.finished.then(()=>{item.style.opacity=String(alpha);effect.cancel();if(artMotions.get(item)===effect)artMotions.delete(item);}).finally(()=>animations.delete(effect)));
+        artMotions.set(item,effect);artTargets.set(item,alpha);animations.add(effect);effects.push(effect.finished.then(()=>{
+          if(artMotions.get(item)!==effect)return;
+          item.style.opacity=String(alpha);effect.cancel();artMotions.delete(item);artTargets.delete(item);
+          if(!alpha){item.remove();surfaces.delete(item);}
+        }).finally(()=>animations.delete(effect)));
       }
       try{await Promise.all(effects);}catch(_){return;}
       if(destroyed||generation!==artGeneration)return;
-      surface.style.opacity='1';originalArt.src=path;originalArt.alt=language()==='en'?venue.subtitleEn:venue.subtitleZh;
-      try{await originalArt.decode();}catch(_){/* Decoded overlay remains until the next successful scene. */}
+      surface.style.opacity='1';originalArt.src=path;originalArt.alt=describeArt(art);
+      try{await originalArt.decode();}catch(_){
+        // The predecoded surface is the only confirmed usable picture. Keep
+        // it opaque if committing the main image fails, until a later choice.
+        if(!destroyed&&generation===artGeneration){stage.dataset.artState='error';chooser.dataset.artState='error';select.setAttribute('aria-busy','false');say('loadError');}
+        return;
+      }
       if(destroyed||generation!==artGeneration)return;
-      paintedVenue=venue.id;originalArt.dataset.venue=venue.id;stage.dataset.artState='ready';chooser.dataset.artState='ready';select.setAttribute('aria-busy','false');cancelArt();discardSurfaces();
+      paintedArtwork=art.key;originalArt.dataset.venue=venue.id;originalArt.dataset.artworkKey=art.key;originalArt.dataset.theme=art.id||'';stage.dataset.artState='ready';chooser.dataset.artState='ready';select.setAttribute('aria-busy','false');cancelArt();discardSurfaces();
     }
     function choose(){
       const id=model.getVenue(select.value).id;
@@ -280,21 +293,30 @@
       }
       if(changed){feedback.textContent='';lastFeedback=null;}
       else if(lastFeedback){const saved=lastFeedback;say(saved.key,saved.arg);}
-      if(changed||requestedVenue!==venue.id)paint(venue,Boolean(next.instant||quiet()));
-      else if(originalArt)originalArt.alt=language()==='en'?venue.subtitleEn:venue.subtitleZh;
+      const art=artworkFor(venue);
+      office.dataset.fullTheme=String(Boolean(art.id));
+      if(changed||requestedArtwork!==art.key)paint(venue,Boolean(next.instant||quiet()));
+      else if(originalArt)originalArt.alt=describeArt(art);
       if(quiet())for(const effect of artMotions.values())effect.finish();
     }
     update({...getState(),instant:true});
     return {
       update,
+      refreshArtwork(now=Date.now()){
+        if(destroyed)return;
+        state={...state,now};
+        const venue=model.getVenue(state.venue);
+        if(requestedArtwork!==artworkFor(venue).key)paint(venue,quiet());
+      },
       destroy(){
         if(destroyed)return;destroyed=true;artGeneration++;
         for(const record of records.values())stop(record);
         cancelArt();for(const animation of animations)animation.cancel();animations.clear();discardSurfaces();
         for(const image of pendingImages){image.onload=null;image.onerror=null;image.removeAttribute('src');}pendingImages.clear();
         listeners.splice(0).forEach(remove=>remove());stage.remove();feedback.remove();chooser.remove();
-        if(originalArt){originalArt.removeAttribute('data-venue');if(originalSrc!==null)originalArt.setAttribute('src',originalSrc);if(originalAlt!==null)originalArt.setAttribute('alt',originalAlt);}
+        if(originalArt){originalArt.removeAttribute('data-venue');originalArt.removeAttribute('data-artwork-key');originalArt.removeAttribute('data-theme');if(originalSrc!==null)originalArt.setAttribute('src',originalSrc);if(originalAlt!==null)originalArt.setAttribute('alt',originalAlt);}
         delete office.dataset.venue;
+        delete office.dataset.fullTheme;
       }
     };
   }

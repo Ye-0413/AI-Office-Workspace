@@ -357,5 +357,18 @@
     "office/lib/festival-model.js",
     "office/lib/festival-studies.js",
     "office/renderer/festival-stage.js"
-  ]
+  ],
+  "rooms": {
+    "file": "rooms.png",
+    "completePaintings": 43,
+    "version": "0.11.0",
+    "sha256": "a4a78d0d2070a53df90638c618efbbfbd4d752cbfedf3196da4256a476486c5b",
+    "sourceHashes": {
+      "office/lib/scene-artwork.js": "5811dc462647ae629be85d57124bdca6830dfe186281035c03f3f15d04195d48",
+      "office/renderer/theme-environment.js": "ec94e1949f63535a48590b53eb927421ebead1c03b10e243c9d4d9f49d2e807d",
+      "office/renderer/theme-environment.css": "900fb6af0719eedd8323db21f33aa9d24b146715173a3c4bfd1ed732c666649b",
+      "office/scripts/render-scene-rooms.cjs": "caa0eeff22e0ad977513c965fa92437dace0edccee8ff0fd1a017bcca02aca80",
+      "office/assets/scenes/themes/generation.json": "4812f8adc24dfe37f1ce6a8e2c43ebc12ae990dd1ce8d7395a698fc01d585ebc"
+    }
+  }
 }

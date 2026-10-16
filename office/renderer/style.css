@@ -144,11 +144,27 @@
 .harbour-view svg{shape-rendering:crispEdges}
 .harbour-view:not([data-visible="true"]) .harbour-cloud,.harbour-view:not([data-visible="true"]) .harbour-ferry{animation-play-state:paused}
 
-.door-window{position:absolute;left:19.5%;top:6.2%;width:45%;height:55%;overflow:hidden;background:linear-gradient(var(--door-sky-top),var(--door-sky));clip-path:polygon(0 0,100% 0,100% 100%,0 100%);mask-image:linear-gradient(90deg,#000 0 47%,transparent 47% 55%,#000 55%),linear-gradient(#000 0 28%,transparent 28% 34%,#000 34% 62%,transparent 62% 68%,#000 68%);mask-composite:intersect;pointer-events:none}
+.door-window{position:absolute;left:19.5%;top:6.2%;width:45%;height:55%;overflow:hidden;clip-path:polygon(0 0,100% 0,100% 100%,0 100%);mask-image:linear-gradient(90deg,#000 0 47%,transparent 47% 55%,#000 55%),linear-gradient(#000 0 28%,transparent 28% 34%,#000 34% 62%,transparent 62% 68%,#000 68%);mask-composite:intersect;pointer-events:none}
 .door-city{position:absolute;inset:20% 0 0;background:var(--door-city);clip-path:polygon(0 45%,13% 45%,13% 20%,25% 20%,25% 45%,40% 45%,40% 0,44% 0,44% 10%,58% 10%,58% 30%,74% 30%,74% 20%,84% 20%,84% 45%,100% 45%,100% 100%,0 100%);opacity:.8}
 .door-window-lights{position:absolute;inset:35% 8% 8%;background:repeating-linear-gradient(0deg,transparent 0 8px,#ffe4a8 8px 10px,transparent 10px 15px);opacity:0;mask-image:repeating-linear-gradient(90deg,#000 0 2px,transparent 2px 6px);transition:opacity 250ms var(--ease-out)}
 
 .door-window{mix-blend-mode:multiply;opacity:.8}.door-city{opacity:.45}
+
+/* Complete theme paintings own their outdoor view. Only transparent Hong
+   Kong light crosses their glass; never stamp a second city over the art. */
+.harbour-view::after{content:"";position:absolute;inset:0;background:linear-gradient(var(--skyTop),var(--skyBottom) 70%,var(--water));opacity:0;pointer-events:none}
+.harbour-view svg{opacity:1}
+.door-window::before{content:"";position:absolute;inset:0;background:linear-gradient(var(--door-sky-top),var(--door-sky));opacity:1;pointer-events:none}
+.harbour-view svg,.harbour-view::after,.door-window::before,.door-city{transition:opacity 250ms var(--ease-out)}
+.office[data-full-theme="true"] .harbour-view svg{opacity:0}
+.office[data-full-theme="true"] .harbour-view::after{opacity:var(--theme-wash-alpha,.08)}
+.office[data-full-theme="true"] .harbour-cloud,.office[data-full-theme="true"] .harbour-ferry{animation-play-state:paused}
+.door-theme-wash{position:absolute;inset:0;display:block;background:linear-gradient(var(--skyTop),var(--skyBottom) 70%,var(--water));opacity:0;transition:opacity 250ms var(--ease-out);pointer-events:none}
+.office[data-full-theme="true"] .door-window::before,.office[data-full-theme="true"] .door-city{opacity:0}
+.office[data-full-theme="true"] .door-window-lights{opacity:0!important}
+.office[data-full-theme="true"] .door-theme-wash[data-visible="true"]{opacity:var(--theme-wash-alpha,.08)}
+.office:is([data-reduced-motion="true"],[data-low-power="true"],[data-hidden="true"]) :is(.harbour-view,.door-theme-wash,.door-city,.door-window-lights),.office:is([data-reduced-motion="true"],[data-low-power="true"],[data-hidden="true"]) .harbour-view svg,.office:is([data-reduced-motion="true"],[data-low-power="true"],[data-hidden="true"]) .harbour-view::after,.office:is([data-reduced-motion="true"],[data-low-power="true"],[data-hidden="true"]) .door-window::before{transition:none}
+@media(prefers-reduced-motion:reduce){.door-theme-wash,.harbour-view svg,.harbour-view::after,.door-window::before,.door-city{transition:opacity 150ms ease}}
 
 /* A personal stamp and a small card distinguish personality from task evidence. */
 .actor-keepsake{position:absolute;right:-7px;top:-9px;display:flex;align-items:center;justify-content:center;width:21px;height:21px;border:1px solid #c5ad7a;background:#f2e8c9;color:#7e8862;box-shadow:0 2px 3px #2c24162b;border-radius:50%;font-size:13px;opacity:0;transform:translateY(3px);transition:transform 160ms var(--ease-out),opacity 160ms var(--ease-out)}
