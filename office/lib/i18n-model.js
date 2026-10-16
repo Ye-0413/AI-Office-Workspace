@@ -37,6 +37,8 @@
     'identity.auto': ['保持自动命名', 'Use automatic names'],
     'identity.restore': ['恢复自动名称', 'Restore automatic name'],
     'identity.parent': ['协助 {name}', 'Helping {name}'],
+    'family.clonesSummary': ['分身 {active} 活跃 · 累计 {total}', '{active} active clones · {total} total'],
+    'family.clonesHint': ['累计保留本次观察期间出现过的独立分身；活跃只统计当前有工作依据的分身。', 'Total retains distinct clones observed in this app session; active requires current work evidence.'],
     'family.leader': ['领队 · {count} 位帮手', 'Leader · {count} helpers'],
     'identity.provider': ['{name} · 来自 {provider}', '{name} · from {provider}'],
     'door.enter': ['进入办公室', 'Enter the office'],
@@ -61,6 +63,12 @@
   });
 
   const phrases = [
+    ['分身出现', 'Clone appearing'],
+    ['结束分身', 'Releasing clone'],
+    ['结束分身。', 'Clone released.'],
+    ['分身暂歇', 'Clone resting'],
+    ['分身暂歇。', 'Clone resting.'],
+    ['等分身归位', 'Waiting for clones'],
     ['演示故事', 'Demo story'],
     ['伙伴昵称', 'Agent names'],
     ['海港名字与小性格，只在工作室里使用。', 'Harbour names and little personalities, just for the office.'],

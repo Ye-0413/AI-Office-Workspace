@@ -79,3 +79,23 @@ Validation for 0.4.0:
 - The Office quality workflow runs on main pushes and pull requests, with immutable verified action revisions, minimum read permissions and bounded execution. Remote run status is available in GitHub Actions.
 
 All local screenshots and app build artifacts remain outside committed source; restricted character artwork and the original app icon are not published to GitHub.
+
+## 0.5.0 real observation, articulated motion and shadow clones — 2026-10-16
+
+The application now runs exclusively from actual observation snapshots. Synthetic demo runtimes, story controls and demo IPC were removed; isolated test fixtures are still explicitly synthetic. Hook and read-only rollout health are evaluated independently, with native diagnostics retained. No provider messages, hook installation/removal or approval changes were performed during this release verification.
+
+The Hong Kong clock is now a physical-looking desk clock on the cabinet below the whiteboard, with 34px digits. The small wall clock hands also follow actual Hong Kong time. Day previews preserve the actual time, and speech bubbles avoid covering the large clock. Eleven new articulated performances add eye, hand, foot and prop motion to actual reading, searching, planning, coding, design, testing, building, command execution, tool waits, user waits and errors. Tool-result and recent-work cues retain their existing priority. Metadata refreshes preserve animation phase; hidden, reduced-motion, low-power and lifecycle transitions cancel or suspend motion.
+
+Every real identity has a stable bilingual nickname pair: Chinese UI uses its Chinese nickname, English UI its English nickname. Task titles, paths and complete IDs remain literal. Root nameplates, inspector and roster show currently active descendants and cumulative distinct observed descendants, including nested and already-ended helpers. Totals are scoped to this application observation session and survive room/page changes; old absent confirmed-ended families may be evicted under the documented soft retention bound. Idle, absent, stale and unknown/no-work sessions do not become active or falsely ended.
+
+Only root sessions use the doorway. New helpers split from the visible main body with a finite local smoke/echo effect, then follow furniture-safe paths. Nested relationship lines still follow actual immediate parents. Confirmed helper endings and observed completed turns return the body to the main agent and announce “结束分身。”; a completed turn does not close an open native thread or change backend lifecycle counts. Repeated idle snapshots cannot recreate that body; real new work splits the same identity again without increasing its cumulative count. Missing signals use a neutral resting transition. Root departures wait for returning descendants, resumed work interrupts returns, and quiet modes settle cleanly without doorway effects.
+
+The reducer now accepts a same-turn explicit SubagentStop after that helper's own Stop, while rejecting old-turn and stale no-turn ending events. This preserves native closure evidence without allowing delayed observations to end resumed work.
+
+Validation recorded before packaging:
+
+- **341/341** Node tests pass, including actual normalized helper-turn completion through the reducer and renderer predicate, unique history, late ancestry, stale/unknown evidence, quiet cleanup and rejection of delayed end events.
+- The existing native Electron renderer suite passes **28** behavior checks. New clone coverage checks seven groups: root-only doorway use, main-body split/return, open-thread completed-turn absorption and reopening, nested ancestry/counters, bilingual names with literal task text, interrupted/quiet returns, and whole-family departure ordering. The native avatar suite verifies all eleven performances and timeline/quiet/lifecycle behavior; the day-cycle suite covers all five phases and the embedded clock.
+- An isolated launch of the actual 0.5.0 application read existing local Codex rollouts and rendered **one actual root and one actual helper**, with no renderer or monitor error. It used a separate user-data directory, read-only monitoring and zero provider-connection actions. This verifies real local Codex observation; provider replay fixtures do not establish live operation of every supported client.
+
+Packaging checks and the final GitHub workflow result are recorded with the release delivery. Restricted artwork, installer archives, screenshots and local observation reports remain outside committed source.

@@ -1,0 +1,10 @@
+/* Short, local smoke identifies a real parent/child boundary, never a task result. */
+.clone-effect{position:absolute;left:0;top:0;width:0;height:0;z-index:8;pointer-events:none}
+.clone-ring{position:absolute;display:block;left:-50px;top:-18px;width:100px;height:29px;border:2px dashed var(--family-color,#a3ad83);border-radius:50%;opacity:0}
+.clone-smoke{position:absolute;display:block;width:35px;height:29px;background:#f0e6caf2;box-shadow:inset 0 -5px 0 #bcbd9d66;clip-path:polygon(0 37%,14% 37%,14% 17%,33% 17%,33% 0,66% 0,66% 17%,86% 17%,86% 37%,100% 37%,100% 83%,83% 83%,83% 100%,17% 100%,17% 83%,0 83%);opacity:0}
+.clone-echo{position:absolute;left:-77px;top:-128px;width:154px;height:129px;opacity:0;transform-origin:50% 100%}
+.clone-echo img{position:absolute;width:48.3871%;height:61.5385%;left:25.8064%;top:30.7692%;image-rendering:pixelated;filter:sepia(.15);pointer-events:none}
+.actor[data-clone-phase="returning"] .nameplate,.actor[data-clone-phase="absorbing"] .nameplate{border-style:dashed}
+.actor[data-clone-hold="true"] .actor-state{color:#737e5d}
+.office[data-reduced-motion="true"] .clone-effect,.office[data-low-power="true"] .clone-effect,.office[data-hidden="true"] .clone-effect{display:none}
+@media(prefers-reduced-motion:reduce){.clone-effect{display:none}}

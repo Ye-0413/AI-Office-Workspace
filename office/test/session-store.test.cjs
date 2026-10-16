@@ -149,6 +149,63 @@ test('native SessionEnd remains authoritative with running tools and children, e
   assert.equal(store.ingest(event('tool-end', { turnId: 'new', at: 17000, toolCallId: 'busy' })), false);
   assert.equal(store.ingest(event('turn-end', { turnId: 'new', at: 18000 })), false);
 });
+test('native helper end closes after its own same-turn Stop and keeps its parent settled', () => {
+  const store = createSessionStore({ now: () => 20000 });
+  const helper = { subagentId: 'helper', parentId: 'codex:one', turnId: 'child-turn' };
+  store.ingest(event('turn-start', { turnId: 'parent-turn', at: 10000 }));
+  store.ingest(event('subagent-start', { ...helper, at: 11000 }));
+  store.ingest(event('turn-end', { turnId: 'parent-turn', at: 12000, activity: 'idle' }));
+  assert.equal(store.snapshot().find(s => !s.parentId).activity, 'waiting-tool');
+  store.ingest(event('turn-end', { ...helper, at: 13000, activity: 'idle' }));
+  let child = store.snapshot().find(s => s.parentId);
+  assert.equal(child.status, 'idle'); assert.equal(child.closed, false);
+  assert.equal(store.snapshot().find(s => !s.parentId).status, 'idle');
+  assert.equal(store.ingest(event('subagent-end', { ...helper, at: 1000, activity: 'idle' })), true);
+  child = store.snapshot().find(s => s.parentId);
+  assert.equal(child.closed, true); assert.equal(child.status, 'closed');
+  assert.equal(child.turnCompletedAt, undefined); assert.equal(child.lastEventAt, 13000);
+  assert.equal(store.snapshot().find(s => !s.parentId).status, 'idle');
+  assert.equal(store.ingest(event('tool-start', { ...helper, at: 14000, toolCallId: 'late-old-call' })), false);
+});
+test('a delayed old helper end cannot close a resumed helper turn or release its waiting parent', () => {
+  const store = createSessionStore({ now: () => 20000 });
+  const helper = { subagentId: 'helper', parentId: 'codex:one' };
+  store.ingest(event('turn-start', { turnId: 'parent-turn', at: 10000 }));
+  store.ingest(event('subagent-start', { ...helper, turnId: 'old', at: 11000 }));
+  store.ingest(event('turn-end', { ...helper, turnId: 'old', at: 12000, activity: 'idle' }));
+  store.ingest(event('turn-start', { ...helper, turnId: 'new', at: 13000 }));
+  store.ingest(event('tool-start', { ...helper, turnId: 'new', at: 14000, toolCallId: 'busy', activity: 'testing' }));
+  store.ingest(event('turn-end', { turnId: 'parent-turn', at: 15000, activity: 'idle' }));
+  assert.equal(store.ingest(event('subagent-end', { ...helper, turnId: 'old', at: 16000, activity: 'idle' })), false);
+  let child = store.snapshot().find(s => s.parentId);
+  assert.equal(child.closed, false); assert.equal(child.activeTools, 1); assert.equal(child.activity, 'testing');
+  assert.equal(store.snapshot().find(s => !s.parentId).activity, 'waiting-tool');
+  assert.equal(store.ingest(event('subagent-end', { ...helper, turnId: 'new', at: 17000, activity: 'idle' })), true);
+  child = store.snapshot().find(s => s.parentId);
+  assert.equal(child.closed, true); assert.equal(child.activeTools, 0);
+  assert.equal(store.snapshot().find(s => !s.parentId).status, 'idle');
+});
+test('rollout fallback cannot promote a helper Stop into an authoritative helper end', () => {
+  const store = createSessionStore({ now: () => 30000 });
+  const helper = { subagentId: 'helper', parentId: 'codex:one', turnId: 'child-turn' };
+  store.ingest(event('subagent-start', { ...helper, at: 10000 }));
+  store.ingest(event('turn-end', { ...helper, at: 11000, activity: 'idle' }));
+  assert.equal(store.ingest(event('subagent-end', { ...helper, at: 12000, activity: 'idle', evidence: { source: 'codex-jsonl' } })), false);
+  assert.equal(store.snapshot()[0].closed, false);
+  assert.equal(store.snapshot()[0].status, 'idle');
+});
+test('an uncorrelated stale helper end cannot use native teardown priority to close new work', () => {
+  const store = createSessionStore({ now: () => 20000 });
+  const helper = { subagentId: 'helper', parentId: 'codex:one' };
+  store.ingest(event('subagent-start', { ...helper, turnId: 'old', at: 10000 }));
+  store.ingest(event('turn-end', { ...helper, turnId: 'old', at: 11000, activity: 'idle' }));
+  store.ingest(event('turn-start', { ...helper, turnId: 'new', at: 12000 }));
+  store.ingest(event('tool-start', { ...helper, turnId: 'new', at: 13000, toolCallId: 'busy', activity: 'testing' }));
+  assert.equal(store.ingest(event('subagent-end', { ...helper, at: 1000 })), false);
+  assert.equal(store.snapshot()[0].closed, false);
+  assert.equal(store.snapshot()[0].activity, 'testing');
+  assert.equal(store.snapshot()[0].activeTools, 1);
+});
 test('interruption is idle cancellation and never receives a success celebration timestamp', () => {
   const store = createSessionStore({ now: () => 2000 });
   store.ingest(event('turn-start', { turnId: 'aborted' }));

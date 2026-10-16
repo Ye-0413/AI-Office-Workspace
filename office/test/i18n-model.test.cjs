@@ -162,3 +162,9 @@ test('diagnostic paths retain their exact bytes and unknown paths/task content/b
   assert.equal(I18n.t('zh','identity.parent',{name}),'协助 '+name,'user parameters stay literal even if they equal fixed backend copy');
   assert.equal(I18n.translate('fr',name),name);
 });
+
+test('clone counters and endings have bilingual copy without rewriting their evidence', () => {
+  assert.equal(I18n.t('zh', 'family.clonesSummary', {active:2,total:7}), '分身 2 活跃 · 累计 7');
+  assert.equal(I18n.t('en', 'family.clonesSummary', {active:2,total:7}), '2 active clones · 7 total');
+  for (const [zh,en] of [['分身出现','Clone appearing'],['结束分身。','Clone released.'],['分身暂歇。','Clone resting.']]) assert.equal(I18n.translate('en',zh),en);
+});

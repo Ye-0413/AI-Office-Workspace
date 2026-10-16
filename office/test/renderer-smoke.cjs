@@ -7,6 +7,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
 const Scene = require('../lib/scene-model.js');
+const Persona = require('../lib/agent-persona.js');
 
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mini-office-renderer-'));
 app.setPath('userData', dataDir);
@@ -144,7 +145,7 @@ app.whenReady().then(async () => {
   await check('independent same-provider sessions and a child render their original SVG assets', async () => {
     const state = await evaluate(`({actors:document.querySelectorAll('.actor').length,helpers:document.querySelectorAll('.actor[data-helper="true"]').length,images:[...document.querySelectorAll('.character-body img')].every(img=>img.complete&&img.naturalWidth>0),labels:[...document.querySelectorAll('.actor-title')].map(n=>n.textContent),empty:document.getElementById('empty-state').hidden})`);
     assert.equal(state.actors, 4); assert.equal(state.helpers, 1); assert.equal(state.images, true); assert.equal(state.empty, true);
-    for (const session of sessions) assert.ok(state.labels.includes(Scene.identityName(session)));
+    for (const session of sessions) assert.ok(state.labels.includes(Persona.forSession(session).aliasZh));
     assert.equal(state.labels.includes('修复登录'), false, 'Task descriptions must stay out of character names');
   });
 
@@ -331,7 +332,7 @@ app.whenReady().then(async () => {
   });
   await check('family colors, parent names, arrows and tree indentation remain visible with reduced motion', async () => {
     const relation = await evaluate(`(()=>{const root=document.querySelector('.actor[data-session-id="family-root:5"]'),child=document.querySelector('.actor[data-session-id="family-child"]'),grand=document.querySelector('.actor[data-session-id="family-grandchild"]');return{root:root.querySelector('.actor-relation').textContent,child:child.querySelector('.actor-relation').textContent,grand:grand.querySelector('.actor-relation').textContent,colors:[root,child,grand].map(n=>n.style.getPropertyValue('--family-color')),links:document.querySelectorAll('.helper-thread').length,linksVisible:getComputedStyle(document.getElementById('helper-links')).display};})()`);
-    assert.match(relation.root,/领队.*2/);assert.match(relation.child,/协助/);assert.match(relation.grand,/协助/);assert.equal(new Set(relation.colors).size,1);assert.equal(relation.links,2);assert.notEqual(relation.linksVisible,'none');
+    assert.match(relation.root,/分身 2 活跃.*累计 2/);assert.match(relation.child,/协助/);assert.match(relation.grand,/协助/);assert.equal(new Set(relation.colors).size,1);assert.equal(relation.links,2);assert.notEqual(relation.linksVisible,'none');
     await evaluate(`document.getElementById('inspect-helper').click()`);
     assert.equal(await evaluate(`document.getElementById('inspect-title').textContent`),'family-child');
     await evaluate(`document.getElementById('roster-button').click()`);

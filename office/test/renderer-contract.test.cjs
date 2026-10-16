@@ -6,6 +6,10 @@ const path = require('node:path');
 const vm = require('node:vm');
 const Scene = require('../lib/scene-model.js');
 const Director = require('../lib/animation-director.js');
+const Clones = require('../lib/clone-lifecycle.js');
+const I18n = require('../lib/i18n-model.js');
+const { createSessionStore } = require('../lib/session-store.cjs');
+const { normalizeEvent } = require('../lib/provider-events.cjs');
 
 // Execute the renderer's actual functions without opening a GUI or installing hooks.
 const source = fs.readFileSync(path.join(__dirname, '..', 'renderer', 'app.js'), 'utf8');
@@ -24,7 +28,7 @@ function context(extra = {}) {
   const nodes = new Map();
   const errors = [];
   const sandbox = {
-    Scene, Director, persona:require('../lib/agent-persona.js').forSession, displayName:Scene.identityName, keepsakeIcon:()=> '✦',settings:{nameStyle:'classic'},language:'zh', bridge: {}, mutationPending: false,
+    Scene, Director, I18n, cloneLedger:Clones.createLedger().update(extra.snapshot?.sessions || []), restedClones:new Set(), persona:require('../lib/agent-persona.js').forSession, keepsakeIcon:()=> '✦',settings:{},language:'zh', bridge: {}, mutationPending: false,
     $: id => { if (!nodes.has(id)) nodes.set(id, node()); return nodes.get(id); },
     text: (target, value) => { target.textContent = String(value ?? ''); },
     element: (tag, className, content) => ({ ...node(content), tagName: tag, className }),
@@ -36,7 +40,7 @@ function context(extra = {}) {
     ...extra,
   };
   vm.createContext(sandbox);
-  for (const name of ['call', 'connect', 'renderInspector']) vm.runInContext(functionSource(name), sandbox);
+  for (const name of ['displayName', 'cloneSummary', 'cloneBusy', 'call', 'connect', 'renderInspector']) vm.runInContext(functionSource(name), sandbox);
   return { sandbox, nodes, errors };
 }
 
@@ -140,4 +144,76 @@ test('live folders remain available and missing-path tasks remain disabled', () 
   session.projectPath = '';
   sandbox.renderInspector();
   assert.equal(nodes.get('open-source').disabled, true);
+});
+
+test('root inspector counts nested observed identities and localizes names without rewriting task data', () => {
+  const session = { id: 'fixture', sessionId: 'native-root-id', provider: 'codex', title: 'Keep This User Title', activity: 'planning', status: 'active', events: [] };
+  const sessions = [session,
+    { id: 'coding-child', parentId: session.id, activity: 'coding', status: 'active' },
+    { id: 'nested-ended', parentId: 'coding-child', closed: true },
+    { id: 'idle-child', parentId: session.id, activity: 'idle', status: 'idle' },
+    { id: 'stale-child', parentId: session.id, activity: 'unknown', status: 'stale', disconnected: true },
+    { id: 'unknown-child', parentId: session.id, activity: 'unknown', status: 'active' }];
+  const { sandbox, nodes } = context({ snapshot: { mode: 'live', sessions }, settings: { nameStyle: 'classic' } });
+  const p = require('../lib/agent-persona.js').forSession(session);
+  sandbox.renderInspector();
+  assert.equal(nodes.get('inspect-nickname').textContent, p.aliasZh);
+  assert.equal(nodes.get('inspect-persona-name').textContent, p.aliasZh);
+  assert.equal(nodes.get('inspect-title').textContent, session.title);
+  assert.match(nodes.get('inspect-session-id').textContent, /native-root-id/);
+  assert.equal(nodes.get('inspect-helper').textContent, '分身 1 活跃 · 累计 5');
+  assert.match(nodes.get('inspect-helper').title, /独立分身/);
+  sandbox.language = 'en';
+  sandbox.renderInspector();
+  assert.equal(nodes.get('inspect-nickname').textContent, p.aliasEn);
+  assert.equal(nodes.get('inspect-persona-name').textContent, p.aliasEn);
+  assert.equal(nodes.get('inspect-helper').textContent, '1 active clones · 5 total');
+  assert.equal(nodes.get('inspect-title').textContent, session.title);
+});
+
+test('greeting remains visibly disabled while a body is cloning or holding for returning clones', () => {
+  const session = { id: 'fixture', sessionId: 'native-root-id', provider: 'codex', title: 'Original task', activity: 'planning', status: 'active', events: [] };
+  const actor = { session, clonePhase: 'splitting', holdingFamily: false, departing: false };
+  const { sandbox, nodes } = context({ snapshot: { mode: 'live', sessions: [session] }, actors: new Map([[session.id, actor]]) });
+  sandbox.renderInspector(); assert.equal(nodes.get('greet-agent').disabled, true);
+  actor.clonePhase = 'working'; actor.holdingFamily = true;
+  sandbox.renderInspector(); assert.equal(nodes.get('greet-agent').disabled, true);
+  actor.holdingFamily = false;
+  sandbox.renderInspector(); assert.equal(nodes.get('greet-agent').disabled, false);
+  assert.equal(session.activity, 'planning');
+});
+
+test('a real completed helper turn returns visually while its native session and historical ledger stay open', () => {
+  let now = 1000;
+  const store = createSessionStore({ now: () => now, staleMs: 10000 });
+  const emit = raw => store.ingest(normalizeEvent('codex', { session_id: 'root', ...raw }, { receivedAt: now++, source: 'hook' }));
+  emit({ hook_event_name: 'UserPromptSubmit', turn_id: 'parent-turn', prompt: 'Observe actual helper work' });
+  emit({ hook_event_name: 'SubagentStart', turn_id: 'child-turn', agent_id: 'helper' });
+  emit({ hook_event_name: 'Stop', turn_id: 'child-turn', agent_id: 'helper' });
+  const session = Object.freeze(store.snapshot().find(item => item.parentId));
+  assert.equal(session.closed, false);
+  assert.equal(session.status, 'idle');
+  const actor = { id: session.id, session }, parent = { id: session.parentId, departing: false };
+  const rested = new Set(), observedIds = new Set([actor.id, parent.id]), spoken = [];
+  const actors = new Map([[actor.id, actor], [parent.id, parent]]);
+  let releases = 0;
+  const sandbox = { Scene, actors, observedIds,
+    say: (_parent, phrase) => spoken.push(phrase), rememberRestedClone: id => rested.add(id),
+    removeActor: id => actors.delete(id), releaseWaitingRoots: () => { releases++; } };
+  vm.createContext(sandbox);
+  for (const name of ['completedCloneTurn', 'completedCloneReturn', 'finishCloneReturn']) vm.runInContext(functionSource(name), sandbox);
+  assert.equal(sandbox.completedCloneTurn(session, 0), true);
+  assert.equal(sandbox.completedCloneTurn(session, session.turnCompletedAt), false, 'the same completion cannot start another return');
+  for (const patch of [{ activeTools: 1 }, { attention: true }, { status: 'stale' }, { disconnected: true }, { activity: 'unknown' }]) {
+    assert.equal(sandbox.completedCloneTurn({ ...session, ...patch }, 0), false);
+  }
+  sandbox.finishCloneReturn(actor, parent, 'completed');
+  assert.deepEqual(spoken, ['结束分身。']);
+  assert.equal(rested.has(actor.id), true);
+  assert.equal(observedIds.has(actor.id), false, 'new real work must split a new visual body from its parent');
+  assert.equal(actors.has(actor.id), false);
+  assert.equal(releases, 1);
+  assert.equal(store.snapshot().find(item => item.id === actor.id).closed, false);
+  const ledger = Clones.createLedger().update(store.snapshot(), now);
+  assert.deepEqual(ledger.stats(parent.id), { active: 0, total: 1, ended: 0, open: 1, uncertain: 0 });
 });

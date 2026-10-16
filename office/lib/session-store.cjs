@@ -97,6 +97,11 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
     // when the client tears down an idle thread. Rollout fallback never owns
     // this boundary and must not synthesize it.
     const nativeSessionEnd = event.event === 'session-end' && !isFallback(event);
+    // A helper's explicit teardown may follow its own Stop. Accept that native
+    // boundary past the completed-turn fence, while a delayed older helper
+    // turn must never close the same identity after it starts new work.
+    const nativeSubagentEnd = event.event === 'subagent-end' && !isFallback(event)
+      && Boolean(event.turnId && s?.turnId && event.turnId === s.turnId);
     const starts = event.event === 'turn-start' || event.event === 'session-start' || event.event === 'subagent-start';
     if (!s) {
       // A dangling result/Stop cannot conjure a completed session on app launch.
@@ -121,10 +126,10 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
       && event.turnId && event.turnId === s.turnId && pendingTool && at >= pendingTool.startedAt;
     const supplementalResult = correlatedFallbackResult && at < s.lastEventAt;
     if (s.closed && !starts && !metadata && !nativeSessionEnd) return false;
-    if (event.turnId && s.closedTurns.has(event.turnId) && !metadata && !nativeSessionEnd) return false;
+    if (event.turnId && s.closedTurns.has(event.turnId) && !metadata && !nativeSessionEnd && !nativeSubagentEnd) return false;
     if (!metadata && !nativeSessionEnd && event.turnId && s.turnId && event.turnId !== s.turnId && event.event !== 'turn-start') return false;
     if (event.event === 'turn-start' && event.turnId !== s.turnId && at < s.turnStartedAt) return false;
-    if (!metadata && !nativeSessionEnd && !correlatedFallbackResult && at < s.lastEventAt - 2000) return false;
+    if (!metadata && !nativeSessionEnd && !nativeSubagentEnd && !correlatedFallbackResult && at < s.lastEventAt - 2000) return false;
     // Official hooks have a bounded primary lease, not permanent ownership:
     // if a hook disappears, a fresh real rollout record may repair that turn.
     // Expiration itself changes no activity and never implies completion.

@@ -180,3 +180,5 @@
 .wall-hour{width:2px;height:8px;margin-left:-1px}.wall-minute{width:1px;height:12px;margin-left:-.5px}.wall-clock .wall-pin{width:3px;height:3px;margin:0 0 -1.5px -1.5px;border-radius:50%;background:#765032}
 @media(hover:hover) and (pointer:fine){.day-clock:hover{border-color:#977347}}
 @media(prefers-contrast:more){.day-clock time{color:#fff8da}}
+
+.actor-bubble::after{left:var(--bubble-tail-x,48%)}

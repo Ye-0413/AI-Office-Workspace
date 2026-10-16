@@ -5,6 +5,7 @@
   const Attendance = window.OfficeAttendance;
   const Director = window.OfficeAnimationDirector;
   const Family = window.OfficeFamily;
+  const Clones = window.OfficeClones;
   const I18n = window.OfficeI18n;
   const bridge = window.office;
   const $ = (id) => document.getElementById(id);
@@ -13,11 +14,13 @@
   const actorsLayer = $('actors');
   const actors = new Map();
   const archivedTurns = new Map();
-  const settingsDefaults = { rain: false, night: false, sceneTime: 'auto', nameStyle: 'classic', reducedMotion: false, lowPower: false, idleVisitor: true, sound: false, selectedProject: '', language: 'zh' };
+  const settingsDefaults = { rain: false, night: false, sceneTime: 'auto', reducedMotion: false, lowPower: false, idleVisitor: true, sound: false, selectedProject: '', language: 'zh' };
   let settings = { ...settingsDefaults };
   let language = 'zh';
   const scenery = window.OfficeDayScenery.create({ office, world, layer: $('window-scenery') });
   const attendanceModel = Attendance.createAttendance();
+  const cloneLedger = Clones.createLedger();
+  const restedClones = new Set();
   let attendance = { present: [], entering: [], leaving: [], retired: [] };
   const staticCopy = [];
   const copyWalker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
@@ -84,13 +87,14 @@
     catch (error) { showError(error); return null; }
   }
   function persona(session) { return window.OfficeAgentPersona.forSession(session); }
-  function displayName(session) { const p = persona(session); return settings.nameStyle === 'harbour' ? (language === 'en' ? p.aliasEn : p.aliasZh) : Scene.identityName(session); }
+  function displayName(session) { const p = persona(session); return language === 'en' ? p.aliasEn : p.aliasZh; }
+  function cloneSummary(session) { return I18n.t(language, 'family.clonesSummary', cloneLedger.stats(session.id)); }
   function keepsakeIcon(session) { return ({teacup:'♨',paperboat:'⛵',bookmark:'▤',lantern:'✧',leaf:'❧',pebble:'◇',bell:'♧',pencil:'✎',shell:'⌁',star:'✦',acorn:'♧',ribbon:'⋈'})[persona(session).keepsake] || '✦'; }
   function reduced() { return settings.reducedMotion || mediaReduce.matches; }
   function quietSprites() { return reduced() || settings.lowPower || document.hidden; }
   function assetURL(name, replay) { return '../assets/avatars/' + name + (replay ? '?_t=' + (++spriteNonce) : ''); }
   function setPose(actor, name, replay = false) {
-    const performance = actor.performance && actor.performance.update(actor.session, { now: Date.now(), reducedMotion: reduced(), lowPower: settings.lowPower, hidden: document.hidden, walking: Boolean(actor.motion) || actor.node.dataset.walking === 'true', reaction: actor.completing || actor.node.dataset.reaction === 'true' || Boolean(actor.performanceSuspended), departing: actor.departing, stale: actor.spec.stale });
+    const performance = actor.performance && actor.performance.update(actor.session, { now: Date.now(), reducedMotion: reduced(), lowPower: settings.lowPower, hidden: document.hidden, walking: Boolean(actor.motion) || actor.node.dataset.walking === 'true', reaction: actor.completing || actor.node.dataset.reaction === 'true' || Boolean(actor.performanceSuspended) || cloneBusy(actor) || actor.holdingFamily, departing: actor.departing, stale: actor.spec.stale });
     const asset = quietSprites() ? 'clawd-static-base.svg' : performance && performance.active ? performance.asset : name;
     actor.wantedAsset = name;
     if (actor.currentAsset === asset && !replay) return;
@@ -133,9 +137,60 @@
     }
     return { ...actor.position };
   }
+  function cloneBusy(actor) { return ['splitting', 'returning', 'absorbing'].includes(actor.clonePhase); }
+  function completedCloneTurn(session, previousTurnAt = 0) {
+    return Scene.timestamp(session.turnCompletedAt) > previousTurnAt && session.activity === 'idle'
+      && !session.disconnected && session.status !== 'stale' && !session.attention && !(Number(session.activeTools) > 0);
+  }
+  function completedCloneReturn(reason) { return reason === 'ended' || reason === 'completed'; }
+  function clonePhase(actor, phase) { actor.clonePhase = phase; actor.node.dataset.clonePhase = phase; }
+  function cloneAncestor(actor) {
+    const chain = cloneLedger.parentChain(actor.id);
+    const rootId = cloneLedger.rootFor(actor.id);
+    if (rootId && rootId !== actor.id) { const at = chain.indexOf(rootId); if (at >= 0) chain.splice(at, 1); chain.unshift(rootId); }
+    if (!chain.length && actor.session.parentId) chain.push(actor.session.parentId);
+    return chain.map(id => actors.get(id)).find(parent => parent && parent !== actor && !parent.departing
+      && !['returning', 'absorbing'].includes(parent.clonePhase) && (!parent.helper || !Scene.isClosed(parent.session))) || null;
+  }
+  function cloneEffect(actor, anchor, kind) {
+    if (quietSprites() || !anchor) return;
+    const effect = window.OfficeCloneMotion.burst({ anchor: anchor.node, kind, ownerId: actor.id, asset: assetURL('clawd-static-base.svg') });
+    actor.cloneEffects.add(effect);
+    effect.finished.finally(() => actor.cloneEffects.delete(effect));
+  }
+  function relatedClones(actor) {
+    return [...actors.values()].filter(child => child.helper && child !== actor && cloneLedger.parentChain(child.id).includes(actor.id));
+  }
+  function holdForClones(actor) {
+    if (!actor.holdingFamily) cancelAction(actor);
+    actor.holdingFamily = true; actor.node.dataset.cloneHold = 'true';
+    setPose(actor, 'clawd-static-base.svg');
+    text(actor.state, '等分身归位');
+  }
+  function rememberRestedClone(id) {
+    restedClones.add(id);
+    const current = new Set(snapshot.sessions.map(session => session.id));
+    for (const cached of restedClones) {
+      if (restedClones.size <= 4096) break;
+      if (!current.has(cached)) restedClones.delete(cached);
+    }
+  }
+  function releaseWaitingRoots() {
+    queueMicrotask(() => {
+      if (destroyed) return;
+      for (const actor of actors.values()) if (!actor.helper && actor.retireRequested && !actor.departing) depart(actor, actor.retireRequested.inactive).catch(showError);
+    });
+  }
   function cancelAction(actor) {
     actor.serial += 1;
+    for (const effect of actor.cloneEffects || []) effect.cancel();
+    actor.cloneEffects?.clear();
+    clonePhase(actor, actor.helper ? 'working' : '');
+    actor.returnReason = '';
+    delete actor.node.dataset.cloneTarget;
+    delete actor.node.dataset.cloneReason;
     if (actor.opacityMotion) { actor.opacityMotion.cancel(); actor.opacityMotion = null; }
+    actor.node.style.opacity = '1';
     if (actor.motion) {
       actor.position = currentPosition(actor);
       actor.node.style.transform = actorTransform(actor.position, actor.helper);
@@ -165,8 +220,24 @@
     actor.bubble.style.transform = 'translateX(-50%)';
     const bounds = actor.bubble.getBoundingClientRect();
     const displayScale = actor.button.getBoundingClientRect().width / actor.button.offsetWidth;
-    const correction = Math.max(8 - bounds.left, Math.min(0, innerWidth - 8 - bounds.right));
-    if (correction && displayScale > 0) actor.bubble.style.transform = 'translateX(calc(-50% + ' + (correction / displayScale).toFixed(2) + 'px))';
+    let correction = Math.max(8 - bounds.left, Math.min(0, innerWidth - 8 - bounds.right));
+    let down = 0;
+    const clock = $('day-clock').getBoundingClientRect();
+    const shifted = { left: bounds.left + correction, right: bounds.right + correction, top: bounds.top, bottom: bounds.bottom };
+    if (shifted.left < clock.right + 6 && shifted.right > clock.left - 6 && shifted.top < clock.bottom + 6 && shifted.bottom > clock.top - 6) {
+      const candidates = [clock.left - 8 - shifted.right, clock.right + 8 - shifted.left]
+        .filter(dx => shifted.left + dx >= 8 && shifted.right + dx <= innerWidth - 8)
+        .sort((a, b) => Math.abs(a) - Math.abs(b));
+      if (candidates.length) correction += candidates[0];
+      else down = Math.max(0, clock.bottom + 8 - shifted.top);
+    }
+    if (displayScale > 0) {
+      actor.bubble.style.transform = 'translateX(calc(-50% + ' + (correction / displayScale).toFixed(2) + 'px)) translateY(' + (down / displayScale).toFixed(2) + 'px)';
+      const positioned = actor.bubble.getBoundingClientRect();
+      const anchor = actor.button.getBoundingClientRect();
+      const tip = Math.max(9, Math.min(actor.bubble.offsetWidth - 14, ((anchor.left + anchor.right) / 2 - positioned.left) / displayScale));
+      actor.bubble.style.setProperty('--bubble-tail-x', tip.toFixed(2) + 'px');
+    }
     actor.bubble.dataset.show = 'true';
     clearTimeout(actor.bubbleTimer);
     actor.bubbleTimer = setTimeout(() => { actor.bubble.dataset.show = 'false'; }, duration);
@@ -206,7 +277,7 @@
     actor.carry.dataset.carry = String(carrying);
     text(actor.carry, actor.session.activity === 'reading' || actor.session.activity === 'searching' ? '≡' : '✓');
     setPose(actor, carrying ? 'clawd-working-carrying.svg' : 'clawd-static-base.svg');
-    text(actor.state, '前往' + Scene.ZONES[target.zone || actor.spec.zone].name);
+    text(actor.state, actor.clonePhase === 'returning' ? completedCloneReturn(actor.returnReason) ? '结束分身' : '分身暂歇' : '前往' + Scene.ZONES[target.zone || actor.spec.zone].name);
     const points = [];
     let traveled = 0;
     for (let index = 0; index < path.length; index += 1) {
@@ -234,6 +305,8 @@
     return true;
   }
   function finishAtStation(actor) {
+    if (cloneBusy(actor)) return;
+    if (actor.holdingFamily) { setPose(actor, 'clawd-static-base.svg'); text(actor.state, '等分身归位'); return; }
     actor.spec = Scene.activitySpec(actor.session);
     actor.node.dataset.walking = 'false';
     const plan = Director.plan(actor.session, { now: Date.now(), language });
@@ -311,8 +384,122 @@
     finishAtStation(actor);
     say(actor, '会话还在，等下一轮', 2400);
   }
+  async function enterClone(actor, seat) {
+    const serial = cancelAction(actor);
+    actor.target = seat;
+    const parent = cloneAncestor(actor);
+    actor.node.dataset.cloneOrigin = parent ? parent.id : '';
+    actor.position = parent ? currentPosition(parent) : { x: seat.x, y: seat.y };
+    actor.node.style.transform = actorTransform(actor.position, true);
+    actor.node.style.zIndex = String(Math.round(actor.position.y * 10) + 1);
+    if (quietSprites()) {
+      actor.position = { x: seat.x, y: seat.y };
+      actor.node.style.transform = actorTransform(actor.position, true);
+      actor.node.style.zIndex = String(Math.round(seat.y * 10));
+      actor.justEntered = false;
+      finishAtStation(actor);
+      return;
+    }
+    clonePhase(actor, 'splitting');
+    text(actor.state, '分身出现');
+    setPose(actor, 'clawd-static-base.svg');
+    cloneEffect(actor, parent || actor, 'split');
+    const fade = actor.node.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240, easing: 'cubic-bezier(.23,1,.32,1)', fill: 'forwards' });
+    actor.opacityMotion = fade;
+    fade.finished.catch(() => {}).then(() => {
+      if (actor.serial !== serial || actors.get(actor.id) !== actor) return;
+      actor.opacityMotion = null; fade.cancel();
+      clonePhase(actor, 'working');
+    });
+    if (!await move(actor, seat, serial)) return;
+    if (actor.serial !== serial) return;
+    actor.justEntered = false;
+    clonePhase(actor, 'working');
+    finishAtStation(actor);
+  }
+  function finishCloneReturn(actor, parent, reason) {
+    if (parent && actors.get(parent.id) === parent && !parent.departing) say(parent, completedCloneReturn(reason) ? '结束分身。' : '分身暂歇。', 2400);
+    // A confirmed helper TURN may return its visual body while the real native
+    // session remains open. Cache that body until new observed work arrives;
+    // never fabricate SessionEnd or change the ledger's open/ended counts.
+    if (reason !== 'ended') rememberRestedClone(actor.id);
+    // This body was absorbed, rather than merely hidden on another page. A
+    // later real reopening of the same identity must split from its root again.
+    observedIds.delete(actor.id);
+    removeActor(actor.id);
+    releaseWaitingRoots();
+  }
+  function finishQuietClone(actor) {
+    if (!actor.helper || !quietSprites() || !actor.departing && !cloneBusy(actor) && !actor.motion) return;
+    const returning = actor.departing;
+    const reason = actor.returnReason || (Scene.isClosed(actor.session) ? 'ended' : 'resting');
+    const parent = returning ? cloneAncestor(actor) : null;
+    const target = actor.target;
+    cancelAction(actor);
+    if (returning) { actor.departing = true; finishCloneReturn(actor, parent, reason); return; }
+    actor.position = { x: target.x, y: target.y };
+    actor.node.style.transform = actorTransform(actor.position, true);
+    actor.node.style.zIndex = String(Math.round(target.y * 10));
+    actor.justEntered = false;
+    finishAtStation(actor);
+  }
+  async function returnClone(actor, reason) {
+    if (actor.departing) return;
+    const serial = cancelAction(actor);
+    actor.departing = true; actor.returnReason = reason;
+    clonePhase(actor, 'returning');
+    actor.node.dataset.cloneReason = reason;
+    actor.node.dataset.attention = 'false';
+    text(actor.state, completedCloneReturn(reason) ? '结束分身' : '分身暂歇');
+    let parent = cloneAncestor(actor);
+    actor.node.dataset.cloneTarget = parent ? parent.id : '';
+    setPose(actor, 'clawd-static-base.svg');
+    if (quietSprites()) { finishCloneReturn(actor, parent, reason); return; }
+    // Re-read the rendered body after each leg: the original parent may have
+    // moved, returned into its own parent, or left this room in the meantime.
+    while (parent && actor.serial === serial && !destroyed) {
+      actor.node.dataset.cloneTarget = parent.id;
+      const target = { ...currentPosition(parent), zone: parent.target?.zone || parent.spec.zone };
+      if (!await move(actor, target, serial)) return;
+      parent = cloneAncestor(actor);
+      if (!parent || Scene.distance(currentPosition(actor), currentPosition(parent)) < 1.1) break;
+      if (!await delay(actor, 80, serial)) return;
+    }
+    if (actor.serial !== serial || destroyed) return;
+    parent = cloneAncestor(actor);
+    actor.node.dataset.cloneTarget = parent ? parent.id : '';
+    if (parent) {
+      actor.position = currentPosition(parent);
+      actor.node.style.transform = actorTransform(actor.position, true);
+    }
+    clonePhase(actor, 'absorbing');
+    actor.node.dataset.walking = 'false';
+    actor.bubble.dataset.show = 'false';
+    cloneEffect(actor, parent || actor, 'absorb');
+    const fade = actor.node.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 240, easing: 'cubic-bezier(.23,1,.32,1)', fill: 'forwards' });
+    actor.opacityMotion = fade;
+    await fade.finished.catch(() => {});
+    if (actor.serial !== serial || destroyed) return;
+    finishCloneReturn(actor, parent, reason);
+  }
   async function depart(actor, inactive = false) {
     if (actor.departing) return;
+    if (actor.helper) {
+      const completed = inactive && completedCloneTurn(actor.session, actor.lastTurnAt);
+      if (completed) actor.lastTurnAt = Scene.timestamp(actor.session.turnCompletedAt);
+      await returnClone(actor, inactive ? completed ? 'completed' : 'resting' : 'ended'); return;
+    }
+    actor.retireRequested = { inactive };
+    if (cloneLedger.stats(actor.id).active > 0) { holdForClones(actor); return; }
+    // A root waits locally for visible clones to merge; helpers never acquire
+    // an independent doorway route, including uncertain or idle retirements.
+    for (const child of relatedClones(actor)) if (!child.departing) {
+      const current = snapshot.sessions.find(session => session.id === child.id);
+      if (current) { child.session = current; child.spec = Scene.activitySpec(current); }
+      depart(child, !Scene.isClosed(child.session)).catch(showError);
+    }
+    if (relatedClones(actor).length) { holdForClones(actor); return; }
+    actor.holdingFamily = false; actor.node.dataset.cloneHold = 'false';
     actor.departing = true;
     const serial = cancelAction(actor);
     actor.node.dataset.attention = 'false';
@@ -367,7 +554,9 @@
     actorsLayer.append(node);
     const restored = observedIds.has(session.id) && !attendance.entering.includes(session.id);
     observedIds.add(session.id);
-    const actor = { id: session.id, session, spec: Scene.activitySpec(session), node, button, body, image, title, relation, provider, state, bubble, carry, arrival, position: restored ? { x: seat.x, y: seat.y } : { x: Scene.ZONES.exit.x, y: Scene.ZONES.exit.y }, target: seat, helper: Boolean(session.parentId), serial: 0, delays: new Set(), motion: null, lastTurnAt: Scene.timestamp(session.turnCompletedAt), arrivedAt: -10000, lastZone: restored ? seat.zone : '', currentAsset: '', wantedAsset: '', bubbleTimer: 0, defer: 0, justEntered: !restored, completing: false, departing: false };
+    const helper = Boolean(session.parentId);
+    const actor = { id: session.id, session, spec: Scene.activitySpec(session), node, button, body, image, title, relation, provider, state, bubble, carry, arrival, position: restored || helper ? { x: seat.x, y: seat.y } : { x: Scene.ZONES.exit.x, y: Scene.ZONES.exit.y }, target: seat, helper, serial: 0, delays: new Set(), cloneEffects: new Set(), clonePhase: helper ? 'working' : '', motion: null, lastTurnAt: Scene.timestamp(session.turnCompletedAt), arrivedAt: -10000, lastZone: restored ? seat.zone : '', currentAsset: '', wantedAsset: '', bubbleTimer: 0, defer: 0, justEntered: !restored, completing: false, departing: false, holdingFamily: false, retireRequested: null };
+    node.dataset.clonePhase = actor.clonePhase;
     actor.performance = window.OfficeAvatarPerformance.create({ actorNode: node, body, image, session });
     node.style.transform = actorTransform(actor.position, actor.helper);
     node.style.zIndex = '860';
@@ -381,6 +570,7 @@
     updateActorLabel(actor);
     actors.set(session.id, actor);
     if (restored) finishAtStation(actor);
+    else if (helper) enterClone(actor, seat).catch(showError);
     else {
       openDoor();
       settle(actor, seat, true).catch(showError);
@@ -399,19 +589,24 @@
     actor.provider.dataset.provider = String(session.provider).toLowerCase();
     actor.title.textContent = displayName(session);
     const family = familyGraph.info.get(session.id);
-    const parent = familyGraph.byId.get(session.parentId);
-    actor.node.style.setProperty('--family-color', family ? family.color : '#a7a563');
-    actor.node.dataset.family = family ? family.rootId : session.id;
-    actor.node.dataset.hasFamily = String(Boolean(session.parentId || family && family.descendants));
-    actor.relation.textContent = parent ? I18n.t(language,'identity.parent',{name:displayName(parent)}) : session.parentId ? tr('子任务 · 父任务未在场') : family && family.descendants ? I18n.t(language,'family.leader',{count:family.descendants}) : '';
-    actor.relation.title = actor.relation.textContent;
+    const parent = familyGraph.byId.get(session.parentId) || actors.get(session.parentId)?.session;
+    const rootId = cloneLedger.rootFor(session.id) || (family ? family.rootId : session.id);
+    const counts = cloneLedger.stats(session.id);
+    actor.node.style.setProperty('--family-color', Family.color(rootId));
+    actor.node.dataset.family = rootId;
+    actor.node.dataset.hasFamily = 'true';
+    actor.node.dataset.activeClones = String(counts.active);
+    actor.node.dataset.totalClones = String(counts.total);
+    actor.relation.textContent = parent ? I18n.t(language,'identity.parent',{name:displayName(parent)}) : session.parentId ? tr('子任务 · 父任务未在场') : cloneSummary(session);
+    actor.relation.title = session.parentId ? actor.relation.textContent : I18n.t(language, 'family.clonesHint');
     text(actor.provider, session.provider === 'claude-code' ? 'Claude' : Scene.providerName(session.provider));
-    if (!actor.motion && !actor.completing && !actor.departing) text(actor.state, spec.label);
+    if (actor.holdingFamily) text(actor.state, '等分身归位');
+    else if (!actor.motion && !actor.completing && !actor.departing && !cloneBusy(actor)) text(actor.state, spec.label);
     actor.button.setAttribute('aria-label', displayName(session) + ' · ' + Scene.providerName(session.provider) + ' · ' + String(session.title || '未命名任务') + '，' + tr(spec.label) + '。' + tr('单击查看详情，双击打招呼。'));
     actor.button.setAttribute('aria-pressed', String(session.id === selectedSession));
   }
   async function react(actor) {
-    if (actor.departing || actor.spec.stale) return;
+    if (actor.departing || actor.spec.stale || cloneBusy(actor) || actor.holdingFamily) return;
     if (actor.session.activity === 'waiting-user' || actor.session.activity === 'error') {
       say(actor, '请回原工具看一下', 3000);
       selectSession(actor.id);
@@ -460,13 +655,24 @@
     const sessionMap = new Map(sessions.map((session) => [session.id, session]));
     const visibleIds = new Set(currentPage.visible.map((session) => session.id));
     const retiringIds = new Set(attendance.retired);
-    for (const actor of [...actors.values()]) {
+    // Process descendants first so their return owns its parent anchor before
+    // a simultaneous root end can begin the doorway departure.
+    for (const actor of [...actors.values()].sort((a, b) => cloneLedger.parentChain(b.id).length - cloneLedger.parentChain(a.id).length)) {
       const next = sessionMap.get(actor.id);
-      if ((next && Scene.isClosed(next) || retiringIds.has(actor.id) || attendance.leaving.includes(actor.id)) && Scene.projectKey(next || actor.session) === selectedProject) { actor.session = next || actor.session; depart(actor, !Scene.isClosed(actor.session)).catch(showError); }
+      if (actor.retireRequested && next && !Scene.isClosed(next) && visibleIds.has(actor.id)) {
+        actor.retireRequested = null; actor.holdingFamily = false; actor.node.dataset.cloneHold = 'false';
+      }
+      if ((next && Scene.isClosed(next) || retiringIds.has(actor.id) || attendance.leaving.includes(actor.id) || actor.retireRequested) && Scene.projectKey(next || actor.session) === selectedProject) {
+        actor.session = next || actor.session; actor.spec = Scene.activitySpec(actor.session); updateActorLabel(actor);
+        depart(actor, !Scene.isClosed(actor.session)).catch(showError);
+      }
       else if (!visibleIds.has(actor.id) && !actor.departing) removeActor(actor.id);
     }
     const nextSeats = Scene.assignSeats(currentPage.visible, seats);
-    for (const session of currentPage.visible) {
+    for (const session of currentPage.visible.slice().sort((a, b) => cloneLedger.parentChain(a.id).length - cloneLedger.parentChain(b.id).length)) {
+      // A quiet synchronous return earlier in this reconciliation may have
+      // absorbed this idle body after the visible-page list was calculated.
+      if (restedClones.has(session.id) && !Clones.isActive(session)) continue;
       const seat = nextSeats.get(session.id);
       let actor = actors.get(session.id);
       if (!actor) { makeActor(session, seat); continue; }
@@ -478,7 +684,7 @@
       actor.helper = Boolean(session.parentId);
       updateActorLabel(actor);
       const completedAt = Scene.timestamp(session.turnCompletedAt);
-      const newCompletion = completedAt > actor.lastTurnAt && session.activity === 'idle' && !spec.stale;
+      const newCompletion = actor.helper ? completedCloneTurn(session, actor.lastTurnAt) : completedAt > actor.lastTurnAt && session.activity === 'idle' && !spec.stale;
       const targetChanged = !actor.target || actor.target.zone !== seat.zone || Scene.distance(actor.target, seat) > .7;
       const stateChanged = old.activity !== session.activity || oldSpec.stale !== spec.stale || Boolean(old.attention) !== Boolean(session.attention);
       // A brief tool can end before its route starts. Invalidate that old route
@@ -490,12 +696,16 @@
         actor.queuedSeat = null;
       }
       if (actor.departing) {
+        // An idle source row can remain present during a neutral return after
+        // its root ends. Only new work/reopening may interrupt that return.
+        if (actor.helper && ['resting', 'completed'].includes(actor.returnReason) && !Clones.isActive(session)) continue;
         actor.departing = false;
         cancelAction(actor);
         settle(actor, seat, true).catch(showError);
         continue;
       }
-      if (newCompletion) completeTurn(actor, completedAt, seat).catch(showError);
+      if (newCompletion && actor.helper) { actor.lastTurnAt = completedAt; returnClone(actor, 'completed').catch(showError); }
+      else if (newCompletion) completeTurn(actor, completedAt, seat).catch(showError);
       else if (targetChanged || stateChanged) {
         if (spec.stale) {
           cancelAction(actor);
@@ -528,7 +738,10 @@
     for (const actor of actors.values()) {
       if (!actor.session.parentId) continue;
       const family = familyGraph.info.get(actor.id);
-      const parent = (family ? family.ancestors : [actor.session.parentId]).map(id => actors.get(id)).find(candidate => candidate && !candidate.departing);
+      // Relationship lines follow the observed immediate ancestry; the main
+      // body used for split/return motion is deliberately a separate choice.
+      const parent = cloneLedger.parentChain(actor.id).map(id => actors.get(id))
+        .find(candidate => candidate && candidate !== actor && !candidate.departing);
       if (!parent || parent.departing || actor.departing) continue;
       const childPoint = currentPosition(actor);
       const parentPoint = currentPosition(parent);
@@ -581,22 +794,22 @@
     text($('inspect-provider'), Scene.providerName(session.provider));
     $('inspect-nickname').textContent = displayName(session);
     const personality = persona(session);
-    $('inspect-persona-name').textContent = settings.nameStyle === 'harbour' ? Scene.identityName(session) : (language === 'en' ? personality.aliasEn : personality.aliasZh);
+    $('inspect-persona-name').textContent = displayName(session);
     $('inspect-persona-trait').textContent = language === 'en' ? personality.traitEn : personality.traitZh;
     $('inspect-keepsake').textContent = keepsakeIcon(session);
-    $('greet-agent').disabled = !actor || actor.departing || Boolean(spec.stale);
+    $('greet-agent').disabled = !actor || actor.departing || Boolean(spec.stale) || cloneBusy(actor) || actor.holdingFamily;
     text($('inspect-title'), session.title || '未命名任务');
-    text($('inspect-location'), attendance.retired.includes(session.id) ? '门外休息' : actor && actor.motion ? '前往' + Scene.ZONES[(actor.target || spec).zone].name : Scene.ZONES[spec.zone].name);
+    text($('inspect-location'), attendance.retired.includes(session.id) || restedClones.has(session.id) ? session.parentId ? '分身暂歇' : '门外休息' : actor && actor.motion ? '前往' + Scene.ZONES[(actor.target || spec).zone].name : Scene.ZONES[spec.zone].name);
     text($('inspect-summary'), session.summary || spec.verb);
     text($('inspect-state'), spec.label);
     text($('inspect-signal'), timeAgo(session.lastEventAt));
     text($('inspect-tools'), Number(session.activeTools) > 0 ? session.activeTools + ' 个工具调用进行中' : '');
-    const parent = snapshot.sessions.find(item => item.id === session.parentId);
-    const children = snapshot.sessions.filter(item => item.parentId === session.id && !Scene.isClosed(item));
-    $('inspect-helper').hidden = !session.parentId && !children.length;
+    const parent = snapshot.sessions.find(item => item.id === session.parentId) || actors.get(session.parentId)?.session;
+    $('inspect-helper').hidden = false;
     $('inspect-helper').dataset.parentId = parent ? parent.id : '';
     $('inspect-helper').disabled = !parent;
-    text($('inspect-helper'), parent ? (language === 'en' ? '↳ Helping ' : '↳ 协助 ') + displayName(parent) + ' ↗' : session.parentId ? (language === 'en' ? 'Parent is outside' : '父任务未在场') : (language === 'en' ? 'Leader · ' + children.length + ' helpers' : '领队 · ' + children.length + ' 位帮手'));
+    text($('inspect-helper'), parent ? (language === 'en' ? '↳ Helping ' : '↳ 协助 ') + displayName(parent) + ' ↗' : session.parentId ? (language === 'en' ? 'Parent is outside' : '父任务未在场') : cloneSummary(session));
+    $('inspect-helper').title = session.parentId ? $('inspect-helper').textContent : I18n.t(language, 'family.clonesHint');
     text($('open-source'), '打开项目文件夹 ↗');
     $('open-source').disabled = !session.projectPath;
     text($('inspect-action-note'), Scene.needsAttention(session) ? '请回到 ' + Scene.providerName(session.provider) + ' 回答或处理审批。' : spec.stale ? '最后位置已保留，尚不能确认当前进度。' : '此按钮打开 Finder。任务与对话请回到原工具查看。');
@@ -670,7 +883,8 @@
       copy.append(element('strong', '', displayName(session)), element('span', 'roster-task', session.title || '未命名任务'));
       const parent = familyGraph.byId.get(session.parentId);
       if (parent) { const relation = element('span','roster-relation'); relation.textContent = '↳ ' + I18n.t(language,'identity.parent',{name:displayName(parent)}); copy.append(relation); }
-      row.append(copy, element('span', 'roster-state', (attendance.retired.includes(session.id) ? tr('门外休息') : tr(spec.label)) + ' →'));
+      else if (!session.parentId) { const relation = element('span','roster-relation'); relation.textContent = cloneSummary(session); relation.title = I18n.t(language, 'family.clonesHint'); copy.append(relation); }
+      row.append(copy, element('span', 'roster-state', (attendance.retired.includes(session.id) || restedClones.has(session.id) ? tr(session.parentId ? '分身暂歇' : '门外休息') : tr(spec.label)) + ' →'));
       row.addEventListener('click', () => { $('roster-dialog').close(); selectSession(session.id); });
       fragment.append(row);
     }
@@ -678,8 +892,10 @@
   }
   function render() {
     office.dataset.mode = snapshot.mode;
+    cloneLedger.update(snapshot.sessions, Date.now());
+    for (const session of snapshot.sessions) if (Clones.isActive(session)) restedClones.delete(session.id);
     attendance = attendanceModel.update(snapshot.sessions);
-    familyGraph = Family.build(snapshot.sessions.filter(session => !Scene.isClosed(session)));
+    familyGraph = Family.build(snapshot.sessions);
     const roomBefore = selectedProject;
     rooms = Scene.roomsFor(snapshot.sessions);
     const roomChoice = Scene.chooseRoom(rooms, attendance.present, { current: selectedProject, explicit: roomSelectionExplicit });
@@ -701,6 +917,7 @@
     $('project-select').value = selectedProject;
     $('room-switcher').hidden = !rooms.length;
     currentPage = Scene.pageSessions(attendance.present, selectedProject, page, selectedSession);
+    currentPage.visible = currentPage.visible.filter(session => !restedClones.has(session.id) || Clones.isActive(session));
     page = currentPage.page;
     reconcileActors();
     const alive = snapshot.sessions.filter((session) => !Scene.isClosed(session));
@@ -772,13 +989,14 @@
     office.dataset.lowPower = String(settings.lowPower);
     for (const key of ['rain', 'reducedMotion', 'lowPower', 'idleVisitor']) $('setting-' + key).checked = Boolean(settings[key]);
     $('setting-sceneTime').value = settings.sceneTime;
-    $('setting-nameStyle').value = settings.nameStyle;
-    for (const actor of actors.values()) {
+    for (const actor of [...actors.values()]) {
+      finishQuietClone(actor);
+      if (!actors.has(actor.id)) continue;
       if (reduced() && actor.motion) {
         const target = actor.target;
         const wasDeparting = actor.departing;
         cancelAction(actor);
-        if (wasDeparting && (attendance.retired.includes(actor.id) || Scene.isClosed(actor.session))) { openDoor(); removeActor(actor.id); continue; }
+        if (wasDeparting && (attendance.retired.includes(actor.id) || Scene.isClosed(actor.session))) { if (!actor.helper) openDoor(); removeActor(actor.id); continue; }
         actor.departing = false;
         actor.position = { x: target.x, y: target.y };
         actor.node.style.transform = actorTransform(actor.position, actor.helper);
@@ -844,7 +1062,6 @@
   $('day-reset').addEventListener('click', () => { $('setting-sceneTime').focus(); saveSettings({ sceneTime: 'auto' }); });
   $('roster-button').addEventListener('click', () => openDialog('roster-dialog'));
   $('greet-agent').addEventListener('click', () => { const actor = actors.get(selectedSession); if (actor) react(actor); });
-  $('setting-nameStyle').addEventListener('change', event => saveSettings({ nameStyle: event.target.value }));
   $('inspect-helper').addEventListener('click', () => { const id = $('inspect-helper').dataset.parentId; if (id) selectSession(id); });
   $('dismiss-error').addEventListener('click', () => { $('error-message').hidden = true; });
   $('project-select').addEventListener('change', (event) => switchRoom(event.target.value));
@@ -877,7 +1094,7 @@
   });
   document.addEventListener('visibilitychange', () => {
     office.dataset.hidden = String(document.hidden);
-    for (const actor of actors.values()) setPose(actor, actor.wantedAsset || actor.spec.asset);
+    for (const actor of [...actors.values()]) { finishQuietClone(actor); if (actors.has(actor.id)) setPose(actor, actor.wantedAsset || actor.spec.asset); }
     visitor.tick();
     if (!document.hidden) { scenery.update(settings, language); ensureMotionTicker(); }
   });
