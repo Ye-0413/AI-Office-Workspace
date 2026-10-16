@@ -1,0 +1,1535 @@
+{
+  "version": 1,
+  "source": {
+    "registry": "agents/registry.js",
+    "sha256": "3ffb9f5b203ebea8133cda546917483fb0cdb4c75385e5db4fdb01bb53c1a086",
+    "files": [
+      {
+        "path": "agents/antigravity-cli.js",
+        "sha256": "e4e65264e1ef4b6bdf834326bcd4a66e0d8920122be6a97f84186ab9661dcf79"
+      },
+      {
+        "path": "agents/claude-code.js",
+        "sha256": "322a108c0529266e1c2c14b625bae83274802a2e40bb1a5fc9672a807f31a91a"
+      },
+      {
+        "path": "agents/codebuddy.js",
+        "sha256": "d624efee29227641a58653c368fde797ca7a2352d3f9147359dd23a94095c4d3"
+      },
+      {
+        "path": "agents/codewhale.js",
+        "sha256": "4084d991689ed9eeeb7c27783601134caa557362d795b325b499a4880927ffd3"
+      },
+      {
+        "path": "agents/codex.js",
+        "sha256": "e628f50291144135e216bd329c7065b4f92b23a4c5823a8034d1f14d6f56ec13"
+      },
+      {
+        "path": "agents/copilot-cli.js",
+        "sha256": "aa7a41b566383376f70562d2371d6f84808e38d1c50b73822ac7cd45ec92a3d0"
+      },
+      {
+        "path": "agents/cursor-agent.js",
+        "sha256": "2942bc22ed81cf5bdb22b457efd17f966b62f714ec85366bdb34fc634e10c07b"
+      },
+      {
+        "path": "agents/deepseek-harness.js",
+        "sha256": "e03fda43d6df1e20f5e9167c09fe3640c8e947b7bfc5f0fff5e384ad235db4fd"
+      },
+      {
+        "path": "agents/gemini-cli.js",
+        "sha256": "2103c665cc54b29380f02ef8bdd1c1142a5a78c2b70855078cb70d9afc72e11d"
+      },
+      {
+        "path": "agents/grok-build.js",
+        "sha256": "8fddc92174ed6d74957430915d18e58363669a535cb3fbbd979d105e1dab279a"
+      },
+      {
+        "path": "agents/hermes.js",
+        "sha256": "3c18ccb3a3121f1512cfbbfe4a870c03157f6a5977e7fe1d50183dff99f2d526"
+      },
+      {
+        "path": "agents/kimi-cli.js",
+        "sha256": "2b04936542d1caf57e81f13db959775e4e58b2a3fc701c619807adc7c053ac31"
+      },
+      {
+        "path": "agents/kiro-cli.js",
+        "sha256": "effb1be60ca8702801f9464ed69a8522dda83cbb22bc222d7113def47993c496"
+      },
+      {
+        "path": "agents/kirocrew.js",
+        "sha256": "f71f6271af280fbb823dbdc0de11e6199ee05b9666f67266228153b4ff632e7f"
+      },
+      {
+        "path": "agents/mimocode.js",
+        "sha256": "21d31f7701e2a358c18b803b00a1db5bd7722c2bbbe7a64f0a5856146f26e431"
+      },
+      {
+        "path": "agents/minimax.js",
+        "sha256": "8afca22fede5d6217d966f5046e4237d9d7de0a11beb4037180eb21ab9140cbc"
+      },
+      {
+        "path": "agents/omp.js",
+        "sha256": "cd25c1eb729ae81d1fd5b0dbb747be171ce6c1894e6fd283a9b65688a7469b41"
+      },
+      {
+        "path": "agents/openclaw.js",
+        "sha256": "a8e790032be0a91133ccddc887fb59b19066bb7ea8630d6e538847cec83e9041"
+      },
+      {
+        "path": "agents/opencode-family.js",
+        "sha256": "df0166484ec9100b8e267d1ad629829d1f14c338efe2d887f2a25cdc38f8fa84"
+      },
+      {
+        "path": "agents/opencode.js",
+        "sha256": "40888f876d818838626712bfd1a5aa2fcea02f00efdf9255b9c1701c88c26510"
+      },
+      {
+        "path": "agents/pi.js",
+        "sha256": "06892a5690087c7740895b30456db8f99c5cb2fdae01226c9ba370c16d88f956"
+      },
+      {
+        "path": "agents/qoder.js",
+        "sha256": "bc9ac3afca8674ce7ca5f12a399a9d9059963ed3d2b7b40d6ebdb01824208d11"
+      },
+      {
+        "path": "agents/qoderwork.js",
+        "sha256": "b1797311d62204e773798f5f877c044e6f8c932fc6458012dff18c74c0e78120"
+      },
+      {
+        "path": "agents/qwen-code.js",
+        "sha256": "de84daf74a16d0e70faeb15526459e643f93eccab6124a028dc575844e3a73af"
+      },
+      {
+        "path": "agents/qwenwork.js",
+        "sha256": "2b7b28bee4f98c894c4721ee74a7368b909ab0c4f61e6173640ca1f180ecb857"
+      },
+      {
+        "path": "agents/reasonix.js",
+        "sha256": "ee954c85df5e2dd41f9a191f5e82c037e712621a1452305988c5e3b01d47b5f1"
+      },
+      {
+        "path": "agents/registry.js",
+        "sha256": "9a9522bdd494b0ac572fdc39e3bf969aeab254064af4f13812e64bccd3a926bd"
+      },
+      {
+        "path": "agents/traecode.js",
+        "sha256": "b31640728c71d2894bdf4dd9cc43f743d81026a4589ceac872698419a69d6bdf"
+      },
+      {
+        "path": "agents/workbuddy.js",
+        "sha256": "5352040220d098d0f6faacc905b64572529132a9506152f51b631803b14cf264"
+      },
+      {
+        "path": "agents/zcode.js",
+        "sha256": "dc84f35f13924a85e6be9681dedb61d217b51b20a748c24b0eefe9c9003488fd"
+      }
+    ]
+  },
+  "providers": [
+    {
+      "id": "claude-code",
+      "name": "Claude Code",
+      "processNames": {
+        "win": [
+          "claude.exe"
+        ],
+        "mac": [
+          "claude"
+        ],
+        "linux": [
+          "claude"
+        ]
+      },
+      "startupRecoveryProcessNames": {
+        "win": [
+          "claude.exe"
+        ],
+        "mac": [
+          "claude"
+        ],
+        "linux": [
+          "claude"
+        ]
+      },
+      "eventSource": "hook",
+      "eventMap": {
+        "SessionStart": "idle",
+        "SessionEnd": "sleeping",
+        "UserPromptSubmit": "thinking",
+        "PreToolUse": "working",
+        "PostToolUse": "working",
+        "PostToolBatch": "thinking",
+        "PostToolUseFailure": "error",
+        "Stop": "attention",
+        "StopFailure": "error",
+        "SubagentStart": "juggling",
+        "SubagentStop": "working",
+        "PreCompact": "sweeping",
+        "PostCompact": "attention",
+        "Notification": "notification",
+        "Elicitation": "notification",
+        "WorktreeCreate": "carrying"
+      },
+      "capabilities": {
+        "httpHook": true,
+        "permissionApproval": true,
+        "mobilePermissionObservation": true,
+        "notificationHook": true,
+        "sessionEnd": true,
+        "subagent": true
+      },
+      "pidField": "claude_pid"
+    },
+    {
+      "id": "deepseek-harness",
+      "name": "DeepSeek Harness (experimental)",
+      "processNames": {
+        "win": [],
+        "mac": [],
+        "linux": []
+      },
+      "startupRecoveryProcessNames": {
+        "win": [],
+        "mac": [],
+        "linux": []
+      },
+      "eventSource": "plugin-event",
+      "eventMap": {
+        "SessionStart": "idle",
+        "UserPromptSubmit": "thinking",
+        "PreToolUse": "working",
+        "PostToolUse": "working",
+        "PostToolUseFailure": "error",
+        "Stop": "attention",
+        "StopFailure": "error",
+        "SessionEnd": "sleeping"
+      },
+      "capabilities": {
+        "httpHook": true,
+        "permissionApproval": true,
+        "mobilePermissionObservation": false,
+        "notificationHook": false,
+        "interactiveBubble": true,
+        "sessionEnd": true,
+        "subagent": false
+      },
+      "hookConfig": {
+        "configFormat": "dsh-plugin"
+      }
+    },
+    {
+      "id": "codex",
+      "name": "Codex CLI",
+      "processNames": {
+        "win": [
+          "codex.exe"
+        ],
+        "mac": [
+          "codex"
+        ],
+        "linux": [
+          "codex"
+        ]
+      },
+      "startupRecoveryProcessNames": {
+        "win": [
+          "codex.exe"
+        ],
+        "mac": [
+          "codex"
+        ],
+        "linux": [
+          "codex"
+        ]
+      },
+      "eventSource": "hook+log-poll",
+      "eventMap": {
+        "SessionStart": "idle",
+        "UserPromptSubmit": "thinking",
+        "PreToolUse": "working",
+        "PermissionRequest": "notification",
+        "PostToolUse": "working",
+        "PreCompact": "sweeping",
+        "PostCompact": "sweeping",
+        "Interrupt": "idle",
+        "Stop": "codex-turn-end",
+        "SessionEnd": "sleeping"
+      },
+      "logEventMap": {
+        "session_meta": "idle",
+        "event_msg:task_started": "thinking",
+        "event_msg:user_message": "thinking",
+        "event_msg:agent_message": null,
+        "event_msg:guardian_assessment": "working",
+        "event_msg:exec_command_end": "working",
+        "event_msg:patch_apply_end": "working",
+        "event_msg:custom_tool_call_output": "working",
+        "response_item:function_call": "working",
+        "response_item:custom_tool_call": "working",
+        "response_item:web_search_call": "working",
+        "event_msg:task_complete": "codex-turn-end",
+        "event_msg:context_compacted": "sweeping",
+        "event_msg:turn_aborted": "idle"
+      },
+      "capabilities": {
+        "httpHook": false,
+        "permissionApproval": true,
+        "mobilePermissionObservation": true,
+        "interactiveBubble": true,
+        "sessionEnd": true,
+        "subagent": false
+      },
+      "logConfig": {
+        "sessionDir": "~/.codex/sessions",
+        "filePattern": "rollout-*.jsonl",
+        "pollIntervalMs": 1500
+      },
+      "hookConfig": {
+        "configFormat": "codex-hooks-json"
+      },
+      "stdinFormat": "codexHookJson",
+      "pidField": "codex_pid"
+    },
+    {
+      "id": "copilot-cli",
+      "name": "Copilot CLI",
+      "processNames": {
+        "win": [
+          "copilot.exe"
+        ],
+        "mac": [
+          "copilot"
+        ],
+        "linux": [
+          "copilot"
+        ]
+      },
+      "startupRecoveryProcessNames": {
+        "win": [
+          "copilot.exe"
+        ],
+        "mac": [
+          "copilot"
+        ],
+        "linux": [
+          "copilot"
+        ]
+      },
+      "eventSource": "hook",
+      "eventMap": {
+        "sessionStart": "idle",
+        "sessionEnd": "sleeping",
+        "userPromptSubmitted": "thinking",
+        "preToolUse": "working",
+        "postToolUse": "working",
+        "errorOccurred": "error",
+        "agentStop": "attention",
+        "subagentStart": "juggling",
+        "subagentStop": "working",
+        "preCompact": "sweeping"
+      },
+      "capabilities": {
+        "httpHook": false,
+        "permissionApproval": true,
+        "mobilePermissionObservation": false,
+        "interactiveBubble": true,
+        "sessionEnd": true,
+        "subagent": true
+      },
+      "hookConfig": {
+        "configFormat": "user-global-hooks-json"
+      },
+      "stdinFormat": "camelCase",
+      "pidField": "copilot_pid"
+    },
+    {
+      "id": "gemini-cli",
+      "name": "Gemini CLI",
+      "processNames": {
+        "win": [
+          "gemini.exe"
+        ],
+        "mac": [
+          "gemini"
+        ],
+        "linux": [
+          "gemini"
+        ]
+      },
+      "startupRecoveryProcessNames": {
+        "win": [
+          "gemini.exe"
+        ],
+        "mac": [
+          "gemini"
+        ],
+        "linux": [
+          "gemini"
+        ]
+      },
+      "eventSource": "hook",
+      "eventMap": {
+        "SessionStart": "idle",
+        "SessionEnd": "sleeping",
+        "BeforeAgent": "thinking",
+        "BeforeTool": "working",
+        "AfterTool": "working",
+        "AfterAgent": "idle",
+        "Notification": "notification",
+        "PreCompress": "idle"
+      },
+      "capabilities": {
+        "httpHook": false,
+        "permissionApproval": false,
+        "mobilePermissionObservation": false,
+        "notificationHook": true,
+        "sessionEnd": true,
+        "subagent": false
+      },
+      "hookConfig": {
+        "configFormat": "gemini-settings-json"
+      },
+      "stdinFormat": "geminiHookJson",
+      "pidField": "gemini_pid"
+    },
+    {
+      "id": "antigravity-cli",
+      "name": "Antigravity CLI",
+      "processNames": {
+        "win": [
+          "agy.exe"
+        ],
+        "mac": [
+          "agy"
+        ],
+        "linux": [
+          "agy"
+        ]
+      },
+      "startupRecoveryProcessNames": {
+        "win": [
+          "agy.exe"
+        ],
+        "mac": [
+          "agy"
+        ],
+        "linux": [
+          "agy"
+        ]
+      },
+      "eventSource": "hook",
+      "eventMap": {
+        "PreInvocation": "thinking",
+        "PostToolUse": "working",
+        "PostInvocation": "idle",
+        "Stop": "attention"
+      },
+      "capabilities": {
+        "httpHook": false,
+        "permissionApproval": false,
+        "mobilePermissionObservation": false,
+        "interactiveBubble": false,
+        "notificationHook": false,
+        "sessionEnd": true,
+        "subagent": true
+      },
+      "hookConfig": {
+        "configFormat": "antigravity-hooks-json"
+      },
+      "stdinFormat": "antigravityHookJson",
+      "pidField": "agy_pid"
+    },
+    {
+      "id": "cursor-agent",
+      "name": "Cursor Agent",
+      "processNames": {
+        "win": [
+          "Cursor.exe"
+        ],
+        "mac": [
+          "Cursor"
+        ],
+        "linux": [
+          "cursor",
+          "Cursor"
+        ]
+      },
+      "startupRecoveryProcessNames": {
+        "win": [],
+        "mac": [],
+        "linux": []
+      },
+      "eventSource": "hook",
+      "eventMap": {
+        "sessionStart": "idle",
+        "sessionEnd": "sleeping",
+        "beforeSubmitPrompt": "thinking",
+        "preToolUse": "working",
+        "postToolUse": "working",
+        "postToolUseFailure": "working",
+        "stop": "attention",
+        "subagentStart": "juggling",
+        "subagentStop": "working",
+        "preCompact": "sweeping",
+        "afterAgentThought": "thinking"
+      },
+      "capabilities": {
+        "httpHook": false,
+        "permissionApproval": false,
+        "mobilePermissionObservation": false,
+        "sessionEnd": true,
+        "subagent": true
+      },
+      "hookConfig": {
+        "configFormat": "cursor-hooks-json"
+      },
+      "stdinFormat": "cursorHookJson",
+      "pidField": "cursor_pid"
+    },
+    {
+      "id": "codebuddy",
+      "name": "CodeBuddy",
+      "processNames": {
+        "win": [
+          "CodeBuddy.exe",
+          "codebuddy.exe"
+        ],
+        "mac": [
+          "CodeBuddy"
+        ],
+        "linux": [
+          "codebuddy",
+          "CodeBuddy"
+        ]
+      },
+      "startupRecoveryProcessNames": {
+        "win": [
+          "CodeBuddy.exe",
+          "codebuddy.exe"
+        ],
+        "mac": [
+          "CodeBuddy"
+        ],
+        "linux": [
+          "codebuddy",
+          "CodeBuddy"
+        ]
+      },
+      "eventSource": "hook",
+      "eventMap": {
+        "SessionStart": "idle",
+        "SessionEnd": "sleeping",
+        "UserPromptSubmit": "thinking",
+        "PreToolUse": "working",
+        "PostToolUse": "working",
+        "Stop": "attention",
+        "PermissionRequest": "notification",
+        "Notification": "notification",
+        "PreCompact": "sweeping"
+      },
+      "capabilities": {
+        "httpHook": true,
+        "customPermissionUrl": true,
+        "permissionApproval": true,
+        "mobilePermissionObservation": true,
+        "notificationHook": true,
+        "sessionEnd": true,
+        "subagent": false
+      },
+      "hookConfig": {
+        "configFormat": "claude-code-compatible"
+      },
+      "stdinFormat": "claudeCodeHookJson",
+      "pidField": "codebuddy_pid"
+    },
+    {
+      "id": "kiro-cli",
+      "name": "Kiro CLI",
+      "processNames": {
+        "win": [
+          "kiro-cli.exe"
+        ],
+        "mac": [
+          "kiro-cli"
+        ],
+        "linux": [
+          "kiro-cli"
+        ]
+      },
+      "startupRecoveryProcessNames": {
+        "win": [
+          "kiro-cli.exe"
+        ],
+        "mac": [
+          "kiro-cli"
+        ],
+        "linux": [
+          "kiro-cli"
+        ]
+      },
+      "eventSource": "hook",
+      "eventMap": {
+        "agentSpawn": "idle",
+        "userPromptSubmit": "thinking",
+        "preToolUse": "working",
+        "postToolUse": "working",
+        "stop": "attention"
+      },
+      "capabilities": {
+        "httpHook": false,
+        "permissionApproval": false,
+        "mobilePermissionObservation": false,
+        "sessionEnd": false,
+        "subagent": false
+      },
+      "hookConfig": {
+        "configFormat": "kiro-agent-json"
+      },
+      "stdinFormat": "camelCase",
+      "pidField": "kiro_pid"
+    },
+    {
+      "id": "kirocrew",
+      "name": "KiroCrew",
+      "processNames": {
+        "win": [],
+        "mac": [],
+        "linux": []
+      },
+      "startupRecoveryProcessNames": {
+        "win": [],
+        "mac": [],
+        "linux": []
+      },
+      "eventSource": "hook",
+      "eventMap": {
+        "AgentSpawn": "idle",
+        "UserPromptSubmit": "thinking",
+        "PostToolUse": "working",
+        "Stop": "attention"
+      },
+      "capabilities": {
+        "httpHook": false,
+        "permissionApproval": false,
+        "mobilePermissionObservation": false,
+        "sessionEnd": false,
+        "subagent": false
+      },
+      "hookConfig": {
+        "configFormat": "kirocrew-hooks-json"
+      },
+      "stdinFormat": "PascalCase",
+      "pidField": null
+    },
+    {
+      "id": "kimi-cli",
+      "name": "Kimi Code",
+      "processNames": {
+        "mac": [
+          "kimi",
+          "kimi-",
+          "kimi-c",
+          "kimi-co",
+          "kimi-cod",
+          "kimi-code",
+          "kimi code"
+        ],
+        "linux": [
+          "kimi",
+          "kimi-",
+          "kimi-c",
+          "kimi-co",
+          "kimi-cod",
+          "kimi-code"
+        ],
+        "win": [
+          "kimi.exe"
+        ]
+      },
+      "startupRecoveryProcessNames": {
+        "mac": [
+          "kimi",
+          "kimi-",
+          "kimi-c",
+          "kimi-co",
+          "kimi-cod",
+          "kimi-code"
+        ],
+        "linux": [
+          "kimi",
+          "kimi-",
+          "kimi-c",
+          "kimi-co",
+          "kimi-cod",
+          "kimi-code"
+        ],
+        "win": [
+          "kimi.exe"
+        ]
+      },
+      "eventSource": "hook",
+      "eventMap": {
+        "SessionStart": "idle",
+        "SessionEnd": "sleeping",
+        "UserPromptSubmit": "thinking",
+        "PreToolUse": "working",
+        "PostToolUse": "working",
+        "PostToolUseFailure": "error",
+        "Stop": "attention",
+        "StopFailure": "error",
+        "SubagentStart": "juggling",
+        "SubagentStop": "working",
+        "PreCompact": "sweeping",
+        "PostCompact": "attention",
+        "Notification": "notification",
+        "PermissionRequest": "notification",
+        "PermissionResult": "working",
+        "Interrupt": "idle"
+      },
+      "capabilities": {
+        "httpHook": true,
+        "permissionApproval": true,
+        "mobilePermissionObservation": false,
+        "notificationHook": true,
+        "interactiveBubble": false,
+        "sessionEnd": true,
+        "subagent": true
+      },
+      "hookConfig": {
+        "configFormat": "kimi-toml"
+      },
+      "stdinFormat": "claudeHookJson",
+      "pidField": "kimi_pid"
+    },
+    {
+      "id": "qwen-code",
+      "name": "Qwen Code",
+      "processNames": {
+        "win": [
+          "qwen.exe"
+        ],
+        "mac": [
+          "qwen"
+        ],
+        "linux": [
+          "qwen"
+        ]
+      },
+      "startupRecoveryProcessNames": {
+        "win": [
+          "qwen.exe"
+        ],
+        "mac": [
+          "qwen"
+        ],
+        "linux": [
+          "qwen"
+        ]
+      },
+      "eventSource": "hook",
+      "eventMap": {
+        "SessionStart": "idle",
+        "SessionEnd": "sleeping",
+        "UserPromptSubmit": "thinking",
+        "PreToolUse": "working",
+        "PostToolUse": "working",
+        "Stop": "attention",
+        "PermissionRequest": "notification"
+      },
+      "capabilities": {
+        "httpHook": false,
+        "permissionApproval": true,
+        "mobilePermissionObservation": true,
+        "notificationHook": true,
+        "interactiveBubble": true,
+        "sessionEnd": true,
+        "subagent": false
+      },
+      "hookConfig": {
+        "configFormat": "qwen-settings-json"
+      },
+      "stdinFormat": "qwenHookJson"
+    },
+    {
+      "id": "zcode",
+      "name": "ZCode",
+      "processNames": {
+        "win": [
+          "zcode-cli.exe"
+        ],
+        "mac": [
+          "zcode-cli"
+        ],
+        "linux": [
+          "zcode-cli"
+        ]
+      },
+      "startupRecoveryProcessNames": {
+        "win": [],
+        "mac": [
+          "zcode-cli"
+        ],
+        "linux": [
+          "zcode-cli"
+        ]
+      },
+      "eventSource": "hook",
+      "eventMap": {
+        "SessionStart": "idle",
+        "UserPromptSubmit": "thinking",
+        "PreToolUse": "working",
+        "PostToolUse": "working",
+        "PostToolUseFailure": "error",
+        "Stop": "attention",
+        "PermissionRequest": "notification"
+      },
+      "capabilities": {
+        "httpHook": false,
+        "permissionApproval": true,
+        "mobilePermissionObservation": false,
+        "notificationHook": false,
+        "interactiveBubble": true,
+        "sessionEnd": false,
+        "subagent": false
+      },
+      "hookConfig": {
+        "configFormat": "zcode-config-json"
+      },
+      "stdinFormat": "qwenHookJson"
+    },
+    {
+      "id": "codewhale",
+      "name": "CodeWhale",
+      "processNames": {
+        "win": [
+          "codewhale.exe"
+        ],
+        "mac": [
+          "codewhale"
+        ],
+        "linux": [
+          "codewhale"
+        ]
+      },
+      "startupRecoveryProcessNames": {
+        "win": [
+          "codewhale.exe"
+        ],
+        "mac": [
+          "codewhale"
+        ],
+        "linux": [
+          "codewhale"
+        ]
+      },
+      "eventSource": "hook",
+      "eventMap": {
+        "SessionStart": "idle",
+        "SessionEnd": "sleeping",
+        "UserPromptSubmit": "thinking",
+        "PreToolUse": "working",
+        "PostToolUse": "working",
+        "PostToolUseFailure": "error",
+        "Notification": "attention",
+        "StopFailure": "error",
+        "PreCompact": "sweeping",
+        "PostCompact": "attention"
+      },
+      "capabilities": {
+        "httpHook": false,
+        "permissionApproval": false,
+        "mobilePermissionObservation": false,
+        "notificationHook": true,
+        "interactiveBubble": false,
+        "sessionEnd": true,
+        "subagent": false
+      },
+      "pidField": "codewhale_pid"
+    },
+    {
+      "id": "opencode",
+      "name": "OpenCode",
+      "processNames": {
+        "win": [
+          "opencode.exe"
+        ],
+        "mac": [
+          "opencode"
+        ],
+        "linux": [
+          "opencode"
+        ]
+      },
+      "startupRecoveryProcessNames": {
+        "win": [
+          "opencode.exe"
+        ],
+        "mac": [
+          "opencode"
+        ],
+        "linux": [
+          "opencode"
+        ]
+      },
+      "eventSource": "plugin-event",
+      "eventMap": {
+        "SessionStart": "idle",
+        "SessionEnd": "sleeping",
+        "UserPromptSubmit": "thinking",
+        "PreToolUse": "working",
+        "PostToolUse": "working",
+        "PostToolUseFailure": "error",
+        "Stop": "attention",
+        "StopFailure": "error",
+        "PreCompact": "sweeping",
+        "PostCompact": "attention"
+      },
+      "capabilities": {
+        "httpHook": false,
+        "permissionApproval": true,
+        "mobilePermissionObservation": false,
+        "sessionEnd": true,
+        "subagent": false
+      },
+      "pidField": "opencode_pid"
+    },
+    {
+      "id": "mimocode",
+      "name": "MiMo Code",
+      "processNames": {
+        "win": [
+          "mimo.exe"
+        ],
+        "mac": [
+          "mimo"
+        ],
+        "linux": [
+          "mimo"
+        ]
+      },
+      "startupRecoveryProcessNames": {
+        "win": [
+          "mimo.exe"
+        ],
+        "mac": [
+          "mimo"
+        ],
+        "linux": [
+          "mimo"
+        ]
+      },
+      "eventSource": "plugin-event",
+      "eventMap": {
+        "SessionStart": "idle",
+        "SessionEnd": "sleeping",
+        "UserPromptSubmit": "thinking",
+        "PreToolUse": "working",
+        "PostToolUse": "working",
+        "PostToolUseFailure": "error",
+        "Stop": "attention",
+        "StopFailure": "error",
+        "PreCompact": "sweeping",
+        "PostCompact": "attention"
+      },
+      "capabilities": {
+        "httpHook": false,
+        "permissionApproval": true,
+        "mobilePermissionObservation": false,
+        "sessionEnd": true,
+        "subagent": false
+      },
+      "pidField": "mimocode_pid"
+    },
+    {
+      "id": "pi",
+      "name": "Pi",
+      "processNames": {
+        "win": [
+          "pi.exe"
+        ],
+        "mac": [
+          "pi"
+        ],
+        "linux": [
+          "pi"
+        ]
+      },
+      "startupRecoveryProcessNames": {
+        "win": [
+          "pi.exe"
+        ],
+        "mac": [],
+        "linux": []
+      },
+      "eventSource": "extension",
+      "eventMap": {
+        "SessionStart": "idle",
+        "UserPromptSubmit": "thinking",
+        "PreToolUse": "working",
+        "PostToolUse": "working",
+        "PostToolUseFailure": "error",
+        "Stop": "attention",
+        "PreCompact": "sweeping",
+        "PostCompact": "attention",
+        "SessionEnd": "sleeping"
+      },
+      "capabilities": {
+        "httpHook": false,
+        "permissionApproval": false,
+        "mobilePermissionObservation": false,
+        "notificationHook": false,
+        "interactiveBubble": false,
+        "sessionEnd": true,
+        "subagent": false
+      },
+      "hookConfig": {
+        "configFormat": "pi-extension"
+      },
+      "pidField": "pi_pid"
+    },
+    {
+      "id": "omp",
+      "name": "OMP",
+      "processNames": {
+        "win": [
+          "omp.exe"
+        ],
+        "mac": [
+          "omp"
+        ],
+        "linux": [
+          "omp"
+        ]
+      },
+      "startupRecoveryProcessNames": {
+        "win": [
+          "omp.exe"
+        ],
+        "mac": [],
+        "linux": []
+      },
+      "eventSource": "extension",
+      "eventMap": {
+        "SessionStart": "idle",
+        "UserPromptSubmit": "thinking",
+        "PreToolUse": "working",
+        "PostToolUse": "working",
+        "PostToolUseFailure": "error",
+        "Stop": "attention",
+        "PreCompact": "sweeping",
+        "PostCompact": "attention",
+        "SessionEnd": "sleeping"
+      },
+      "capabilities": {
+        "httpHook": false,
+        "permissionApproval": false,
+        "mobilePermissionObservation": false,
+        "notificationHook": false,
+        "interactiveBubble": false,
+        "sessionEnd": true,
+        "subagent": false
+      },
+      "hookConfig": {
+        "configFormat": "omp-extension"
+      }
+    },
+    {
+      "id": "openclaw",
+      "name": "OpenClaw",
+      "processNames": {
+        "win": [],
+        "mac": [],
+        "linux": []
+      },
+      "startupRecoveryProcessNames": {
+        "win": [],
+        "mac": [],
+        "linux": []
+      },
+      "eventSource": "plugin-event",
+      "eventMap": {
+        "SessionStart": "idle",
+        "UserPromptSubmit": "thinking",
+        "PreToolUse": "working",
+        "PostToolUse": "working",
+        "PostToolUseFailure": "error",
+        "Stop": "attention",
+        "StopFailure": "error",
+        "PreCompact": "sweeping",
+        "PostCompact": "attention",
+        "SessionEnd": "sleeping"
+      },
+      "capabilities": {
+        "httpHook": false,
+        "permissionApproval": false,
+        "mobilePermissionObservation": false,
+        "notificationHook": false,
+        "interactiveBubble": false,
+        "sessionEnd": true,
+        "subagent": false
+      },
+      "hookConfig": {
+        "configFormat": "openclaw-plugin"
+      },
+      "pidField": "openclaw_pid"
+    },
+    {
+      "id": "hermes",
+      "name": "Hermes Agent",
+      "processNames": {
+        "win": [
+          "hermes.exe"
+        ],
+        "mac": [
+          "hermes"
+        ],
+        "linux": [
+          "hermes"
+        ]
+      },
+      "startupRecoveryProcessNames": {
+        "win": [
+          "hermes.exe"
+        ],
+        "mac": [
+          "hermes"
+        ],
+        "linux": [
+          "hermes"
+        ]
+      },
+      "eventSource": "plugin-event",
+      "eventMap": {
+        "SessionStart": "idle",
+        "UserPromptSubmit": "thinking",
+        "PreToolUse": "working",
+        "PostToolUse": "working",
+        "PostToolUseFailure": "error",
+        "Stop": "attention",
+        "StopFailure": "error",
+        "SessionEnd": "sleeping"
+      },
+      "capabilities": {
+        "httpHook": false,
+        "permissionApproval": true,
+        "mobilePermissionObservation": true,
+        "interactiveBubble": true,
+        "sessionEnd": true,
+        "subagent": false
+      },
+      "pidField": "hermes_pid"
+    },
+    {
+      "id": "qoder",
+      "name": "Qoder",
+      "processNames": {
+        "win": [
+          "qoder.exe",
+          "qodercli.exe",
+          "qoder-cli.exe"
+        ],
+        "mac": [
+          "qoder",
+          "qodercli",
+          "qoder-cli"
+        ],
+        "linux": [
+          "qoder",
+          "qodercli",
+          "qoder-cli"
+        ]
+      },
+      "startupRecoveryProcessNames": {
+        "win": [
+          "qodercli.exe",
+          "qoder-cli.exe"
+        ],
+        "mac": [
+          "qodercli",
+          "qoder-cli"
+        ],
+        "linux": [
+          "qodercli",
+          "qoder-cli"
+        ]
+      },
+      "eventSource": "hook",
+      "eventMap": {
+        "SessionStart": "idle",
+        "UserPromptSubmit": "thinking",
+        "PreToolUse": "working",
+        "PostToolUse": "working",
+        "PostToolUseFailure": "error",
+        "Stop": "attention",
+        "Notification": "notification",
+        "PermissionRequest": "notification",
+        "PermissionDenied": "notification",
+        "SessionEnd": "sleeping"
+      },
+      "capabilities": {
+        "httpHook": false,
+        "permissionApproval": false,
+        "mobilePermissionObservation": false,
+        "interactiveBubble": false,
+        "notificationHook": true,
+        "sessionEnd": true,
+        "subagent": false
+      },
+      "hookConfig": {
+        "configFormat": "qoder-settings-json"
+      },
+      "stdinFormat": "qoderHookJson",
+      "pidField": "source_pid"
+    },
+    {
+      "id": "reasonix",
+      "name": "Reasonix",
+      "processNames": {
+        "win": [
+          "reasonix.exe",
+          "reasonix-desktop.exe",
+          "reasonix-cli.exe"
+        ],
+        "mac": [
+          "reasonix",
+          "reasonix-desktop"
+        ],
+        "linux": [
+          "reasonix",
+          "reasonix-desktop"
+        ]
+      },
+      "startupRecoveryProcessNames": {
+        "win": [
+          "reasonix.exe",
+          "reasonix-cli.exe"
+        ],
+        "mac": [
+          "reasonix"
+        ],
+        "linux": [
+          "reasonix"
+        ]
+      },
+      "eventSource": "hook",
+      "eventMap": {
+        "SessionStart": "idle",
+        "SessionEnd": "sleeping",
+        "UserPromptSubmit": "thinking",
+        "PreToolUse": "working",
+        "PostToolUse": "working",
+        "Stop": "attention",
+        "SubagentStop": "working",
+        "Notification": "notification",
+        "PreCompact": "sweeping"
+      },
+      "capabilities": {
+        "httpHook": false,
+        "permissionApproval": false,
+        "mobilePermissionObservation": false,
+        "interactiveBubble": false,
+        "notificationHook": true,
+        "sessionEnd": true,
+        "subagent": true
+      },
+      "hookConfig": {
+        "configFormat": "reasonix-settings-json"
+      },
+      "stdinFormat": "reasonixHookJson",
+      "pidField": "reasonix_pid"
+    },
+    {
+      "id": "qoderwork",
+      "name": "QoderWork",
+      "category": "work",
+      "processNames": {
+        "win": [
+          "QoderWork.exe"
+        ],
+        "mac": [
+          "QoderWork"
+        ],
+        "linux": [
+          "QoderWork"
+        ]
+      },
+      "startupRecoveryProcessNames": {
+        "win": [],
+        "mac": [],
+        "linux": []
+      },
+      "eventSource": "hook",
+      "eventMap": {
+        "SessionStart": "idle",
+        "UserPromptSubmit": "thinking",
+        "PreToolUse": "working",
+        "PostToolUse": "working",
+        "PostToolUseFailure": "error",
+        "Stop": "attention",
+        "Notification": "notification",
+        "PermissionRequest": "working",
+        "PermissionDenied": "working",
+        "SessionEnd": "sleeping"
+      },
+      "capabilities": {
+        "httpHook": false,
+        "permissionApproval": false,
+        "mobilePermissionObservation": false,
+        "interactiveBubble": false,
+        "notificationHook": true,
+        "sessionEnd": true,
+        "subagent": false
+      },
+      "hookConfig": {
+        "configFormat": "qoderwork-settings-json"
+      },
+      "stdinFormat": "qoderworkHookJson",
+      "pidField": "source_pid"
+    },
+    {
+      "id": "qwenwork",
+      "name": "QwenWork",
+      "category": "work",
+      "processNames": {
+        "win": [
+          "QwenWorkCN.exe"
+        ],
+        "mac": [
+          "QwenWorkCN",
+          "千问办公"
+        ],
+        "linux": []
+      },
+      "startupRecoveryProcessNames": {
+        "win": [],
+        "mac": [],
+        "linux": []
+      },
+      "eventSource": "hook",
+      "eventMap": {
+        "SessionStart": "idle",
+        "UserPromptSubmit": "thinking",
+        "PreToolUse": "working",
+        "PostToolUse": "working",
+        "PostToolUseFailure": "error",
+        "Stop": "attention",
+        "Notification": "notification",
+        "PermissionRequest": "working",
+        "PermissionDenied": "working",
+        "SessionEnd": "sleeping"
+      },
+      "capabilities": {
+        "httpHook": false,
+        "permissionApproval": false,
+        "mobilePermissionObservation": false,
+        "interactiveBubble": false,
+        "notificationHook": true,
+        "sessionEnd": true,
+        "subagent": false
+      },
+      "hookConfig": {
+        "configFormat": "qwenwork-settings-json"
+      },
+      "stdinFormat": "qwenworkHookJson",
+      "pidField": "source_pid"
+    },
+    {
+      "id": "workbuddy",
+      "name": "WorkBuddy",
+      "processNames": {
+        "win": [
+          "WorkBuddy.exe",
+          "workbuddy.exe"
+        ],
+        "mac": [
+          "WorkBuddy AI Helper",
+          "WorkBuddy AI Helper (Renderer)",
+          "WorkBuddy Helper",
+          "WorkBuddy Helper (Renderer)"
+        ],
+        "linux": [
+          "workbuddy",
+          "WorkBuddy"
+        ]
+      },
+      "startupRecoveryProcessNames": {
+        "win": [],
+        "mac": [],
+        "linux": []
+      },
+      "eventSource": "hook",
+      "eventMap": {
+        "SessionStart": "idle",
+        "SessionEnd": "sleeping",
+        "UserPromptSubmit": "thinking",
+        "PreToolUse": "working",
+        "PostToolUse": "working",
+        "Stop": "attention",
+        "Notification": "notification",
+        "PreCompact": "sweeping"
+      },
+      "capabilities": {
+        "httpHook": false,
+        "permissionApproval": false,
+        "mobilePermissionObservation": false,
+        "interactiveBubble": false,
+        "notificationHook": true,
+        "sessionEnd": true,
+        "subagent": false
+      },
+      "hookConfig": {
+        "configFormat": "claude-code-compatible"
+      },
+      "stdinFormat": "claudeCodeHookJson",
+      "pidField": "workbuddy_pid"
+    },
+    {
+      "id": "traecode",
+      "name": "TraeCode",
+      "processNames": {
+        "win": [
+          "Trae CN.exe",
+          "trae cn.exe",
+          "TraeCN.exe",
+          "traecn.exe"
+        ],
+        "mac": [
+          "Trae",
+          "trae"
+        ],
+        "linux": [
+          "trae",
+          "Trae"
+        ]
+      },
+      "startupRecoveryProcessNames": {
+        "win": [],
+        "mac": [],
+        "linux": []
+      },
+      "eventSource": "hook",
+      "eventMap": {
+        "SessionStart": "idle",
+        "UserPromptSubmit": "thinking",
+        "PreToolUse": "working",
+        "PostToolUse": "working",
+        "Stop": "attention",
+        "Notification": "notification"
+      },
+      "capabilities": {
+        "httpHook": false,
+        "permissionApproval": false,
+        "mobilePermissionObservation": false,
+        "interactiveBubble": false,
+        "notificationHook": true,
+        "sessionEnd": false,
+        "subagent": false
+      },
+      "hookConfig": {
+        "configFormat": "traecode-hooks-json"
+      },
+      "stdinFormat": "claudeCodeHookJson",
+      "pidField": "traecode_pid"
+    },
+    {
+      "id": "grok-build",
+      "name": "Grok Build",
+      "processNames": {
+        "win": [
+          "grok.exe"
+        ],
+        "mac": [
+          "grok"
+        ],
+        "linux": [
+          "grok"
+        ]
+      },
+      "startupRecoveryProcessNames": {
+        "win": [],
+        "mac": [],
+        "linux": []
+      },
+      "eventSource": "hook",
+      "eventMap": {
+        "SessionStart": "idle",
+        "SessionEnd": "sleeping",
+        "UserPromptSubmit": "thinking",
+        "PreToolUse": "working",
+        "PostToolUse": "working",
+        "PostToolUseFailure": "error",
+        "Stop": "attention",
+        "StopFailure": "error",
+        "StopCancelled": "idle",
+        "Notification": "notification",
+        "PreCompact": "sweeping",
+        "PostCompact": "thinking",
+        "PermissionDenied": "notification"
+      },
+      "capabilities": {
+        "httpHook": false,
+        "permissionApproval": false,
+        "mobilePermissionObservation": false,
+        "interactiveBubble": false,
+        "notificationHook": true,
+        "sessionEnd": true,
+        "subagent": false
+      },
+      "hookConfig": {
+        "configFormat": "grok-hooks-json"
+      },
+      "stdinFormat": "grokHookJson"
+    },
+    {
+      "id": "minimax",
+      "name": "MiniMax Code",
+      "processNames": {
+        "win": [
+          "MiniMax Code.exe",
+          "mcode.exe"
+        ],
+        "mac": [
+          "MiniMax Code",
+          "mcode"
+        ],
+        "linux": [
+          "mcode",
+          "MiniMax Code"
+        ]
+      },
+      "startupRecoveryProcessNames": {
+        "win": [],
+        "mac": [],
+        "linux": []
+      },
+      "eventSource": "hook",
+      "eventMap": {
+        "SessionStart": "idle",
+        "SessionEnd": "sleeping",
+        "UserPromptSubmit": "thinking",
+        "PreToolUse": "working",
+        "PostToolUse": "working",
+        "Stop": "attention",
+        "SubagentStart": "juggling",
+        "SubagentStop": "working",
+        "PreCompact": "sweeping",
+        "PostCompact": "thinking"
+      },
+      "capabilities": {
+        "httpHook": false,
+        "permissionApproval": false,
+        "mobilePermissionObservation": false,
+        "interactiveBubble": false,
+        "notificationHook": false,
+        "sessionEnd": true,
+        "subagent": false
+      },
+      "hookConfig": {
+        "configFormat": "minimax-plugin-hooks"
+      },
+      "stdinFormat": "claudeCodeHookJson",
+      "pidField": "minimax_pid"
+    }
+  ]
+}

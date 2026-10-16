@@ -1,0 +1,261 @@
+{
+  "version": 1,
+  "upstreamCommit": "c52e2df6ff778bf85310166882c516385f2f6eab",
+  "files": [
+    {
+      "source": "assets/svg/clawd-about-hero.svg",
+      "destination": "avatars/clawd-about-hero.svg",
+      "sha256": "1ba34a618fc9931f386a716132dee2490157b3634223327e5f051898776b042d"
+    },
+    {
+      "source": "assets/svg/clawd-aegyo-shy.svg",
+      "destination": "avatars/clawd-aegyo-shy.svg",
+      "sha256": "5f0be5b18af3a01e13da1b6f0bbb84c425242e37c22aff95966cb07ea7f673df"
+    },
+    {
+      "source": "assets/svg/clawd-coffee-hand.svg",
+      "destination": "avatars/clawd-coffee-hand.svg",
+      "sha256": "9385409c0e924cb6d66c4a8247da89dc82d904c23a6b22aa5b6a86c23a043bb9"
+    },
+    {
+      "source": "assets/svg/clawd-coffee-head-flip.svg",
+      "destination": "avatars/clawd-coffee-head-flip.svg",
+      "sha256": "363d8da64bd79afdd52f07006565ccb721a6c0451aeccb7939b31611013b28a5"
+    },
+    {
+      "source": "assets/svg/clawd-collapse-sleep.svg",
+      "destination": "avatars/clawd-collapse-sleep.svg",
+      "sha256": "92d87d277b28d49e0587410890985a30e8a38d36c71f5fe8d6b249ca20040945"
+    },
+    {
+      "source": "assets/svg/clawd-designing.svg",
+      "destination": "avatars/clawd-designing.svg",
+      "sha256": "ed1ae3b8b7a61be7082e4c4e0d98358c53744b4c003d633704997d8586ddba51"
+    },
+    {
+      "source": "assets/svg/clawd-dizzy.svg",
+      "destination": "avatars/clawd-dizzy.svg",
+      "sha256": "f28186141caf4b4011fd7b34f49683597aa0c70ee31d26e48c4882ce1ae4a348"
+    },
+    {
+      "source": "assets/svg/clawd-error.svg",
+      "destination": "avatars/clawd-error.svg",
+      "sha256": "ac829581d4f330eff38d86a50bc4ba100c2a2ba27d5add86142b11c49679e3f4"
+    },
+    {
+      "source": "assets/svg/clawd-happy.svg",
+      "destination": "avatars/clawd-happy.svg",
+      "sha256": "80b65cc97919f1fe89b8f1dc044e16cfb661a7918d2644e236c919fe743695ab"
+    },
+    {
+      "source": "assets/svg/clawd-headphones-groove.svg",
+      "destination": "avatars/clawd-headphones-groove.svg",
+      "sha256": "098a64c33a47532a389bbb7dcd9d5dac83f7034553cc48a57d6ac82f173e5b6d"
+    },
+    {
+      "source": "assets/svg/clawd-heart-eyes.svg",
+      "destination": "avatars/clawd-heart-eyes.svg",
+      "sha256": "0500fa84896e2facfec8636e7a18d8fcc5307205ee85f8c11e5e3cac51824b8b"
+    },
+    {
+      "source": "assets/svg/clawd-idle-bubble.svg",
+      "destination": "avatars/clawd-idle-bubble.svg",
+      "sha256": "70720d8bb5881c4529faddd53920dfcf01e6db4d4820d873c91061329fcfa34c"
+    },
+    {
+      "source": "assets/svg/clawd-idle-collapse.svg",
+      "destination": "avatars/clawd-idle-collapse.svg",
+      "sha256": "66974b734ccc0cc33eb16f9f67c2dc4829cf2558a10f95e45f736bf3e89b6b97"
+    },
+    {
+      "source": "assets/svg/clawd-idle-doze.svg",
+      "destination": "avatars/clawd-idle-doze.svg",
+      "sha256": "5f83f8d865814e670e8aea6daf76f5130898b01b02de08050493a9bdda490fd2"
+    },
+    {
+      "source": "assets/svg/clawd-idle-follow.svg",
+      "destination": "avatars/clawd-idle-follow.svg",
+      "sha256": "05c997cd539ccad1e85f6296252cb7cc185ba3fde66fd17c47817249ff107bf9"
+    },
+    {
+      "source": "assets/svg/clawd-idle-living.svg",
+      "destination": "avatars/clawd-idle-living.svg",
+      "sha256": "f88a331ae9bd416aeded6aba50b95c1f5740f4da6077c929f5fbe6f4267ead77"
+    },
+    {
+      "source": "assets/svg/clawd-idle-look.svg",
+      "destination": "avatars/clawd-idle-look.svg",
+      "sha256": "2d3791ab6bf77eb61ce62c1053a41445ecd2ae85323cf30c610a1459aef5555f"
+    },
+    {
+      "source": "assets/svg/clawd-idle-low-battery.svg",
+      "destination": "avatars/clawd-idle-low-battery.svg",
+      "sha256": "e6c6a481bf6cab95f1fcc97bc5e2601a4553bc247fe83f1ce493a4a2e852c212"
+    },
+    {
+      "source": "assets/svg/clawd-idle-reading.svg",
+      "destination": "avatars/clawd-idle-reading.svg",
+      "sha256": "12e5b2d882b62f5cdcbd65f3585f0d10970de6acce50a54a1aaa116af74abee5"
+    },
+    {
+      "source": "assets/svg/clawd-idle-yawn.svg",
+      "destination": "avatars/clawd-idle-yawn.svg",
+      "sha256": "52f9a417e4c2b510710333771daeb6f3fd08663f967d59beb40ef641aa7b7ac8"
+    },
+    {
+      "source": "assets/svg/clawd-mini-alert.svg",
+      "destination": "avatars/clawd-mini-alert.svg",
+      "sha256": "f67370d5305c6358c4089ee5029d6d60586910f5045debf8ebfafe14cbd25661"
+    },
+    {
+      "source": "assets/svg/clawd-mini-crabwalk.svg",
+      "destination": "avatars/clawd-mini-crabwalk.svg",
+      "sha256": "a4659a7005ac1cc5e5be41750e292c059d306940979c69fbe94f0d9c9e7588ff"
+    },
+    {
+      "source": "assets/svg/clawd-mini-enter-sleep.svg",
+      "destination": "avatars/clawd-mini-enter-sleep.svg",
+      "sha256": "6a82a615421466ce7102af4c42a0ed1b0994a59bc5c9adf2e013a430ee924fe5"
+    },
+    {
+      "source": "assets/svg/clawd-mini-enter.svg",
+      "destination": "avatars/clawd-mini-enter.svg",
+      "sha256": "126f55f39a81c4c9a3ae46f409a73476945020ca9bc54e4a40326e6223a19d41"
+    },
+    {
+      "source": "assets/svg/clawd-mini-happy.svg",
+      "destination": "avatars/clawd-mini-happy.svg",
+      "sha256": "6ec26f45e13ff42b2ad37b0b3dbb63d13d2e24cba0ac85a72ce142304d4d1399"
+    },
+    {
+      "source": "assets/svg/clawd-mini-idle.svg",
+      "destination": "avatars/clawd-mini-idle.svg",
+      "sha256": "321e0f422d4786e4befead2ee0115c6f96ae6477066c024d1030a6657eac3a6b"
+    },
+    {
+      "source": "assets/svg/clawd-mini-peek.svg",
+      "destination": "avatars/clawd-mini-peek.svg",
+      "sha256": "42e8f7b7aed75d01cee7d5620387844f193e728f9519a6d2d6e4d8fd1e024c9b"
+    },
+    {
+      "source": "assets/svg/clawd-mini-sleep.svg",
+      "destination": "avatars/clawd-mini-sleep.svg",
+      "sha256": "bb45bb753a5234099c780d994e90c65282e157cf7459d3e19e5122cd6e14a2ff"
+    },
+    {
+      "source": "assets/svg/clawd-mini-typing.svg",
+      "destination": "avatars/clawd-mini-typing.svg",
+      "sha256": "d9fb88648e166f7ed46a90e33442607351aa4bd7f657acd0e2147b08b0c2fdfb"
+    },
+    {
+      "source": "assets/svg/clawd-notification.svg",
+      "destination": "avatars/clawd-notification.svg",
+      "sha256": "b20cd7074049c8dfe7ec7bd2b98f9ff641cd2bdea3db7d8cafd5bbd3e1bb158e"
+    },
+    {
+      "source": "assets/svg/clawd-outlaw-bender.svg",
+      "destination": "avatars/clawd-outlaw-bender.svg",
+      "sha256": "0ec89c58828194babda9f8722ef1d9bf83158e9886c0a05dc8fc532353991d0c"
+    },
+    {
+      "source": "assets/svg/clawd-react-annoyed.svg",
+      "destination": "avatars/clawd-react-annoyed.svg",
+      "sha256": "aa82ad1d26ea423b5e74fe63cb300e7022d6220287a79c67a32f2e68d45c13df"
+    },
+    {
+      "source": "assets/svg/clawd-react-double-jump.svg",
+      "destination": "avatars/clawd-react-double-jump.svg",
+      "sha256": "8e8b987194239193ccc5469115d401966bbad44a712c219057915add54642cd7"
+    },
+    {
+      "source": "assets/svg/clawd-react-double.svg",
+      "destination": "avatars/clawd-react-double.svg",
+      "sha256": "3bda663b037120f0afcf6c957bf0efe196cf9ae77b664ea3f7f1d496d9a916e5"
+    },
+    {
+      "source": "assets/svg/clawd-react-drag.svg",
+      "destination": "avatars/clawd-react-drag.svg",
+      "sha256": "0901a8302f4f1f80e720ef200ebe4d70fab46f48b297ac46221fc990b3298d0d"
+    },
+    {
+      "source": "assets/svg/clawd-react-left.svg",
+      "destination": "avatars/clawd-react-left.svg",
+      "sha256": "afa640216d5b20b319299fbf0c63fa8f029056487a270ff07321d361be4f5e84"
+    },
+    {
+      "source": "assets/svg/clawd-react-right.svg",
+      "destination": "avatars/clawd-react-right.svg",
+      "sha256": "b21d98b5aca6261dc78e23c365d7fcf8be1e1a741bc9ff98af4c3df58a1be738"
+    },
+    {
+      "source": "assets/svg/clawd-sleeping.svg",
+      "destination": "avatars/clawd-sleeping.svg",
+      "sha256": "475c51b4f9d963c61e9c0eef97cffbe1642daf615a599e23d997125bfc4f11b1"
+    },
+    {
+      "source": "assets/svg/clawd-static-base.svg",
+      "destination": "avatars/clawd-static-base.svg",
+      "sha256": "f20494e8bf37b973438c286f646071e6f8246056846c79064370b503a8336a7f"
+    },
+    {
+      "source": "assets/svg/clawd-wake.svg",
+      "destination": "avatars/clawd-wake.svg",
+      "sha256": "4f25dfd48e5857a470fb3c69a33edecb2a2f1d084e3e93e2286a1f7bb9736684"
+    },
+    {
+      "source": "assets/svg/clawd-working-building.svg",
+      "destination": "avatars/clawd-working-building.svg",
+      "sha256": "1b0ace93f0acdb146eb9e83831e7f136a9f7bb46df04941401c349b0f9ec5c32"
+    },
+    {
+      "source": "assets/svg/clawd-working-carrying.svg",
+      "destination": "avatars/clawd-working-carrying.svg",
+      "sha256": "78f09cb97f2436796a27ecf6c1b124f07833d629842f2e1c1a5f6ab811eb32b5"
+    },
+    {
+      "source": "assets/svg/clawd-working-debugger.svg",
+      "destination": "avatars/clawd-working-debugger.svg",
+      "sha256": "c7d2995a5c985b41febfb95f3ea3b85602d9ebac0051a5e495c54821bf573591"
+    },
+    {
+      "source": "assets/svg/clawd-working-juggling.svg",
+      "destination": "avatars/clawd-working-juggling.svg",
+      "sha256": "0d4a704d05a92340ba661c004bc9434a39911514c1f0ed166b9caadb248b07b9"
+    },
+    {
+      "source": "assets/svg/clawd-working-sweeping.svg",
+      "destination": "avatars/clawd-working-sweeping.svg",
+      "sha256": "602d41ad3bafed1e79334ab5c2dbbddbca736ee4f810c76c4ee03b528f502d98"
+    },
+    {
+      "source": "assets/svg/clawd-working-thinking.svg",
+      "destination": "avatars/clawd-working-thinking.svg",
+      "sha256": "fa73d5f9eed0a27746cc9a9b92d90f15da61171afe4fb01fb681132af22068a5"
+    },
+    {
+      "source": "assets/svg/clawd-working-typing-boss.svg",
+      "destination": "avatars/clawd-working-typing-boss.svg",
+      "sha256": "3a9d3c5241582acc889ac0be9503f33db59b8c29c553637fba66f22073d4cf0d"
+    },
+    {
+      "source": "assets/svg/clawd-working-typing.svg",
+      "destination": "avatars/clawd-working-typing.svg",
+      "sha256": "c5427bd79f75470cb2cca517ed8a6bdb1b2ae19f287a7723d763720bc515971d"
+    },
+    {
+      "source": "assets/svg/clawd-working-ultrathink.svg",
+      "destination": "avatars/clawd-working-ultrathink.svg",
+      "sha256": "9e8c7063222193d6959f24578a741d4ea894d4254b3dbb6f370f47f2c1bc7787"
+    },
+    {
+      "source": "assets/svg/clawd-working-wizard.svg",
+      "destination": "avatars/clawd-working-wizard.svg",
+      "sha256": "4b3794beda0e1d666aabefe470da49b2144a637c4a052c15f426b340afd9aaf7"
+    },
+    {
+      "source": "assets/icon.png",
+      "destination": "icon.png",
+      "sha256": "5b5ebb036324a51966021da031fcf68673ff6d281ad2253926570e89f41ab812"
+    }
+  ]
+}

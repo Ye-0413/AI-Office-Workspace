@@ -1,0 +1,17 @@
+'use strict';
+const fs = require('node:fs');
+const path = require('node:path');
+const {execFileSync} = require('node:child_process');
+if (process.platform !== 'darwin') throw new Error('The native macOS lock helper must be built on macOS');
+const index = process.argv.indexOf('--arch');
+const arch = index < 0 ? process.arch : process.argv[index + 1];
+if (!['arm64', 'x64'].includes(arch)) throw new Error('Unsupported macOS architecture');
+const root = path.resolve(__dirname, '..');
+const target = path.join(root, 'assets/helpers/mini-office-flock');
+fs.mkdirSync(path.dirname(target), {recursive:true});
+execFileSync('/usr/bin/xcrun', ['clang', '-arch', arch === 'x64' ? 'x86_64' : arch, '-mmacosx-version-min=13.0', '-Wall', '-Wextra', '-Werror', '-Os', path.join(root, 'native/mini-office-flock.c'), '-o', target], {stdio:'inherit'});
+execFileSync('/usr/bin/codesign', ['--force', '--sign', '-', target], {stdio:'inherit'});
+const commands=execFileSync('/usr/bin/otool',['-l',target],{encoding:'utf8'});
+const minimum=/\bminos\s+(\d+)(?:\.\d+)*/.exec(commands);
+if(!minimum || Number(minimum[1])>13) throw new Error('Native helper must support macOS 13');
+console.log('Built native flock helper: ' + arch);

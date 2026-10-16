@@ -1,0 +1,166 @@
+{
+  "description": "Schema-derived examples and upstream regression boundaries; no fixture in this file is a real captured user session.",
+  "verifiedAt": "2026-10-15",
+  "cases": [
+    {
+      "name": "codex direct test start",
+      "provider": "codex",
+      "provenance": "official-example",
+      "sourceUrl": "https://learn.chatgpt.com/docs/hooks#pretooluse",
+      "raw": {"session_id":"codex-a","cwd":"/example/mini-office","hook_event_name":"PreToolUse","turn_id":"turn-a","tool_name":"Bash","tool_use_id":"call-a","tool_input":{"command":"npm test"}},
+      "expected": {"id":"codex:codex-a","event":"tool-start","activity":"testing","turnId":"turn-a","toolCallId":"call-a"}
+    },
+    {
+      "name": "codex patch start",
+      "provider": "codex",
+      "provenance": "official-example",
+      "sourceUrl": "https://learn.chatgpt.com/docs/hooks#tool-coverage",
+      "raw": {"session_id":"codex-a","hook_event_name":"PreToolUse","turn_id":"turn-a","tool_name":"apply_patch","tool_use_id":"call-b","tool_input":{"command":"*** Begin Patch\n*** End Patch"}},
+      "expected": {"event":"tool-start","activity":"coding"}
+    },
+    {
+      "name": "codex result shape not fixed by hooks",
+      "provider": "codex",
+      "provenance": "official-example",
+      "sourceUrl": "https://learn.chatgpt.com/docs/hooks#posttooluse",
+      "raw": {"session_id":"codex-a","hook_event_name":"PostToolUse","turn_id":"turn-a","tool_name":"Bash","tool_use_id":"call-a","tool_input":{"command":"npm test"},"tool_response":"All tests passed"},
+      "expected": {"event":"tool-end","activity":"testing","outcome":"unknown"}
+    },
+    {
+      "name": "codex permission observation never approves",
+      "provider": "codex",
+      "provenance": "official-example",
+      "sourceUrl": "https://learn.chatgpt.com/docs/hooks#permissionrequest",
+      "raw": {"session_id":"codex-a","hook_event_name":"PermissionRequest","turn_id":"turn-a","tool_name":"Bash","tool_input":{"command":"npm ci"}},
+      "expected": {"event":"waiting-user","activity":"waiting-user"}
+    },
+    {
+      "name": "codex independently keyed child",
+      "provider": "codex",
+      "provenance": "official-example",
+      "sourceUrl": "https://learn.chatgpt.com/docs/hooks#subagentstart",
+      "raw": {"session_id":"codex-a","hook_event_name":"SubagentStart","turn_id":"turn-a","agent_id":"child-a","agent_type":"reviewer"},
+      "expected": {"id":"codex:codex-a:child-a","parentId":"codex:codex-a","event":"subagent-start","activity":"waiting-tool"}
+    },
+    {
+      "name": "codex stop remains open",
+      "provider": "codex",
+      "provenance": "official-example",
+      "sourceUrl": "https://learn.chatgpt.com/docs/hooks#stop",
+      "raw": {"session_id":"codex-a","hook_event_name":"Stop","turn_id":"turn-a","stop_hook_active":false,"last_assistant_message":"This text must never reach normalized storage."},
+      "expected": {"event":"turn-end","activity":"idle"}
+    },
+    {
+      "name": "codex interrupt distinct from failure",
+      "provider": "codex",
+      "provenance": "official-example",
+      "sourceUrl": "https://learn.chatgpt.com/docs/hooks#interrupt",
+      "raw": {"session_id":"codex-a","hook_event_name":"Interrupt","turn_id":"turn-a"},
+      "expected": {"event":"interrupted","activity":"idle","outcome":"cancelled"}
+    },
+    {
+      "name": "claude reading child tool preserves provenance",
+      "provider": "claude-code",
+      "provenance": "official-example",
+      "sourceUrl": "https://code.claude.com/docs/en/hooks#common-input-fields",
+      "raw": {"session_id":"claude-a","prompt_id":"prompt-a","hook_event_name":"PreToolUse","agent_id":"child-a","agent_type":"Explore","tool_name":"Read","tool_use_id":"toolu-a","tool_input":{"file_path":"/example/README.md"}},
+      "expected": {"id":"claude-code:claude-a:child-a","parentId":"claude-code:claude-a","event":"tool-start","activity":"reading","turnId":"prompt-a"}
+    },
+    {
+      "name": "claude test execution failure",
+      "provider": "claude-code",
+      "provenance": "official-example",
+      "sourceUrl": "https://code.claude.com/docs/en/hooks#posttoolusefailure-input",
+      "raw": {"session_id":"claude-a","hook_event_name":"PostToolUseFailure","tool_name":"Bash","tool_input":{"command":"npm test"},"tool_use_id":"toolu-a","error":"Exit code 1\nTests failed: 1","is_interrupt":false},
+      "expected": {"event":"tool-end","activity":"error","outcome":"failure"}
+    },
+    {
+      "name": "claude interrupted tool is cancelled",
+      "provider": "claude-code",
+      "provenance": "official-example",
+      "sourceUrl": "https://code.claude.com/docs/en/hooks#posttoolusefailure-input",
+      "raw": {"session_id":"claude-a","hook_event_name":"PostToolUseFailure","tool_name":"Bash","tool_input":{"command":"npm test"},"tool_use_id":"toolu-a","error":"interrupted","is_interrupt":true},
+      "expected": {"event":"tool-end","activity":"idle","outcome":"cancelled"}
+    },
+    {
+      "name": "claude explicit user question",
+      "provider": "claude-code",
+      "provenance": "official-example",
+      "sourceUrl": "https://code.claude.com/docs/en/hooks#pretooluse",
+      "raw": {"session_id":"claude-a","hook_event_name":"PreToolUse","tool_name":"AskUserQuestion","tool_use_id":"toolu-question","tool_input":{"questions":[]}},
+      "expected": {"event":"waiting-user","activity":"waiting-user"}
+    },
+    {
+      "name": "claude background work suppresses completion",
+      "provider": "claude-code",
+      "provenance": "upstream-derived",
+      "sourceUrl": "https://github.com/rullerzhou-afk/clawd-on-desk/blob/c52e2df6ff778bf85310166882c516385f2f6eab/test/claude-stop-disposition.test.js",
+      "raw": {"session_id":"claude-a","hook_event_name":"Stop","background_tasks":[{"id":"child-b","type":"subagent","status":"running"}]},
+      "expected": {"event":"turn-end","activity":"waiting-tool"}
+    },
+    {
+      "name": "cursor generation stays inside conversation",
+      "provider": "cursor",
+      "provenance": "official-example",
+      "sourceUrl": "https://cursor.com/docs/hooks#pretooluse",
+      "raw": {"conversation_id":"cursor-a","generation_id":"generation-a","hook_event_name":"preToolUse","tool_name":"Shell","tool_input":{"command":"npm run build"},"tool_use_id":"call-a","workspace_roots":["/example/project"]},
+      "expected": {"id":"cursor:cursor-a","event":"tool-start","activity":"building","turnId":"generation-a","projectPath":"/example/project"}
+    },
+    {
+      "name": "cursor JSON stringified exit code",
+      "provider": "cursor",
+      "provenance": "official-example",
+      "sourceUrl": "https://cursor.com/docs/hooks#posttooluse",
+      "raw": {"conversation_id":"cursor-a","generation_id":"generation-a","hook_event_name":"postToolUse","tool_name":"Shell","tool_input":{"command":"npm test"},"tool_use_id":"call-a","tool_output":"{\"exitCode\":0,\"stdout\":\"All tests passed\"}","duration":5432},
+      "expected": {"event":"tool-end","activity":"testing","outcome":"success"}
+    },
+    {
+      "name": "cursor timeout uses its own schema",
+      "provider": "cursor",
+      "provenance": "official-example",
+      "sourceUrl": "https://cursor.com/docs/hooks#posttoolusefailure",
+      "raw": {"conversation_id":"cursor-a","hook_event_name":"postToolUseFailure","tool_name":"Shell","tool_input":{"command":"npm test"},"tool_use_id":"call-a","error_message":"Command timed out after 30s","failure_type":"timeout","duration":5000,"is_interrupt":false},
+      "expected": {"event":"tool-end","activity":"error","outcome":"failure"}
+    },
+    {
+      "name": "cursor child explicit root relationship",
+      "provider": "cursor",
+      "provenance": "official-example",
+      "sourceUrl": "https://cursor.com/docs/hooks#subagentstart",
+      "raw": {"conversation_id":"cursor-child-conversation","generation_id":"generation-a","hook_event_name":"subagentStart","subagent_id":"child-a","subagent_type":"explore","task":"Review authentication","parent_conversation_id":"cursor-a","tool_call_id":"task-call-a"},
+      "expected": {"id":"cursor:cursor-a:child-a","parentId":"cursor:cursor-a","sessionId":"cursor-a","event":"subagent-start"}
+    },
+    {
+      "name": "cursor child end without stable ID does not close root",
+      "provider": "cursor",
+      "provenance": "official-example",
+      "sourceUrl": "https://cursor.com/docs/hooks#subagentstop",
+      "raw": {"conversation_id":"cursor-a","hook_event_name":"subagentStop","subagent_type":"explore","status":"completed","task":"Review authentication","duration_ms":45000},
+      "expected": null
+    },
+    {
+      "name": "cursor loop end is not session removal",
+      "provider": "cursor",
+      "provenance": "official-example",
+      "sourceUrl": "https://cursor.com/docs/hooks#stop",
+      "raw": {"conversation_id":"cursor-a","generation_id":"generation-a","hook_event_name":"stop","status":"completed","loop_count":0},
+      "expected": {"event":"turn-end","activity":"idle","outcome":"success"}
+    },
+    {
+      "name": "upstream cursor reduced event cannot recreate tool details",
+      "provider": "cursor",
+      "provenance": "upstream-derived",
+      "sourceUrl": "https://github.com/rullerzhou-afk/clawd-on-desk/blob/c52e2df6ff778bf85310166882c516385f2f6eab/hooks/cursor-hook.js",
+      "raw": {"session_id":"cursor-a","agent_id":"cursor-agent","event":"PreToolUse","state":"working","display_svg":"clawd-working-building.svg"},
+      "expected": {"id":"cursor:cursor-a","event":"tool-start","activity":"unknown"}
+    },
+    {
+      "name": "upstream codex internal marker is rejected",
+      "provider": "codex",
+      "provenance": "upstream-derived",
+      "sourceUrl": "https://github.com/rullerzhou-afk/clawd-on-desk/blob/c52e2df6ff778bf85310166882c516385f2f6eab/hooks/codex-internal-worker.js",
+      "raw": {"session_id":"internal-a","event":"UserPromptSubmit","agent_id":"codex","codex_internal_thread":"ambient_suggestions","prompt":"Internal prompt"},
+      "expected": null
+    }
+  ]
+}

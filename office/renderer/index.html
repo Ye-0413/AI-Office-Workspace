@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">
+  <title>小小工作室 · AI Mini Office</title>
+  <link rel="stylesheet" href="style.css">
+  <script defer src="../lib/provider-labels.js"></script>
+  <script defer src="../lib/scene-model.js"></script>
+  <script defer src="../lib/attendance-model.js"></script>
+  <script defer src="../lib/animation-director.js"></script>
+  <script defer src="../lib/i18n-model.js"></script>
+  <script defer src="../lib/family-model.js"></script>
+  <script defer src="../lib/visitor-model.js"></script>
+  <script defer src="../lib/visitor-dialogue.js"></script>
+  <script defer src="idle-visitor.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <main id="office" class="office" aria-label="AI 小小工作室" data-mode="live" data-quiet="true">
+    <div id="world-frame" class="world-frame">
+      <div id="world" class="world">
+        <img id="room-art" class="room-art" src="../assets/office-room.jpg" alt="迷你办公室，书架、构思白板、构建实验台、代码工位、咖啡休息角和成果架围绕中央通路" draggable="false">
+        <div id="studio-door" class="studio-door" data-open="false" aria-hidden="true"><span class="door-darkness"></span><span class="door-leaf"></span><span class="door-light"></span></div>
+        <div class="scene-night" aria-hidden="true"></div>
+        <div class="scene-lamplight" aria-hidden="true"></div>
+        <div class="window-weather" aria-hidden="true"><div class="rain"></div></div>
+        <div class="dust" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+
+        <div class="room-prop prop-library" data-zone-prop="library" aria-hidden="true"><i></i><i></i></div>
+        <div class="room-prop prop-board" data-zone-prop="board" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div class="room-prop prop-bench" data-zone-prop="bench" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div class="room-prop prop-desk" data-zone-prop="desk" aria-hidden="true"><span>&lt;/&gt;</span></div>
+        <div class="room-prop prop-sofa" data-zone-prop="sofa" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div id="archive-stack" class="archive-stack" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div class="floor-sign sign-library" data-zone-label="library">资料书架</div>
+        <div class="floor-sign sign-board" data-zone-label="board">构思白板</div>
+        <div class="floor-sign sign-bench" data-zone-label="bench">构建实验台</div>
+        <div class="floor-sign sign-desk" data-zone-label="desk">代码工位</div>
+        <div class="floor-sign sign-sofa" data-zone-label="sofa">咖啡休息角</div>
+        <div class="floor-sign sign-archive" data-zone-label="archive">成果架</div>
+        <div id="helper-links" class="helper-links" aria-hidden="true"></div>
+        <div id="actors" class="actors" aria-label="当前项目的任务角色"></div>
+        <div id="visitors" class="visitors"></div>
+        <div id="effects" class="effects" aria-hidden="true"></div>
+        <div id="empty-state" class="sr-only" role="status">小小工作室，等大家入驻。</div>
+        <div id="page-empty" class="sr-only" role="status" hidden>这个房间暂时安静下来。</div>
+        <div class="scene-vignette" aria-hidden="true"></div>
+      </div>
+    </div>
+
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i></span><span>小小工作室</span><span class="brand-sub">AI MINI OFFICE</span></div>
+      <div id="room-switcher" class="room-switcher" hidden><label for="project-select" class="sr-only">项目房间</label><select id="project-select" aria-label="项目房间"></select><button id="other-attention" class="attention-button" type="button" hidden></button></div>
+      <div class="top-actions"><button id="language-button" class="language-button" type="button" aria-label="切换到 English">EN</button><button id="mode-button" type="button" class="mode-button"><span class="mode-dot" aria-hidden="true"></span><span id="mode-label">实时观察</span></button><button id="connections-button" type="button" class="icon-button" aria-label="连接 AI 工具" title="连接 AI 工具"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3v5m8-5v5M6 8h12v3a6 6 0 0 1-6 6v4m-6-13v3a6 6 0 0 0 6 6"/></svg><span id="connection-count" class="connection-count">0</span></button><button id="settings-button" type="button" class="icon-button" aria-label="房间偏好与显示器" title="房间偏好与显示器"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/><circle cx="12" cy="12" r="5"/></svg></button></div>
+    </header>
+
+    <div id="error-message" class="error-message" role="alert" hidden><span></span><button id="dismiss-error" type="button" aria-label="关闭错误提示">×</button></div>
+    <footer class="room-status">
+      <div class="room-status-copy"><span id="status-dot" class="status-dot" aria-hidden="true"></span><span id="room-summary">正在打开办公室…</span><span id="signal-summary" class="signal-summary"></span></div>
+      <div id="pagination" class="pagination" hidden><button id="page-prev" type="button" aria-label="上一组任务">←</button><span id="page-label"></span><button id="page-next" type="button" aria-label="下一组任务">→</button></div>
+      <button id="roster-button" class="roster-button" type="button" hidden>房间里的伙伴</button>
+      <div id="demo-controls" class="demo-controls" hidden><span class="demo-caption">模拟事件</span><button id="demo-play" type="button">暂停</button><button id="demo-next" type="button">下一幕 →</button><button id="demo-reset" type="button" aria-label="从头播放演示">↻</button><button id="exit-demo" type="button">回到实时</button></div>
+      <button id="attention-jump" type="button" class="attention-jump" hidden></button>
+    </footer>
+
+    <aside id="inspector" class="inspector" aria-label="任务详情" hidden>
+      <div class="inspector-main"><div class="inspector-heading"><span id="inspect-provider" class="provider-badge"></span><span id="inspect-nickname" class="inspect-nickname"></span><span id="inspect-location" class="inspect-location"></span><button type="button" id="inspect-helper" class="inspect-helper" hidden>临时帮手</button></div><h2 id="inspect-title"></h2><p id="inspect-summary"></p><div class="inspector-meta"><span id="inspect-state"></span><span id="inspect-signal"></span><span id="inspect-tools"></span></div></div>
+      <div class="inspector-actions"><button id="open-source" type="button" class="button button-warm">打开项目文件夹 ↗</button><span id="inspect-action-note">角色行动来自观察事件</span></div>
+      <button id="close-inspector" type="button" class="close-inspector" aria-label="关闭任务详情">×</button>
+      <details id="event-details" class="event-details"><summary>最近活动与判断依据</summary><div class="evidence-summary"><span id="inspect-source"></span><span id="inspect-confidence"></span></div><div id="inspect-animation" class="animation-evidence"></div><ol id="inspect-events"></ol><div id="inspect-session-id" class="session-identity"></div></details>
+    </aside>
+
+    <dialog id="connections-dialog" class="office-dialog connections-dialog" aria-labelledby="connections-title">
+      <div class="dialog-header"><div><span class="dialog-eyebrow">让伙伴们入驻</span><h2 id="connections-title">连接 AI 工具</h2></div><button type="button" class="dialog-close" data-close-dialog aria-label="关闭连接面板">×</button></div>
+      <p class="dialog-intro">每个独立任务成为一个角色。工具事件决定它去哪里、做什么；审批与回答继续在原工具完成。</p>
+      <label class="sr-only" for="provider-search">搜索 AI 工具</label><input id="provider-search" class="provider-search" type="search" placeholder="搜索 AI 工具…" autocomplete="off" spellcheck="false">
+      <div id="provider-connections" class="provider-connections"></div>
+      <p class="dialog-footnote">Codex 的官方 hooks 需要在 Codex 中审核信任后才会生效。已有会话的日志可作为只读补充；无法判断的事件会显示“观察中”。</p>
+      <div class="dialog-bottom"><span id="connection-result" role="status"></span><button type="button" class="button button-paper" data-close-dialog>回到办公室</button></div>
+    </dialog>
+
+    <dialog id="roster-dialog" class="office-dialog roster-dialog" aria-labelledby="roster-title">
+      <div class="dialog-header"><div><span class="dialog-eyebrow">每项任务都有自己的位置</span><h2 id="roster-title">房间里的伙伴</h2></div><button type="button" class="dialog-close" data-close-dialog aria-label="关闭伙伴列表">×</button></div>
+      <p class="dialog-intro">同一工具的独立 session 分别入驻。选择任务，可以在房间中找到它。</p>
+      <div id="roster-list" class="roster-list"></div>
+    </dialog>
+
+    <dialog id="settings-dialog" class="office-dialog settings-dialog" aria-labelledby="settings-title">
+      <div class="dialog-header"><div><span class="dialog-eyebrow">把小房间放到喜欢的地方</span><h2 id="settings-title">房间偏好</h2></div><button type="button" class="dialog-close" data-close-dialog aria-label="关闭房间偏好">×</button></div>
+      <div class="setting-row"><div><label for="setting-night">晚间灯光</label><span>温暖的台灯，安静的夜色。</span></div><input id="setting-night" type="checkbox"></div>
+      <div class="setting-row"><div><label for="setting-rain">窗外细雨</label><span>只改变环境，不代表任务状态。</span></div><input id="setting-rain" type="checkbox"></div>
+      <div class="setting-row"><div><label for="setting-idleVisitor">闲时串门</label><span>安静时有访客来逛逛；真实任务入驻就让路。</span></div><input id="setting-idleVisitor" type="checkbox"></div>
+      <div class="setting-row"><div><label for="setting-reducedMotion">减少动作</label><span>保留位置与状态，暂停角色循环及装饰动作。</span></div><input id="setting-reducedMotion" type="checkbox"></div>
+      <div class="setting-row"><div><label for="setting-lowPower">节能观察</label><span>保留状态变化，减少持续动画与场景特效。</span></div><input id="setting-lowPower" type="checkbox"></div>
+      <div class="display-setting"><label for="display-select">放到哪块屏幕？</label><div><select id="display-select"></select><button id="move-display" type="button" class="button button-paper">移到这块屏幕</button></div><span>推荐在 1280 × 720 副屏全屏观看。</span></div>
+      <p class="dialog-footnote">房间只呈现有依据的活动：安静不等于睡觉。一轮结束后会暂离，有新工作再回来。</p>
+      <div class="dialog-bottom"><span id="settings-result" role="status"></span><button type="button" class="button button-paper" data-close-dialog>完成</button></div>
+    </dialog>
+    <div id="announcer" class="sr-only" role="status" aria-live="polite"></div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,76 @@
+{
+  "name": "ai-mini-office",
+  "version": "0.3.1",
+  "description": "A tiny living office for observing local AI agent sessions.",
+  "main": "main.cjs",
+  "type": "commonjs",
+  "author": "AI Mini Office contributors",
+  "license": "AGPL-3.0-only",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "test": "node --test test/*.test.cjs",
+    "build": "electron-builder --mac dir --arm64 --publish never",
+    "build:mac": "electron-builder --mac dmg zip --arm64 --publish never",
+    "build:mac:x64": "electron-builder --mac dmg zip --x64 --publish never",
+    "verify:bundle": "node scripts/verify-bundle.cjs",
+    "verify:renderer": "electron test/renderer-smoke.cjs",
+    "verify:packaged-hook": "node scripts/smoke-packaged-hook.cjs",
+    "verify:packaged-flow": "node scripts/verify-packaged-flow.cjs",
+    "prebuild": "node scripts/prepare-build.cjs",
+    "prebuild:mac": "node scripts/prepare-build.cjs",
+    "prebuild:mac:x64": "node scripts/prepare-build.cjs --arch x64",
+    "pretest": "node scripts/sync-provider-catalog.cjs --check",
+    "sync:providers": "node scripts/sync-provider-catalog.cjs",
+    "verify:codex-restart": "electron scripts/verify-codex-restart.cjs"
+  },
+  "devDependencies": {
+    "electron": "41.10.4",
+    "electron-builder": "26.15.7"
+  },
+  "build": {
+    "appId": "local.ai-mini-office",
+    "productName": "AI Mini Office",
+    "copyright": "AI Mini Office",
+    "directories": {
+      "output": "../dist-mini-office"
+    },
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "lib/**/*",
+      "src/claude-hook-operations.js",
+      "hooks/**/*",
+      "renderer/**/*",
+      "assets/**/*",
+      "docs/**/*",
+      "LICENSE",
+      "UPSTREAM-NOTICE.md",
+      "README.md",
+      "native/**/*"
+    ],
+    "asar": true,
+    "mac": {
+      "icon": "assets/icon.png",
+      "category": "public.app-category.entertainment",
+      "identity": "-",
+      "hardenedRuntime": false,
+      "minimumSystemVersion": "13.0",
+      "artifactName": "AI-Mini-Office-${version}-${arch}.${ext}",
+      "target": [
+        {
+          "target": "dir",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "asarUnpack": [
+      "assets/helpers/*"
+    ]
+  },
+  "dependencies": {
+    "@iarna/toml": "2.2.5"
+  }
+}
