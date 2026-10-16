@@ -170,6 +170,7 @@
     ['桌面连接尚未就绪，请重新打开小小工作室。', 'The desktop connection is not ready. Reopen AI Mini Office.'],
     ['操作未完成，请稍后重试。', 'Action could not be completed. Try again shortly.'],
     ['角色素材未能加载，请重新打开应用。任务状态仍在观察。', 'Character art could not load. Reopen the app. Task observation continues.'],
+    ['角色素材暂未加载，后续状态更新会重试。任务状态仍在观察。', 'Character art is temporarily unavailable. A later state update will retry. Task observation continues.'],
     ['房间背景未能加载，请重新打开应用。', 'The room background could not load. Reopen the app.'],
     ['尚未收到事件', 'No events yet'],
     ['刚刚收到事件', 'Event just received'],

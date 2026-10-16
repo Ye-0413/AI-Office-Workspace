@@ -2,10 +2,17 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { createAttendance } = require('../lib/attendance-model.js');
+const { normalizeEvent } = require('../lib/provider-events.cjs');
+const { createSessionStore } = require('../lib/session-store.cjs');
 
 const task = (id, extra = {}) => ({ id, sessionId: id, provider: 'codex', status: 'active',
   activity: 'coding', lastEventAt: 1000, activeTools: 0, attention: false, ...extra });
 const idle = (id, at, extra = {}) => task(id, { status: 'idle', activity: 'idle', lastEventAt: at, ...extra });
+function hookIdle(id, at, provider = 'codex', raw = { hook_event_name: 'SessionStart', session_id: id }) {
+  const event = normalizeEvent(provider, raw, { receivedAt: at, source: 'hook' });
+  assert.ok(event); const store = createSessionStore({ now: () => at });
+  assert.equal(store.ingest(event), true); return store.snapshot()[0];
+}
 
 test('initial idle history stays outside while live work enters, without changing session truth', () => {
   const model = createAttendance({ now: () => 10000 });
@@ -77,12 +84,91 @@ test('closed sessions depart immediately, children remain governed by their own 
 });
 test('fresh idle SessionStart can arrive later; another idle timestamp alone cannot wake a retired actor', () => {
   let time = 1000; const model = createAttendance({ idleMs: 20, now: () => time });
-  model.update([idle('old', 500)]); time = 2000;
-  let result = model.update([idle('old', 2000), idle('new', 2000)]);
+  model.update([idle('codex:old', 500)]); time = 2000;
+  let result = model.update([idle('codex:old', 2000), idle('new', 2000)]);
   assert.deepEqual(result.entering, ['new']); assert.deepEqual(result.present.map(s => s.id), ['new']);
   time = 3000;
-  result = model.update([idle('old', 3000, { events: [{ event: 'session-start', at: 3000 }] })]);
-  assert.ok(result.entering.includes('old'));
+  result = model.update([hookIdle('old', time)]);
+  assert.ok(result.entering.includes('codex:old'));
+});
+test('a real fresh SessionStart survives the first idle snapshot at now or just before startup without inventing work', () => {
+  for (const offset of [0, -1]) {
+    let time = 100000; const model = createAttendance({ now: () => time });
+    const session = hookIdle('startup-' + Math.abs(offset), time + offset), truth = structuredClone(session);
+    let result = model.update([session]);
+    assert.deepEqual(result.entering, [session.id]); assert.deepEqual(result.retired, []);
+    assert.equal(result.present[0], session); assert.equal(session.status, 'idle'); assert.equal(session.activity, 'idle'); assert.equal(session.activeTools, 0);
+    assert.deepEqual(session, truth, 'attendance preserves observed identity, timestamps, evidence and state');
+    assert.deepEqual(model.update([session]).entering, [], 'a repeated snapshot cannot replay the entrance');
+    time += 19999; assert.equal(model.update([session]).present.length, 1);
+    time += 1; result = model.update([session]); assert.deepEqual(result.leaving, [session.id]); assert.deepEqual(result.present, []);
+    time += 1; result = model.update([session]); assert.deepEqual(result.entering, []); assert.deepEqual(result.leaving, []); assert.deepEqual(result.retired, [session.id]);
+  }
+});
+test('fresh startup arrival uses the existing idle grace window and rejects old or future hook evidence', () => {
+  const time = 100000;
+  for (const [idleMs, offset, enters] of [[20000, -19999, true], [20000, -20000, false], [20000, -20001, false], [20000, 1, false], [20, -19, true], [20, -20, false]]) {
+    const model = createAttendance({ idleMs, now: () => time }), session = hookIdle('window-' + idleMs + '-' + offset, time + offset);
+    assert.equal(model.update([session]).present.length, enters ? 1 : 0, JSON.stringify({ idleMs, offset }));
+  }
+});
+test('normalized Cursor, Hermes and Kiro hook starts retain their actual identities and explicit idle evidence', () => {
+  const time = 100000;
+  for (const [provider, raw] of [
+    ['cursor', { hook_event_name: 'sessionStart', conversation_id: 'cursor-start' }],
+    ['hermes', { hook_event_name: 'on_session_start', session_id: 'hermes-start' }],
+    ['kiro-cli', { hook_event_name: 'agentSpawn', session_id: 'kiro-start' }]
+  ]) {
+    const model = createAttendance({ now: () => time }), session = hookIdle(provider, time - 1, provider, raw);
+    assert.equal(session.provider, provider); assert.equal(session.events.at(-1).evidence.source, 'hook');
+    assert.equal(session.events.at(-1).evidence.confidence, 'explicit'); assert.equal(model.update([session]).present[0], session);
+    assert.equal(session.status, 'idle'); assert.equal(session.activity, 'idle');
+  }
+});
+test('ordinary idle metadata, restored rollouts and incomplete SessionStart evidence remain outside on startup', () => {
+  const time = 100000, native = hookIdle('rejected-start', time);
+  const variants = [
+    idle('plain-idle', time),
+    idle('metadata-only', time, { events: [{ event: 'metadata', at: time, evidence: { source: 'hook', confidence: 'explicit' } }] }),
+    { ...native, events: [{ ...native.events[0], evidence: { source: 'codex-jsonl', confidence: 'rollout-derived', restored: true } }] },
+    { ...native, evidence: { source: 'codex-jsonl', restored: true, snapshot: 'ended-turn' } },
+    { ...native, events: [{ ...native.events[0], evidence: { source: 'hook', confidence: 'explicit', restored: true } }] },
+    { ...native, events: [{ ...native.events[0], evidence: { source: 'hook', confidence: 'explicit', snapshot: 'restored-wait' } }] },
+    { ...native, events: [{ ...native.events[0], evidence: { source: 'upstream-derived', confidence: 'explicit' } }] },
+    { ...native, events: [{ ...native.events[0], evidence: { source: 'hook', confidence: 'unknown' } }] },
+    { ...native, events: [{ ...native.events[0], evidence: {} }] },
+    { ...native, events: [{ ...native.events[0], at: undefined }] },
+    { ...native, lastEventAt: time + 1 },
+    { ...native, events: [{ ...native.events[0] }, { event: 'metadata', at: time, evidence: { source: 'hook', confidence: 'explicit' } }] }
+  ];
+  for (const session of variants) {
+    const model = createAttendance({ now: () => time }), result = model.update([session]);
+    assert.deepEqual(result.present, []); assert.deepEqual(result.entering, []); assert.deepEqual(result.retired, [session.id]);
+  }
+});
+test('a retired idle identity requires a fresh explicit hook boundary to return, not a newer historical or metadata timestamp', () => {
+  let time = 100000; const native = hookIdle('retired-start', time), model = createAttendance({ now: () => time });
+  model.update([idle(native.id, time - 30000)]);
+  for (const evidence of [{ source: 'codex-jsonl', confidence: 'rollout-derived', restored: true }, { source: 'hook', confidence: 'unknown' }]) {
+    time += 1;
+    const session = hookIdle('retired-start', time); session.events[0].evidence = evidence;
+    assert.deepEqual(model.update([session]).present, []);
+  }
+  time += 1;
+  assert.deepEqual(model.update([idle(native.id, time, { events: [{ event: 'metadata', at: time, evidence: { source: 'hook', confidence: 'explicit' } }] })]).present, []);
+  time += 1; const fresh = hookIdle('retired-start', time), result = model.update([fresh]);
+  assert.deepEqual(result.entering, [fresh.id]); assert.equal(result.present[0], fresh); assert.equal(fresh.status, 'idle');
+});
+test('a later completed-rollout correction still retires earlier open history instead of reviving it as a fresh arrival', () => {
+  let time = 100000; const store = createSessionStore({ now: () => time }), model = createAttendance({ now: () => time });
+  const sessionId = 'ended-history';
+  assert.equal(store.ingest({ provider: 'codex', sessionId, event: 'turn-start', activity: 'planning', at: 1000, turnId: 'old-turn', turnStartedAt: 1000, eventId: 'old-start', evidence: { source: 'codex-jsonl', rawEvent: 'rollout:sustained-snapshot', restored: true } }), true);
+  assert.equal(model.update(store.snapshot()).present.length, 1);
+  time += 10;
+  assert.equal(store.ingest({ provider: 'codex', sessionId, event: 'metadata', activity: 'idle', at: 3000, turnId: 'new-ended-turn', turnStartedAt: 2000, turnEndedAt: 3000, supersedesTurnId: 'old-turn', eventId: 'ended-correction', evidence: { source: 'codex-jsonl', rawEvent: 'rollout:ended-turn-snapshot', restored: true, snapshot: 'ended-turn' } }), true);
+  const snapshot = store.snapshot(), result = model.update(snapshot);
+  assert.equal(snapshot[0].status, 'idle'); assert.deepEqual(result.present, []); assert.deepEqual(result.leaving, [snapshot[0].id]);
+  assert.deepEqual(model.update(snapshot).entering, []);
 });
 test('a newly active helper brings a retired idle parent back, while names remain owned by the supplied ID mapping', () => {
   let time = 1000; const model = createAttendance({ now: () => time });

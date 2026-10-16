@@ -119,10 +119,13 @@
     const performance = actor.performance && actor.performance.update(actor.session, { now: Date.now(), reducedMotion: reduced(), lowPower: settings.lowPower, hidden: document.hidden || actor.entryPending, walking: Boolean(actor.motion) || actor.node.dataset.walking === 'true', reaction: actor.completing || actor.node.dataset.reaction === 'true' || Boolean(actor.performanceSuspended) || cloneBusy(actor) || actor.holdingFamily, departing: actor.departing, stale: actor.spec.stale });
     const asset = quietSprites() ? 'clawd-static-base.svg' : performance && performance.active ? performance.asset : name;
     actor.wantedAsset = name;
-    if (actor.currentAsset === asset && !replay) return;
+    const recoverBitmap = actor.image.hidden && actor.image.complete;
+    if (actor.currentAsset === asset && !replay && !recoverBitmap) return;
     actor.currentAsset = asset;
     actor.image.dataset.asset = asset;
-    actor.image.src = assetURL(asset, replay && !quietSprites());
+    // Retry a failed cached resource on a later normal state update. Do not
+    // start another load while that retry is still in flight.
+    actor.image.src = assetURL(asset, recoverBitmap || replay && !quietSprites());
   }
   function timeAgo(value) {
     const milliseconds = Math.max(0, Date.now() - Scene.timestamp(value));
@@ -275,8 +278,8 @@
   }
   function visibleActors() { return [...actors.values()].filter(actor => !actor.entryPending); }
   function syncTraffic() {
-    traffic.sync(visibleActors().map(actor => ({ id: actor.id, position: currentPosition(actor), ...actorGeometry(actor),
-      canYield: !actor.departing && !cloneBusy(actor) && !actor.holdingFamily && !actor.completing && !actor.spec.stale })));
+    traffic.sync([...actors.values()].filter(actor => !actor.entryPending || actor.stagedEntry).map(actor => ({ id: actor.id, position: currentPosition(actor), ...actorGeometry(actor), staged: Boolean(actor.stagedEntry),
+      canYield: !actor.entryPending && !actor.departing && !cloneBusy(actor) && !actor.holdingFamily && !actor.completing && !actor.spec.stale })));
   }
   function spaceFree(point, actor, overlapIds = []) {
     return Scene.legalActorPoint(point, { ...actorGeometry(actor), reservedRects: CLOCK_RESERVED })
@@ -301,6 +304,15 @@
       for (const actor of actors.values()) if (actor.entryPending) {
         const parent = actor.helper ? cloneAncestor(actor) : null;
         const instantEntry = reduced() || document.hidden;
+        if (!actor.helper && !actor.restoreEntry && !instantEntry) {
+          if (!entranceLane) continue;
+          // Request the future doorway walk while still outside. The planner
+          // may first move a worker out of the way; no invisible physical body
+          // is allowed to trap that worker at the portal.
+          settle(actor, actor.target, true).catch(showError);
+          progressed = true;
+          break;
+        }
         const point = actor.restoreEntry || instantEntry || actor.helper && quietSprites() ? actor.target : parent ? currentPosition(parent)
           : ENTRY_POINT;
         if (!actor.helper && !actor.restoreEntry && !instantEntry && !entranceLane) continue;
@@ -331,7 +343,14 @@
     } else if (reservation.kind === 'arrived' || reservation.kind === 'move') {
       clearTrafficBlock();
       const id = reservation.id, actor = actors.get(id), pending = trafficWaiters.get(id);
-      if (!actor || actor.entryPending) { traffic.cancel(id); return; }
+      if (!actor || actor.entryPending && !actor.stagedEntry) { traffic.cancel(id); return; }
+      if (actor.stagedEntry) {
+        if (!pending || pending.serial !== actor.serial) { traffic.cancel(id); return; }
+        actor.stagedEntry = false; actor.entryPending = false;
+        actor.node.style.visibility = '';
+        actor.entranceActive = true; observedIds.add(actor.id); openDoor();
+        progressed = true;
+      }
       if (reservation.kind === 'arrived') {
         trafficWaiters.delete(id); actor.node.dataset.traffic = 'arrived';
         actor.yielding = false;
@@ -418,6 +437,7 @@
   }
   function cancelAction(actor) {
     actor.serial += 1;
+    actor.stagedEntry = false;
     actor.yielding = false;
     delete actor.node.dataset.trafficHint;
     const pendingMove = trafficWaiters.get(actor.id);
@@ -588,7 +608,12 @@
     const serial = cancelAction(actor);
     actor.target = seat;
     actor.spec = Scene.activitySpec(actor.session);
-    if (actor.spec.stale) { finishAtStation(actor); return; }
+    if (actor.spec.stale && !actor.entryPending) { finishAtStation(actor); return; }
+    if (actor.entryPending && !actor.helper && !actor.restoreEntry && !reduced() && !document.hidden) {
+      actor.stagedEntry = true;
+      actor.position = { x: ENTRY_POINT.x, y: ENTRY_POINT.y };
+      actor.node.style.transform = actorTransform(actor.position, false);
+    }
     // Short bursts of tools in one area should not make a character pace constantly.
     const dwelling = performance.now() - actor.arrivedAt;
     if (!urgent && dwelling < 1700 && Scene.distance(actor.position, seat) > 1 && !actor.justEntered) {
@@ -808,7 +833,7 @@
     button.append(body, plate, mark, bubble);
     node.append(shadow, arrival, carry, button);
     actorsLayer.append(node);
-    const restored = reflowPending || observedIds.has(session.id) && !attendance.entering.includes(session.id)
+    const restored = observedIds.has(session.id) && (reflowPending || !attendance.entering.includes(session.id))
       || snapshotReceived === 1 && !session.parentId;
     const helper = Boolean(session.parentId);
     const actor = { id: session.id, session, spec: Scene.activitySpec(session), node, button, body, image, title, relation, provider, state, bubble, carry, arrival, position: { x: seat.x, y: seat.y }, target: seat, helper, serial: 0, delays: new Set(), cloneEffects: new Set(), clonePhase: helper ? 'working' : '', motion: null, lastTurnAt: Scene.timestamp(session.turnCompletedAt), arrivedAt: -10000, lastZone: restored ? seat.zone : '', currentAsset: '', wantedAsset: '', bubbleTimer: 0, defer: 0, justEntered: !restored, completing: false, departing: false, holdingFamily: false, retireRequested: null, entryPending: true, restoreEntry: restored };
@@ -820,7 +845,18 @@
     node.style.zIndex = '860';
     image.addEventListener('error', () => {
       if (actor.currentAsset !== 'clawd-static-base.svg') { actor.currentAsset = 'clawd-static-base.svg'; image.dataset.asset = 'clawd-static-base.svg'; image.src = assetURL('clawd-static-base.svg'); }
-      else { image.hidden = true; showError('角色素材未能加载，请重新打开应用。任务状态仍在观察。'); }
+      else { image.hidden = true; showError('角色素材暂未加载，后续状态更新会重试。任务状态仍在观察。'); }
+    });
+    image.addEventListener('load', () => {
+      // A failed fallback hides only the failed bitmap. A later valid pose
+      // must restore it, including walking and reduced-motion appearances.
+      if (image.naturalWidth > 0) {
+        const recovering = image.hidden;
+        image.hidden = false;
+        // The articulated body has its own external image reference. Retry
+        // that reference too, rather than revealing an empty animated rig.
+        if (recovering) body.querySelector('.ap-rig defs image')?.setAttribute('href', assetURL(window.OfficeAvatarPerformanceModel.ASSET, true));
+      }
     });
     button.addEventListener('click', () => selectSession(actor.id));
     button.addEventListener('dblclick', () => react(actor));
@@ -948,7 +984,13 @@
       actor.spec = spec;
       actor.helper = Boolean(session.parentId);
       updateActorLabel(actor);
-      if (actor.entryPending) { actor.target = seat; continue; }
+      if (actor.entryPending) {
+        const changed = actor.target && (actor.target.zone !== seat.zone || Scene.distance(actor.target, seat) > .7)
+          || old.activity !== session.activity || oldSpec.stale !== spec.stale;
+        if (actor.stagedEntry && changed) cancelAction(actor);
+        actor.target = seat;
+        continue;
+      }
       if (reflowPending) {
         cancelAction(actor);
         if (!actor.helper && actor.entranceActive) {

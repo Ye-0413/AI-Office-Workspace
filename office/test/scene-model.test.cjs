@@ -551,3 +551,71 @@ test('a protected reflow entrance reserves its actual body for other actors with
   assert.equal(Scene.legalActorPoint(point,{session:task('other'),footprint,reservedRects}),false);
   assert.equal(Scene.legalActorPoint(point,{id:session.id,footprint,reservedRects}),true);
 });
+
+function lifecycleOptions(sessions, scale=1.35) {
+  const footprint={left:83,right:83,top:135,bottom:77};
+  return {scale,footprints:new Map(sessions.map(session=>[session.id,footprint])),reservedRects:CLOCK_RESERVED.concat(Scene.actorReservation({x:87,y:78},{scale,footprint}))};
+}
+
+test('finishing an entrance cannot blank a page when old lobby seats obstruct a fresh complete board layout', () => {
+  const sessions=[task('r0','unknown'),task('r1','planning'),task('r2','planning')],options=lifecycleOptions(sessions);
+  // This was the valid two-body layout just before the old entry-dependent
+  // divisor changed. It must not veto the existing safe three-body solution.
+  const old=new Map([['r0',{x:54,y:78,zone:'lobby'}],['r1',{x:32,y:46.5,zone:'board'}]]);
+  const entering=Scene.pageSessions(sessions,Scene.ALL_ROOMS,0,'',{...options,entryIds:new Set(['r1']),previousSeats:old});
+  const settled=Scene.pageSessions(sessions,Scene.ALL_ROOMS,entering.page,'',{...options,entryIds:new Set(),previousSeats:entering.seats});
+  for(const result of [entering,settled]){assertReadableLayout(result,options);assert.deepEqual(result.visible.map(session=>session.id),['r0','r1','r2']);}
+  assert.equal(settled.capacity,entering.capacity);assert.equal(settled.pages,1);
+});
+
+test('a reader and a resting main remain on the same page after either entrance finishes', () => {
+  const sessions=[task('r0','reading'),task('r1','idle')],options=lifecycleOptions(sessions);
+  for(const id of ['r0','r1']) {
+    const entering=Scene.pageSessions(sessions,Scene.ALL_ROOMS,0,'',{...options,entryIds:new Set([id])});
+    const settled=Scene.pageSessions(sessions.slice().reverse(),Scene.ALL_ROOMS,0,'',{...options,entryIds:new Set(),previousSeats:entering.seats});
+    assertReadableLayout(entering,options);assertReadableLayout(settled,options);
+    assert.equal(entering.pages,1);assert.equal(settled.pages,1);assert.equal(settled.capacity,entering.capacity);
+    assert.deepEqual(settled.visible.map(session=>session.id),sessions.map(session=>session.id));
+  }
+});
+
+test('entry lifecycle and snapshot order cannot change root groups or hide selectable observed helpers', () => {
+  const roots=['reading','idle','planning','testing','coding','planning','coding'].map((activity,index)=>task('root-'+index,activity));
+  const helpers=[task('helper-reading','reading',{parentId:'root-4'}),task('helper-code','coding',{parentId:'root-4'}),task('helper-planning','planning',{parentId:'root-2'})];
+  const sessions=roots.concat(helpers);
+  for(const scale of [.65,1,1.35]) {
+    const options=lifecycleOptions(sessions,scale),baseline=Scene.pageSessions(sessions,Scene.ALL_ROOMS,0,'',options);
+    const phases=[new Set(),...roots.map(root=>new Set([root.id])),new Set(roots.map(root=>root.id)),new Set()];
+    let previous=baseline.seats;
+    for(const entryIds of phases) {
+      const input=sessions.slice().reverse();
+      const first=Scene.pageSessions(input,Scene.ALL_ROOMS,0,'',{...options,entryIds,previousSeats:previous});
+      assert.equal(first.capacity,baseline.capacity);assert.equal(first.pages,baseline.pages);assertReadableLayout(first,options);
+      const ids=new Set();
+      for(let page=0;page<first.pages;page++) {
+        const result=Scene.pageSessions(input,Scene.ALL_ROOMS,page,'',{...options,entryIds});assertReadableLayout(result,options);
+        const expected=baseline.roots.slice(page*baseline.capacity,(page+1)*baseline.capacity).map(root=>root.id);
+        assert.deepEqual(result.visible.filter(session=>!session.parentId).map(session=>session.id),expected);
+        for(const id of expected)ids.add(id);
+      }
+      assert.equal(ids.size,roots.length);
+      for(const helper of helpers) {
+        const selected=Scene.pageSessions(input,Scene.ALL_ROOMS,0,helper.id,{...options,entryIds});assertReadableLayout(selected,options);
+        assert.ok(selected.visible.some(session=>session.id===helper.id));assert.equal(selected.rootIdsBySession.get(helper.id),helper.parentId);
+      }
+      previous=first.seats;
+    }
+  }
+});
+
+test('packed board fallback keeps the newcomer to the right and every offered foot endpoint clears the walking buffer', () => {
+  const sessions=[task('r0','unknown'),task('r1','planning'),task('r2','planning')];
+  const footprint={left:83,right:83,top:135,bottom:74};
+  const options={scale:1.35,entryIds:new Set(['r2']),footprints:new Map(sessions.map(session=>[session.id,footprint])),
+    reservedRects:CLOCK_RESERVED.concat(Scene.actorReservation({x:87,y:78},{scale:1.35,footprint})),
+    previousSeats:new Map([['r0',{x:70.02534375,y:78,zone:'lobby'}],['r1',{x:49.621664,y:46.5,zone:'board'}]])};
+  const result=Scene.pageSessions(sessions,Scene.ALL_ROOMS,0,'',options);assertReadableLayout(result,options);
+  assert.equal(result.visible.length,3);assert.ok(result.seats.get('r2').x>result.seats.get('r1').x,'left-to-right fallback must not invert entrance priority');
+  for(const point of result.seats.values())for(const obstacle of Scene.OBSTACLES)assert.equal(Scene.segmentHitsRect(point,point,obstacle,.8),false,'a safe seat must also be a legal walking endpoint');
+  assert.equal(Scene.legalActorPoint({x:49.621664,y:46.5},{scale:1.35,footprint}),false,'the former middle target lay inside the route buffer');
+});

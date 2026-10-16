@@ -113,7 +113,9 @@
   }
   function legalActorPoint(point, options = {}) {
     if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y) || point.x < 5 || point.x > 95 || point.y < 40.7 || point.y > 86) return false;
-    if (OBSTACLES.some(rect => inside(point, rect, .6))) return false;
+    // Seats and route endpoints use the same furniture clearance. A point
+    // inside the route's .8 margin must never be offered as an arrival target.
+    if (OBSTACLES.some(rect => inside(point, rect, .8))) return false;
     const bounds = actorBounds(point, options), viewport = options.viewport || ACTOR_VIEWPORT;
     if (bounds.left < viewport.left - 1e-7 || bounds.right > viewport.right + 1e-7 || bounds.top < viewport.top - 1e-7 || bounds.bottom > viewport.bottom + 1e-7) return false;
     return !(options.reservedRects || []).some(rect => rect && (!rect.ownerId || rect.ownerId !== (options.id || options.session?.id))
@@ -283,6 +285,12 @@
       .sort((a, b) => String(a.id).localeCompare(String(b.id)));
     let result, pageCapacity = CAPACITY;
     const hasHelpers = room.some(session => !suppressed(session) && rootIdsBySession.get(session.id) !== session.id);
+    const stationHistory = new Map(room.filter(session => activitySpec(session).stale && options.previousSeats?.has(session.id))
+      .map(session => [session.id, options.previousSeats.get(session.id)]));
+    // Entry priority is a route preference, never evidence that the room grew
+    // or shrank. Capacity uses the same deterministic complete-layout baseline
+    // before, during and after an entrance; stale observations keep their zone.
+    const baselineOptions = { ...options, entryIds: new Set(), preferredId: '' };
     // Capacity is a property of the available room, never of which page was
     // visited first. Reserve one helper when families exist so roster selection
     // cannot create a different page divisor and skip independent roots.
@@ -292,15 +300,17 @@
         const heads = roots.slice(start, start + pageCapacity);
         const ids = new Set(heads.map(session => session.id));
         const probe = heads.filter(session => !suppressed(session));
+        const variants = new Map();
         if (hasHelpers) {
-          const helper = room.filter(session => !suppressed(session) && !ids.has(session.id) && ids.has(rootIdsBySession.get(session.id)))
-            .sort((a, b) => {
-              const bounds = session => actorBounds({ x: 50, y: 78 }, { helper: true, scale: options.scale, footprint: options.footprints?.get(session.id) });
-              return bounds(b).width - bounds(a).width || String(a.id).localeCompare(String(b.id));
-            })[0];
-          if (helper) probe.push(helper);
+          for (const helper of room.filter(session => !suppressed(session) && !ids.has(session.id) && ids.has(rootIdsBySession.get(session.id)))
+            .sort((a, b) => String(a.id).localeCompare(String(b.id)))) {
+            const spec = activitySpec(helper), zone = spec.stale && stationHistory.has(helper.id) ? stationHistory.get(helper.id).zone : spec.zone;
+            const key = JSON.stringify([zone, options.footprints?.get(helper.id) || ACTOR_FOOTPRINT.helper]);
+            if (!variants.has(key)) variants.set(key, helper);
+          }
         }
-        if (!assignSeats(probe, new Map(), options).fits) { fits = false; break; }
+        if (!assignSeats(probe, stationHistory, baselineOptions).fits
+          || [...variants.values()].some(helper => !assignSeats(probe.concat(helper), stationHistory, baselineOptions).fits)) { fits = false; break; }
       }
       if (fits) break;
       pageCapacity -= 1;
@@ -322,9 +332,18 @@
       const helpers = room.filter(session => !rootIds.has(session.id) && rootIds.has(rootIdsBySession.get(session.id)) && !suppressed(session));
       helpers.sort((a, b) => Number(b.id === preferredId) - Number(a.id === preferredId) || Number(needsAttention(b)) - Number(needsAttention(a)) || String(a.id).localeCompare(String(b.id)));
       const minimumHelpers = helpers.some(session => session.id === preferredId) ? 1 : 0;
+      const layout = visible => {
+        let seats = assignSeats(visible, options.previousSeats || new Map(), { ...options, preferredId });
+        // Old seats and entrance-side preferences are useful only while the
+        // whole family page still fits. A fresh safe solution must not become
+        // an empty page merely because one old seat blocks the greedy order.
+        if (!seats.fits) seats = assignSeats(visible, stationHistory, { ...options, preferredId });
+        if (!seats.fits) seats = assignSeats(visible, stationHistory, baselineOptions);
+        return seats;
+      };
       for (let count = Math.min(3, helpers.length); count >= minimumHelpers; count -= 1) {
         const visible = mains.concat(helpers.slice(0, count));
-        const seats = assignSeats(visible, options.previousSeats || new Map(), { ...options, preferredId });
+        const seats = layout(visible);
         result = { page: current, pages, roots, rootIdsBySession, visible, capacity, helperCapacity: count, seats,
           helperOverflow: Math.max(0, helpers.length - count), hidden: Math.max(0, room.length - visible.length), layoutFits: seats.fits };
         if (seats.fits) return result;
@@ -374,7 +393,7 @@
       if (actor.old && (actor.spec.stale || actor.old.zone === actor.zone)) candidates.unshift(actor.old);
       const target = candidates[0];
       const alternatives = [];
-      for (const y of [40.7, 41, 42.5, 44, 46, 46.5, 70, 73, 76, 78, 80, 82, 84]) for (let x = 7; x <= 94; x += 3) alternatives.push({ x, y });
+      for (const y of [40.7, 40.9, 41, 42.5, 44, 46, 46.5, 70, 73, 76, 78, 80, 82, 84]) for (let x = 7; x <= 94; x += 3) alternatives.push({ x, y });
       alternatives.sort((a, b) => distance(a, target) - distance(b, target) || a.y - b.y || a.x - b.x);
       const choices = candidates.concat(alternatives);
       if (actor.entering) {
@@ -399,31 +418,39 @@
         const bounds = actorBounds({ x: 0, y }, actor);
         return { actor, y, bounds };
       });
-      let cursor = viewport.left;
-      const result = [];
-      for (const entry of entries) {
-        const area = STATION_AREAS[entry.actor.zone];
-        let left = Math.max(cursor, viewport.left, area.x1 * WORLD.width / 100 + entry.bounds.left);
-        // Skip reserved clock/door rectangles while preserving the station's
-        // foot range. No borrowing a different artwork zone to finish a row.
-        for (let pass = 0; pass <= (options.reservedRects || []).length; pass += 1) {
-          const rect = (options.reservedRects || []).find(rect => (!rect.ownerId || rect.ownerId !== entry.actor.session.id)
-            && entry.bounds.top < rect.bottom + 4 && entry.bounds.bottom > rect.top - 4
-            && left < rect.right + 4 && left + entry.bounds.width > rect.left - 4);
-          if (!rect) break;
-          left = rect.right + 4;
+      // Opposite alignments are distinct safe layouts: a reader at the left
+      // and a sofa occupant at the right can fit while two left-aligned rows
+      // overlap. At most four upper/lower combinations are considered.
+      const layouts = [];
+      for (const reverse of [false, true]) {
+        let cursor = reverse ? viewport.right : viewport.left;
+        const result = [];
+        for (const entry of reverse ? entries.slice().reverse() : entries) {
+          const area = STATION_AREAS[entry.actor.zone];
+          let left = reverse
+            ? Math.min(cursor, viewport.right, area.x2 * WORLD.width / 100 + entry.bounds.right) - entry.bounds.width
+            : Math.max(cursor, viewport.left, area.x1 * WORLD.width / 100 + entry.bounds.left);
+          for (let pass = 0; pass <= (options.reservedRects || []).length; pass += 1) {
+            const rect = (options.reservedRects || []).find(rect => (!rect.ownerId || rect.ownerId !== entry.actor.session.id)
+              && entry.bounds.top < rect.bottom + RESERVED_GAP && entry.bounds.bottom > rect.top - RESERVED_GAP
+              && left < rect.right + RESERVED_GAP && left + entry.bounds.width > rect.left - RESERVED_GAP);
+            if (!rect) break;
+            left = reverse ? rect.left - RESERVED_GAP - entry.bounds.width : rect.right + RESERVED_GAP;
+          }
+          let point = { x: (left - entry.bounds.left) * 100 / WORLD.width, y: entry.y };
+          const step = reverse ? -.25 : .25;
+          // Scan only within this actor's artwork station, including the narrow
+          // aisles beside the board. The same shared rectangle checks all feet.
+          while (point.x >= area.x1 - 1e-7 && point.x <= area.x2 + 1e-7
+            && !legalActorPoint(point, { ...options, ...entry.actor })) {
+            point = { x: point.x + step, y: entry.y }; left += step * WORLD.width / 100;
+          }
+          if (left < viewport.left - 1e-7 || left + entry.bounds.width > viewport.right + 1e-7 || !stationCompatible(point, entry.actor.zone)) break;
+          result.push({ actor: entry.actor, point }); cursor = reverse ? left - gap : left + entry.bounds.width + gap;
         }
-        let point = { x: (left - entry.bounds.left) * 100 / WORLD.width, y: entry.y };
-        // Large board actors clear the clock only in the narrow aisles beside
-        // and between desks. Scan legal feet inside this station, never move a
-        // planning task into the bookshelf or the build bench to make it fit.
-        while (point.x <= area.x2 && !legalActorPoint(point, { ...options, ...entry.actor })) {
-          point = { x: point.x + .25, y: entry.y }; left += .25 * WORLD.width / 100;
-        }
-        if (left + entry.bounds.width > viewport.right + 1e-7 || !stationCompatible(point, entry.actor.zone)) return [];
-        result.push({ actor: entry.actor, point }); cursor = left + entry.bounds.width + gap;
+        if (result.length === entries.length) layouts.push(result);
       }
-      return [result];
+      return layouts;
     };
     let solution = null;
     const permutations = (remaining, order, split) => {
@@ -462,7 +489,11 @@
       const splitOrder = Array.from({ length: descriptors.length + 1 }, (_, index) => index)
         .filter(split => split <= descriptors.filter(actor => !foreground(actor)).length)
         .sort((a, b) => Math.abs(a - descriptors.length / 2) - Math.abs(b - descriptors.length / 2));
-      for (const split of splitOrder) { permutations(descriptors, [], split); if (solution) break; }
+      // Greedy entrance priority chooses the nearest seat first. In a packed
+      // row the order instead runs left to right, so try established bodies
+      // first and newcomers last, keeping the doorway-side seat reachable.
+      const rowOrder = descriptors.slice().sort((a, b) => Number(a.entering) - Number(b.entering));
+      for (const split of splitOrder) { permutations(rowOrder, [], split); if (solution) break; }
     }
     return finish(solution || placed);
   }

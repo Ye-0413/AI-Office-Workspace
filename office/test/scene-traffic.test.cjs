@@ -71,6 +71,39 @@ test('a normal entrance-side new main walks past the same three mixed-station bo
     assert.equal(traffic.finish(plan.id,plan.token,plan.target),true);assert.equal(traffic.state().queued,0);
   }
 });
+
+test('a staged main stays outside while a real worker vacates the doorway, then enters and lets the worker return safely', () => {
+  const footprint={left:83,right:83,top:135,bottom:74},scale=1.35;
+  const actors=[actor('r0',70.02534375,78,{scale,footprint}),actor('r1',32,46.5,{scale,footprint}),actor('r2',87,78,{scale,footprint,staged:true,canYield:false})];
+  const traffic=Traffic.createCoordinator({gap:Scene.ACTOR_GAP,reservedRects:Scene.CLOCK_RESERVED,legalPoint:(p,a)=>Scene.legalActorPoint(p,{...a,reservedRects:Scene.CLOCK_RESERVED})});
+  traffic.sync(actors);traffic.request('r2',{x:49.8716640625,y:46.5});
+  const order=[];let crossedFutureDoor=false;
+  for(let attempt=0;attempt<6&&traffic.state().queued;attempt++) {
+    const plan=traffic.nextAny();assert.equal(plan.kind,'move');order.push(plan.id);
+    const mover=actors.find(actor=>actor.id===plan.id);if(plan.staged){assert.equal(plan.id,'r2');mover.staged=false;}
+    for(let leg=1;leg<plan.path.length;leg++)for(let step=0;step<=300;step++) {
+      const a=plan.path[leg-1],b=plan.path[leg],p={x:a.x+(b.x-a.x)*step/300,y:a.y+(b.y-a.y)*step/300};
+      assert.equal(Scene.legalActorPoint(p,{...mover,reservedRects:Scene.CLOCK_RESERVED}),true);
+      for(const other of actors.filter(actor=>actor.id!==mover.id)) {
+        const overlap=Scene.actorsOverlap(p,mover,other.position,other,Scene.ACTOR_GAP);
+        if(other.staged)crossedFutureDoor=crossedFutureDoor||overlap;else assert.equal(overlap,false,'every actually visible body keeps its complete clearance');
+      }
+    }
+    mover.position=plan.target;traffic.finish(plan.id,plan.token,plan.target);traffic.sync(actors);
+  }
+  assert.deepEqual(order,['r0','r2','r0']);assert.equal(crossedFutureDoor,true,'the invisible future doorway body was the actual obstruction');
+  assert.equal(traffic.state().queued,0);assert.deepEqual(actors[0].position,{x:70.02534375,y:78});assert.deepEqual(actors[2].position,{x:49.8716640625,y:46.5});
+});
+
+test('cancelling a staged newcomer preserves a safe real worker return and never schedules the cancelled body', () => {
+  const footprint={left:83,right:83,top:135,bottom:74},scale=1.35;
+  const actors=[actor('r0',70.02534375,78,{scale,footprint}),actor('r1',32,46.5,{scale,footprint}),actor('r2',87,78,{scale,footprint,staged:true,canYield:false})];
+  const traffic=Traffic.createCoordinator({gap:Scene.ACTOR_GAP,reservedRects:Scene.CLOCK_RESERVED,legalPoint:(p,a)=>Scene.legalActorPoint(p,{...a,reservedRects:Scene.CLOCK_RESERVED})});
+  traffic.sync(actors);traffic.request('r2',{x:49.8716640625,y:46.5});const outgoing=traffic.nextAny();assert.equal(outgoing.id,'r0');
+  actors[0].position=outgoing.target;traffic.finish('r0',outgoing.token,outgoing.target);
+  traffic.cancel('r2');traffic.sync(actors.slice(0,2));const back=traffic.nextAny();assert.equal(back.kind,'move');assert.equal(back.id,'r0');
+  assert.equal(traffic.finish('r0',back.token,back.target),true);assert.equal(traffic.state().queued,0);assert.equal(traffic.nextAny().kind,'idle');
+});
 test('an unobstructed body-only lane still detours around a name tag below another actor', () => {
   const traffic = coordinator(), a = actor('a', 15, 75), b = actor('b', 50, 65);
   const middle = bounds({ x: 50, y: 75 }, a), blocker = bounds(b.position, b);

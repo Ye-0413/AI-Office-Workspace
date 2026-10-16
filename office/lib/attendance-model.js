@@ -33,6 +33,17 @@
     const grace = Number.isFinite(Number(idleMs)) ? Math.max(0, Number(idleMs)) : 20000;
     const capacity = Number.isInteger(maxEntries) && maxEntries > 0 ? maxEntries : 256;
     const clock = () => { const at = Number(now()); return Number.isFinite(at) ? at : 0; };
+    const freshHookArrival = (session, time) => {
+      const event = latestEvent(session), evidence = event && event.evidence;
+      // Native hooks use local receivedAt, preserved by the store as event.at.
+      // Reuse the idle grace window; startup timing alone cannot erase a real
+      // recent arrival, nor can restored rollouts or metadata invent one.
+      return Boolean(event && event.event === 'session-start' && evidence?.source === 'hook'
+        && evidence.confidence === 'explicit' && evidence.restored !== true && !evidence.snapshot
+        && session.evidence?.restored !== true && !session.evidence?.snapshot
+        && Number.isFinite(event.at) && event.at >= 0 && event.at === eventTime(session.lastEventAt)
+        && time >= event.at && time - event.at < grace);
+    };
     let startedAt = clock();
     const entries = new Map();
     let initial = true;
@@ -69,7 +80,7 @@
         const idle = confirmedIdle(session) && !protectedByChild;
         let entry = entries.get(id);
         if (!entry) {
-          const historicalIdle = idle && (initial || at < startedAt);
+          const historicalIdle = idle && (initial || at < startedAt) && !freshHookArrival(session, time);
           entry = { phase: closed(session) || historicalIdle ? 'retired' : 'present',
             reason: closed(session) ? 'closed' : historicalIdle ? 'initial-idle' : '',
             idleSince: idle && !historicalIdle ? time : null,
@@ -79,7 +90,7 @@
         } else {
           const advanced = at > entry.lastEventAt;
           const changed = at >= entry.lastEventAt && nextSignature !== entry.signature;
-          const freshArrival = advanced && latestEvent(session)?.event === 'session-start';
+          const freshArrival = advanced && freshHookArrival(session, time);
           if (closed(session)) {
             if (entry.phase === 'present') leaving.push(id);
             entry.phase = 'retired'; entry.reason = 'closed'; entry.idleSince = null;

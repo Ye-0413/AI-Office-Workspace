@@ -64,7 +64,7 @@
         const scale = Number.isFinite(value.scale) ? value.scale : 1;
         const footprint = value.footprint && ['left','right','top','bottom'].every(key => Number.isFinite(value.footprint[key]) && value.footprint[key] >= 0)
           ? Object.fromEntries(['left','right','top','bottom'].map(key => [key, value.footprint[key]])) : undefined;
-        next.set(String(value.id), { id: String(value.id), position, helper: Boolean(value.helper), scale, footprint, canYield: value.canYield !== false });
+        next.set(String(value.id), { id: String(value.id), position, helper: Boolean(value.helper), scale, footprint, staged: value.staged === true, canYield: value.canYield !== false });
       }
       const signature = JSON.stringify([...next.values()].sort((a, b) => a.id.localeCompare(b.id)));
       if (signature !== sync.signature || invalid !== sync.invalid) { sync.signature = signature; sync.invalid = invalid; changed(); }
@@ -93,7 +93,7 @@
     }
     function targetBlockers(r, target = r.target) {
       const moving = actors.get(r.id), destination = rect(target, moving);
-      return [...actors.values()].filter(other => other.id !== r.id && !(same(target, r.target) && r.overlapIds.includes(other.id))
+      return [...actors.values()].filter(other => other.id !== r.id && !other.staged && !(same(target, r.target) && r.overlapIds.includes(other.id))
         && intersects(destination, rect(other.position, other), gapX, gapY)).map(other => other.id)
         .concat(reservedRects.filter(other => intersects(destination, other.bounds, 400 / world.width, 400 / world.height)).map(other => other.id));
     }
@@ -109,7 +109,7 @@
         return { left: -b.x1, right: b.x2, top: y - b.y1, bottom: b.y2 - y };
       });
       const extent = Object.fromEntries(['left', 'right', 'top', 'bottom'].map(key => [key, Math.max(...samples.map(s => s[key]))]));
-      const blockers = [...actors.values()].filter(other => other.id !== r.id).map(other => {
+      const blockers = [...actors.values()].filter(other => other.id !== r.id && !other.staged).map(other => {
         const b = rect(other.position, other);
         return { id: other.id, bounds: b, gapX, gapY, x1: b.x1 - extent.right - gapX, x2: b.x2 + extent.left + gapX,
           y1: b.y1 - extent.bottom - gapY, y2: b.y2 + extent.top + gapY };
@@ -132,7 +132,10 @@
       for (const p of original) add(p);
       // Boundary lanes also allow routing around an actor envelope whose
       // expanded corners extend outside the visible world.
-      for (const x of [4, 12, 25, 50, 75, 88, 96]) for (const y of [40.7, 41, 44, 72, 76, 77, 80, 86]) add({ x, y });
+      // Board feet and the entrance lane are also the narrow legal portals
+      // between furniture. Omitting them can leave a valid final layout with
+      // no route for a large newcomer or the worker making room for it.
+      for (const x of [4, 12, 25, 50, 69, 75, 88, 96]) for (const y of [40.7, 41, 44, 46.5, 72, 76, 77, 78, 80, 86]) add({ x, y });
       const costs = nodes.map(() => Infinity), previous = nodes.map(() => -1), visited = new Set();
       costs[0] = 0;
       while (visited.size < nodes.length) {
@@ -166,7 +169,7 @@
       return null;
     }
     function cycleCanFinish(r, holding, cycle) {
-      const original = new Map([...actors.values()].map(actor => [actor.id, actor.position]));
+      const original = new Map([...actors.values()].map(actor => [actor.id, { position: actor.position, staged: actor.staged }]));
       try {
         actors.get(r.id).position = holding;
         const remaining = [...requests.values()], done = new Set();
@@ -175,17 +178,17 @@
           for (const candidate of remaining) {
             if (done.has(candidate.id)) continue;
             if (candidate.waitFor && requests.has(candidate.waitFor) && !done.has(candidate.waitFor)) continue;
-            if (findPath(candidate)) { actors.get(candidate.id).position = candidate.target; done.add(candidate.id); progress = true; }
+            if (findPath(candidate)) { actors.get(candidate.id).position = candidate.target; actors.get(candidate.id).staged = false; done.add(candidate.id); progress = true; }
           }
           if (cycle.every(id => done.has(id))) return true;
           if (!progress) break;
         }
         return false;
-      } finally { for (const [id, position] of original) actors.get(id).position = position; }
+      } finally { for (const [id, value] of original) { actors.get(id).position = value.position; actors.get(id).staged = value.staged; } }
     }
     function holdingPath(r, cycle) {
       const actor = actors.get(r.id), candidates = [];
-      for (const y of [40.7, 41, 44, 48, 52, 56, 60, 64, 68, 72, 76, 77, 80, 84, 86]) for (let x = 4; x <= 96; x += 4) {
+      for (const y of [40.7, 41, 44, 46.5, 48, 52, 56, 60, 64, 68, 72, 76, 77, 78, 80, 84, 86]) for (let x = 4; x <= 96; x += 4) {
         const p = { x, y };
         if (distance(actor.position, p) < 3 || !legalPoint(p, actor) || targetBlockers(r, p).length) continue;
         const b = rect(p, actor);
@@ -201,7 +204,7 @@
     }
     function cooperativeYield(blocked) {
       if (requests.size >= limit || blocked.cooperative || blocked.overlapIds.length) return null;
-      const candidates = [...actors.values()].filter(actor => actor.id !== blocked.id && actor.canYield && !requests.has(actor.id))
+      const candidates = [...actors.values()].filter(actor => actor.id !== blocked.id && !actor.staged && actor.canYield && !requests.has(actor.id))
         .sort((a, b) => distance(a.position, actors.get(blocked.id).position) - distance(b.position, actors.get(blocked.id).position) || a.id.localeCompare(b.id));
       for (const actor of candidates) {
         // Positive geometric evidence: removing this exact stationary body
@@ -240,11 +243,13 @@
     }
     function reserve(chosen) {
       const r = chosen.request, id = r.id;
+      const staged = Boolean(actors.get(id).staged);
+      actors.get(id).staged = false;
       if (chosen.path.length === 1) {
-        requests.delete(id); changed(); return { kind: 'arrived', id, target: { ...r.target }, yielding: Boolean(r.cooperative) };
+        requests.delete(id); changed(); return { kind: 'arrived', id, target: { ...r.target }, yielding: Boolean(r.cooperative), ...(staged ? { staged: true } : {}) };
       }
       active = { id, token: ++sequence, target: { ...chosen.path.at(-1) }, temporary: chosen.temporary };
-      return { kind: 'move', ...active, instant: r.instant, yielding: Boolean(r.cooperative),
+      return { kind: 'move', ...active, instant: r.instant, yielding: Boolean(r.cooperative), ...(staged ? { staged: true } : {}),
         path: chosen.path.map(p => ({ ...p })) };
     }
     function next(id) {
