@@ -154,9 +154,7 @@
     function stop(finish=false){serial++;if(animation){if(finish&&art&&lastFrame){art.primary.style.transform=lastFrame.transform;art.primary.style.opacity=String(lastFrame.opacity);}animation.cancel();animation=null;}widget.dataset.playing='false';}
     function apply(result,keyboard=false){art?.apply?.({...result,language:language(),reducedMotion:Boolean(quiet()||keyboard)});widget.dataset.state=result.phase||'rest';if(art)art.svg.dataset.state=result.phase||'rest';}
     function coreActivate(previous){
-      const step=(previous.step||0)+1,open=!previous.open;
-      const phases={spring:['leaves','sprout','blossom'],summer:['folded','open'],autumn:['pressed','collecting'],winter:['snowfall','settled'],halloween:['dark','lit'],christmas:['wrapped','unwrapped'],qingming:['resting','flying'],newyear:['wish-left','wish-center','wish-right'],lunarnewyear:['folded','lit'],midautumn:['crescent','full-moon'],hanami:['buds','blossoms','petals'],midsummer:['weave-left','weave-right'],dayofdead:['folded','remembrance']};
-      const choices=phases[currentId]||['ready'];return {step,open,selection:step%choices.length,phase:choices[step%choices.length],statusZh:model.getTheme(currentId).detailZh,statusEn:model.getTheme(currentId).detailEn};
+      return model.activateCore(currentId,previous);
     }
     function activate(source='pointer'){
       if(destroyed||!art)return;
@@ -167,8 +165,7 @@
       records.set(currentId,result);apply(result,source==='keyboard');say(result);
       const theme=model.getTheme(currentId);
       if(typeof onInteraction==='function')try{const answer=onInteraction({venue:state.venue||'workshop',theme:currentId,id:'festival-'+currentId,type:theme.action,state:result.phase,point:{x:20,y:17},source});if(answer?.catch)answer.catch(()=>{});}catch(_){}
-      let frames=model.interactionFrames(currentId).map(frame=>({...frame}));
-      if(['summer','qingming','lunarnewyear','dayofdead'].includes(currentId)&&!result.open)frames=frames.reverse().map((frame,i)=>({...frame,offset:i/(frames.length-1)}));
+      let frames=model.interactionFrames(currentId,result).map(frame=>({...frame}));
       const final=frames.at(-1);lastFrame=final;
       if(quiet()||source==='keyboard'||!art.primary.animate){art.primary.style.transform=final.transform;art.primary.style.opacity=String(final.opacity);return;}
       // Carry the current pose through the entire trajectory. Replacing only
@@ -199,7 +196,7 @@
         art=model.CORE_THEMES.some(item=>item.id===currentId)?coreArt(currentId):root.OfficeFestivalStudies?.build(currentId,{svgNode});
         if(!art?.svg||!art.primary)art=coreArt('spring');
         art.svg.classList.add('festival-art');art.primary.classList.add('festival-primary');
-        const saved=records.get(currentId),frames=model.interactionFrames(currentId),rest=saved&&(!['summer','qingming','lunarnewyear','dayofdead'].includes(currentId)||saved.open)?frames.at(-1):frames[0];
+        const saved=records.get(currentId),frames=model.interactionFrames(currentId,saved),rest=saved?frames.at(-1):frames[0];
         lastFrame=null;art.primary.style.transform=rest.transform;art.primary.style.opacity=String(rest.opacity);
         button.replaceChildren(art.svg,caption);apply(saved||{step:0,open:false,selection:0,phase:'rest'});
       }

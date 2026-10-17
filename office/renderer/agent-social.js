@@ -8,7 +8,14 @@
     const document=layer.ownerDocument,view=document.defaultView,scheduler=Model.createScheduler();
     let current=null,outgoing=null,destroyed=false,frame=0;
     layer.classList.add('agent-social-layer');layer.setAttribute('aria-hidden','true');
-    const context=()=>{const value=getContext()||{};return {...value,hidden:!!(document.hidden||value.hidden)};};
+    const context=()=>{
+      const value=getContext()||{},resolved=typeof value.resolvedTheme==='string'?value.resolvedTheme:root.OfficeFestivals?.resolve?root.OfficeFestivals.resolve(value).theme:value.theme;
+      return {...value,venue:Model.venueOf(value),language:value.language==='en'?'en':'zh',theme:typeof resolved==='string'?resolved:'auto',
+        artworkKey:typeof value.artworkKey==='string'?value.artworkKey:'',hidden:!!(document.hidden||value.hidden)};
+    };
+    // Match the actual visual context, not fresh context objects or the
+    // one-second clock. Retiring uses only our existing finite prop owner.
+    const visualKey=ctx=>JSON.stringify([ctx.venue,ctx.language,ctx.theme,ctx.artworkKey]);
     const svg=(tag,attrs={},parent)=>{const node=document.createElementNS(NS,tag);for(const[key,value]of Object.entries(attrs))node.setAttribute(key,String(value));if(parent)parent.append(node);return node;};
     function cast(onlyIds){
       const source=getActors(),actors=source instanceof Map?[...source.values()]:Array.isArray(source)?source:Array.from(source||[]),room=world.getBoundingClientRect(),width=world.clientWidth||1280,height=world.clientHeight||720;
@@ -57,7 +64,8 @@
     function guard(){
       frame=0;if(!current||destroyed)return;
       const actors=cast(new Set(current.anchors.map(actor=>actor.id)));
-      if(!scheduler.valid(actors,context())||!sameGeometry(actors)){cancel();return;}
+      const ctx=context();
+      if(!scheduler.valid(actors,ctx)||current.visualKey!==visualKey(ctx)||!sameGeometry(actors)){cancel();return;}
       frame=view.requestAnimationFrame(guard);
     }
     function build(plan,actors,ctx){
@@ -130,13 +138,13 @@
         for(const[actor,p,side]of[[a,left,1],[b,right,-1]])hand(actor,p,side===1?'sender':'receiver',[{opacity:0,transform:'translateY(3px)',offset:0},{opacity:1,transform:`translate(${side*4}px,-20px) rotate(${side*22}deg)`,offset:.28},{opacity:1,transform:`translate(${side*7}px,-27px) rotate(${side*12}deg)`,offset:.67},{opacity:0,transform:'translateY(3px)',offset:1}]);nod(a,.38,true);nod(b,.38,true);
       }
       const room=world.getBoundingClientRect();
-      current={token:plan.token,node,animations,anchors:pair.map(actor=>({id:actor.id,...actor.anchor})),worldWidth:room.width,worldHeight:room.height,kind:plan.kind};
+      current={token:plan.token,node,animations,anchors:pair.map(actor=>({id:actor.id,...actor.anchor})),worldWidth:room.width,worldHeight:room.height,kind:plan.kind,visualKey:visualKey(ctx)};
       const token=plan.token;
       Promise.all(animations.map(animation=>animation.finished.catch(()=>{}))).then(()=>{if(current?.token!==token)return;current.node.remove();current=null;scheduler.finish(token);if(frame){view.cancelAnimationFrame(frame);frame=0;}});
       frame=view.requestAnimationFrame(guard);
     }
     function start(request){if(destroyed||outgoing)return false;const actors=cast(),ctx=context(),plan=scheduler.plan(actors,ctx,request);if(!plan)return false;try{build(plan,actors,ctx);return true;}catch(error){cancel();throw error;}}
-    function update(){if(destroyed)return;if(quiet(context())){if(current||outgoing)cancel(true);return;}if(current){const actors=cast(new Set(current.anchors.map(actor=>actor.id)));if(!scheduler.valid(actors,context())||!sameGeometry(actors))cancel();}}
+    function update(){if(destroyed)return;const ctx=context();if(quiet(ctx)){if(current||outgoing)cancel(true);return;}if(current){const actors=cast(new Set(current.anchors.map(actor=>actor.id)));if(!scheduler.valid(actors,ctx)||current.visualKey!==visualKey(ctx)||!sameGeometry(actors))cancel();}}
     function tick(){update();if(!current)start({manual:false});}
     function trigger(request={}){update();return start({...request,manual:true});}
     function destroy(){if(destroyed)return;destroyed=true;cancel(true);}

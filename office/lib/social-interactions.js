@@ -17,7 +17,7 @@
       Object.freeze({id:'meteor-gaze',labelZh:'一起抬头看流星',labelEn:'Watch a meteor together',duration:3200})])
   });
   const TYPES=Object.freeze({workshop:Object.freeze({blueprint:'blueprint-pass',circuit:'magnet-puzzle',bell:'paperplane-nod'}),teahouse:Object.freeze({tea:'tea-toast',windchime:'chime-duet',note:'pastry-pass'}),observatory:Object.freeze({starmap:'star-link',telescope:'meteor-gaze','meteor-note':'star-note'})});
-  const LIMITS=Object.freeze({pairDistance:520,actorCooldown:18000,manualGap:1400,autoGap:24000,pairs:128,actors:256});
+  const LIMITS=Object.freeze({pairDistance:520,manualRadius:260,actorCooldown:18000,manualGap:1400,autoGap:24000,pairs:128,actors:256});
   const venueOf=context=>VENUES.includes(context?.venue)?context.venue:VENUES.includes(context?.scene)?context.scene:'workshop';
   const quiet=context=>!!(context?.hidden||context?.reducedMotion||context?.lowPower||context?.mode&&context.mode!=='live');
   const finitePoint=value=>value&&Number.isFinite(value.x)&&Number.isFinite(value.y);
@@ -47,13 +47,18 @@
   }
   function activityKey(actor){const s=actor.session;return JSON.stringify([actor.id,s.provider,s.status,s.activity,s.turnId||'',s.parentId||'',Boolean(s.attention),Boolean(s.disconnected),Boolean(s.closed)]);}
   function rootFor(actor,byId){const visited=new Set();let current=actor;while(current?.session?.parentId&&!visited.has(current.id)){visited.add(current.id);const parent=current.session.parentId;if(!byId.has(parent))return parent;current=byId.get(parent);}return current?.id||actor.id;}
-  function choosePair(actors,context={},blocked=new Set()){
-    const cast=actors.filter(actor=>eligible(actor,context)&&!blocked.has(actor.id)).sort((a,b)=>a.id.localeCompare(b.id)),byId=new Map(actors.map(actor=>[actor.id,actor])),roots=new Map(cast.map(actor=>[actor.id,rootFor(actor,byId)]));let best=null;
+  function choosePair(actors,context={},blocked=new Set(),origin=null){
+    const eligibleCast=actors.filter(actor=>eligible(actor,context)&&!blocked.has(actor.id));
+    const distances=origin?new Map(eligibleCast.map(actor=>[actor.id,Math.hypot(actor.point.x-origin.x,actor.point.y-origin.y)])):null;
+    const cast=(origin?eligibleCast.filter(actor=>distances.get(actor.id)<=LIMITS.manualRadius):eligibleCast).sort((a,b)=>a.id.localeCompare(b.id)),byId=new Map(actors.map(actor=>[actor.id,actor])),roots=new Map(cast.map(actor=>[actor.id,rootFor(actor,byId)]));let best=null;
     for(let i=0;i<cast.length;i++)for(let j=i+1;j<cast.length;j++){
       const a=cast[i],b=cast[j],distance=Math.hypot(a.point.x-b.point.x,a.point.y-b.point.y);
       if(distance<24||distance>LIMITS.pairDistance)continue;
       const pair={actors:[a,b],family:roots.get(a.id)===roots.get(b.id),distance,key:JSON.stringify([a.id,b.id])};
-      if(!best||Number(pair.family)>Number(best.family)||pair.family===best.family&&(pair.distance<best.distance||pair.distance===best.distance&&pair.key.localeCompare(best.key)<0))best=pair;
+      if(origin){
+        pair.controlDistance=distances.get(a.id)+distances.get(b.id);
+        if(!best||pair.controlDistance<best.controlDistance||pair.controlDistance===best.controlDistance&&(pair.distance<best.distance||pair.distance===best.distance&&(Number(pair.family)>Number(best.family)||pair.family===best.family&&pair.key.localeCompare(best.key)<0)))best=pair;
+      }else if(!best||Number(pair.family)>Number(best.family)||pair.family===best.family&&(pair.distance<best.distance||pair.distance===best.distance&&pair.key.localeCompare(best.key)<0))best=pair;
     }
     return best;
   }
@@ -69,10 +74,21 @@
     }
     function plan(actors,context={},request={}){
       const at=time(),venue=venueOf(context),manual=request.manual===true;
-      if(nextAuto===null)nextAuto=at+LIMITS.autoGap;
+      let origin=null;
+      const local=manual&&Object.hasOwn(request,'point');
+      if(local){
+        // Venue/festival controls use world percentages; actor anchors are
+        // world pixels. Convert once, independent of viewport or body fit.
+        const p=request.point;
+        if(!finitePoint(p)||p.x<0||p.x>100||p.y<0||p.y>100)return null;
+        origin={x:p.x*12.8,y:p.y*7.2};
+      }
+      // A rejected local invitation must not delay automatic activity or
+      // consume a bag/cooldown. All legacy no-point timing stays unchanged.
+      if(!local&&nextAuto===null)nextAuto=at+LIMITS.autoGap;
       if(active||quiet(context)||at-lastStart<LIMITS.manualGap||!manual&&at<nextAuto)return null;
       const blocked=new Set([...actorTimes].filter(([,last])=>at-last<LIMITS.actorCooldown).map(([id])=>id));
-      const pair=choosePair(actors,context,manual?new Set():blocked);
+      const pair=choosePair(actors,context,manual?new Set():blocked,origin);
       if(!pair)return null;
       if(!manual&&at-(pairTimes.get(pair.key)??-Infinity)<LIMITS.autoGap)return null;
       const mapped=request.venue&&request.venue!==venue?undefined:TYPES[venue][request.type],kind=nextKind(venue,request.kind||mapped),definition=CATALOG[venue].find(item=>item.id===kind);

@@ -348,9 +348,9 @@
   "samples": 41,
   "durationMs": 1000,
   "sourceHashes": {
-    "office/lib/festival-model.js": "1d9fd8d25afb9b580ce5df71c081f265209f25bece681e22aedaef0e2d45b565",
+    "office/lib/festival-model.js": "364e8df83764d494fd707302d865688abdc27f1fb350dd2c19e7c8a636d66c77",
     "office/lib/festival-studies.js": "0787c8d4a3af218a2d379be877283d121354a84d76b6e897b1066c62454b4489",
-    "office/renderer/festival-stage.js": "3e821b4ccde7bde4ea9812802db364dac3d9694e1ac1e6b29c1c9d038a1c73d9",
+    "office/renderer/festival-stage.js": "ed16d7d6a12bf6271a641de57bd9e8ef74d6f3d762c300d0741759a05fe3ff34",
     "office/renderer/festival-stage.css": "2a3e152b8a5055aebcbdf607c19ff11aef888265e78ecec7c1cc6a584cf678a5"
   },
   "source": [

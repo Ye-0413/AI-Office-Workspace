@@ -8,6 +8,7 @@ const TIME_ZONE = 'Asia/Hong_Kong';
 const DAY = 86400000, OFFSET = 8 * 3600000;
 const ACTIVITIES = new Set(['reading', 'searching', 'planning', 'coding', 'designing', 'testing', 'building', 'running', 'waiting-tool', 'waiting-user', 'error', 'unknown', 'idle']);
 const STATES = new Set(['active', 'waiting', 'idle', 'stale', 'closed']);
+const SETTLEMENTS = new Set(['turn-end', 'interrupted', 'session-end', 'subagent-end']);
 const EVENTS = new Set(['metadata', 'session-start', 'session-end', 'subagent-start', 'subagent-end', 'turn-start', 'turn-end', 'interrupted', 'tool-start', 'tool-end', 'activity', 'waiting-user', 'error']);
 const hash = value => createHash('sha256').update(value).digest('hex');
 const text = (value, max = 256) => typeof value === 'string' ? value.replace(/[\u0000-\u001f\u007f-\u009f]/g, '').slice(0, max) : '';
@@ -112,24 +113,47 @@ function createUsageLog({ dataDir, now = Date.now, staleMs = 180000 } = {}) {
     }
   }
   function clock() { const time = timestamp(now()); if (time === null) throw new TypeError('Invalid usage clock'); return time; }
-  function stateOf(s) { return { status: STATES.has(s.status) ? s.status : 'idle', activity: ACTIVITIES.has(s.activity) ? s.activity : 'unknown', lastEventAt: timestamp(s.lastEventAt) }; }
-  function advance(sessions, time, boundary = time) {
+  function stateOf(s) {
+    const value = s.settlementBoundary, marker = value && typeof value === 'object' && !Array.isArray(value) ? value : null;
+    const at = marker && typeof marker.at === 'number' ? timestamp(marker.at) : null;
+    return { status: STATES.has(s.status) ? s.status : 'idle', activity: ACTIVITIES.has(s.activity) ? s.activity : 'unknown', lastEventAt: timestamp(s.lastEventAt),
+      settlementBoundary: marker && SETTLEMENTS.has(marker.event) && at !== null ? { event: marker.event, at } : null };
+  }
+  function advance(sessions, time, boundary = time, boundaryOwner = null) {
     const next = new Map(), credits = new Map(), snapshots = new Map(sessions.filter(s => s && identifier(s.id, 8192)).map(s => [s.id, s]));
     for (const [id, old] of tracks) {
-      const snapshot = snapshots.get(id), state = snapshot && stateOf(snapshot);
-      const changed = !state || state.status !== old.status || state.activity !== old.activity;
-      const end = Math.max(old.cursor, Math.min(time, changed ? boundary : time, old.lastEventAt + staleMs));
-      let meteredStart = old.meteredStart, meteredEnd = old.meteredEnd;
-      if (changed && boundary < old.cursor) {
-        // A short native turn may finish before the latest checkpoint was
-        // delivered. Correct only this process's actually credited interval;
-        // archived/offline history is never reconstructed or subtracted.
-        addDuration(id, old.activity, old.status, Math.max(boundary, meteredStart), meteredEnd, -1);
+      const snapshot = snapshots.get(id), state = snapshot && stateOf(snapshot), marker = state?.settlementBoundary;
+      const newSettlement = marker && (marker.event !== old.settlementBoundary?.event || marker.at !== old.settlementBoundary?.at);
+      // Quota/title metadata is accepted history, not a new activity boundary.
+      // Preserve real progress heartbeats and ElicitationResult reductions,
+      // including a visible wait-to-work change with no timestamp advance.
+      const metadataCausal = state && (state.lastEventAt > old.lastEventAt || newSettlement || state.status !== 'stale' &&
+        (state.status !== old.status || state.activity !== old.activity && state.activity !== 'waiting-tool'));
+      const ownBoundary = boundaryOwner?.id === id && (boundaryOwner.event !== 'metadata' || metadataCausal);
+      // Parent identity or idle/stale presentation alone cannot prove a child
+      // settled it. Only new, explicit reducer evidence authorizes that cut.
+      const parentSettled = boundaryOwner?.parentId === id && newSettlement;
+      const causalBoundary = ownBoundary || parentSettled;
+      const changed = !state || state.status !== old.status || state.activity !== old.activity || causalBoundary && newSettlement;
+      const transitionAt = causalBoundary ? Math.max(boundary, newSettlement ? marker.at : boundary) : time;
+      const end = Math.max(old.cursor, Math.min(time, changed ? transitionAt : time, old.lastEventAt + staleMs));
+      let meteredStart = old.meteredStart, meteredEnd = old.meteredEnd, meteredActivity = old.meteredActivity, meteredStatus = old.meteredStatus;
+      if (changed && transitionAt < old.cursor) {
+        // Correct only this process's actual credited lease, including when a
+        // later snapshot has masked its work/wait bucket as stale/unknown.
+        // No lease is recovered from disk and no offline history is rebuilt.
+        addDuration(id, meteredActivity, meteredStatus, Math.max(transitionAt, meteredStart), meteredEnd, -1);
       }
       addDuration(id, old.activity, old.status, old.cursor, end);
-      if (changed) { meteredStart = time; meteredEnd = time; }
-      else if (end > old.cursor) { if (meteredEnd < old.cursor) meteredStart = old.cursor; meteredEnd = end; }
-      credits.set(id, { meteredStart, meteredEnd });
+      if (changed && causalBoundary) {
+        meteredStart = time; meteredEnd = time; meteredActivity = state?.activity; meteredStatus = state?.status;
+      } else if (end > old.cursor && ['active', 'waiting'].includes(old.status)) {
+        if (meteredEnd < old.cursor || meteredActivity !== old.activity || meteredStatus !== old.status) meteredStart = old.cursor;
+        meteredEnd = end; meteredActivity = old.activity; meteredStatus = old.status;
+      }
+      // Pure snapshot-derived changes keep their last credited bucket alive
+      // until a real boundary arrives, even if its presentation is unchanged.
+      credits.set(id, { meteredStart, meteredEnd, meteredActivity, meteredStatus });
     }
     for (const [id, snapshot] of snapshots) {
       const archived = db.prepare('SELECT last_seen_at FROM actors WHERE id=?').get(id);
@@ -138,7 +162,7 @@ function createUsageLog({ dataDir, now = Date.now, staleMs = 180000 } = {}) {
       // Never recover an interval from disk or backfill a replay's historic time.
       // Future-dated evidence cannot open a metered interval either.
       if (state.lastEventAt === null || state.lastEventAt > time || state.lastEventAt < archived.last_seen_at) continue;
-      next.set(id, { ...state, cursor: Math.max(time, old?.cursor ?? time), ...(credits.get(id) || { meteredStart: time, meteredEnd: time }) });
+      next.set(id, { ...state, cursor: Math.max(time, old?.cursor ?? time), ...(credits.get(id) || { meteredStart: time, meteredEnd: time, meteredActivity: state.activity, meteredStatus: state.status }) });
       db.prepare('UPDATE actors SET parent_id=CASE WHEN ?<>\'\' THEN ? ELSE parent_id END,project_name=CASE WHEN ?<>\'\' THEN ? ELSE project_name END,status=CASE WHEN ?>=last_seen_at THEN ? ELSE status END,activity=CASE WHEN ?>=last_seen_at THEN ? ELSE activity END WHERE id=?').run(identifier(snapshot.parentId, 8192) ? snapshot.parentId : '', identifier(snapshot.parentId, 8192) ? snapshot.parentId : '', text(snapshot.projectName, 128), text(snapshot.projectName, 128), state.lastEventAt ?? -1, state.status, state.lastEventAt ?? -1, state.activity, id);
     }
     return next;
@@ -154,7 +178,8 @@ function createUsageLog({ dataDir, now = Date.now, staleMs = 180000 } = {}) {
     let next;
     const result = transaction(() => {
       if (db.prepare('SELECT 1 FROM events WHERE id=?').get(fingerprint)) return false;
-      const parent = identifier(snapshot?.parentId || event.parentId, 8192) ? snapshot?.parentId || event.parentId : event.subagentId ? actorKey(event.provider, event.sessionId) : '';
+      const observedParent = snapshot?.parentId || event.parentId;
+      const parent = identifier(observedParent, 8192) ? observedParent : event.subagentId ? actorKey(event.provider, event.sessionId) : '';
       const project = text(snapshot?.projectName, 128), day = date(at);
       const exists = !!db.prepare('SELECT 1 FROM actors WHERE id=?').get(id);
       db.prepare('INSERT INTO actors(id,provider,parent_id,project_name,first_seen_at,last_seen_at,status,activity) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET parent_id=CASE WHEN excluded.parent_id<>\'\' THEN excluded.parent_id ELSE actors.parent_id END,project_name=CASE WHEN excluded.project_name<>\'\' THEN excluded.project_name ELSE actors.project_name END,first_seen_at=MIN(first_seen_at,excluded.first_seen_at),last_seen_at=MAX(last_seen_at,excluded.last_seen_at),status=CASE WHEN excluded.last_seen_at>=actors.last_seen_at THEN excluded.status ELSE actors.status END,activity=CASE WHEN excluded.last_seen_at>=actors.last_seen_at THEN excluded.activity ELSE actors.activity END').run(id, event.provider, parent, project, at, at, state.status, state.activity);
@@ -173,7 +198,7 @@ function createUsageLog({ dataDir, now = Date.now, staleMs = 180000 } = {}) {
       const work = !['metadata', 'session-start', 'session-end', 'subagent-end'].includes(event.event);
       const failures = work && (permitted.outcome === 'failure' || event.event === 'error') ? mark('failure', callKey) : 0;
       db.prepare('INSERT INTO actor_days(actor_id,day,events,turns,tool_calls,failures) VALUES(?,?,1,?,?,?) ON CONFLICT(actor_id,day) DO UPDATE SET events=events+1,turns=turns+excluded.turns,tool_calls=tool_calls+excluded.tool_calls,failures=failures+excluded.failures').run(id, day, turns, tools, failures);
-      next = advance(sessions, Math.max(time, lastClock), time < lastClock ? lastClock : Math.min(at, time));
+      next = advance(sessions, Math.max(time, lastClock), time < lastClock ? lastClock : Math.min(at, time), { id, parentId: identifier(observedParent, 8192) ? observedParent : '', event: event.event });
       return true;
     });
     if (result) { tracks = next; lastClock = Math.max(lastClock, time); }

@@ -1,6 +1,18 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const F=require('../lib/festival-model.js');
+
+test('state endpoints reuse the authored path for both gift directions without mutating it',()=>{
+  const authored=F.interactionFrames('christmas'),snapshot=JSON.stringify(authored),opening=F.interactionFrames('christmas',{open:true}),closing=F.interactionFrames('christmas',{open:false});
+  assert.deepEqual(opening,authored);assert.equal(closing.length,41);assert.equal(closing[0].transform,authored.at(-1).transform);assert.equal(closing.at(-1).transform,authored[0].transform);assert.equal(closing[0].offset,0);assert.equal(closing.at(-1).offset,1);
+  for(let i=0;i<41;i++){assert.equal(closing[i].transform,authored[40-i].transform);assert.equal(closing[i].opacity,authored[40-i].opacity);assert.equal(closing[i].offset,i/40);}
+  assert.equal(JSON.stringify(authored),snapshot);assert.ok(new Set(closing.map(f=>f.transform+'|'+f.opacity)).size>=31);
+  for(const theme of F.THEMES)if(!['summer','christmas','qingming','lunarnewyear','dayofdead'].includes(theme.id))assert.deepEqual(F.interactionFrames(theme.id,{open:false}),F.interactionFrames(theme.id),theme.id+' must keep its existing authored direction');
+});
+test('core feedback follows semantic phase rather than a binary open flag and leaves caller state intact',()=>{
+  const previous={step:1,open:true,selection:1},before={...previous},blossom=F.activateCore('spring',previous);assert.deepEqual(previous,before);assert.equal(blossom.phase,'blossom');assert.equal(blossom.open,false);assert.match(blossom.statusZh,/花瓣/);assert.match(blossom.statusEn,/Petals/);
+  const wrap=F.activateCore('christmas',previous);assert.equal(wrap.phase,'wrapped');assert.match(wrap.statusZh,/合上/);assert.match(wrap.statusEn,/closed/);assert.equal(F.activateCore('christmas',wrap).phase,'unwrapped');
+});
 const hk=date=>Date.parse(date+'T12:00:00+08:00');
 test('manual themes and decorative weather are bounded and bilingual',()=>{
   assert.equal(F.CORE_THEMES.length,13);assert.ok(F.THEMES.length>=13);assert.equal(new Set(F.THEME_IDS).size,F.THEMES.length+1);

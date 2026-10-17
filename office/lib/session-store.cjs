@@ -79,6 +79,10 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
     s.closed = s.status === 'closed';
     s.activity = 'idle';
     s.attention = false;
+    // An observed terminal can settle behind a late child/tool result even
+    // while snapshot presentation is stale. Expose that reducer fact without
+    // treating an abort/teardown (or restored observed-ended state) as success.
+    if (terminal.has(event)) s.settlementBoundary = { event, at: completedAt };
     if (event === 'turn-end') s.turnCompletedAt = completedAt;
     boundedAdd(s.closedTurns, s.turnId);
     s.turnOpen = false;
@@ -178,6 +182,9 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
       seen.set(key, at);
       while (seen.size > maxSeen) seen.delete(seen.keys().next().value);
     }
+    // Clear only after acceptance fences: an old/duplicate same-turn start
+    // cannot erase the last real settlement merely by being observed again.
+    if (starts) delete s.settlementBoundary;
     if (!supplementalResult) {
       if (event.title) s.title = String(event.title).slice(0, 100);
       if (event.projectPath) s.projectPath = String(event.projectPath).slice(0, 2048);
@@ -191,7 +198,7 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
         s.turnId = event.turnId; s.turnStartedAt = event.turnStartedAt; s.turnOpen = false;
         s.lastEventAt = at; s.status = 'idle'; s.activity = 'idle'; s.attention = false;
         s.toolName = ''; s.summary = String(event.summary || '').slice(0, 240); s.evidence = event.evidence;
-        delete s.turnCompletedAt;
+        delete s.turnCompletedAt; delete s.settlementBoundary;
         // Real children retain independent work. This internal pending state
         // settles without a turn-end timestamp or a completion animation.
         s.pendingEnd = activeChildren(s.id) ? 'observed-ended' : null;
@@ -232,7 +239,7 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
         s.turnStartedAt = turnStartAt;
       }
       s.turnId = event.turnId || null; s.turnOpen = true;
-      delete s.turnCompletedAt;
+      delete s.turnCompletedAt; delete s.settlementBoundary;
     }
     s.lastEventAt = advancesKnownTurn ? at : Math.max(s.lastEventAt, at);
     if (!supplementalResult) {
@@ -280,6 +287,7 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
       s.waits.set(callId ? `call:${callId}` : `kind:${event.evidence?.rawEvent || 'waiting-user'}`,
         { callId, rawEvent: event.evidence?.rawEvent || '', at });
     } else if (terminal.has(event.event)) {
+      delete s.settlementBoundary;
       s.pendingEnd = event.event;
       s.pendingEndAt = at;
       s.status = 'active'; s.attention = false;
@@ -338,6 +346,7 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
         evidence: { ...s.evidence }, activeTools: s.tools.size,
         attention: s.attention, disconnected, closed: s.closed,
         ...(s.turnCompletedAt ? { turnCompletedAt: s.turnCompletedAt } : {}),
+        ...(s.settlementBoundary ? { settlementBoundary: { ...s.settlementBoundary } } : {}),
         events: s.events.map(e => ({ ...e, evidence: { ...e.evidence } })),
       };
     }).sort((a, b) => b.lastEventAt - a.lastEventAt || a.id.localeCompare(b.id));

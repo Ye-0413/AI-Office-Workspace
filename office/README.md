@@ -2,7 +2,7 @@
 
 A local macOS playground for watching independent AI sessions inhabit a tiny office. Designed for a five-inch 1280×720 secondary display.
 
-Version 0.20 keeps explicit Codex tool cancellations distinct from success/failure. Room summaries and application-owned untitled placeholders follow the selected language; real task titles remain literal. Window resizes synchronously fit the world frame without changing actor layouts or replacing their physical and animation owners.
+Version 0.21 keeps seasonal prop states, bilingual feedback and their actual open/closed poses in sync, including uninterrupted reversals. Manual social interactions choose eligible partners near the clicked point; locale, theme and artwork changes retire existing decorative gestures from their current pose. Usage durations follow each actor's own observed boundaries, so delayed events do not backdate unrelated actors' stale transitions.
 
 ## 当前动画展示
 

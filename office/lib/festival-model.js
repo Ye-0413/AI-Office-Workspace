@@ -36,6 +36,23 @@
     {id:'dayofdead',nameZh:'亡灵节花忆',nameEn:'Día de Muertos remembrance',season:'autumn',action:'dayofdead-marigold',actionZh:'展开万寿菊剪纸',actionEn:'Unfold the marigold paper',detailZh:'万寿菊、剪纸和暖烛，温柔纪念所爱的人。',detailEn:'Marigolds, paper and warm candles remember the people we love.'}
   ].map(item=>Object.freeze({...item,kind:['spring','summer','autumn','winter','hanami'].includes(item.id)?'seasonal-study':'festival',source:['qingming','lunarnewyear','midautumn'].includes(item.id)?CALENDAR_SOURCES[0].url:item.id==='midsummer'?CALENDAR_SOURCES[2].url:item.id==='dayofdead'?CALENDAR_SOURCES[3].url:null})));
   const THEMES=Object.freeze(CORE_THEMES.concat((studies?.CATALOG||[]).map(item=>Object.freeze({...item}))));
+  // Local object states, never AI work or calendar evidence. These captions
+  // describe the selected target; the renderer owns its finite transition.
+  const CORE_PHASES=Object.freeze(Object.fromEntries(Object.entries({
+    spring:[['leaves','绿叶舒展开，留住一滴春水。','Green leaves spread around a drop of spring water.'],['sprout','小芽探出头，叶尖轻轻舒展。','A little shoot rises and stretches its leaf tips.'],['blossom','花瓣渐次舒展，春色落在枝头。','Petals unfold to bring spring to the little shoot.']],
+    summer:[['folded','竹扇轻轻收拢，把清风藏进扇骨。','The bamboo fan folds closed, tucking its breeze away.'],['open','竹骨舒展，一扇清风迎面而来。','The bamboo fan opens wide for a little cool air.']],
+    autumn:[['pressed','枫叶收进叶笺，留下秋日纹路。','The maple leaf rests pressed inside its autumn album.'],['collecting','拾起一片枫叶，让它轻轻落下。','A maple leaf is gathered and floats toward the album.']],
+    winter:[['snowfall','轻摇雪瓶，一小阵雪花重新飘起。','A gentle shake sends the snowflakes swirling again.'],['settled','雪瓶轻轻归稳，雪花慢慢落定。','The globe steadies as its snowflakes settle softly.']],
+    halloween:[['dark','南瓜灯光收暗，笑脸安静歇一会儿。','The pumpkin light dims and its friendly smile rests.'],['lit','掀起南瓜小盖，暖光照亮笑脸。','The pumpkin lid lifts and a warm smile lights up.']],
+    christmas:[['wrapped','礼盒轻轻合上，树灯收成柔光。','The gift is closed again and the tree lights soften.'],['unwrapped','礼盒敞开，树上的暖灯渐渐亮起。','The gift opens and the tree lights glow warmly.']],
+    qingming:[['resting','纸鸢轻轻收回，安静记起想念的人。','The kite rests again, with a quiet thought for those we miss.'],['flying','纸鸢乘风而起，给想念的人捎去一缕春意。','The paper kite rises, with a quiet thought for those we miss.']],
+    newyear:[['wish-left','愿签向左轻摆，留下一枚新年心愿。','The wish card leans left with a little New Year wish.'],['wish-center','愿签回到中央，金色纸花轻轻散开。','The wish card rests at the center as paper stars spread.'],['wish-right','愿签向右轻摆，把祝愿挂在枝间。','The wish card leans right, carrying a wish between the branches.']],
+    lunarnewyear:[['folded','红灯笼轻收，金结静静垂下。','The red lantern folds in and its golden knot rests.'],['lit','红灯笼舒展，金结轻晃映暖光。','The red lantern opens and its golden knot sways in warm light.']],
+    midautumn:[['crescent','云影轻掩，一弯月色陪着月兔。','Cloud-shadow returns to leave a crescent beside the rabbit.'],['full-moon','云边让开，圆月与月兔相逢。','The clouds part for a full moon beside the little rabbit.']],
+    hanami:[['buds','花枝轻歇，含苞的小花等待下一阵春风。','The branch rests with small buds waiting for another spring breeze.'],['blossoms','几朵樱花舒展，枝头添上一层春色。','A few cherry blossoms open along the branch.'],['petals','满枝花瓣展开，春樱轻轻摇曳。','Petals fill the branch as the cherry blossoms sway.']],
+    midsummer:[['weave-left','彩带向左交织，换出一枚仲夏花结。','The ribbons weave left into a Midsummer knot.'],['weave-right','彩带向右交织，花环下展开新纹样。','The ribbons weave right into a new pattern beneath the wreath.']],
+    dayofdead:[['folded','剪纸轻收，万寿菊与暖烛静静相伴。','The paper folds in beside marigolds and quiet candlelight.'],['remembrance','剪纸展开，万寿菊与暖烛温柔寄托思念。','The paper opens beside marigolds and warm candles of remembrance.']]
+  }).map(([id,phases])=>[id,Object.freeze(phases.map(([phase,statusZh,statusEn])=>Object.freeze({phase,statusZh,statusEn})))])));
   const THEME_IDS = Object.freeze(['auto',...THEMES.map(item=>item.id)]);
   const WEATHER_MODES = Object.freeze(['auto','off','rain','snow']);
   const hkFormatter = new Intl.DateTimeFormat('en-CA',{timeZone:TIME_ZONE,year:'numeric',month:'2-digit',day:'2-digit'});
@@ -81,9 +98,14 @@
     const weather=weatherMode==='auto'?(theme.season==='winter'?'snow':theme.season==='spring'?'rain':'off'):weatherMode;
     return {theme:theme.id,season:theme.season,kind:theme.kind,source:theme.source,weather,weatherMode,selected,mode:selected==='auto'?'auto':'manual',reason:automatic.reason,window:automatic.window,dateIso:date.dateIso,timeZone:TIME_ZONE,now};
   }
-  function interactionFrames(id){
+  function activateCore(id,previous={}){
+    const step=(Number.isSafeInteger(previous.step)&&previous.step>=0?previous.step:0)+1,open=!previous.open,choices=CORE_PHASES[id];
+    if(!choices){const theme=getTheme(id);return {step,open,selection:0,phase:'ready',statusZh:theme.detailZh,statusEn:theme.detailEn};}
+    const selection=step%choices.length;return {step,open,selection,...choices[selection]};
+  }
+  function interactionFrames(id,state){
     if(!CORE_THEMES.some(item=>item.id===id)&&typeof studies?.frames==='function')return studies.frames(id,INTERACTION_SAMPLES);
-    return Array.from({length:INTERACTION_SAMPLES},(_,index)=>{
+    const frames=Array.from({length:INTERACTION_SAMPLES},(_,index)=>{
       const p=index/(INTERACTION_SAMPLES-1),wave=Math.sin(p*Math.PI*4)*(1-p),lift=Math.sin(p*Math.PI);
       let transform='translate(0px,0px)',opacity=1;
       if(id==='spring')transform=`translate(0px,${(10*(1-p)).toFixed(3)}px) scale(${(.94+.06*p).toFixed(4)})`;
@@ -104,6 +126,10 @@
       else if(id==='dayofdead')transform=`translate(${(-4*(1-p)).toFixed(3)}px,${(2*(1-p)).toFixed(3)}px) rotate(${(-lift*1.2).toFixed(3)}deg) scaleX(${(.72+.28*p).toFixed(4)})`;
       return {offset:p,transform,opacity};
     });
+    // One endpoint rule serves activation and saved-state restoration. The
+    // default call remains the authored forward path for existing consumers.
+    return state?.open===false&&['summer','christmas','qingming','lunarnewyear','dayofdead'].includes(id)
+      ?frames.reverse().map((frame,index)=>({...frame,offset:index/(frames.length-1)})):frames;
   }
-  return Object.freeze({TIME_ZONE,DEFAULT_THEME,DEFAULT_WEATHER,CORE_THEMES,THEMES,THEME_IDS,WEATHER_MODES,QINGMING_DAYS,CALENDAR_SOURCES,INTERACTION_DURATION,INTERACTION_SAMPLES,dateParts,lunarParts,seasonAt,getTheme,automaticTheme,resolve,interactionFrames});
+  return Object.freeze({TIME_ZONE,DEFAULT_THEME,DEFAULT_WEATHER,CORE_THEMES,THEMES,THEME_IDS,WEATHER_MODES,QINGMING_DAYS,CALENDAR_SOURCES,INTERACTION_DURATION,INTERACTION_SAMPLES,dateParts,lunarParts,seasonAt,getTheme,automaticTheme,resolve,activateCore,interactionFrames});
 });
