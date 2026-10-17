@@ -53,6 +53,45 @@ function observeContextExit(patch){
     requestAnimationFrame(sample);
   });
 }
+// Additional programs must also run through their original finite owners.
+// Atlas seeks above/below are not substituted for this elapsed-RAF evidence.
+function observeNewProgram(definition){
+  const original=document.querySelector('.agent-social-vignette'),world=document.getElementById('world'),actors=fixtureActors.slice(),started=performance.now();
+  const before=actors.map(a=>({node:a.node,body:a.body,html:a.node.outerHTML,session:JSON.stringify(a.session),serial:a.serial,position:JSON.stringify(a.position),clocks:a.body.getAnimations().map(animation=>({animation,time:animation.currentTime}))}));
+  const owned=original.getAnimations({subtree:true}),mechanisms=[...original.querySelectorAll('.social-prop,.social-gear-rotor,.social-fan-rib,.social-orbit-half,.social-orbit-star')],hands=[...original.querySelectorAll('.social-hand')];
+  const rows=[],poses=new Set(),handPoses=hands.map(()=>new Set());let deadline,endedAt=null,error=null;
+  const alpha=node=>{let value=1;for(let n=node;n&&n!==world;n=n.parentElement){const c=getComputedStyle(n);if(c.display==='none'||c.visibility==='hidden')return 0;value*=Number(c.opacity);}return value;};
+  Promise.all(owned.map(a=>a.finished)).then(()=>endedAt=performance.now(),cause=>error=String(cause));
+  return new Promise((resolve,reject)=>{
+    const fail=cause=>{clearTimeout(deadline);reject(cause);};deadline=setTimeout(()=>fail(Error('new social narrative exceeded duration+700ms: '+definition.id)),definition.duration+700);
+    function frame(now){try{
+      if(error)throw Error('original finite narrative was canceled: '+error);
+      const same=actors.every((a,i)=>a===fixtureActors[i]&&a.node===before[i].node&&a.body===before[i].body&&a.node.outerHTML===before[i].html&&JSON.stringify(a.session)===before[i].session&&a.serial===before[i].serial&&JSON.stringify(a.position)===before[i].position&&before[i].clocks.every(c=>a.body.getAnimations().includes(c.animation)&&c.animation.playState==='running'&&c.animation.currentTime>=c.time));
+      if(!same)throw Error('a new decorative mechanism changed a real actor/body/clock/fact');
+      if(original.isConnected){
+        const visible=mechanisms.filter(n=>alpha(n)>.08),key=JSON.stringify(visible.map(n=>getComputedStyle(n).transform));
+        if(visible.length)poses.add(key);hands.forEach((hand,i)=>{if(alpha(hand)>.08)handPoses[i].add(getComputedStyle(hand).transform);});
+        const room=world.getBoundingClientRect(),sx=1280/room.width,sy=720/room.height;
+        for(const part of original.querySelectorAll('path,rect,circle,ellipse,line,polygon,polyline,text')){
+          if(alpha(part)<.08)continue;const box=part.getBoundingClientRect(),stroke=parseFloat(getComputedStyle(part).strokeWidth)||0,matrix=part.getScreenCTM(),pad=matrix?stroke*Math.max(Math.hypot(matrix.a,matrix.b),Math.hypot(matrix.c,matrix.d))/2:0;
+          const b={left:(box.left-room.left-pad)*sx,right:(box.right-room.left+pad)*sx,top:(box.top-room.top-pad)*sy,bottom:(box.bottom-room.top+pad)*sy};
+          if(b.left<-.6||b.top<-.6||b.right>1280.6||b.bottom>720.6)throw Error('visible new social part left the world '+JSON.stringify({kind:definition.id,part:part.getAttribute('class'),b}));
+          if(b.left<830&&b.right>470&&b.top<175&&b.bottom>65)throw Error('new social part covers the clock '+JSON.stringify({kind:definition.id,part:part.getAttribute('class'),b}));
+        }
+        rows.push({at:now,visible:visible.length,pose:key});
+      }
+      if(endedAt!==null&&!original.isConnected){
+        if(social.state().active||social.state().exiting||document.querySelector('.agent-social-vignette'))throw Error('completed new narrative leaked a plan or SVG');
+        if(rows.filter(r=>r.visible).length<31||poses.size<31||handPoses.some(p=>p.size<31))throw Error('new narrative lacks31actual distinct visible prop and dual-hand poses '+JSON.stringify({kind:definition.id,visible:rows.filter(r=>r.visible).length,poses:poses.size,hands:handPoses.map(p=>p.size)}));
+        const span=rows.at(-1).at-rows[0].at;if(span<definition.duration*.85)throw Error('native narrative was sampled only briefly');
+        if(before.some(saved=>saved.clocks.some(c=>c.animation.currentTime-c.time<definition.duration*.8)))throw Error('real work clock did not advance independently through the narrative');
+        clearTimeout(deadline);return resolve({kind:definition.id,frames:rows.length,visibleFrames:rows.filter(r=>r.visible).length,distinctPoses:poses.size,handPoses:handPoses.map(p=>p.size),spanMs:span,finishedElapsedMs:endedAt-started,sameActors:true,originalFiniteOwners:owned.length,rows});
+      }
+      requestAnimationFrame(frame);
+    }catch(cause){fail(cause);}}
+    requestAnimationFrame(frame);
+  });
+}
 app.whenReady().then(async()=>{
   const fixture=path.join(profile,'fixture.html');
   fs.writeFileSync(fixture,`<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="${url('renderer/agent-social.css')}"><style>html,body{margin:0;width:100%;height:100%;background:#233137}#world{width:1280px;height:720px;position:relative;background:linear-gradient(#314952,#4e5946)}.actor{position:absolute;width:154px;height:129px;--family-color:#c78c68}.body{width:154px;height:129px;position:relative}.torso{position:absolute;left:44px;top:56px;width:65px;height:45px;background:#c78c68;border:2px solid #302a26;border-radius:12px}.eye{position:absolute;top:68px;width:6px;height:10px;border-radius:3px;background:#273235}.eye.l{left:62px}.eye.r{left:88px}.foot{position:absolute;top:102px;left:50px;width:50px;height:8px;border-radius:4px;background:#8f674e}.tag{position:absolute;top:127px;left:28px;background:#ead9b9;padding:5px 12px;border-radius:5px;font:12px sans-serif;color:#564830}#a{left:280px;top:290px}#b{left:650px;top:285px;--family-color:#7b9d9c}#b .torso{background:#7b9d9c}</style><div id="world"><div class="actor" id="a"><div class="body"><div class="torso"></div><i class="eye l"></i><i class="eye r"></i><i class="foot"></i></div><span class="tag">Fixture A</span></div><div class="actor" id="b"><div class="body"><div class="torso"></div><i class="eye l"></i><i class="eye r"></i><i class="foot"></i></div><span class="tag">Fixture B</span></div><div id="social"></div></div><script src="${url('lib/social-interactions.js')}"></script><script src="${url('renderer/agent-social.js')}"></script><script>window.fixtureTime=1000;Date.now=()=>fixtureTime;window.fixtureContext={venue:'workshop',language:'zh',hidden:false,reducedMotion:false,lowPower:false,mode:'live'};window.fixtureActors=['a','b'].map((id,index)=>({id:'codex:'+id,node:document.getElementById(id),body:document.querySelector('#'+id+' .body'),session:{id:'codex:'+id,provider:'codex',status:'active',activity:index?'reading':'coding',turnId:'one',...(index?{parentId:'codex:a'}:{})},entryPending:false,clonePhase:'',position:{x:index?57:27,y:58},serial:19}));window.fixtureTruth=JSON.stringify(fixtureActors.map(a=>({session:a.session,serial:a.serial,position:a.position,html:a.node.outerHTML})));window.originalAnimations=fixtureActors.map(a=>a.body.animate([{opacity:.999},{opacity:1}],{duration:12000,iterations:Infinity}));window.social=OfficeAgentSocial.create({layer:document.getElementById('social'),world:document.getElementById('world'),getActors:()=>fixtureActors,getContext:()=>fixtureContext});</script>`);
@@ -69,15 +108,28 @@ app.whenReady().then(async()=>{
     const report=await run(`(()=>{const v=document.querySelector('.agent-social-vignette');window.socialAnimations=v.getAnimations({subtree:true});for(const a of socialAnimations)a.pause();const samples=new Set();for(let sample=0;sample<31;sample++){for(const a of socialAnimations)a.currentTime=a.effect.getTiming().duration*(.18+sample*.64/30);samples.add(JSON.stringify([...v.querySelectorAll('.social-hand,.social-prop,.social-reaction,.social-star-line')].map(n=>({transform:getComputedStyle(n).transform,opacity:getComputedStyle(n).opacity}))));}for(const a of socialAnimations)a.currentTime=a.effect.getTiming().duration*.46;return{samples:samples.size,kind:v.dataset.socialKind,hands:[...v.querySelectorAll('.social-hand')].map(n=>n.dataset.part),caption:v.querySelector('.social-caption text').textContent,signature:JSON.stringify([...v.querySelectorAll('[data-prop],.social-star-line,.social-meteor,.social-reaction')].map(n=>({tag:n.tagName,prop:n.dataset.prop,markup:n.innerHTML,frames:n.getAnimations().flatMap(a=>a.effect.getKeyframes())}))),animations:socialAnimations.length,bothAnimated:[...v.querySelectorAll('.social-hand')].every(n=>n.getAnimations().length>0),captionPosition:v.querySelector('.social-caption').getBoundingClientRect().x};})()`);
     assert.equal(report.kind,definition.id);assert.equal(report.samples,31,'31 elapsed samples must contain continuously changing native poses/props');assert.deepEqual(report.hands.sort(),['receiver','sender']);assert.equal(report.bothAnimated,true);assert.ok(report.animations>=5);assert.match(report.caption,/工作室小互动/);assert.ok(report.captionPosition>100,'caption stays by its pair');signatures.add(report.signature);
     await wait(36);const first=(await win.webContents.capturePage()).toPNG();pictures.add(createHash('sha256').update(first).digest('hex'));if(process.env.MINI_OFFICE_SOCIAL_PREVIEW_DIR){fs.mkdirSync(process.env.MINI_OFFICE_SOCIAL_PREVIEW_DIR,{recursive:true});fs.writeFileSync(path.join(process.env.MINI_OFFICE_SOCIAL_PREVIEW_DIR,definition.id+'.png'),first);}
-    const before=await run(`JSON.stringify([...document.querySelectorAll('.social-hand')].map(n=>getComputedStyle(n).transform))`);
-    await run(`for(const a of socialAnimations)a.currentTime=a.effect.getTiming().duration*.74;void 0`);
-    const after=await run(`JSON.stringify([...document.querySelectorAll('.social-hand')].map(n=>getComputedStyle(n).transform))`);assert.notEqual(after,before,'both endpoints have real changing native gesture transforms');
+    // Keep the original nine programs' two-point atlas contract unchanged.
+    // New stories may hold a prop steadily while its mechanism moves (orbit
+    // hands intentionally hold the joined ring from .36 through .82). Their
+    // stricter full, unseeked lifecycle below requires 31 visible distinct
+    // poses for each hand and the props, not arbitrary motion at two times.
+    if(!['gear-turn','fan-breeze','orbit-join'].includes(definition.id)){
+      const before=await run(`JSON.stringify([...document.querySelectorAll('.social-hand')].map(n=>getComputedStyle(n).transform))`);
+      await run(`for(const a of socialAnimations)a.currentTime=a.effect.getTiming().duration*.74;void 0`);
+      const after=await run(`JSON.stringify([...document.querySelectorAll('.social-hand')].map(n=>getComputedStyle(n).transform))`);assert.notEqual(after,before,'both endpoints have real changing native gesture transforms');
+    }
     assert.equal(await run(`JSON.stringify(fixtureActors.map(a=>({session:a.session,serial:a.serial,position:a.position,html:a.node.outerHTML})))===fixtureTruth`),true,'social animation must not mutate actual actors or facts');
     assert.equal(await run(`fixtureActors.every((a,i)=>a.body.getAnimations().includes(originalAnimations[i]))`),true,'original pose animation identities survive');
     checks.push({kind:definition.id,animations:report.animations,duration:definition.duration,elapsedSamples:report.samples});
     await run(`fixtureContext.hidden=true;social.update();fixtureContext.hidden=false;void 0`);assert.equal(await run(`document.querySelectorAll('.agent-social-vignette').length`),0);
   }
-  assert.equal(signatures.size,9,'all nine actual SVG/keyframe compositions differ');assert.equal(pictures.size,9,'all nine native rendered moments differ');
+  assert.equal(catalog.length,12,'three rooms each retain three old programs and one new story');assert.equal(signatures.size,12,'all twelve actual SVG/keyframe compositions differ');assert.equal(pictures.size,12,'all twelve native rendered moments differ');
+  for(const definition of catalog.filter(d=>['gear-turn','fan-breeze','orbit-join'].includes(d.id))){
+    await run(`fixtureTime+=60000;fixtureContext={venue:${JSON.stringify(definition.venue)},language:'en',hidden:false,reducedMotion:false,lowPower:false,mode:'live'};social.update();void 0`);
+    assert.equal(await run(`social.trigger({kind:${JSON.stringify(definition.id)}})`),true);
+    const report=await run('('+observeNewProgram.toString()+')('+JSON.stringify(definition)+')');assert.ok(report.visibleFrames>=31&&report.distinctPoses>=31&&report.handPoses.every(n=>n>=31));assert.equal(report.sameActors,true);
+    checks.push({...report,kind:'actual-new-program',program:definition.id});
+  }
   // Actual interruption, without seeking the finite exit. An old SVG is held
   // at its composed prop pose while the real body clocks continue untouched.
   await run(`fixtureTime+=60000;fixtureContext={venue:'workshop',language:'zh',hidden:false,reducedMotion:false,lowPower:false,mode:'live'};social.update();void 0`);

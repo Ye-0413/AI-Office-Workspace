@@ -96,12 +96,12 @@ test('a running social owner becomes invalid as soon as a real new station inten
  assert.equal(scheduler.state().active.token,plan.token,'the pure model never removes or changes an actual body');
 });
 
-test('rejected finite owners do not postpone automatic eligibility or consume any of the nine choreographies',()=>{
+test('rejected finite owners do not postpone automatic eligibility or consume any of the twelve choreographies',()=>{
  for(const venue of Social.VENUES){
   const h=harness();h.context.requestStation(h.actor,{x:68,y:78,zone:'desk'});const attempt=blockedWithoutConsumption(h.pair(),{venue});
   attempt.at(24000);assert.equal(attempt.scheduler.plan(h.pair(),{venue}),null);assert.equal(attempt.scheduler.state().nextAuto,24000);
   h.context.requestStation(h.actor,{...h.actor.position});
-  const seen=[];for(let i=0;i<3;i++){const plan=attempt.scheduler.plan(h.pair(),{venue});assert.ok(plan);seen.push(plan.kind);assert.equal(attempt.scheduler.finish(plan.token),true);attempt.at(64000+i*40000);}
+  const seen=[];for(let i=0;i<Social.CATALOG[venue].length;i++){const plan=attempt.scheduler.plan(h.pair(),{venue});assert.ok(plan);seen.push(plan.kind);assert.equal(attempt.scheduler.finish(plan.token),true);attempt.at(64000+i*40000);}
   assert.deepEqual(new Set(seen),new Set(Social.CATALOG[venue].map(entry=>entry.id)));
  }
 });

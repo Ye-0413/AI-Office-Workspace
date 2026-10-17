@@ -7,60 +7,55 @@
 })(typeof globalThis === 'object' ? globalThis : this, function () {
   'use strict';
 
-  // Pool changes deliberately version the nickname mapping. Scene.identityName
-  // and the separate English mapping retain every original identity.
-  // Chinese v2 is independently authored: 256 epithets × 128 mythic,
-  // celestial and classical objects = 32,768 four-character combinations.
-  // English v1 stays independent and retains its original natural aliases.
-  // A nickname is decorative; real IDs, family ancestry and work evidence win.
-  const chineseFirst = Object.freeze([
-    '青霄 赤霄 紫霄 碧落 云阙 云岫 云岚 云霄 流云 霁云 凌云 天游 扶摇 乘风 御风 追风 玄风 清风 朔风 回风 霁风 长风 太初 太虚 太清 上清 玉清 澄空 净空 霄汉 云汉 霞举',
-    '流光 扶光 曦光 晨光 玄光 灵光 明光 曜光 凝光 霞光 霜光 星芒 映雪 流霞 晴岚 朝霞 暮霞 丹霞 碧霞 紫霞 烟霞 烟岚 霜华 雪霁 霁色 清晖 银辉 皓辉 朗照 澄辉 虹霓 逸光',
-    '玄墨 玄青 玄素 玄苍 玄玉 玄羽 玄渊 玄霜 青冥 青玄 青岚 青芜 青璇 青璧 青萝 青岑 丹青 丹霄 丹枫 丹砂 丹羽 丹阙 丹华 丹心 朱墨 朱华 朱颜 朱晖 素月 素雪 素锦 素心',
-    '昆仑 蓬莱 瀛洲 方丈 岱舆 员峤 瑶台 琼楼 玉京 玉阙 紫府 碧城 灵台 灵墟 灵岩 灵境 空山 远岫 苍梧 沧海 扶桑 汤谷 若木 建木 归墟 弱水 流沙 赤水 青丘 云梦 梦泽 沧溟',
-    '兰亭 墨池 墨韵 墨香 墨华 墨羽 墨染 墨痕 锦书 锦瑟 锦云 锦绣 书海 书林 书山 砚边 松烟 徽墨 龙文 凤章 龙章 鸿文 华章 逸兴 雅韵 古意 清音 余音 希声 琴心 剑气 剑影',
-    '凌霜 傲雪 映月 揽月 踏月 逐日 追日 观星 问天 问道 望远 乘云 御剑 横空 破晓 凌波 临渊 听澜 听雨 听松 听风 观澜 见山 寻幽 探微 怀瑾 握瑜 含章 藏锋 凝霜 流火 飞羽',
-    '清和 清微 清远 清越 清漪 清泠 清晏 清寂 澄明 澄心 澄怀 澄江 澄霄 静渊 静岚 静川 静玄 宁渊 宁川 宁霄 逸尘 逸云 逸风 逸舟 无尘 无垢 无涯 无相 逍遥 自在 抱朴 归真',
-    '春泽 春晖 春晏 春山 夏木 夏云 秋水 秋岚 秋澄 秋鸿 冬藏 冬青 寒江 寒烟 寒星 寒玉 夕照 晚照 晓霁 晓岚 月华 月影 月照 月隐 星澜 星野 星霭 星垂 天青 天启 天极 天纵'
-  ].join(' ').split(' '));
-  const chineseSecond = Object.freeze([
-    '青鸾 烛龙 白泽 麒麟 玄武 朱雀 应龙 黄龙 苍龙 螭龙 螣蛇 鲲鹏 重明 毕方 九尾 陆吾',
-    '英招 开明 乘黄 夫诸 天禄 辟邪 獬豸 貔貅 狻猊 狴犴 螭吻 嘲风 蒲牢 囚牛 赑屃 睚眦',
-    '望舒 羲和 常羲 嫦娥 女娲 伏羲 夸父 精卫 句芒 蓐收 祝融 共工 后土 飞廉 屏翳 河伯',
-    '天枢 天璇 天玑 天权 玉衡 开阳 瑶光 北辰 太微 紫微 天市 文昌 天钺 天魁 参商 南斗',
-    '长庚 启明 岁星 荧惑 镇星 辰星 太白 太阴 斗柄 星槎 星舟 星盘 星图 星罗 辰宿 璇玑',
-    '云笺 素笺 锦笺 玉笺 青简 竹简 金简 玉简 松砚 龙砚 凤砚 古砚 霜毫 紫毫 玉笔 银钩',
-    '瑶琴 古琴 鸣琴 七弦 长笛 洞箫 玉箫 陶埙 笙歌 编钟 霓裳 流觞 龙泉 干将 莫邪 承影',
-    '青锋 玉璧 玉璜 玉璋 琼枝 瑶华 琼英 嘉木 芳洲 汀兰 杜若 蘅芜 玉珩 碧玺 灵犀 天章'
-  ].join(' ').split(' '));
-  const englishFirst = [
-    'Seabreeze', 'Tidal', 'Ferry', 'Lighthouse', 'Seasalt', 'Coral', 'Seashell', 'Seafoam',
-    'Sailcloth', 'Harbour', 'Ripple', 'Reef', 'Silverbeach', 'Sandbar', 'Seablue', 'Voyage',
-    'Morningmist', 'Dawn', 'Dewdrop', 'Bluesky', 'Sunbeam', 'Twilight', 'Sunset', 'Moonbay',
-    'Starlight', 'Nightblue', 'Warmrain', 'Cloudlet', 'Rainbow', 'Frostblue', 'Springtide', 'Autumn',
-    'Osmanthus', 'Camellia', 'Jasmine', 'Magnolia', 'Kapok', 'Banyan', 'Bamboo', 'Ginkgo',
-    'Fern', 'Pine', 'Maple', 'Moss', 'Wisteria', 'Lotus', 'Willow', 'Peach',
-    'Puer', 'Oolong', 'Matcha', 'Hojicha', 'Milktea', 'Lemontea', 'Honey', 'Ginger',
-    'Sesame', 'Almond', 'Cocoa', 'Cinnamon', 'Mint', 'Vanilla', 'Cardamom', 'Orangepeel',
-    'Jade', 'Amber', 'Indigo', 'Ochre', 'Moonwhite', 'Celadon', 'Copper', 'Velvetblue',
-    'Pearlglow', 'Warmgold', 'Graphite', 'Rosepink', 'Evergreen', 'Cedar', 'Cream', 'Berryred',
-    'Hillpath', 'Brook', 'Stonestep', 'Bamboofence', 'Flowerstall', 'Hillmist', 'Leafshade', 'Islet',
-    'Teahouse', 'Paperwindow', 'Rainlane', 'Pageleaf', 'Windchime', 'Stonewall', 'Rooftile', 'Woodframe',
-    'Pineapple', 'Coconut', 'Taro', 'Azuki', 'Chestnut', 'Oat', 'Yuzu', 'Greenplum',
-    'Mulberry', 'Apricot', 'Pomegranate', 'Blueberry', 'Lychee', 'Longan', 'Hawthorn', 'Kumquat',
-    'Papercrane', 'Raindrop', 'Dapple', 'Snowflake', 'Firefly', 'Starsand', 'Cloudwisp', 'Rainbowbridge',
-    'Daybell', 'Fluorite', 'Kite', 'Moonstone', 'Lamplight', 'Cottoncloud', 'Eveningbreeze', 'Sunshower'
-  ];
-  const englishSecond = [
-    'Otter', 'Sparrow', 'Egret', 'Gull', 'Fawn', 'Fox', 'Bear', 'Bunny',
-    'Kitten', 'Whale', 'Dolphin', 'Turtle', 'Frog', 'Raccoon', 'Owl', 'Goose',
-    'Swallow', 'Pigeon', 'Sandpiper', 'Wren', 'Marten', 'Ferret', 'Hedgehog', 'Dormouse',
-    'Kettle', 'Teacup', 'Spoon', 'Sugarpot', 'Pudding', 'Custard', 'Cookie', 'Waffle',
-    'Tartlet', 'Dumpling', 'Mochi', 'Gumdrop', 'Bun', 'Toast', 'Beanbun', 'Wafer',
-    'Lantern', 'Bookmark', 'Paperboat', 'Stamp', 'Button', 'Yarnball', 'Pocket', 'Scarf',
-    'Bell', 'Drum', 'Crayon', 'Pinwheel', 'Acorn', 'Pinecone', 'Sprout', 'Bud',
-    'Mushroom', 'Feather', 'Pebble', 'Skiff', 'Pearl', 'Sail', 'Inkdrop', 'Nook'
-  ];
+  // v3 deliberately changes nickname mapping only. Each Chinese name below is
+  // a whole attested mythological name, never a generated epithet/object pair.
+  // Primary ancient text: 山海經, as transcribed at the chapter URLs. The right
+  // side of "display|original" records only a simplified-character spelling;
+  // names without a bar retain the source spelling. No runtime network access.
+  // The pools are finite decoration, not actor IDs or uniqueness guarantees.
+  function mythSource(chapter, entries) {
+    return Object.freeze({
+      chapter: '山海经·' + chapter,
+      url: 'https://zh.wikisource.org/wiki/山海經/' + chapter,
+      names: Object.freeze(entries.split(' ').map(entry => {
+        const [name, original = name] = entry.split('|');
+        return Object.freeze({ name, original });
+      }))
+    });
+  }
+  const nicknameSources = Object.freeze([
+    mythSource('南山經', '狌狌 鹿蜀 旋龟|旋龜 猼訑 灌灌 赤鱬 狸力|貍力 长右|長右 猾褢 蛊雕|蠱雕 瞿如 虎蛟 凤皇|鳳皇'),
+    mythSource('西山經', '羬羊 葱聋|蔥聾 肥遗|肥遺 鸾鸟|鸞鳥 凫徯|鳧徯 朱厌|朱厭 罗罗|羅羅 举父|舉父 蛮蛮|蠻蠻 英招 陆吾|陸吾 土蝼|土螻 钦原|欽原 长乘|長乘 胜遇 毕方|畢方 天狗 江疑 耆童 帝江 蓐收 红光|紅光 当扈|當扈 冉遗|冉遺 穷奇|窮奇 蠃鱼|蠃魚 文鳐|文鰩 槐鬼离仑|槐鬼離侖'),
+    mythSource('北山經', '水马|水馬 何罗|何羅 孟槐 鳛鳛|鰼鰼 耳鼠 孟极|孟極 幽鴳 足訾 诸犍|諸犍 白鵺 那父 竦斯 窫窳 诸怀|諸懷 狍鸮|狍鴞 居暨 天马|天馬 鶌鶋 飞鼠|飛鼠 领胡|領胡 象蛇 酸与|酸與 精卫|精衛 女娃'),
+    mythSource('東山經', '从从|從從 狪狪 軨軨 犰狳 朱獳 獙獙 蠪姪 峳峳 絜钩|絜鉤 妴胡 鮯鮯'),
+    mythSource('中山經', '朏朏 鸣蛇|鳴蛇 化蛇 蠪蛭 马腹|馬腹 熏池 夫诸|夫諸 武罗|武羅 泰逢'),
+    mythSource('大荒東經', '少昊 颛顼|顓頊 羲和 帝俊 晏龙|晏龍 司幽 天吴|天吳 折丹 禺京 奢比尸 应龙|應龍 蚩尤 王亥'),
+    mythSource('大荒西經', '石夷 叔均 后稷 老童 祝融 太子长琴|太子長琴 巫咸 巫即 巫朌 巫彭 巫姑 巫真 巫礼|巫禮 巫抵 巫谢|巫謝 巫罗|巫羅 大鵹 少鵹 青鸟|青鳥 弇兹|弇茲 常羲 屏蓬 天犬 西王母 吴回 灵恝|靈恝 鱼妇|魚婦'),
+    mythSource('大荒北經', '蜚蛭 琴虫|琴蟲 禺强|禺彊 九凤|九鳳 强良|彊良 夸父 相繇 风伯|風伯 雨师|雨師 苗龙|苗龍 融吾 弄明 烛九阴|燭九陰 女魃'),
+    mythSource('海內經', '嫘祖 昌意 韩流|韓流 柏子高 素女 延维|延維 禺号|禺號 奚仲 吉光 义均|義均 听訞|聽訞 炎居 戏器|戲器 术器|術器 后土 噎鸣|噎鳴')
+  ]);
+  const chineseNames = Object.freeze(nicknameSources.flatMap(source => source.names.map(entry => entry.name)));
+  // Independently authored short English sound units: 64 × 64 = 4,096
+  // four/five-letter, single-word space-pet aliases (e.g. Lumi, Cosmo, Orbit).
+  const englishFirst = Object.freeze('ba be bi bo bu ca ce ci co cu da de di do du fa fe fi fo fu ga ge gi go gu ka ke ki ko ku la le li lo lu ma me mi mo mu na ne ni no nu pa pe pi po pu ra re ri ro ru sa se si so su zu or el ax'.split(' '));
+  const englishSecond = Object.freeze('ba be bi bo bu ca ce ci co cu da de di do du fa fe fi fo fu ga ge gi go gu ka ke ki ko ku la le li lo lu ma me mi mo mu na ne ni no nu pa pe pi po pu ra re ri ro ru sa se si so su va bit smo pix'.split(' '));
+  // Sound units occasionally spell an unsuitable complete English word.
+  // Curated one-to-one replacements keep all 4,096 outputs short and unique;
+  // no RNG/retry or work/identity field is consulted when avoiding them.
+  const englishReplacements = Object.freeze({
+    Rape: 'Ravo', Pedo: 'Pexi', Kike: 'Kivo', Paki: 'Paxi', Dago: 'Daxo',
+    Mofo: 'Moxi', Niga: 'Nixi', Nige: 'Nixe', Nigi: 'Nixo', Nigo: 'Nixu', Nigu: 'Niza', Nega: 'Nexi',
+    Faga: 'Faxi', Fage: 'Faxe', Fagi: 'Faxo', Fago: 'Faxu', Fagu: 'Faza',
+    Fapa: 'Fayo', Fape: 'Faya', Fapi: 'Faye', Fapo: 'Fayi', Fapu: 'Fayu',
+    Fupa: 'Fuxi', Loli: 'Loxi', Dope: 'Doxi', Caca: 'Caxi', Kaka: 'Kaxi',
+    Pipi: 'Pixi', Pupu: 'Puxi', Culo: 'Cuxi', Pene: 'Pexu', Figa: 'Fixi', Foda: 'Foxi',
+    Suka: 'Suxi', Gago: 'Gaxi', Baka: 'Baxi', Dike: 'Dixi', Lame: 'Laxi',
+    Puke: 'Puxo', Gore: 'Goxi', Lice: 'Lixi', Nude: 'Nuxi', Dupa: 'Duxi', Lube: 'Luxi'
+  });
+  function englishAlias(first, second) {
+    const name = first[0].toUpperCase() + first.slice(1) + second;
+    return Object.hasOwn(englishReplacements, name) ? englishReplacements[name] : name;
+  }
   const traits = [
     ['把书签夹得很整齐', 'Keeps every bookmark in a neat row'],
     ['喜欢听渡轮轻轻靠岸', 'Likes the soft sound of a ferry arriving'],
@@ -137,15 +132,14 @@
     const value = session && typeof session === 'object' ? session : {};
     const key = JSON.stringify([canonicalProvider(value.provider), String(value.id || value.sessionId || '')]);
     const headHash = hash(key, 0x811c9dc5), tailHash = hash(key, 0x9e3779b9);
-    const chineseHead = chineseFirst[headHash % chineseFirst.length];
-    const chineseTail = chineseSecond[tailHash % chineseSecond.length];
+    const chineseName = chineseNames[headHash % chineseNames.length];
     const englishHead = englishFirst[headHash % englishFirst.length];
     const englishTail = englishSecond[tailHash % englishSecond.length];
     const trait = traits[hash(key, 0x85ebca6b) % traits.length];
     const greeting = greetings[hash(key, 0xc2b2ae35) % greetings.length];
     const signoff = signoffs[hash(key, 0x27d4eb2f) % signoffs.length];
     return Object.freeze({
-      aliasZh: chineseHead + chineseTail, aliasEn: englishHead + ' ' + englishTail,
+      aliasZh: chineseName, aliasEn: englishAlias(englishHead, englishTail),
       traitZh: trait[0], traitEn: trait[1],
       greetingZh: greeting[0], greetingEn: greeting[1],
       keepsake: keepsakes[hash(key, 0x165667b1) % keepsakes.length],
@@ -153,5 +147,5 @@
     });
   }
 
-  return Object.freeze({ version: 2, forSession });
+  return Object.freeze({ version: 3, forSession, nicknameSources });
 });

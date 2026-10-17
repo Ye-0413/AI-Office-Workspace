@@ -21,6 +21,7 @@
   const archivedTurns = new Map();
   const settingsDefaults = { rain: false, night: false, sceneTime: 'auto', sceneVenue: 'workshop', sceneTheme: 'auto', sceneWeather: 'auto', agentScale: 1, reducedMotion: false, lowPower: false, idleVisitor: true, sound: false, selectedProject: '', language: 'zh' };
   let settings = { ...settingsDefaults };
+  const sizeStability = window.OfficeSizeStability.create({ requestedScale: settings.agentScale });
   let settingsRequest = 0;
   let language = 'zh';
   const usageHistory = window.OfficeUsageHistory?.create({ bridge, getLanguage: () => language });
@@ -442,7 +443,7 @@
     const closingPairs = closingDockPairs();
     const observedById = new Map(snapshot.sessions.map(session => [session.id, session]));
     for (const [child, parent] of closingPairs) { pinned.add(child); pinned.add(parent); }
-    return { allowTransfers: transferAvailable(incoming), transferEligibleIds: transferEligible(incoming), requestedScale: settings.agentScale, venue: settings.sceneVenue, footprints: actorFootprints, reservedRects: CLOCK_RESERVED, previousSeats: seats, previousScale: uniformScale, previousRequestedScale: currentPage.requestedScale,
+    return { allowTransfers: transferAvailable(incoming), transferEligibleIds: transferEligible(incoming), requestedScale: settings.agentScale, maximumScale: currentPage.scaleCeiling, venue: settings.sceneVenue, footprints: actorFootprints, reservedRects: CLOCK_RESERVED, previousSeats: seats, previousScale: uniformScale, previousRequestedScale: currentPage.requestedScale,
       closingDockPairs: closingPairs, openingDockPairs: openingDockPairs(incoming), finiteExitIds: new Set(exiting),
       // A settled absent ancestor has no ordinary station route. A first late
       // descendant, its real holding walk, and fresh work keep their own owners.
@@ -1776,6 +1777,7 @@
     // mode to a solver's output scale: that would feed font changes back into fit.
     office.dataset.nameplateMode = nameplateMode(layoutBodies.length);
     measureActorFootprints(layoutBodies);
+    currentPage.scaleCeiling = sizeStability.maximum();
     if (transferOwner && !transferValid(transferOwner, layoutBodies)) revokeTransfer('snapshot-or-geometry', null, false);
     if (transferOwner) currentPage = { ...currentPage, visible: presentBodies };
     else {
@@ -1789,6 +1791,8 @@
       currentPage.routeGeometry = { paths: currentPage.pathsById, scale: currentPage.uniformScale,
         footprints: new Map([...actorFootprints].map(([id, footprint]) => [id, { ...footprint }])) };
     }
+    sizeStability.observe({ count: layoutBodies.length, uniformScale: currentPage.uniformScale, targetUniformScale: currentPage.targetUniformScale });
+    currentPage.scaleCeiling = sizeStability.maximum();
     page = 0;
     reconcileActors();
     const alive = snapshot.sessions.filter((session) => !Scene.isClosed(session));
@@ -1873,6 +1877,7 @@
     const nextScale = Number.isFinite(requestedScale) && requestedScale > 0 ? Math.max(.65, Math.min(1.35, requestedScale)) : 1;
     const scaleChanged = oldScale !== nextScale;
     if (scaleChanged) {
+      sizeStability.request(nextScale);
       cancelPhysicalRoutes();
       reflowPending = true;
     }
@@ -1959,6 +1964,11 @@
   $('day-clock').addEventListener('click', () => { openDialog('settings-dialog'); $('setting-sceneTime').focus(); });
   $('setting-sceneTime').addEventListener('change', event => saveSettings({ sceneTime: event.target.value }));
   $('setting-agentScale').addEventListener('change', event => saveSettings({ agentScale: Number(event.target.value) / 100 }));
+  $('agent-size-refit').addEventListener('click', () => {
+    sizeStability.request(settings.agentScale);
+    cancelPhysicalRoutes(); reflowPending = true; render();
+    text($('settings-result'), '已按当前偏好重新适配。');
+  });
   $('day-reset').addEventListener('click', () => { $('setting-sceneTime').focus(); saveSettings({ sceneTime: 'auto' }); });
   $('roster-button').addEventListener('click', () => openDialog('roster-dialog'));
   $('greet-agent').addEventListener('click', () => { const actor = actors.get(selectedSession); if (actor) react(actor); });

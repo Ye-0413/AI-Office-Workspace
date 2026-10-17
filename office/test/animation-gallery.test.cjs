@@ -84,3 +84,25 @@ test('station gallery certifies all twelve current furniture programs and actual
  }
  assert.equal(new Set(manifest.assets.flatMap(a=>a.programs.map(p=>p.program))).size,12);
 });
+
+test('public pair gallery contains all twelve current programs and complete source-bound 48fps samples',()=>{
+ const Social=require('../lib/social-interactions.js'),Export=require('../scripts/render-social-previews.cjs');
+ const manifest=require('../../docs/animations/social/manifest.json');
+ assert.equal(manifest.version,require('../package.json').version);
+ assert.equal(manifest.sampling.fps,48);assert.equal(manifest.sampling.frames,168);
+ assert.equal(manifest.sampling.continuousOwnerLifetimeCertified,false);
+ assert.equal(manifest.sampling.continuousRoomPlaybackCertified,false);
+ assert.equal(manifest.sampling.avatarWorkClockCertified,false);
+ assert.equal(manifest.restrictedImageElements,0);assert.equal(manifest.unlistedResourceRequests,0);
+ assert.equal(manifest.assets.length,3);
+ for(const[name,hash]of Object.entries(manifest.sourceHashes))assert.equal(createHash('sha256').update(fs.readFileSync(path.join(repo,name))).digest('hex'),hash,name);
+ for(const asset of manifest.assets){
+  assert.deepEqual(asset.programs.map(p=>p.id),Social.CATALOG[asset.venue].map(p=>p.id));
+  const buffer=fs.readFileSync(path.join(dir,'social',asset.file)),gif=inspectGif(buffer),timing=Export.gifTiming(buffer);
+  assert.equal(buffer.length,asset.bytes);assert.equal(createHash('sha256').update(buffer).digest('hex'),asset.sha256);
+  assert.equal(gif.loop,0);assert.equal(gif.frames,168);assert.ok(gif.uniqueImages>=31);
+  assert.equal(gif.width,1000);assert.equal(gif.height,720);assert.deepEqual(timing,asset.encodedTiming);
+  assert.ok(Math.abs(timing.durationMs-3500)<=20);
+  for(const program of asset.programs){assert.ok(program.distinctPngFrames>=31);assert.equal(program.sampledPngFrames,168);assert.equal(program.mountedActorIdentitiesUnchanged,true);assert.ok(program.transparentPropTailSamples>0);}
+ }
+});

@@ -69,7 +69,7 @@ app.whenReady().then(async()=>{
  await run(`document.getElementById('language-button').click();void 0`);
  await until(`document.documentElement.lang==='en'`,'real language button changes language',3000);
  await until(settled(13),'English geometry must settle');
- const en=await inspect('thirteen-en',13);assert.ok(en.some(r=>r.name.length>=15),'long actual English aliases are covered');
+ const en=await inspect('thirteen-en',13);assert.ok(en.every(r=>/^[A-Z][a-z]{3,6}$/.test(r.name)),'actual English aliases use the requested short single-word persona names');
  win.setContentSize(800,450);await pause(650);await until(settled(13),'small viewport fit must settle');await inspect('thirteen-en-800',13);
  win.setContentSize(800,800);await pause(650);await until(settled(13),'letterboxed fit must settle');
  assert.ok(await run("document.getElementById('world').getBoundingClientRect().top>20"),'actual nonzero world letterbox offset');await inspect('thirteen-en-800-letterbox',13);

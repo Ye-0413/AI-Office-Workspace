@@ -92,3 +92,56 @@ test('actual artwork confirmation is a visual change while rawauto resolving to 
   f.settings.theme='spring';f.api.update();assert.equal(f.api.state().active.token,token);assert.equal(f.layer.children[0],original);
   f.settings.artworkKey='workshop:spring';f.api.update();assert.equal(f.api.state().active,null);assert.equal(f.api.state().exiting.token,token);f.api.destroy();
 });
+
+
+const additions=[['workshop','gear-turn',3000,'.social-gear-rotor',2],['teahouse','fan-breeze',3200,'.social-fan-rib',7],['observatory','orbit-join',3200,'.social-orbit-half',2]];
+for(const[venue,kind,duration,part,count]of additions){
+  test(`${kind} has its own authored41-pose geometry and finite overlay owner while real actors keep their work`,async()=>{
+    const f=fixture();f.settings.venue=venue;const before=f.actors.map(a=>({session:structuredClone(a.session),position:{...a.position},serial:a.serial,node:a.node,body:a.body})),work=f.work,workAt=work.currentTime;
+    assert.equal(f.api.trigger({kind}),true);assert.equal(f.api.state().active.kind,kind);const original=f.layer.children[0],owned=original.getAnimations({subtree:true});
+    assert.equal(original.querySelectorAll(part).length,count);assert.equal(original.querySelectorAll('.social-hand').length,2);assert.equal(original.querySelectorAll('.social-reaction').length,2);
+    const dense=owned.filter(m=>m.frames.length===41);assert.ok(dense.length>=3,'the new mechanism must author a full continuous41-sample sequence');
+    for(const motion of dense){assert.equal(motion.options.duration,duration);assert.equal(motion.options.iterations,undefined);assert.equal(motion.frames[0].offset,0);assert.equal(motion.frames.at(-1).offset,1);for(let i=0;i<41;i++){const frame=motion.frames[i];assert.ok(!/NaN|Infinity/.test(frame.transform||''));if(i)assert.ok(frame.offset>motion.frames[i-1].offset);assert.equal(frame.easing,'linear','dense trajectories must not restart a strong curve every75ms');}}
+    const combined=Array.from({length:41},(_,i)=>dense.map(m=>JSON.stringify({transform:m.frames[i].transform})).join('|'));assert.ok(new Set(combined).size>=31);
+    await f.step(740);assert.equal(f.layer.children[0],original);assert.equal(work,f.work);assert.equal(work.playState,'running');assert.ok(work.currentTime>workAt);
+    f.actors.forEach((a,i)=>{assert.deepEqual(a.session,before[i].session);assert.deepEqual(a.position,before[i].position);assert.equal(a.serial,before[i].serial);assert.equal(a.node,before[i].node);assert.equal(a.body,before[i].body);});
+    await f.step(duration-740+1);assert.equal(f.layer.children.length,0);assert.equal(f.api.state().active,null);assert.equal(f.raf.size,0);assert.equal(work.playState,'running');f.api.destroy();
+  });
+  test(`${kind} interrupts from its actual decorative clocks and leaves no quiet or removed-owner replay`,async()=>{
+    const f=fixture();f.settings.venue=venue;f.api.trigger({kind});await f.step(930);const original=f.layer.children[0],owned=original.getAnimations({subtree:true}),times=owned.map(m=>m.currentTime);
+    f.a.routeReservation={token:1,serial:f.a.serial};f.api.update();assert.equal(f.api.state().active,null);assert.ok(f.api.state().exiting);owned.forEach((m,i)=>{assert.equal(m.currentTime,times[i]);assert.equal(m.playState,'paused');});assert.equal(f.work.playState,'running');
+    f.settings.hidden=true;f.api.update();assert.equal(f.layer.children.length,0);assert.equal(f.raf.size,0);await f.step(200);assert.equal(f.layer.children.length,0);f.api.destroy();
+  });
+}
+
+// Audit the actual emitted cog outline and interpolated transform descriptors,
+// including diagonally/vertically separated peers; a pretty name is not proof
+// that two rotating filled shapes will avoid cutting through one another.
+test('the authored cog teeth keep their painted outlines separate across sampled horizontal, vertical and diagonal approaches',()=>{
+  const interpolate=(frames,p)=>{const n=p*(frames.length-1),i=Math.min(frames.length-2,Math.floor(n)),r=n-i;return {i,r,a:frames[i],b:frames[i+1]};};
+  const number=(frame,pattern)=>Number((frame.transform||'').match(pattern)?.[1]||0);
+  const pose=(frames,p)=>{const {a,b,r}=interpolate(frames,p),value=pattern=>number(a,pattern)*(1-r)+number(b,pattern)*r;return{x:value(/translate\(([-\d.]+)px/),y:value(/,([-\d.]+)px/),angle:value(/rotate\(([-\d.]+)deg/)*Math.PI/180};};
+  const cross=(a,b,c)=>(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]),intersects=(a,b,c,d)=>cross(a,b,c)*cross(a,b,d)<-1e-8&&cross(c,d,a)*cross(c,d,b)<-1e-8;
+  const distance=(p,a,b)=>{const dx=b[0]-a[0],dy=b[1]-a[1],length=dx*dx+dy*dy,t=length?Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/length)):0;return Math.hypot(p[0]-a[0]-t*dx,p[1]-a[1]-t*dy);};
+  for(const displacement of [{x:141,y:0},{x:0,y:170},{x:130,y:140}]){
+    const f=fixture();f.b.body.box={...f.b.body.box,left:f.a.body.box.left+displacement.x,top:f.a.body.box.top+displacement.y};f.api.trigger({kind:'gear-turn'});
+    const gears=f.layer.children[0].querySelectorAll('.social-gear-rotor').map(rotor=>{const scaleNode=rotor.parentNode,carrier=scaleNode.parentNode,base=carrier.parentNode.attrs.transform.match(/translate\(([-\d.]+) ([-\d.]+)\)/),points=rotor.children[0].attrs.d.match(/-?\d+(?:\.\d+)?/g).map(Number),scale=Number(scaleNode.attrs.transform.match(/scale\(([-\d.]+)\)/)[1]);return {base:{x:Number(base[1]),y:Number(base[2])},scale,points:Array.from({length:points.length/2},(_,i)=>[points[i*2],points[i*2+1]]),frames:carrier.animations[0].frames,rotations:rotor.animations[0].frames};});
+    assert.equal(gears.length,2);let closest=Infinity;
+    for(let i=0;i<=120;i++){
+      const polygons=gears.map(gear=>{const carry=pose(gear.frames,i/120),rotation=pose(gear.rotations,i/120).angle,c=Math.cos(rotation),s=Math.sin(rotation);return gear.points.map(([x,y])=>[gear.base.x+carry.x+gear.scale*(x*c-y*s),gear.base.y+carry.y+gear.scale*(x*s+y*c)]);});
+      assert.ok(!polygons[0].some((p,j)=>polygons[1].some((q,k)=>intersects(p,polygons[0][(j+1)%polygons[0].length],q,polygons[1][(k+1)%polygons[1].length]))),'filled teeth may not cross');
+      for(let side=0;side<2;side++)for(const p of polygons[side])for(let j=0;j<polygons[1-side].length;j++)closest=Math.min(closest,distance(p,polygons[1-side][j],polygons[1-side][(j+1)%polygons[1-side].length]));
+    }
+    assert.ok(closest>1.1*gears[0].scale,JSON.stringify({displacement,closest,strokePair:1.1*gears[0].scale}));f.api.destroy();
+  }
+});
+
+test('all twelve actual vector compositions are distinct even without labels, CSS names and data-prop tags',()=>{
+  const vectors=new Set();
+  for(const [venue,definitions]of Object.entries(Social.CATALOG))for(const definition of definitions){
+    const f=fixture();f.settings.venue=venue;assert.equal(f.api.trigger({kind:definition.id}),true);
+    const shapes=f.layer.children[0].querySelectorAll('path,ellipse,circle,polygon,polyline,line').map(n=>Object.fromEntries(Object.entries(n.attrs).filter(([key])=>['d','cx','cy','r','rx','ry','points','x1','y1','x2','y2'].includes(key))));
+    const signature=JSON.stringify(shapes);assert.ok(!vectors.has(signature),definition.id+' must not merely rename/recolor another drawing');vectors.add(signature);f.api.destroy();
+  }
+  assert.equal(vectors.size,12);
+});

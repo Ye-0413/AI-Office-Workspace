@@ -90,7 +90,9 @@ app.whenReady().then(async () => {
   await savePreview('twelve-original-before-departures');
   const keep = new Set([0, 1, 6, 7]), survivors = twelve.filter((_, index) => keep.has(index));
   const removed = twelve.filter((_, index) => !keep.has(index)).map(session => session.id);
-  await begin('real twelve-to-four departures restore the proved large fit without another snapshot', survivors, removed);
+  const originalScale = (await readGeometry())[0].uniformScale;
+  await run(`window.sizeTrace={frames:0,min:Infinity,max:0,ids:new Set(${JSON.stringify(survivors.map(s=>s.id))})};(function sample(){if(!window.sizeTrace)return;sizeTrace.frames++;for(const node of document.querySelectorAll('.actor[data-session-id]'))if(sizeTrace.ids.has(node.dataset.sessionId)){const matrix=new DOMMatrixReadOnly(getComputedStyle(node).transform),scale=Math.hypot(matrix.m11,matrix.m12);sizeTrace.min=Math.min(sizeTrace.min,scale);sizeTrace.max=Math.max(sizeTrace.max,scale);}requestAnimationFrame(sample);})()`);
+  await begin('real twelve-to-four departures keep retained bodies at their shared stable fit', survivors, removed);
   send(survivors); const removalPush = pushes;
   const largeFit = `${allSettled(4)}&&[...document.querySelectorAll('.actor')].every(n=>Math.hypot(new DOMMatrixReadOnly(getComputedStyle(n).transform).m11,new DOMMatrixReadOnly(getComputedStyle(n).transform).m12)>=.9)`;
   const fitEndpoint = `${largeFit}&&[...document.querySelectorAll('.actor')].every(node=>node.getAnimations().every(motion=>!(motion instanceof CSSTransition&&motion.transitionProperty==='transform'&&(motion.playState==='running'||motion.pending)))&&Math.abs(new DOMMatrixReadOnly(getComputedStyle(node).transform).m11-new DOMMatrixReadOnly(node.style.transform).m11)<.00001)`;
@@ -99,11 +101,31 @@ app.whenReady().then(async () => {
     const endpointFrame = await run('crowdAudit.report().frames');
     await until(`crowdAudit.report().frames>=${endpointFrame+31}&&${fitEndpoint}`, 'keep auditing at least thirty-one real frames after the completed fit endpoint');
   }
-  await until(largeFit, 'real endpoints and released slots must grow the four retained original bodies', 90000);
-  await captureFitTail();
-  const released = await finish({ minimumScale: .4 }); assert.ok(released.lastScale >= .9); assert.equal(pushes, removalPush, 'a later observer push must not rescue a missing physical-endpoint refresh');
+  await until(allSettled(4), 'all departed mains must finish their actual exit walks', 90000);
+  const stableStart = await run('crowdAudit.report().frames');
+  await until(`crowdAudit.report().frames>=${stableStart+61}&&${allSettled(4)}`, 'observe actual settled retained bodies over sixty-one further frames');
+  const trace = await run('({frames:sizeTrace.frames,min:sizeTrace.min,max:sizeTrace.max})');
+  await run('window.sizeTrace=null');
+  assert.ok(trace.frames>=61); assert.ok(trace.max<=originalScale+.00002, 'automatic departures must never regrow bodies: '+JSON.stringify({originalScale,trace}));
+  await finish(); assert.equal(pushes, removalPush, 'body stability cannot depend on another observer push');
   await run(`${JSON.stringify(removed)}.forEach(id=>crowdAudit.forget(id))`);
-  await savePreview('four-restored-after-real-departures');
+  await savePreview('four-stable-after-real-departures');
+  await begin('ordinary heartbeats and language changes preserve the fitted body size', survivors);
+  const beforeMetadata = (await readGeometry())[0].uniformScale;
+  await heartbeat(survivors);
+  await run(`document.getElementById('language-button').click()`);
+  await pause(500);
+  const afterMetadata = await readGeometry();
+  assert.ok(afterMetadata.every(row=>Math.abs(row.uniformScale-beforeMetadata)<.00002), 'short bilingual names and metadata cannot regrow the occupied room');
+  await until(`crowdAudit.report().frames>=31&&${allSettled(4)}`, 'metadata and bilingual labels settle with the same actual scale');
+  await finish();
+  await begin('only an explicit same-preference refit releases the stable size', survivors);
+  const refitPush = pushes;
+  await run(`document.getElementById('agent-size-refit').click()`);
+  await until(largeFit, 'the explicit refit must walk to real safe endpoints before growing', 90000);
+  await captureFitTail();
+  const refitted = await finish(); assert.ok(refitted.lastScale>=.9); assert.equal(pushes,refitPush);
+  await savePreview('four-refitted-by-user');
   await begin('the four original bodies respect a deliberate sixty-five-percent fit', survivors);
   await run(`(()=>{const control=document.getElementById('setting-agentScale');control.value='65';control.dispatchEvent(new Event('change',{bubbles:true}));})()`);
   await until(`crowdAudit.report().frames>=31&&${allSettled(4)}&&[...document.querySelectorAll('.actor')].every(n=>Math.abs(Math.hypot(new DOMMatrixReadOnly(getComputedStyle(n).transform).m11,new DOMMatrixReadOnly(getComputedStyle(n).transform).m12)-.65)<.00002)`, 'the genuine size setting must physically settle at sixty-five percent');
@@ -115,7 +137,7 @@ app.whenReady().then(async () => {
   await captureFitTail();
   const grown = await finish(); assert.ok(grown.lastScale >= .9); assert.equal(pushes, resizePush, 'size restoration must not depend on any fresh observer snapshot');
   await savePreview('four-restored-after-size-repositioning');
-  assert.deepEqual(errors, []); console.log(JSON.stringify({ok:true,scope:'real-endpoint-and-slot-fit-recovery',checks,pushes,errors}));
+  assert.deepEqual(errors, []); console.log(JSON.stringify({ok:true,scope:'stable-occupied-size-and-explicit-endpoint-refit',checks,pushes,errors}));
 }).catch(async error => {
   console.error(error); process.exitCode = 1;
   if (win && !win.isDestroyed()) try {

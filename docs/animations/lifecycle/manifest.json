@@ -1,5 +1,5 @@
 {
-  "version": "0.21.0",
+  "version": "0.22.0",
   "publicBody": "original capsule robot with four visible feet; resource-free detached span adapts bitmap fade API; no external sprite references",
   "scope": "production distance-synchronised four-foot joint motion at a fixed screen anchor and clone effect overlays; does not certify room navigation, world foot locking or body collision; those are verified separately in native fixtures",
   "sourceHashes": {

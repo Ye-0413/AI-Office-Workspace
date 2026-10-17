@@ -79,7 +79,12 @@ app.whenReady().then(async () => {
   await finish();
 
   const parent = twelve[2], others = twelve.filter(s => s.id !== parent.id), child = task('late-helper', 'planning', parent.id);
-  await until(`${settled(12)}&&[...document.querySelectorAll('.actor')].every(n=>Math.hypot(new DOMMatrixReadOnly(getComputedStyle(n).transform).m11,new DOMMatrixReadOnly(getComputedStyle(n).transform).m12)>=.4-.00001&&n.getAnimations().every(a=>!(a instanceof CSSTransition&&a.transitionProperty==='transform'&&(a.playState==='running'||a.pending))))`, 'the preceding twelve-body restoration must finish at its proved forty-percent baseline');
+  // Occupied rooms no longer regrow automatically after interrupted exits.
+  // Request the larger baseline through the same real explicit control as users.
+  await begin('an explicit refit restores the twelve-body baseline after real exit cancellation', twelve);
+  await run(`document.getElementById('agent-size-refit').click()`);
+  await until(`${settled(12)}&&[...document.querySelectorAll('.actor')].every(n=>Math.hypot(new DOMMatrixReadOnly(getComputedStyle(n).transform).m11,new DOMMatrixReadOnly(getComputedStyle(n).transform).m12)>=.4-.00001&&n.getAnimations().every(a=>!(a instanceof CSSTransition&&a.transitionProperty==='transform'&&(a.playState==='running'||a.pending))))`, 'the explicit twelve-body refit must finish at its proved forty-percent baseline');
+  await finish();
   await begin('a newly observed real child retains its same departing parent', twelve);
   send(others); await until(`(()=>{const a=crowdActors.get(${JSON.stringify(parent.id)});return a?.departing&&a.navigation?.kind==='exit'&&a.node.dataset.walking==='true'})()`, 'the named parent must already be actually walking out');
   const parentDeparture = await run(`new Promise(resolve=>{const node=${selector(parent.id)},start=performance.now(),points=new Map();let frames=0;function tick(now){frames++;if(!node?.isConnected)return resolve({frames,gone:true});const m=new DOMMatrixReadOnly(getComputedStyle(node).transform),point={x:m.m41,y:m.m42};points.set(point.x.toFixed(2)+'/'+point.y.toFixed(2),point);if(points.size>=31||now-start>1800)return resolve({frames,distinct:points.size,points:[...points.values()],walking:node.dataset.walking==='true',exit:crowdActors.get(${JSON.stringify(parent.id)})?.navigation?.kind==='exit'});requestAnimationFrame(tick)}requestAnimationFrame(tick)})`);
@@ -105,9 +110,11 @@ app.whenReady().then(async () => {
   await preview('thirteen-held-parent-during-function-changes');
   await finish();
 
-  await begin('restored real functions recover the proved thirteen-body destinations around the same held foot', [...twelve, child]);
+  await begin('an explicit refit restores real thirteen-body functions around the same held foot', [...twelve, child]);
   send([...others, child]);
-  await until(`${stableFit(13)}&&[...document.querySelectorAll('.actor')].every(n=>Math.hypot(new DOMMatrixReadOnly(getComputedStyle(n).transform).m11,new DOMMatrixReadOnly(getComputedStyle(n).transform).m12)>=.4-.00001)`, 'the original real function distribution must finish walking and recover its forty-percent fit before the return audit');
+  await until(stableFit(13), 'restored real functions first reach their actual stations at the stable occupied-room size');
+  await run(`document.getElementById('agent-size-refit').click()`);
+  await until(`${stableFit(13)}&&[...document.querySelectorAll('.actor')].every(n=>Math.hypot(new DOMMatrixReadOnly(getComputedStyle(n).transform).m11,new DOMMatrixReadOnly(getComputedStyle(n).transform).m12)>=.4-.00001)`, 'the explicit refit must finish actual walks at the original forty-percent baseline before the return audit');
   await finish();
 
   await begin('the child returns to its actual parent before that main exits', others, [child.id, parent.id]);

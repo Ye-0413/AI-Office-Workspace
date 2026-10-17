@@ -136,6 +136,67 @@
         svg('path',{d:'M-55-12L2 0',class:'social-meteor-tail'},meteorShape);svg('path',{d:'M-7 0L0-7 7 0 0 7Z',class:'social-star'},meteorShape);
         animate(meteor,[{opacity:0,transform:`translate(${-20*propScale}px,${-16*propScale}px)`,offset:0},{opacity:0,transform:`translate(${-20*propScale}px,${-16*propScale}px)`,offset:.2},{opacity:1,transform:`translate(${22*propScale}px,${-8*propScale}px)`,offset:.35},{opacity:1,transform:`translate(${154*propScale}px,${23*propScale}px)`,offset:.61},{opacity:0,transform:`translate(${210*propScale}px,${40*propScale}px)`,offset:.8},{opacity:0,offset:1}]);
         for(const[actor,p,side]of[[a,left,1],[b,right,-1]])hand(actor,p,side===1?'sender':'receiver',[{opacity:0,transform:'translateY(3px)',offset:0},{opacity:1,transform:`translate(${side*4}px,-20px) rotate(${side*22}deg)`,offset:.28},{opacity:1,transform:`translate(${side*7}px,-27px) rotate(${side*12}deg)`,offset:.67},{opacity:0,transform:'translateY(3px)',offset:1}]);nod(a,.38,true);nod(b,.38,true);
+      }else if(['gear-turn','fan-breeze','orbit-join'].includes(plan.kind)){
+        // These are rare finite character stories, not UI transitions. Sample
+        // the existing MOVE token within narrative phases, then interpolate
+        // linearly: restarting that strong curve on every75ms sample would
+        // introduce forty artificial stops. All original nine paths stay above.
+        const cubic=(u,p,q)=>3*(1-u)*(1-u)*u*p+3*(1-u)*u*u*q+u*u*u;
+        const phase=(t,start,end)=>{const x=Math.max(0,Math.min(1,(t-start)/(end-start)));if(x===0||x===1)return x;let lo=0,hi=1;for(let i=0;i<18;i++){const u=(lo+hi)/2;if(cubic(u,.77,.175)<x)lo=u;else hi=u;}return cubic((lo+hi)/2,0,1);};
+        const dense=pose=>Array.from({length:41},(_,i)=>({offset:i/40,easing:'linear',...pose(i/40)}));
+        const fade=t=>phase(t,0,.12)*(1-phase(t,.86,1));
+        const num=n=>Number(n.toFixed(5)),translate=(x,y,angle=0)=>`translate(${num(x)}px,${num(y)}px) rotate(${num(angle)}deg)`;
+        const joinY=clearClock(mid.x,Math.max(215,Math.min(left.y,right.y)-28*propScale),42*propScale);
+        if(plan.kind==='gear-turn'){
+          const engage=t=>phase(t,.06,.32)*(1-phase(t,.78,.98)),spin=t=>phase(t,.34,.76)*90;
+          const axis=Math.atan2(dy,dx),axisDeg=axis*180/Math.PI;
+          const tooth=Array.from({length:8},(_,i)=>[-22.5,-10,-6,6,10,22.5].map((degrees,j)=>{const angle=(i*45+degrees)*Math.PI/180,r=[13,13,17,17,13,13][j];return `${i||j?'L':'M'}${num(Math.cos(angle)*r)} ${num(Math.sin(angle)*r)}`;})).flat().join('')+'Z';
+          for(const[actor,p,side,role]of[[a,left,-1,'sender'],[b,right,1,'receiver']]){
+            const end={x:mid.x+side*15.6*propScale*Math.cos(axis),y:joinY+side*15.6*propScale*Math.sin(axis)},shift={x:end.x-p.x,y:end.y-(p.y-10)};
+            hand(actor,p,role,dense(t=>({opacity:fade(t),transform:translate(shift.x*engage(t),shift.y*engage(t)-5*propScale,side*spin(t)/7)})));
+            let rotor;const gear=prop(p.x,p.y-10,'gear-'+role,g=>{rotor=svg('g',{class:'social-gear-rotor'},g);svg('path',{d:tooth,class:side<0?'social-copper-gear':'social-slate-gear'},rotor);svg('path',{d:'M-3-3H3V3H-3Z',class:'social-gear-hub'},rotor);svg('path',{d:'M0-10V-5M0 5V10M-10 0H-5M5 0H10',class:'social-gear-spokes'},rotor);});
+            animate(gear,dense(t=>({opacity:fade(t),transform:translate(shift.x*engage(t),shift.y*engage(t))})),'linear');
+            // A half-tooth initial phase and opposite equal rotation preserve
+            // the meshed contact instead of one cog cutting through the other.
+            animate(rotor,dense(t=>({transform:`rotate(${num(axisDeg+(side>0?22.5:0)-side*spin(t))}deg)`})),'linear');
+          }
+          nod(a,.7);nod(b,.78);
+        }else if(plan.kind==='fan-breeze'){
+          const carry=t=>phase(t,.06,.3)*(1-phase(t,.8,.98)),opened=t=>phase(t,.17,.4)*(1-phase(t,.75,.96));
+          const fanX=mid.x-18*propScale,fanY=joinY+8*propScale,shift={x:fanX-left.x,y:fanY-(left.y-10)};
+          hand(a,left,'sender',dense(t=>({opacity:fade(t),transform:translate(shift.x*carry(t),shift.y*carry(t)-3*propScale,-8*opened(t))})));
+          hand(b,right,'receiver',dense(t=>({opacity:fade(t),transform:translate(-8*phase(t,.38,.66)*propScale,-9*opened(t)*propScale,12*opened(t))})));
+          const fan=prop(left.x,left.y-10,'bamboo-fan',g=>{
+            for(let i=0;i<7;i++){
+              const rib=svg('g',{class:'social-fan-rib','data-rib':i},g);
+              svg('path',{d:'M0 1L-4-35H4L3-15Z',class:i%2?'social-fan-paper-light':'social-fan-paper'},rib);svg('path',{d:'M0 4V-34',class:'social-bamboo-rib'},rib);
+              animate(rib,dense(t=>({transform:`rotate(${num((i-3)*(1+19*opened(t)))}deg)`})),'linear');
+            }
+            svg('path',{d:'M-3 0H3V9H-3Z',class:'social-fan-pin'},g);
+          });
+          animate(fan,dense(t=>({opacity:fade(t),transform:translate(shift.x*carry(t),shift.y*carry(t),5*Math.sin(t*Math.PI*4)*opened(t))})),'linear');
+          // Two staggered breaths, not a recycled ballistic hand-off. Their
+          // ribbons and a tiny leaf travel only inside this decorative owner.
+          for(let i=0;i<2;i++){
+            const wind=prop(fanX,fanY-15*propScale,'breeze-'+i,g=>svg('path',{d:'M-15-3H-5L0-7H12L17-3H24M-9 5H7L12 1H25',class:'social-breeze'},g));
+            animate(wind,dense(t=>{const p=phase(t,.37+i*.1,.63+i*.1);return{opacity:Math.sin(p*Math.PI)*.85,transform:translate(18*propScale+(right.x-fanX-28*propScale)*p,-7*Math.sin(p*Math.PI)*propScale,i?-4:4)};}),'linear');
+          }
+          const leaf=prop(fanX+14*propScale,fanY-12*propScale,'tea-leaf',g=>{svg('path',{d:'M-6 0L-2-5H5V1L1 5H-4Z',class:'social-tea-leaf'},g);svg('path',{d:'M-5 3L4-3',class:'social-bamboo-rib'},g);});
+          animate(leaf,dense(t=>{const p=phase(t,.43,.79);return{opacity:Math.sin(p*Math.PI),transform:translate((right.x-fanX-14*propScale)*p,(right.y-fanY+12*propScale)*p-18*Math.sin(p*Math.PI)*propScale,24*Math.sin(p*Math.PI*2))};}),'linear');
+          nod(a,.64);nod(b,.74);
+        }else{
+          const joined=t=>phase(t,.06,.36)*(1-phase(t,.82,.98));
+          for(const[actor,p,side,role]of[[a,left,-1,'sender'],[b,right,1,'receiver']]){
+            const shift={x:mid.x-p.x,y:joinY-(p.y-12)};
+            hand(actor,p,role,dense(t=>({opacity:fade(t),transform:translate((shift.x+side*22*propScale)*joined(t),(shift.y-2*propScale)*joined(t),side*12*(1-joined(t)))})));
+            const half=prop(p.x,p.y-12,'paper-orbit-'+role,g=>{const rail=svg('g',{class:'social-orbit-half'},g);svg('path',{d:side<0?'M0-24L-12-22-22-12-24 0-22 12-12 22 0 24':'M0-24L12-22 22-12 24 0 22 12 12 22 0 24',class:side<0?'social-orbit-paper-left':'social-orbit-paper-right'},rail);svg('path',{d:side<0?'M-9-17L-16-8M-16 9L-8 17':'M9-17L16-8M16 9L8 17',class:'social-orbit-fold'},rail);});
+            animate(half,dense(t=>({opacity:fade(t),transform:translate(shift.x*joined(t),shift.y*joined(t),side*24*(1-joined(t)))})),'linear');
+          }
+          const star=prop(mid.x,joinY,'orbit-star',g=>svg('path',{d:'M0-5L2-2 5 0 2 2 0 5-2 2-5 0-2-2Z',class:'social-orbit-star'},g));
+          animate(star,dense(t=>{const p=phase(t,.4,.8),angle=p*Math.PI*2;return{opacity:phase(t,.36,.44)*(1-phase(t,.8,.87)),transform:translate(Math.sin(angle)*15*propScale,-Math.cos(angle)*15*propScale,p*360)};}),'linear');
+          for(const side of[-1,1]){const tab=prop(mid.x,joinY+side*24*propScale,'orbit-seam-'+side,g=>svg('path',{d:'M-4-2H4V2H-4Z',class:'social-orbit-seam'},g));animate(tab,dense(t=>({opacity:phase(t,.33,.4)*(1-phase(t,.8,.87)),transform:translate(0,0)})),'linear');}
+          nod(a,.67,true);nod(b,.73,true);
+        }
       }
       const room=world.getBoundingClientRect();
       current={token:plan.token,node,animations,anchors:pair.map(actor=>({id:actor.id,...actor.anchor})),worldWidth:room.width,worldHeight:room.height,kind:plan.kind,visualKey:visualKey(ctx)};

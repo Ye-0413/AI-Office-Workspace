@@ -158,13 +158,14 @@ test('background Stop remains waiting-tool and snapshots cannot mutate store', (
   const s = store.snapshot()[0]; assert.equal(s.status, 'active'); assert.equal(s.activity, 'waiting-tool');
   s.events[0].summary = 'tampered'; assert.notEqual(store.snapshot()[0].events[0].summary, 'tampered');
 });
-test('prune bounds sessions and subscriptions can be removed', () => {
+test('history retention preserves unresolved sessions and subscriptions can be removed', () => {
   const store = createSessionStore({ now: () => 2000, maxSessions: 2 }); let calls = 0;
   const unsubscribe = store.onChange(() => calls++);
   store.ingest(event('turn-start', { sessionId: 'a' })); unsubscribe();
   store.ingest(event('turn-start', { sessionId: 'b' }));
   store.ingest(event('turn-start', { sessionId: 'c' }));
-  assert.equal(calls, 1); assert.equal(store.snapshot().length, 2);
+  assert.equal(calls, 1); assert.equal(store.snapshot().length, 3, 'three real active identities exceed a two-row history target');
+  assert.deepEqual(store.snapshot().map(s => s.sessionId).sort(), ['a', 'b', 'c']);
   store.clear(); assert.equal(store.snapshot().length, 0);
 });
 test('a fresh child is positive evidence that its quiet parent is still collaborating', () => {

@@ -159,11 +159,14 @@ function createUsageLog({ dataDir, now = Date.now, staleMs = 180000 } = {}) {
       const archived = db.prepare('SELECT last_seen_at FROM actors WHERE id=?').get(id);
       if (!archived) continue;
       const state = stateOf(snapshot), old = tracks.get(id);
-      // Never recover an interval from disk or backfill a replay's historic time.
-      // Future-dated evidence cannot open a metered interval either.
-      if (state.lastEventAt === null || state.lastEventAt > time || state.lastEventAt < archived.last_seen_at) continue;
+      // Accepted passive metadata can move archive last_seen_at without moving
+      // the reducer's work heartbeat. Preserve only an existing process lease
+      // with a nonregressing heartbeat; disk history cannot recreate that lease.
+      const continuous = old && state.lastEventAt !== null && state.lastEventAt >= old.lastEventAt;
+      // Future-dated or regressing evidence cannot open a metered interval.
+      if (state.lastEventAt === null || state.lastEventAt > time || old && state.lastEventAt < old.lastEventAt || !continuous && state.lastEventAt < archived.last_seen_at) continue;
       next.set(id, { ...state, cursor: Math.max(time, old?.cursor ?? time), ...(credits.get(id) || { meteredStart: time, meteredEnd: time, meteredActivity: state.activity, meteredStatus: state.status }) });
-      db.prepare('UPDATE actors SET parent_id=CASE WHEN ?<>\'\' THEN ? ELSE parent_id END,project_name=CASE WHEN ?<>\'\' THEN ? ELSE project_name END,status=CASE WHEN ?>=last_seen_at THEN ? ELSE status END,activity=CASE WHEN ?>=last_seen_at THEN ? ELSE activity END WHERE id=?').run(identifier(snapshot.parentId, 8192) ? snapshot.parentId : '', identifier(snapshot.parentId, 8192) ? snapshot.parentId : '', text(snapshot.projectName, 128), text(snapshot.projectName, 128), state.lastEventAt ?? -1, state.status, state.lastEventAt ?? -1, state.activity, id);
+      db.prepare('UPDATE actors SET parent_id=CASE WHEN ?<>\'\' THEN ? ELSE parent_id END,project_name=CASE WHEN ?<>\'\' THEN ? ELSE project_name END,status=?,activity=? WHERE id=?').run(identifier(snapshot.parentId, 8192) ? snapshot.parentId : '', identifier(snapshot.parentId, 8192) ? snapshot.parentId : '', text(snapshot.projectName, 128), text(snapshot.projectName, 128), state.status, state.activity, id);
     }
     return next;
   }

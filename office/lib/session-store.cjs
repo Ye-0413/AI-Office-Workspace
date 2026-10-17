@@ -208,7 +208,7 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
           const parent = sessions.get(s.parentId);
           if (parent) { settle(parent, at); retainPendingState(parent); }
         }
-        prune(false); accepted(event); emit(); return true;
+        accepted(event); prune(false); emit(); return true;
       }
       const elicitationResolved = event.evidence?.rawEvent === 'ElicitationResult'
         && [...s.waits.values()].some(wait => wait.rawEvent === 'Elicitation' && (!event.toolCallId || event.toolCallId === wait.callId));
@@ -228,7 +228,7 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
         s.lastEventAt = Math.max(s.lastEventAt, at);
       }
       settle(s, at); retainPendingState(s);
-      prune(false); accepted(event); emit(); return true;
+      accepted(event); prune(false); emit(); return true;
     }
     if (isHook(event)) { s.hookAt = Math.max(s.hookAt, at); s.hookReceivedAt = now(); s.hookTurnId = event.turnId || s.turnId; }
     if (event.event === 'turn-start' || (!s.turnId && event.turnId && !terminal.has(event.event))) {
@@ -323,7 +323,7 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
       summary: s.summary, toolName: event.toolName || '', outcome: event.outcome,
       evidence: event.evidence || {} });
     s.events = s.events.slice(-12);
-    prune(false); accepted(event); emit();
+    accepted(event); prune(false); emit();
     return true;
   }
 
@@ -354,10 +354,25 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
   function prune(notify = true) {
     let changed = false;
     if (sessions.size > maxSessions) {
-      const candidates = [...sessions.values()].sort((a, b) => Number(b.closed) - Number(a.closed) || a.lastEventAt - b.lastEventAt);
+      // This is a history-retention target, not permission to erase live work.
+      // Recompute the observed dependency closure on every pass: an actual
+      // result may release its idle/closed ancestors without a new identity.
+      const retained = new Set();
+      for (const session of sessions.values()) {
+        if (!(['active', 'waiting'].includes(session.status) || session.tools.size || session.waits.size || session.externalPending || session.pendingEnd)) continue;
+        let current = session;
+        while (current && !retained.has(current.id)) {
+          retained.add(current.id);
+          current = current.parentId ? sessions.get(current.parentId) : null;
+        }
+      }
+      const candidates = [...sessions.values()].filter(s => !retained.has(s.id) && (s.closed || s.status === 'closed' || s.status === 'idle'))
+        .sort((a, b) => Number(b.closed) - Number(a.closed) || a.lastEventAt - b.lastEventAt);
       while (sessions.size > maxSessions && candidates.length) {
         const retired = candidates.shift(); discardDeferred(retired); sessions.delete(retired.id); changed = true;
       }
+      // An unresolved cast may temporarily exceed the target. Observation age
+      // never supplies a terminal; later real events retry safe reclamation.
     }
     if (notify && !drainingDeferred) {
       drainingDeferred = true;
@@ -380,6 +395,8 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
   }
   return { ingest, snapshot, prune, clear() { sessions.clear(); seen.clear(); deferred.clear(); emit(); },
     onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+    // Readers see the fully reduced accepted identity before safe history
+    // eviction; onChange still receives the post-retention snapshot.
     // Includes a real deferred record accepted during prune; neither queueing,
     // stale/duplicate rejection nor lease expiration alone emits an event.
     onAccepted(fn) { if (typeof fn !== 'function') throw new TypeError('Callback required'); acceptedListeners.add(fn); return () => acceptedListeners.delete(fn); } };

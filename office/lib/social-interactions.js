@@ -6,15 +6,18 @@
     workshop:Object.freeze([
       Object.freeze({id:'blueprint-pass',labelZh:'递一张小图纸',labelEn:'Pass a little blueprint',duration:2800}),
       Object.freeze({id:'paperplane-nod',labelZh:'纸飞机与点头',labelEn:'Paper plane and a nod',duration:3000}),
-      Object.freeze({id:'magnet-puzzle',labelZh:'拼好一块磁贴',labelEn:'Fit two little magnets',duration:3000})]),
+      Object.freeze({id:'magnet-puzzle',labelZh:'拼好一块磁贴',labelEn:'Fit two little magnets',duration:3000}),
+      Object.freeze({id:'gear-turn',labelZh:'同转一对小齿轮',labelEn:'Turn two little gears',duration:3000})]),
     teahouse:Object.freeze([
       Object.freeze({id:'tea-toast',labelZh:'遥遥互敬一盏茶',labelEn:'Raise a cup together',duration:3000}),
       Object.freeze({id:'pastry-pass',labelZh:'传一碟小茶点',labelEn:'Share a little pastry',duration:3000}),
-      Object.freeze({id:'chime-duet',labelZh:'接续一声风铃',labelEn:'Answer a wind chime',duration:3200})]),
+      Object.freeze({id:'chime-duet',labelZh:'接续一声风铃',labelEn:'Answer a wind chime',duration:3200}),
+      Object.freeze({id:'fan-breeze',labelZh:'展开竹扇借清风',labelEn:'Share a bamboo-fan breeze',duration:3200})]),
     observatory:Object.freeze([
       Object.freeze({id:'star-link',labelZh:'共绘一段星线',labelEn:'Sketch a constellation',duration:3200}),
       Object.freeze({id:'star-note',labelZh:'传一页星笺',labelEn:'Pass a star note',duration:3000}),
-      Object.freeze({id:'meteor-gaze',labelZh:'一起抬头看流星',labelEn:'Watch a meteor together',duration:3200})])
+      Object.freeze({id:'meteor-gaze',labelZh:'一起抬头看流星',labelEn:'Watch a meteor together',duration:3200}),
+      Object.freeze({id:'orbit-join',labelZh:'拼合一圈纸星轨',labelEn:'Join a little paper orbit',duration:3200})])
   });
   const TYPES=Object.freeze({workshop:Object.freeze({blueprint:'blueprint-pass',circuit:'magnet-puzzle',bell:'paperplane-nod'}),teahouse:Object.freeze({tea:'tea-toast',windchime:'chime-duet',note:'pastry-pass'}),observatory:Object.freeze({starmap:'star-link',telescope:'meteor-gaze','meteor-note':'star-note'})});
   const LIMITS=Object.freeze({pairDistance:520,manualRadius:260,actorCooldown:18000,manualGap:1400,autoGap:24000,pairs:128,actors:256});

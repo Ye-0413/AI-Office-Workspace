@@ -362,14 +362,14 @@ test('a very late child terminal preserves the explicit settlement of its now-st
   assert.equal(p.events, 2); assert.equal(c.events, 2); assert.equal(c.parentId, p.id);
 });
 
-test('a delayed new actor cannot roll back the stale-capped work of an unrelated actor pruned by the real store', t => {
+test('a delayed new actor preserves an unresolved actor and its own stale-capped work under the history target', t => {
   const f = fixture(t), log = f.create(), { store, writes, ingest } = observedUsage(f, log, { maxSessions: 2 }), base = f.now();
   ingest({ sessionId: 'B' }); f.tick(1); ingest({ sessionId: 'A' });
   f.set(base + 179900); assert.equal(log.reconcile(store.snapshot()), true);
   assert.equal(log.query().items.find(row => row.id === 'codex:B').activeMs, 179900);
   f.set(base + 180100);
   const incoming = ingest({ sessionId: 'C', at: base + 179500 });
-  assert.deepEqual(store.snapshot().map(row => row.id).sort(), ['codex:A', 'codex:C'], 'the real maxSessions prune removed only older B');
+  assert.deepEqual(store.snapshot().map(row => row.id).sort(), ['codex:A', 'codex:B', 'codex:C'], 'live retention keeps all unresolved identities beyond the history target');
   const before = writes.length;
   assert.equal(store.ingest(incoming), false); assert.equal(writes.length, before);
   const check = archive => {
