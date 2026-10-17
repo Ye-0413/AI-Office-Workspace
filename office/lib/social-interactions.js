@@ -20,10 +20,26 @@
   const LIMITS=Object.freeze({pairDistance:520,actorCooldown:18000,manualGap:1400,autoGap:24000,pairs:128,actors:256});
   const venueOf=context=>VENUES.includes(context?.venue)?context.venue:VENUES.includes(context?.scene)?context.scene:'workshop';
   const quiet=context=>!!(context?.hidden||context?.reducedMotion||context?.lowPower||context?.mode&&context.mode!=='live');
+  const finitePoint=value=>value&&Number.isFinite(value.x)&&Number.isFinite(value.y);
+  const navigationOwner=value=>value&&typeof value==='object'&&typeof value.kind==='string'&&value.kind.trim()&&finitePoint(value.target);
+  function physicalBusy(actor,context={}){
+    if(context?.fitting===true)return true;
+    if(!actor||typeof actor!=='object')return false;
+    const reservation=actor.routeReservation,pending=actor.pendingStation;
+    // pumpTraffic owns a reservation only for its current action serial.
+    // A saved plan/walkTiming without its actual motion is not a new lease.
+    const reserved=Number.isSafeInteger(actor.serial)&&actor.serial>=0&&reservation
+      &&Number.isSafeInteger(reservation.token)&&reservation.token>0&&reservation.serial===actor.serial;
+    // These objects come from requestStation/cancelPhysicalRoutes. They also
+    // cover a queued journey, a fit resume and the real between-leg yield gap.
+    return !!(actor.motion||actor.walking||reserved||actor.yielding===true
+      ||navigationOwner(actor.navigation)||navigationOwner(actor.resumeNavigation)
+      ||pending&&finitePoint(pending.seat)&&Number.isFinite(pending.due));
+  }
   function eligible(actor,context={}){
     const s=actor?.session;
     return !!(!quiet(context)&&actor&&typeof actor.id==='string'&&actor.id&&s&&typeof s==='object'&&s.provider
-      &&actor.visible!==false&&!actor.entryPending&&!actor.stagedEntry&&!actor.motion&&!actor.walking&&!actor.departing&&!actor.completing&&!actor.holdingFamily&&!actor.reacting
+      &&actor.visible!==false&&!actor.entryPending&&!actor.stagedEntry&&!physicalBusy(actor,context)&&!actor.departing&&!actor.completing&&!actor.holdingFamily&&!actor.reacting
       &&!['splitting','returning','absorbing'].includes(actor.clonePhase)
       &&!s.closed&&!s.disconnected&&!['stale','closed','waiting'].includes(s.status)&&!s.attention
       &&!['waiting-user','error'].includes(s.activity)&&!actor.spec?.stale
@@ -71,5 +87,5 @@
     function state(){return {active:active?{token:active.token,venue:active.venue,kind:active.kind,ids:[...active.ids],startedAt:active.startedAt,endsAt:active.endsAt}:null,pairEntries:pairTimes.size,actorEntries:actorTimes.size,nextAuto};}
     return Object.freeze({plan,valid,cancel,finish,state});
   }
-  return Object.freeze({VENUES,CATALOG,TYPES,LIMITS,venueOf,eligible,activityKey,choosePair,createScheduler});
+  return Object.freeze({VENUES,CATALOG,TYPES,LIMITS,venueOf,physicalBusy,eligible,activityKey,choosePair,createScheduler});
 });

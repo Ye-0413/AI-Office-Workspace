@@ -66,3 +66,21 @@ test('lifecycle previews use current production gait/effects and at least 31 cha
  for(const item of manifest.assets){const bytes=fs.readFileSync(path.join(folder,item.file)),gif=inspectGif(bytes);assert.equal(bytes.length,item.bytes);assert.equal(createHash('sha256').update(bytes).digest('hex'),item.sha256);assert.ok(bytes.length<5*1024*1024);assert.equal(gif.width,item.width);assert.equal(gif.height,item.height);assert.equal(gif.frames,item.frames);assert.ok(item.fps>=40);assert.ok(item.distinctPngFrames>=31);assert.ok(gif.uniqueImages>=31,item.file+' needs changing encoded image data');assert.equal(gif.loop,0);assert.ok(Math.abs(gif.delay-item.durationMs/10)<=5);}
  const walk=manifest.assets[0].walkingCertificate;assert.ok(walk);assert.equal(walk.inPlace,true);assert.equal(walk.roomNavigationCertified,false);assert.equal(walk.worldDistance,384);assert.equal(walk.plannedDurationMs,1800);assert.equal(walk.samplingDurationMs,2000);assert.equal(walk.stillTailMs,200);assert.ok(walk.encodedStillMs>=180);assert.equal(walk.worldStride,192);assert.equal(walk.completedStrideCycles,2);assert.equal(walk.controller,'OfficeAvatarPerformance.locomotion');assert.equal(walk.sameStrideAnimationObjects,true);assert.equal(walk.first.pathDistance,0);assert.equal(walk.first.worldSpeed,0);assert.equal(walk.last.pathDistance,384);assert.equal(walk.last.worldSpeed,0);assert.ok(Math.abs(walk.last.stridePhaseMs-1200)<.001);
 });
+
+
+test('station gallery certifies all twelve current furniture programs and actual complete looping media',()=>{
+ const Station=require('../renderer/station-arrival.js'),Exporter=require('../scripts/render-station-previews.cjs');
+ const folder=path.join(dir,'stations'),manifest=JSON.parse(fs.readFileSync(path.join(folder,'manifest.json')));
+ assert.equal(manifest.version,require('../package.json').version);assert.equal(manifest.restrictedImageElements,0);assert.equal(manifest.unlistedResourceRequests,0);
+ assert.equal(manifest.sampling.continuousRoomPlaybackCertified,false);assert.equal(manifest.sampling.continuousOwnerLifetimeCertified,false);assert.match(manifest.scope,/synthetic/);assert.match(manifest.scope,/no provider connection/);
+ assert.deepEqual(Object.keys(manifest.sourceHashes).sort(),[...Exporter.SOURCES].sort());
+ for(const [name,hash]of Object.entries(manifest.sourceHashes))assert.equal(createHash('sha256').update(fs.readFileSync(path.join(repo,name))).digest('hex'),hash,'re-export station gallery after changing '+name);
+ assert.deepEqual(manifest.assets.map(a=>a.venue),Object.keys(Station.PROGRAMS));
+ for(const item of manifest.assets){
+  const bytes=fs.readFileSync(path.join(folder,item.file)),gif=inspectGif(bytes);assert.equal(createHash('sha256').update(bytes).digest('hex'),item.sha256);assert.equal(bytes.length,item.bytes);assert.ok(bytes.length<5*1024*1024);
+  assert.equal(gif.width,1000);assert.equal(gif.height,720);assert.equal(gif.frames,72);assert.equal(gif.loop,0);assert.ok(gif.uniqueImages>=31);assert.ok(Math.abs(gif.delay-150)<=5);
+  assert.deepEqual(item.programs.map(p=>p.program),Object.values(Station.PROGRAMS[item.venue]));
+  for(const program of item.programs){assert.equal(program.sampledFrames,72);assert.ok(program.distinctPngFrames>=31);assert.equal(program.mountedEndpointIdentityUnchanged,true);assert.ok(program.finiteDecorativeAnimations>=2);}
+ }
+ assert.equal(new Set(manifest.assets.flatMap(a=>a.programs.map(p=>p.program))).size,12);
+});

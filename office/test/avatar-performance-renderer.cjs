@@ -170,12 +170,15 @@ app.whenReady().then(async () => {
     const closed=sample(),pausedClocks=clocks.every(a=>a.playState==='paused'),sameClosedClocks=clocks.every(a=>layer.getAnimations({subtree:true}).includes(a));
     const returned=performance.update(session,{now:100000000});await wait(240);
     const returnedFrame=sample(),sameReturnedClocks=clocks.every(a=>layer.getAnimations({subtree:true}).includes(a));
-    performance.update(session,{hidden:true,now:100000001});
-    const hidden={count:body.getAnimations({subtree:true}).length,layerHidden:layer.hidden,imageOpacity:Number(getComputedStyle(image).opacity)};
-    performance.update(session,{now:100000002});performance.update({...session,status:'stale'},{now:100000003});performance.update(session,{reducedMotion:true,now:100000004});
+    const beforeHiddenTimes=clocks.map(a=>a.currentTime);performance.update(session,{hidden:true,now:100000001});
+    const hidden={count:clocks.length,layerHidden:layer.hidden,imageOpacity:Number(getComputedStyle(image).opacity),sameClocks:clocks.every(a=>layer.getAnimations({subtree:true}).includes(a)),paused:clocks.every(a=>a.playState==='paused'&&!a.pending),before:beforeHiddenTimes,held:clocks.map(a=>a.currentTime)};
+    await wait(80);hidden.after=clocks.map(a=>a.currentTime);
+    performance.update(session,{now:100000002});
+    const hiddenRestore={sameClocks:clocks.every(a=>layer.getAnimations({subtree:true}).includes(a)),times:clocks.map(a=>a.currentTime),program:performance.plan.program};
+    performance.update({...session,status:'stale'},{now:100000003});performance.update(session,{reducedMotion:true,now:100000004});
     const quiet={count:body.getAnimations({subtree:true}).length,opacity:Number(getComputedStyle(layer).opacity)};
     performance.destroy();actor.remove();
-    return {frames,transitions,firstTimes,times,firstProgram,returnedProgram:returned.program,active,closed,returnedFrame,sameClocks,pausedClocks,sameClosedClocks,sameReturnedClocks,hidden,quiet,factsUnchanged:JSON.stringify(session)===facts};
+    return {frames,transitions,firstTimes,times,firstProgram,returnedProgram:returned.program,active,closed,returnedFrame,sameClocks,pausedClocks,sameClosedClocks,sameReturnedClocks,hidden,hiddenRestore,quiet,factsUnchanged:JSON.stringify(session)===facts};
   })()`);
   assert.equal(presence.frames.length,45,'sample at least 31 real requestAnimationFrame renders across repeated interrupted fades');
   assert.ok(presence.frames.every(frame=>frame.identity),'stale, unknown and active signals preserve the same rig and actual work object nodes');
@@ -190,7 +193,11 @@ app.whenReady().then(async () => {
   assert.ok(presence.times.every((time,i)=>time>=presence.firstTimes[i]&&time>4800),'the original joint clocks never rewind to zero');
   assert.equal(presence.returnedProgram,presence.firstProgram,'a long inactive interval does not rotate the per-kind work program');
   assert.equal(presence.active.rig,1);assert.equal(presence.active.bitmap,0);assert.equal(presence.closed.rig,0);assert.equal(presence.closed.bitmap,1);assert.equal(presence.returnedFrame.rig,1);assert.equal(presence.returnedFrame.bitmap,0);
-  assert.deepEqual(presence.hidden,{count:0,layerHidden:true,imageOpacity:1});assert.deepEqual(presence.quiet,{count:0,opacity:1});assert.equal(presence.factsUnchanged,true);
+  assert.ok(presence.hidden.count>0);assert.equal(presence.hidden.layerHidden,false);assert.equal(presence.hidden.imageOpacity,0);assert.equal(presence.hidden.sameClocks,true);assert.equal(presence.hidden.paused,true);
+  assert.ok(presence.hidden.held.every((time,i)=>Math.abs(time-presence.hidden.before[i])<.2),'hidden pause captures the actual phase without a pending-pause frame');
+  assert.deepEqual(presence.hidden.after,presence.hidden.held,'a hidden standing work interval does not advance its original CSS objects');
+  assert.equal(presence.hiddenRestore.sameClocks,true);assert.equal(presence.hiddenRestore.program,presence.firstProgram);assert.ok(presence.hiddenRestore.times.every((time,i)=>Math.abs(time-presence.hidden.held[i])<.2),'same-program restoration begins at the paused actual phase');
+  assert.deepEqual(presence.quiet,{count:0,opacity:1});assert.equal(presence.factsUnchanged,true);
   const returningPresence = await evaluate(`(async()=>{
     const actor=document.createElement('div');actor.className='fixture';
     const body=document.createElement('span');body.className='character-body';
@@ -262,7 +269,33 @@ app.whenReady().then(async () => {
   assert.deepEqual(returningPresence.destroyed,{rigs:0,animations:0});assert.equal(returningPresence.factsUnchanged,true);
   await evaluate('(()=>{const item=items[0];item.performance.update(item.session,{now:item.performance.plan.programMs*3+3});item.performance.update(item.session,{now:item.performance.plan.programMs*3+3,reducedMotion:true})})()');
   assert.equal(await evaluate('items[0].body.getAnimations({subtree:true}).length'), 0, 'quiet preference cancels an in-flight bridge immediately');
-  for (const preference of ['reducedMotion', 'lowPower', 'hidden', 'reaction']) {
+  // Normal standing work hides by pausing the same CSS objects. Reduced motion,
+  // low power, explicit reaction and lifecycle hiding retain their static paths.
+  await evaluate('items.forEach(item=>item.performance.update(item.session))');await delay(270);
+  const hiddenStanding=await evaluate(`(async()=>{
+    const owners=items.map(item=>{
+      const clocks=item.body.getAnimations({subtree:true}).filter(a=>typeof a.animationName==='string'&&a.effect.getTiming().iterations===Infinity);
+      const before=clocks.map(a=>a.currentTime),program=item.performance.plan.program;
+      item.performance.update(item.session,{hidden:true});
+      return{item,clocks,before,held:clocks.map(a=>a.currentTime),program};
+    });
+    let stable=true,retained=true,paused=true;
+    for(let frame=0;frame<31;frame++){
+      await new Promise(resolve=>requestAnimationFrame(resolve));
+      for(const owner of owners)for(let i=0;i<owner.clocks.length;i++){
+        const clock=owner.clocks[i];stable=stable&&Math.abs(clock.currentTime-owner.held[i])<.0001;
+        retained=retained&&owner.item.body.getAnimations({subtree:true}).includes(clock);paused=paused&&clock.playState==='paused'&&!clock.pending;
+      }
+    }
+    const restored=owners.map(owner=>{
+      owner.item.performance.update(owner.item.session);
+      return{same:owner.clocks.every(a=>owner.item.body.getAnimations({subtree:true}).includes(a)),phase:owner.clocks.every((a,i)=>Math.abs(a.currentTime-owner.held[i])<.2),program:owner.item.performance.plan.program===owner.program};
+    });
+    return{frames:31,nonempty:owners.every(owner=>owner.clocks.length>0),counts:owners.map(owner=>owner.clocks.length),pauseExact:owners.every(owner=>owner.held.every((time,i)=>Math.abs(time-owner.before[i])<.2)),stable,retained,paused,restored};
+  })()`);
+  assert.equal(hiddenStanding.frames,31);assert.equal(hiddenStanding.nonempty,true);assert.equal(hiddenStanding.pauseExact,true);assert.equal(hiddenStanding.stable,true);assert.equal(hiddenStanding.retained,true);assert.equal(hiddenStanding.paused,true);
+  assert.ok(hiddenStanding.restored.every(owner=>owner.same&&owner.phase&&owner.program),'all88 hidden standing programs resume the original nonempty CSS owners and actual phases');
+  for (const preference of ['reducedMotion', 'lowPower', 'reaction']) {
     await evaluate(`items.forEach(item=>item.performance.update(item.session,{${preference}:true}))`);
     assert.equal(await evaluate('items.reduce((sum,item)=>sum+item.body.getAnimations({subtree:true}).length,0)'), 0, preference + ' stops native animation timelines');
   }

@@ -1,0 +1,19 @@
+/* Furniture-only cues; all real bodies stay on their unchanged z10 plane. */
+.station-arrival-layer{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden;contain:layout style}
+.station-arrival{position:absolute;width:120px;height:80px;overflow:visible;pointer-events:none;opacity:0;fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-width:1.4;shape-rendering:geometricPrecision}
+.station-arrival g{transform-box:view-box;transform-origin:0 0}
+.station-arrival .station-paper{fill:#eadbb8;stroke:#786445;stroke-width:1.5}
+.station-arrival .station-line{fill:none;stroke:#77694e;stroke-width:1.25}
+.station-arrival .station-metal{fill:#b9bda4;stroke:#685c40;stroke-width:1.5}
+.station-arrival .station-accent{fill:#c59355;stroke:#745536;stroke-width:1.2}
+.station-arrival .station-accent-line{fill:none;stroke:#59808b;stroke-width:1.9}
+.station-arrival .station-leaf{fill:#92aa82;stroke:#5e7958;stroke-width:1.2}
+.station-arrival .station-steam{fill:none;stroke:#eee2c2;stroke-width:1.6}
+.station-arrival[data-palette="tea"] .station-paper{fill:#e9e0bd;stroke:#788264}
+.station-arrival[data-palette="tea"] .station-accent{fill:#c5d1b4;stroke:#6b8466}
+.station-arrival[data-palette="tea"] .station-accent-line{stroke:#718d75}
+.station-arrival[data-palette="star"] .station-paper{fill:#d5d9dc;stroke:#687e87}
+.station-arrival[data-palette="star"] .station-metal{fill:#b7c7cf;stroke:#657983}
+.station-arrival[data-palette="star"] .station-accent{fill:#e2c983;stroke:#9a8652}
+.station-arrival[data-palette="star"] .station-accent-line{stroke:#668f9e}
+@media(prefers-reduced-motion:reduce){.station-arrival-layer{display:none}}

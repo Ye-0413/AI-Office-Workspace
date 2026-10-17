@@ -47,6 +47,8 @@
   const staticAttributes = [...document.querySelectorAll('[aria-label],[title],[alt],[placeholder]')].flatMap(node => ['aria-label','title','alt','placeholder'].filter(name => node.hasAttribute(name)).map(name => ({node,name,original:node.getAttribute(name)})));
   let doorTimer = 0;
   let snapshot = { mode: 'live', now: Date.now(), sessions: [], connections: [] };
+  let nativeWindowHidden = false;
+  function sceneHidden() { return document.hidden || nativeWindowHidden; }
   let selectedProject = '';
   let roomSelectionExplicit = false;
   let selectedSession = '';
@@ -74,10 +76,14 @@
   const providerIds = window.OfficeProviders.getAllProviders().map(provider => provider.id === 'cursor-agent' ? 'cursor' : provider.id);
   const observedIds = new Set();
   let familyGraph = Family.build([]);
-  const visitor = window.OfficeIdleVisitor.create({ layer: $('visitors'), world, openDoor, context: () => ({ enabled: settings.idleVisitor, ready: snapshotReceived > 0, mode: snapshot.mode, busy: attendance.present.length > 0 || actors.size > 0, hidden: document.hidden, reducedMotion: reduced(), lowPower: settings.lowPower, language }) });
+  const visitor = window.OfficeIdleVisitor.create({ layer: $('visitors'), world, openDoor, context: () => ({ enabled: settings.idleVisitor, ready: snapshotReceived > 0, mode: snapshot.mode, busy: attendance.present.length > 0 || actors.size > 0, hidden: sceneHidden(), reducedMotion: reduced(), lowPower: settings.lowPower, language }) });
   const sceneContext = () => ({ venue: settings.sceneVenue, scene: settings.sceneVenue, theme: settings.sceneTheme, weather: settings.sceneWeather,
-    language, reducedMotion: reduced(), lowPower: settings.lowPower, hidden: document.hidden, dayPhase: office.dataset.dayPhase, now: Date.now() });
+    language, reducedMotion: reduced(), lowPower: settings.lowPower, hidden: sceneHidden(), fitting, scale: uniformScale, mode: snapshot.mode,
+    artworkKey: $('room-art').dataset.artworkKey || '', dayPhase: office.dataset.dayPhase, now: Date.now() });
   const social = window.OfficeAgentSocial?.create({ layer: $('social-effects'), world, getActors: () => actors, getContext: sceneContext });
+  const stationArrival = window.OfficeStationArrival?.create({ layer: $('station-arrivals'), world, getActors: () => actors, getContext: sceneContext });
+  const onStationArrival = event => stationArrival?.arrive(event.detail);
+  office.addEventListener('office:actor-arrival', onStationArrival);
   const themeEnvironment = window.OfficeThemeEnvironment?.create({ office, world, getState: sceneContext });
   const venueStage = window.OfficeVenueStage?.create({ office, world, topbar: document.querySelector('.topbar'), getState: sceneContext,
     onSelectVenue: id => saveSettings({ sceneVenue: id }), onInteraction: payload => social?.trigger(payload) });
@@ -134,11 +140,11 @@
   function archiveCount() { return selectedProject === Scene.ALL_ROOMS ? Math.min(3, [...archivedTurns.values()].reduce((sum, count) => sum + count, 0)) : archivedTurns.get(selectedProject) || 0; }
   function keepsakeIcon(session) { return ({teacup:'♨',paperboat:'⛵',bookmark:'▤',lantern:'✧',leaf:'❧',pebble:'◇',bell:'♧',pencil:'✎',shell:'⌁',star:'✦',acorn:'♧',ribbon:'⋈'})[persona(session).keepsake] || '✦'; }
   function reduced() { return settings.reducedMotion || mediaReduce.matches; }
-  function quietSprites() { return reduced() || settings.lowPower || document.hidden; }
+  function quietSprites() { return reduced() || settings.lowPower || sceneHidden(); }
   function assetURL(name, replay) { return '../assets/avatars/' + name + (replay ? '?_t=' + (++spriteNonce) : ''); }
   function setPose(actor, name, replay = false) {
     const performanceSession = actor.visualWorkActivity ? { ...actor.session, activity: actor.visualWorkActivity } : actor.session;
-    const performance = actor.performance && actor.performance.update(performanceSession, { now: Date.now(), reducedMotion: reduced(), lowPower: settings.lowPower, hidden: document.hidden || actor.entryPending, walking: Boolean(actor.motion) || actor.node.dataset.walking === 'true', reaction: false, departing: actor.departing, stale: actor.spec.stale });
+    const performance = actor.performance && actor.performance.update(performanceSession, { now: Date.now(), reducedMotion: reduced(), lowPower: settings.lowPower, hidden: sceneHidden() || actor.entryPending, walking: Boolean(actor.motion) || actor.node.dataset.walking === 'true', reaction: false, departing: actor.departing, stale: actor.spec.stale });
     actor.fallback?.retry();
     const asset = quietSprites() ? 'clawd-static-base.svg' : performance && performance.active ? performance.asset : name;
     actor.wantedAsset = name;
@@ -778,7 +784,7 @@
     actor.performance?.locomotion?.({ owner: owner.motion, distanceWorld: sample.pathDistance, speedWorld: sample.worldSpeed, scale: uniformScale });
   }
   function ensureMotionTicker() {
-    if (frameTimer || destroyed || document.hidden || ![...actors.values()].some(actor => actor.motion)) return;
+    if (frameTimer || destroyed || sceneHidden() || ![...actors.values()].some(actor => actor.motion)) return;
     function tick() {
       frameTimer = 0;
       if (destroyed) return;
@@ -792,7 +798,7 @@
         } else if (actor.endpointOverlap && actors.get(actor.endpointOverlap.parentId)?.motion) endpointParent(actor);
       }
       renderHelperLinks();
-      if (moving && !document.hidden) frameTimer = requestAnimationFrame(tick);
+      if (moving && !sceneHidden()) frameTimer = requestAnimationFrame(tick);
     }
     frameTimer = requestAnimationFrame(tick);
   }
@@ -807,7 +813,7 @@
     const separating = [...actors.values()].filter(child => child !== actor && endpointParent(child) === actor
       && !Scene.actorsOverlap(target, actorGeometry(actor), currentPosition(child), actorGeometry(child), currentPage.gap));
     const overlapIds = [...new Set([...(parent && (cloneBusy(actor) || actor.justEntered) ? [parent.id] : []), ...(endpoint ? [endpoint.id] : []), ...separating.map(child => child.id)])];
-    if (!traffic.request(actor.id, target, { instant: reduced() || document.hidden, overlapIds })) return false;
+    if (!traffic.request(actor.id, target, { instant: reduced() || sceneHidden(), overlapIds })) return false;
     actor.node.dataset.traffic = 'queued';
     transitCaption(actor);
     return new Promise(resolve => { trafficWaiters.set(actor.id, { actor, target, serial, carrying, resolve }); pumpTraffic(); });
@@ -817,7 +823,7 @@
     const target = path.at(-1);
     actor.node.dataset.traffic = 'moving';
     const length = path.slice(1).reduce((sum, point, index) => sum + Scene.distance(path[index], point), 0);
-    if (length < .000001 || instant || reduced() || document.hidden) {
+    if (length < .000001 || instant || reduced() || sceneHidden()) {
       actor.node.style.transition = 'none';
       actor.position = { x: target.x, y: target.y };
       actor.node.style.transform = actorTransform(actor.position, actor.helper);
@@ -1612,15 +1618,22 @@
     for (const session of alive) if (nextAttention.has(session.id) && !previousAttention.has(session.id)) text($('announcer'), I18n.t(language,'announce.attention',{provider:Scene.providerName(session.provider),title:session.title || '任务'}));
     previousAttention = nextAttention;
     refreshQuietPresentation();
-    venueStage?.update(sceneContext()); festivalStage?.update(sceneContext()); themeEnvironment?.update(sceneContext()); social?.update();
+    venueStage?.update(sceneContext()); festivalStage?.update(sceneContext()); themeEnvironment?.update(sceneContext()); social?.update(); stationArrival?.update();
   }
   function receive(next) {
     if (!next || !Array.isArray(next.sessions)) return;
+    const previouslyHidden = sceneHidden();
+    // Native window evidence is independent of AI activity. A retained boolean
+    // remains the last confirmed host state if the next native read fails.
+    nativeWindowHidden = typeof next.windowVisibility?.hidden === 'boolean' ? next.windowVisibility.hidden : false;
     snapshotReceived += 1;
     snapshot = { ...next, mode: 'live', sessions: next.sessions.filter((session) => session && typeof session.id === 'string'), connections: Array.isArray(next.connections) ? next.connections : [] };
     usageHistory?.updateStatus(snapshot.usageLog);
     setupAssistant?.update(snapshot.setup);
+    // Reconcile fresh work before quiet lifecycle cleanup: this packet may
+    // revoke the very absorption owner that was active before native hiding.
     render();
+    if (previouslyHidden !== sceneHidden()) refreshVisibility();
   }
   async function refreshSnapshot() { const next = await call('getSnapshot'); if (next) receive(next); }
   function switchRoom() {
@@ -1757,17 +1770,18 @@
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && !document.querySelector('dialog[open]')) { selectedSession = ''; $('inspector').hidden = true; for (const actor of actors.values()) updateActorLabel(actor); }
   });
-  document.addEventListener('visibilitychange', () => {
-    office.dataset.hidden = String(document.hidden);
+  function refreshVisibility() {
+    office.dataset.hidden = String(sceneHidden());
     for (const actor of [...actors.values()]) {
       settleQuietCloneEffects(actor);
       if (actors.has(actor.id)) setPose(actor, actor.wantedAsset || actor.spec.asset);
     }
     renderHelperLinks();
     visitor.tick();
-    venueStage?.update(sceneContext()); festivalStage?.update(sceneContext()); themeEnvironment?.update(sceneContext()); social?.update();
-    if (!document.hidden) { scenery.update(settings, language); ensureMotionTicker(); }
-  });
+    venueStage?.update(sceneContext()); festivalStage?.update(sceneContext()); themeEnvironment?.update(sceneContext()); social?.update(); stationArrival?.update();
+    if (!sceneHidden()) { scenery.update(settings, language); ensureMotionTicker(); }
+  }
+  document.addEventListener('visibilitychange', refreshVisibility);
   mediaReduce.addEventListener('change', () => applySettings(settings));
   const observer = new ResizeObserver(refreshScale);
   observer.observe(office);
@@ -1790,19 +1804,21 @@
     else render();
   }).catch((error) => { showError(error); applySettings(settings); render(); });
   const clockTimer = setInterval(() => {
-    if (document.hidden) return;
+    if (sceneHidden()) return;
     scenery.update(settings, language);
     festivalStage?.update(sceneContext()); venueStage?.update(sceneContext()); themeEnvironment?.update(sceneContext());
     renderInspector();
     updateSignalSummary();
   }, 12000);
-  const secondsTimer = setInterval(() => { if (!document.hidden) { scenery.updateClock(settings, language); festivalStage?.update(sceneContext()); themeEnvironment?.update(sceneContext()); venueStage?.refreshArtwork(); social?.tick(); } }, 1000);
+  const secondsTimer = setInterval(() => { if (!sceneHidden()) { scenery.updateClock(settings, language); festivalStage?.update(sceneContext()); themeEnvironment?.update(sceneContext()); venueStage?.refreshArtwork(); social?.tick(); } }, 1000);
   window.addEventListener('beforeunload', () => {
     destroyed = true;
+    document.removeEventListener('visibilitychange', refreshVisibility);
     usageHistory?.dispose();
     setupAssistant?.dispose();
     visitor.destroy();
-    social?.destroy(); venueStage?.destroy(); festivalStage?.destroy(); themeEnvironment?.destroy();
+    office.removeEventListener('office:actor-arrival', onStationArrival);
+    stationArrival?.destroy(); social?.destroy(); venueStage?.destroy(); festivalStage?.destroy(); themeEnvironment?.destroy();
     scenery.destroy();
     clearInterval(clockTimer);
     clearInterval(secondsTimer);

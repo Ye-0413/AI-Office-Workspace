@@ -44,6 +44,25 @@ test('actual dense synthetic capture diagonal and horizontal leg separate contin
  assertSymmetric(diagonal,horizontal,false,0);assertSymmetric(diagonal,horizontal,false,1);
 });
 
+test('all remaining full-envelope legs in the twelve-body native yield capture reject the old diagonal empty-corner alarm',()=>{
+ // Wholly synthetic observations: only world-pixel geometry is retained.
+ // There are no session IDs, local paths, live data or endpoint exemptions.
+ const aPoints=[{x:512,y:604.8},{x:621.3599853515625,y:512.1199951171875},{x:827.5999755859375,y:512.1199951171875},{x:870.4000244140625,y:604.7999877929688}];
+ const bPoints=[{x:435.49,y:477.627},{x:409.6000061035156,y:475.20001220703125},{x:390.3999938964844,y:320.3999938964844}];
+ const aExtents={left:44,right:44,top:46.000012207031205,bottom:34.799975585937545};
+ const bExtents={left:43.99982666015626,right:44.00017333984374,top:45.999772216796885,bottom:34.80024609374999};
+ const legs=(points,e)=>points.slice(1).map((to,i)=>sweep(points[i],to,e)),a=legs(aPoints,aExtents),b=legs(bPoints,bExtents);
+ const aabbOverlap=(a,b)=>{const x=enclosing(a),y=enclosing(b);return x.left<y.right-1&&y.left<x.right-1&&x.top<y.bottom-1&&y.top<x.bottom-1;};
+ assert.equal(a.flatMap(x=>b.map(y=>aabbOverlap(x,y))).filter(Boolean).length,1,'the original double-AABB predicate really raises exactly one alarm');
+ for(const x of a)for(const y of b){
+  assertSymmetric(x,y,false,1); // Preserve the original one-pixel criterion.
+  assertSymmetric(x,y,false,0); // The actual full swept rectangles also separate.
+ }
+ // This is a geometry test, not a blanket permission for the captured IDs:
+ // a real interior crossing with those same asymmetric envelopes still fails.
+ assertSymmetric(a[0],sweep({x:570,y:580},{x:570,y:500},bExtents),true,1);
+});
+
 test('a true crossing at two different progress values remains forbidden independently of either Animation clock',()=>{
  const a=sweep({x:0,y:0},{x:100,y:0}),b=sweep({x:90,y:-10},{x:90,y:90});
  assertSymmetric(a,b,true); // Crossing occurs at a(.9), b(.1), not a(t)=b(t).

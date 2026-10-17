@@ -1,11 +1,11 @@
 {
-  "version": "0.16.0",
+  "version": "0.17.0",
   "publicBody": "original capsule robot with four visible feet; resource-free detached span adapts bitmap fade API; no external sprite references",
   "scope": "production distance-synchronised four-foot joint motion at a fixed screen anchor and clone effect overlays; does not certify room navigation, world foot locking or body collision; those are verified separately in native fixtures",
   "sourceHashes": {
     "office/lib/avatar-performance-model.js": "d5744f06c34164ca6d6c71794ed5b4456aea83b0a08720e680a31a1f1910e9c3",
     "office/lib/walk-timing.js": "2a0fb10aad03e13bea46faafaae86c4922cf54858abf842704b35a38720b3049",
-    "office/renderer/avatar-performance.js": "6efe2e878ce152de33991ad973109cf5db823752e7200e6f0d9eabae3965440b",
+    "office/renderer/avatar-performance.js": "afdf79f209fe42f4b58fd50b1567f855e245c8d1a8940eafeecabf9ec6a7ea32",
     "office/renderer/avatar-performance.css": "38c96933a0ff0923ee8bcffa38d0da20d88cc730f4d08b99f270b31b3fe95491",
     "office/renderer/clone-motion.js": "6e05a742e6d03b29d1016d5aa925a0d12f894f0826b2f6b26f3921605bd80c6c",
     "office/renderer/clone-motion.css": "d6e8a048276af3359e316262f25bb2c59e8429a50dafad5442840eabea30bb78",

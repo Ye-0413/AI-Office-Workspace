@@ -21,7 +21,7 @@ async function startMain(t, { now, dataDir: requestedDataDir } = {}) {
   Object.assign(app, {
     isPackaged: false, setName(name) { this.name = name; },
     requestSingleInstanceLock: () => true, getPath: () => dataDir,
-    getVersion: () => 'test', whenReady: () => Promise.resolve(), quit() {},
+    getVersion: () => 'test', whenReady: () => Promise.resolve(), isHidden: () => false, quit() {},
   });
   class BrowserWindow extends EventEmitter {
     constructor() {
@@ -31,6 +31,8 @@ async function startMain(t, { now, dataDir: requestedDataDir } = {}) {
       });
     }
     isDestroyed() { return false; }
+    isVisible() { return true; }
+    isMinimized() { return false; }
     setAlwaysOnTop() {}
     setTitle() {}
     loadFile() { return Promise.resolve(); }
@@ -63,6 +65,7 @@ async function startMain(t, { now, dataDir: requestedDataDir } = {}) {
       };
       if (name === './lib/codex-monitor.cjs') return { createCodexMonitor: observer('monitor') };
       if (name === './lib/observer-bridge.cjs') return { createObserverBridge: observer('bridge') };
+      if (name === './lib/window-visibility.cjs') return requireFromMain(name);
       if (name === './lib/session-store.cjs' && now) return { createSessionStore: options => requireFromMain(name).createSessionStore({ ...options, now }) };
       if (name === './lib/activity-stats.cjs' && now) return { createActivityStats: options => requireFromMain(name).createActivityStats({ ...options, now }) };
       if (name === './lib/usage-log.cjs' && now) return { createUsageLog: options => requireFromMain(name).createUsageLog({ ...options, now }) };

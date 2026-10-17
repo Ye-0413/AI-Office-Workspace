@@ -13,17 +13,18 @@ const {mergeObservationHealth}=require('./lib/observation-health.cjs');
 const {createObserverBridge}=require('./lib/observer-bridge.cjs');
 const {getProvider}=require('./lib/provider-catalog.cjs');
 const {withNativeLock}=require('./lib/native-lock.cjs');
+const {createWindowVisibility}=require('./lib/window-visibility.cjs');
 
 app.setName('AI Mini Office');
 if(process.env.MINI_OFFICE_DATA_DIR){fs.mkdirSync(process.env.MINI_OFFICE_DATA_DIR,{recursive:true,mode:0o700});app.setPath('userData',path.resolve(process.env.MINI_OFFICE_DATA_DIR));}
 if(!app.requestSingleInstanceLock()){app.quit();}
 else {
-let win=null,settings,liveStore,activityStats,usageLog,usageApi,setupManager,monitor,bridge,pruneTimer=null,refreshTimer=null,ready=false,providerMutation=false;
+let win=null,windowVisibility=null,settings,liveStore,activityStats,usageLog,usageApi,setupManager,monitor,bridge,pruneTimer=null,refreshTimer=null,ready=false,providerMutation=false;
 const rendererErrors=[];
 function current(){
   const liveSessions=liveStore.snapshot();
   const monitorStatus=monitor.status(),connections=bridge.getConnections().map(c=>mergeObservationHealth(c,monitorStatus,liveSessions));
-  return{mode:'live',now:Date.now(),sessions:liveSessions,activityStats:activityStats.snapshot(),usageLog:usageLog.status(),setup:setupManager.snapshot(),connections,monitor:{running:monitorStatus.running,error:monitorStatus.error||null},version:app.getVersion(),packaged:app.isPackaged};
+  return{mode:'live',now:Date.now(),windowVisibility:windowVisibility?.snapshot()||{available:false,hidden:null},sessions:liveSessions,activityStats:activityStats.snapshot(),usageLog:usageLog.status(),setup:setupManager.snapshot(),connections,monitor:{running:monitorStatus.running,error:monitorStatus.error||null},version:app.getVersion(),packaged:app.isPackaged};
 }
 function broadcast(){if(win&&!win.isDestroyed()&&ready)win.webContents.send('office:snapshot',current());}
 function observe(event){return liveStore.ingest(event);}
@@ -54,6 +55,7 @@ app.whenReady().then(()=>{
   setupManager=createSetupManager({getConnections:()=>bridge.getConnections(),connect:provider=>bridge.connect(provider),onChange:broadcast});
   liveStore.onChange(()=>broadcast());
   win=new BrowserWindow({width:1280,height:720,minWidth:800,minHeight:450,title:'AI Mini Office',backgroundColor:'#251d17',titleBarStyle:'hiddenInset',autoHideMenuBar:true,webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,webSecurity:true}});
+  windowVisibility=createWindowVisibility({window:win,watch:true,getAppHidden:()=>process.platform==='darwin'?app.isHidden():false,onChange:()=>broadcast()});
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   win.webContents.on('will-navigate',event=>event.preventDefault());
   win.webContents.on('render-process-gone',(_event,details)=>{rendererErrors.push('renderer:'+details.reason);writeSmokeReport();});
@@ -80,8 +82,8 @@ app.whenReady().then(()=>{
   if(process.env.MINI_OFFICE_SMOKE_REPORT&&process.env.MINI_OFFICE_SMOKE_EXIT_MS){const delay=Number(process.env.MINI_OFFICE_SMOKE_EXIT_MS);if(Number.isFinite(delay)&&delay>=3000&&delay<=30000)setTimeout(async()=>{await writeSmokeReport();app.quit();},delay);}
   pruneTimer=setInterval(()=>{liveStore.prune();usageLog.reconcile(liveStore.snapshot());broadcast();},5000);
   refreshTimer=setInterval(()=>broadcast(),2000);
-  win.on('closed',()=>{win=null;});
+  win.on('closed',()=>{windowVisibility?.dispose();win=null;});
 }).catch(error=>{console.error('[AI Mini Office]',error);app.quit();});
 app.on('window-all-closed',()=>app.quit());
-app.on('before-quit',()=>{ready=false;if(pruneTimer)clearInterval(pruneTimer);if(refreshTimer)clearInterval(refreshTimer);monitor?.stop();bridge?.stop();usageLog?.close();activityStats?.close();});
+app.on('before-quit',()=>{ready=false;windowVisibility?.dispose();if(pruneTimer)clearInterval(pruneTimer);if(refreshTimer)clearInterval(refreshTimer);monitor?.stop();bridge?.stop();usageLog?.close();activityStats?.close();});
 }

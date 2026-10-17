@@ -15,6 +15,8 @@ function productionFunction(name, optional = false) {
   const pattern = new RegExp('^  (?:async )?function ' + name + '\\(', 'm');
   const match = pattern.exec(source);
   if (!match) { assert.ok(optional, 'production function exists: ' + name); return ''; }
+  const lineEnd = source.indexOf('\n', match.index);
+  if (/\}\s*$/.test(source.slice(match.index, lineEnd))) return source.slice(match.index, lineEnd);
   const tail = source.slice(match.index + match[0].length);
   const next = /^  (?:async )?function [A-Za-z_$][\w$]*\(/m.exec(tail);
   assert.ok(next, 'production function has a following declaration: ' + name);
@@ -64,7 +66,7 @@ function fixture(options = {}) {
   const context = {
     Scene, actors, uniformScale: 1, destroyed: false, fitting: false,
     settings: { lowPower: false, reducedMotion: false, ...options.settings },
-    mediaReduce: { matches: false }, document: { hidden: Boolean(options.hidden) },
+    mediaReduce: { matches: false }, document: { hidden: Boolean(options.hidden) }, nativeWindowHidden: false,
     performance: { now: () => now }, language: 'en', Director: { plan: () => ({ label: 'writing code' }) },
     setPose: (value, pose) => poses.push({ value, pose }), text: (value, label) => { value.textContent = label; },
     lifecycleCaption: () => '', transitCaption: () => {}, ensureMotionTicker: () => {},
@@ -83,7 +85,7 @@ function fixture(options = {}) {
   const timingPath = path.join(__dirname, '../lib/walk-timing.js');
   if (fs.existsSync(timingPath)) context.WalkTiming = require(timingPath);
   vm.createContext(context);
-  const names = ['reduced', 'quietSprites', 'actorTransform', 'currentPosition', 'cancelAction', 'queueNavigation', 'requestStation', 'animateWalk', 'finishAtStation'];
+  const names = ['sceneHidden', 'reduced', 'quietSprites', 'actorTransform', 'currentPosition', 'cancelAction', 'queueNavigation', 'requestStation', 'animateWalk', 'finishAtStation'];
   vm.runInContext(names.map(name => productionFunction(name)).join('\n') + '\n' + productionFunction('syncWalkingGait', true), context);
   return {
     actor, node, context, animations, arrivals, poses, locomotion, timers, cancelledTraffic,

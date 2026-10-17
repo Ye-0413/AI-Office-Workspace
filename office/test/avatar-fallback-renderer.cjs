@@ -206,8 +206,23 @@ app.whenReady().then(async()=>{
     send(tasks.map(t=>({...t,activity:mode==='unknown'?'unknown':'reading',lastEventAt:Date.now()})));
     await run(`[...document.querySelectorAll('.character-body')].forEach(b=>{b.querySelector('img').src='../assets/avatars/clawd-static-base.svg?native-fault=${mode}';b.querySelector('.ap-rig defs image').setAttribute('href','../assets/avatars/clawd-static-base.svg?native-fault=${mode}')});void 0`);
     await until(allBody(`b.dataset.bitmapHealth==='failed'&&b.dataset.rigHealth==='failed'`),mode+' must enter real dual failure');
+    if(mode==='unknown'){
+      // Failed resource facts can precede the real 220ms work-to-native and
+      // material bridges. Observe them now, without waiting/finishing/seeking
+      // away the transition, using the existing strict family/core coverage.
+      const transition=await captureFrames(31,{blended:true,label:'unknown-dual-failure-transition'});
+      assert.ok(transition.every(rows=>rows.length===2),'both original bodies must remain in every transition frame');
+      const drawn=value=>value&&value.display!=='none'&&!value.hidden&&Number(value.opacity)>.001,middle=value=>drawn(value)&&Number(value.opacity)<.999;
+      const intermediateByActor=Object.fromEntries(tasks.map(task=>[task.id,transition.filter(rows=>rows.some(row=>row.id===task.id&&([row.alpha.layer,row.alpha.native].some(middle)||drawn(row.alpha.native)&&[row.alpha.base,row.alpha.outgoing].some(middle)))).length]));
+      assert.ok(Object.values(intermediateByActor).every(count=>count>0),'each body must actually expose an intermediate finite presence/material phase: '+JSON.stringify(intermediateByActor));
+      checks.push({name:'unknown dual failure preserves both family-coloured bodies through31 real transition frames',phase:'blended-transition',frames:transition.length,intermediateByActor,minTinted:Math.min(...transition.flat().map(row=>row.coverage.tinted)),minCoreTinted:Math.min(...transition.flat().map(row=>row.coverage.coreTinted)),minMedianAlpha:Math.min(...transition.flat().map(row=>row.coverage.medianAlpha))});
+      // Only after continuous evidence may the original opaque assertion
+      // establish a genuinely settled native body. Await actual owners; no
+      // fixed sleep, clock mutation, new fault or changed pixel threshold.
+      await until(allBody(`b.dataset.bitmapHealth==='failed'&&b.dataset.rigHealth==='failed'&&b.dataset.bitmapHealing==='false'&&b.dataset.rigHealing==='false'&&!b.getAnimations({subtree:true}).some(a=>Number.isFinite(Number(a.effect?.getTiming().iterations))&&(a.pending||a.playState==='running'))&&Number(getComputedStyle(b.querySelector('.avatar-performance')).opacity)<.01&&Number(getComputedStyle(b.querySelector('.avatar-native-fallback')).opacity)>.99&&Number(getComputedStyle(b.querySelector('.avatar-fallback-base')).opacity)>.99&&Number(getComputedStyle(b.querySelector('.avatar-fallback-outgoing')).opacity)<.01`),'unknown presence and material owners must really settle before opaque samples',2000);
+    }
     const frames=await captureFrames(8);assert.ok(frames.flat().every(r=>r.colored>=8));
-    checks.push(mode+' dual failure retains identifiable native body');
+    checks.push({name:mode+' dual failure retains identifiable opaque native body',phase:mode==='unknown'?'settled-native':'immediate-quiet',frames:frames.length,minColored:Math.min(...frames.flat().map(row=>row.colored))});
   }
   assert.ok(expectedFailures.length>=4);assert.deepEqual(errors,[]);
   console.log(JSON.stringify({ok:true,checks,expectedCanceledArtworkRequests:expectedFailures.length,errors}));

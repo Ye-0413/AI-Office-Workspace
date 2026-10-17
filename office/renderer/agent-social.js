@@ -6,7 +6,7 @@
     const Model=root.OfficeSocialInteractions;
     if(!layer||!world||!Model||typeof getActors!=='function'||typeof getContext!=='function')throw new TypeError('Social interactions need the real scene layer, world and actor/context readers');
     const document=layer.ownerDocument,view=document.defaultView,scheduler=Model.createScheduler();
-    let current=null,destroyed=false,frame=0;
+    let current=null,outgoing=null,destroyed=false,frame=0;
     layer.classList.add('agent-social-layer');layer.setAttribute('aria-hidden','true');
     const context=()=>{const value=getContext()||{};return {...value,hidden:!!(document.hidden||value.hidden)};};
     const svg=(tag,attrs={},parent)=>{const node=document.createElementNS(NS,tag);for(const[key,value]of Object.entries(attrs))node.setAttribute(key,String(value));if(parent)parent.append(node);return node;};
@@ -23,10 +23,30 @@
           color:view.getComputedStyle(actor.node).getPropertyValue('--family-color').trim()||'#b87960'};
       });
     }
-    function cancel(){
+    const quiet=ctx=>!!(ctx.hidden||ctx.reducedMotion||ctx.lowPower||ctx.mode&&ctx.mode!=='live');
+    function remove(record){
+      if(!record)return;
+      record.exit?.cancel();
+      for(const animation of record.animations)animation.cancel();
+      record.node.remove();
+    }
+    function cancel(immediate=false){
       const old=current;current=null;scheduler.cancel();
       if(frame){view.cancelAnimationFrame(frame);frame=0;}
-      if(old){for(const animation of old.animations)animation.cancel();old.node.remove();}
+      if(immediate||destroyed||quiet(context())){
+        const leaving=outgoing;outgoing=null;remove(leaving);remove(old);return;
+      }
+      if(!old)return;
+      // Only these original decorative trajectories are held. Real joints,
+      // work props, body feet and their clocks keep their separate owners.
+      for(const animation of old.animations){
+        const at=animation.currentTime;animation.pause();
+        if(Number.isFinite(at))animation.currentTime=at;
+      }
+      old.node.dataset.socialExiting='true';outgoing=old;
+      const alpha=Number(view.getComputedStyle(old.node).opacity);
+      old.exit=old.node.animate([{opacity:Number.isFinite(alpha)?alpha:1},{opacity:0}],{duration:160,easing:EASE_OUT,fill:'both'});
+      old.exit.finished.catch(()=>{}).then(()=>{if(outgoing!==old)return;outgoing=null;remove(old);});
     }
     function sameGeometry(cast){
       if(!current)return false;
@@ -115,12 +135,12 @@
       Promise.all(animations.map(animation=>animation.finished.catch(()=>{}))).then(()=>{if(current?.token!==token)return;current.node.remove();current=null;scheduler.finish(token);if(frame){view.cancelAnimationFrame(frame);frame=0;}});
       frame=view.requestAnimationFrame(guard);
     }
-    function start(request){if(destroyed)return false;const actors=cast(),ctx=context(),plan=scheduler.plan(actors,ctx,request);if(!plan)return false;try{build(plan,actors,ctx);return true;}catch(error){cancel();throw error;}}
-    function update(){if(destroyed)return;if(current){const actors=cast(new Set(current.anchors.map(actor=>actor.id)));if(!scheduler.valid(actors,context())||!sameGeometry(actors))cancel();}}
+    function start(request){if(destroyed||outgoing)return false;const actors=cast(),ctx=context(),plan=scheduler.plan(actors,ctx,request);if(!plan)return false;try{build(plan,actors,ctx);return true;}catch(error){cancel();throw error;}}
+    function update(){if(destroyed)return;if(quiet(context())){if(current||outgoing)cancel(true);return;}if(current){const actors=cast(new Set(current.anchors.map(actor=>actor.id)));if(!scheduler.valid(actors,context())||!sameGeometry(actors))cancel();}}
     function tick(){update();if(!current)start({manual:false});}
     function trigger(request={}){update();return start({...request,manual:true});}
-    function destroy(){if(destroyed)return;destroyed=true;cancel();}
-    return Object.freeze({update,tick,trigger,destroy,state:()=>({destroyed,active:current?{kind:current.kind,token:current.token,ids:current.anchors.map(actor=>actor.id)}:null,...scheduler.state()})});
+    function destroy(){if(destroyed)return;destroyed=true;cancel(true);}
+    return Object.freeze({update,tick,trigger,destroy,state:()=>({destroyed,exiting:outgoing?{kind:outgoing.kind,token:outgoing.token}:null,active:current?{kind:current.kind,token:current.token,ids:current.anchors.map(actor=>actor.id)}:null,...scheduler.state()})});
   }
   root.OfficeAgentSocial=Object.freeze({create});
 })(typeof globalThis==='object'?globalThis:this);

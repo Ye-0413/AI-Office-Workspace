@@ -1,0 +1,234 @@
+{
+  "version": "0.17.0",
+  "scope": "Twelve original furniture glyph programs through the actual OfficeStationArrival controller, presented as independent offline endpoint fixtures. Transparent mounted synthetic actor geometry and active synthetic sessions only; no provider connection, room navigation, body contact or IK is demonstrated or certified.",
+  "sampling": {
+    "fps": 48,
+    "frames": 72,
+    "durationMs": 1500,
+    "productionProgramDurationMs": 1400,
+    "nominalStillTailMs": 100,
+    "firstStoppedFrame": 68,
+    "firstStoppedFrameMs": 1416.6666666666667,
+    "encodedStillTailMs": 83.33333333333326,
+    "method": "Each elapsed frame creates a fresh finite production decorative owner on an unchanged mounted endpoint. Only that owner's finite WAAPI animations are paused and sought; its original SVG/program is not modified. No document.timeline or performance clock replacement. The authored transparent endpoint begins at productionProgramDurationMs; nominal and encoded still tails are reported separately on the sampling frame grid.",
+    "continuousRoomPlaybackCertified": false,
+    "continuousOwnerLifetimeCertified": false
+  },
+  "sourceHashes": {
+    "office/lib/scene-model.js": "45a0ac0fcc1c09a799158e483c1eee330316963ed64c61852c45fd8c385b7c8c",
+    "office/lib/scene-traffic.js": "be29c677fbf611685e9d10982e8c00cedfd84a6c04f71f7e4ea01e27b575ae08",
+    "office/lib/walking-layout.js": "58f31f528b6316d537e5cbd3a531b051bb64493c60f43d80eee57a0f7ed965ef",
+    "office/lib/social-interactions.js": "4efc64e9f8ea4048bbbc5019b2e9b5f60b9d42d5fd648e9cd592377f4cd3be1f",
+    "office/renderer/station-arrival.js": "0281971a8e05c5f46a4408d56604dd5ce4c0776aa1524ba6bc2426ac5011a196",
+    "office/renderer/station-arrival.css": "62701902956ee13310a52e148a588029299a560e2c54d65fa9ad804ffb181c96",
+    "office/scripts/render-station-previews.cjs": "391f4122b99f65f717d8f8606df3238513ef243af99d9c912f14832b04ba1691"
+  },
+  "assets": [
+    {
+      "file": "workshop.gif",
+      "venue": "workshop",
+      "label": "工坊 · 到站小响应",
+      "width": 1000,
+      "height": 720,
+      "frames": 72,
+      "fps": 48,
+      "durationMs": 1500,
+      "productionProgramDurationMs": 1400,
+      "distinctPngFrames": 64,
+      "bytes": 839716,
+      "sha256": "1c58ab8874a103dc957292105bf2b295fbf9d21fe27c5dbfdd04ffa46e7cad38",
+      "programs": [
+        {
+          "program": "field-book",
+          "zone": "library",
+          "label": "翻开手绘笔记",
+          "sampledFrames": 72,
+          "distinctPngFrames": 64,
+          "finiteDecorativeAnimations": 4,
+          "anchor": {
+            "x": 308,
+            "y": 250
+          },
+          "mountedEndpointIdentityUnchanged": true
+        },
+        {
+          "program": "blueprint-links",
+          "zone": "board",
+          "label": "接上图纸线索",
+          "sampledFrames": 72,
+          "distinctPngFrames": 64,
+          "finiteDecorativeAnimations": 5,
+          "anchor": {
+            "x": 775,
+            "y": 205
+          },
+          "mountedEndpointIdentityUnchanged": true
+        },
+        {
+          "program": "circuit-spool",
+          "zone": "desk",
+          "label": "转动电路卷轴",
+          "sampledFrames": 72,
+          "distinctPngFrames": 64,
+          "finiteDecorativeAnimations": 4,
+          "anchor": {
+            "x": 550,
+            "y": 345
+          },
+          "mountedEndpointIdentityUnchanged": true
+        },
+        {
+          "program": "bench-dial",
+          "zone": "bench",
+          "label": "校准小仪表",
+          "sampledFrames": 72,
+          "distinctPngFrames": 64,
+          "finiteDecorativeAnimations": 2,
+          "anchor": {
+            "x": 1130,
+            "y": 145
+          },
+          "mountedEndpointIdentityUnchanged": true
+        }
+      ]
+    },
+    {
+      "file": "teahouse.gif",
+      "venue": "teahouse",
+      "label": "茶室 · 到站小响应",
+      "width": 1000,
+      "height": 720,
+      "frames": 72,
+      "fps": 48,
+      "durationMs": 1500,
+      "productionProgramDurationMs": 1400,
+      "distinctPngFrames": 64,
+      "bytes": 812107,
+      "sha256": "48c121ea6e9d224868a2fd7a5ff3c457b9232108a9b3b25df4a5ddfdc7299462",
+      "programs": [
+        {
+          "program": "tea-scroll",
+          "zone": "library",
+          "label": "展开茶笺",
+          "sampledFrames": 72,
+          "distinctPngFrames": 64,
+          "finiteDecorativeAnimations": 4,
+          "anchor": {
+            "x": 308,
+            "y": 250
+          },
+          "mountedEndpointIdentityUnchanged": true
+        },
+        {
+          "program": "folded-note",
+          "zone": "board",
+          "label": "折好一张小札",
+          "sampledFrames": 72,
+          "distinctPngFrames": 64,
+          "finiteDecorativeAnimations": 3,
+          "anchor": {
+            "x": 775,
+            "y": 205
+          },
+          "mountedEndpointIdentityUnchanged": true
+        },
+        {
+          "program": "tea-filter",
+          "zone": "desk",
+          "label": "滤下一滴清茶",
+          "sampledFrames": 72,
+          "distinctPngFrames": 64,
+          "finiteDecorativeAnimations": 3,
+          "anchor": {
+            "x": 550,
+            "y": 345
+          },
+          "mountedEndpointIdentityUnchanged": true
+        },
+        {
+          "program": "tea-thermometer",
+          "zone": "bench",
+          "label": "看看茶温",
+          "sampledFrames": 72,
+          "distinctPngFrames": 64,
+          "finiteDecorativeAnimations": 4,
+          "anchor": {
+            "x": 1130,
+            "y": 145
+          },
+          "mountedEndpointIdentityUnchanged": true
+        }
+      ]
+    },
+    {
+      "file": "observatory.gif",
+      "venue": "observatory",
+      "label": "观星室 · 到站小响应",
+      "width": 1000,
+      "height": 720,
+      "frames": 72,
+      "fps": 48,
+      "durationMs": 1500,
+      "productionProgramDurationMs": 1400,
+      "distinctPngFrames": 64,
+      "bytes": 943839,
+      "sha256": "be04e683e9a8be4ab35b997b6c2f68de08c9d073c26c51ac4a695f5caab25d7f",
+      "programs": [
+        {
+          "program": "star-atlas",
+          "zone": "library",
+          "label": "翻阅星图",
+          "sampledFrames": 72,
+          "distinctPngFrames": 64,
+          "finiteDecorativeAnimations": 7,
+          "anchor": {
+            "x": 308,
+            "y": 250
+          },
+          "mountedEndpointIdentityUnchanged": true
+        },
+        {
+          "program": "constellation",
+          "zone": "board",
+          "label": "连成一段星座",
+          "sampledFrames": 72,
+          "distinctPngFrames": 64,
+          "finiteDecorativeAnimations": 5,
+          "anchor": {
+            "x": 775,
+            "y": 205
+          },
+          "mountedEndpointIdentityUnchanged": true
+        },
+        {
+          "program": "armillary",
+          "zone": "desk",
+          "label": "轻转浑仪",
+          "sampledFrames": 72,
+          "distinctPngFrames": 64,
+          "finiteDecorativeAnimations": 2,
+          "anchor": {
+            "x": 550,
+            "y": 345
+          },
+          "mountedEndpointIdentityUnchanged": true
+        },
+        {
+          "program": "lens-iris",
+          "zone": "bench",
+          "label": "调节镜片光圈",
+          "sampledFrames": 72,
+          "distinctPngFrames": 64,
+          "finiteDecorativeAnimations": 5,
+          "anchor": {
+            "x": 1130,
+            "y": 145
+          },
+          "mountedEndpointIdentityUnchanged": true
+        }
+      ]
+    }
+  ],
+  "restrictedImageElements": 0,
+  "unlistedResourceRequests": 0
+}

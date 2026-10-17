@@ -165,7 +165,7 @@
     let systemMotion = null, inheritedOptions = {};
     const bitmap = body.querySelector('img');
     const originalBitmapOpacity = bitmap?.style?.getPropertyValue?.('opacity') || '';
-    let visual = null, presence = 'inactive', presenceSerial = 0;
+    let visual = null, presence = 'inactive', presenceSerial = 0, hiddenWork = false;
     const fades = new Set(), paused = new Map();
     let frozen = [];
     const joints = () => typeof svg.querySelectorAll === 'function' ? [...svg.querySelectorAll('.ap-upper,.ap-eyes,.ap-arm,.ap-foot')] : [];
@@ -489,6 +489,9 @@
       options = { ...options, reducedMotion: Boolean(options.reducedMotion || systemMotion?.matches()) };
       session = value;
       const base = Model.plan(session, options);
+      // The public plan still reports hidden/inactive. Only the clock's work
+      // kind is retained so a hidden interval cannot erase its visible history.
+      const workBase = options.hidden ? Model.plan(session, { ...options, hidden: false }) : base;
       const now = Number.isFinite(options.now) ? options.now : null;
       // Credit only the kind that was actually visible since the previous
       // update. Other kinds, hidden intervals and quiet modes never catch up
@@ -503,11 +506,23 @@
         visibleClocks.set(last.kind, (visibleClocks.get(last.kind) || 0) + Math.max(0, now - lastNow));
       }
       lastNow = now === null ? null : Math.max(lastNow === null ? now : lastNow, now);
-      const visibleElapsed = clockLease ? clockLease.sample(base.kind, { now, visible: base.active && base.animate }) : visibleClocks.get(base.kind) || 0;
+      const visibleElapsed = clockLease ? clockLease.sample(workBase.kind, { now, visible: base.active && base.animate }) : visibleClocks.get(workBase.kind) || 0;
       const plan = Model.plan(session, { ...options, visibleElapsed });
       const changed = !visual || visual.program !== plan.program || visual.kind !== plan.kind;
       const quiet = Boolean(options.reducedMotion || options.lowPower || options.hidden);
       const canFade = Boolean(view?.getComputedStyle && layer.animate && bitmap?.animate && !quiet);
+      const hiddenPlan = options.hidden && workBase.active ? Model.plan(session, { ...options, hidden: false, visibleElapsed }) : null;
+      if (hiddenPlan?.animate && visual?.animate && hiddenPlan.key === visual.key && !gait
+        && (hiddenWork || presence === 'active' || presence === 'entering')
+        && !layer.hidden && layer.dataset.animate === 'true' && view?.getComputedStyle && joints().length) {
+        // Hiding alone is a pause lease, not a new lifecycle or CSS program.
+        // Preserve selectors/props and synchronously freeze the actual phase;
+        // independent health fades keep their own finite owner.
+        freezeVisual(); hiddenWork = true; last = plan;
+        return plan;
+      }
+      const wasHidden = hiddenWork;
+      hiddenWork = false;
       // Locomotion is visual evidence of a real route, never an AI work kind.
       // The same crops and health owner continue to render its stepping feet.
       if (options.walking && !options.reaction && canFade && joints().length) {
@@ -532,7 +547,7 @@
         last = plan;
         return plan;
       }
-      const resuming = Boolean(wasWalking || visual && presence !== 'active' && presence !== 'entering');
+      const resuming = Boolean(wasHidden || wasWalking || visual && presence !== 'active' && presence !== 'entering');
       const blend = (changed || wasWalking) && plan.animate;
       const before = blend ? walkingPose || capture() : [];
       const oldProps = blend && !wasWalking ? retainProps() : null;
