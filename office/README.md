@@ -2,6 +2,8 @@
 
 A local macOS playground for watching independent AI sessions inhabit a tiny office. Designed for a five-inch 1280×720 secondary display.
 
+Version 0.20 keeps explicit Codex tool cancellations distinct from success/failure. Room summaries and application-owned untitled placeholders follow the selected language; real task titles remain literal. Window resizes synchronously fit the world frame without changing actor layouts or replacing their physical and animation owners.
+
 ## 当前动画展示
 
 **11 类活动，每类 8 种，共 88 种动作。**

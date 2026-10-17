@@ -36,6 +36,8 @@ function fileThreadId(file) {
 }
 function outcomeOf(output) {
   const o = parseObject(output);
+  // Match native-hook precedence: cancellation is not failure or success.
+  if (o.interrupted === true || o.is_interrupt === true) return 'cancelled';
   for (const k of ['exit_code', 'exitCode']) if (Number.isInteger(o[k])) return o[k] === 0 ? 'success' : 'failure';
   return o.isError === true ? 'failure' : 'unknown';
 }

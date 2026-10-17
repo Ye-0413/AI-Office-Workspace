@@ -619,3 +619,124 @@ test('Codex terminal reconciles only its own observed tools and cannot finish an
   fs.appendFileSync(child, f.end('child-turn') + '\n'); m.poll();
   parent = store.snapshot().find(s => !s.parentId); assert.equal(parent.status, 'idle'); assert.ok(parent.turnCompletedAt);
 });
+
+
+// These cases observe real normalized results through temporary synthetic
+// rollouts. The submitted commands/questions are classified, never executed.
+function resultFixture(t, outputType) {
+  const f = fixture(t), file = f.file('result-cancellation', [f.meta()]);
+  const store = createSessionStore({ now: f.now });
+  const monitor = f.monitor({ onEvent(event) { f.events.push(event); store.ingest(event); } });
+  monitor.start();
+  const custom = outputType === 'custom_tool_call_output';
+  function call(id, command = 'npm test') {
+    if (!custom) return command === null
+      ? f.call(id, 'request_user_input', { questions: [{ question: 'PRIVATE QUESTION' }] })
+      : f.call(id, 'exec_command', { cmd: command, private: 'PRIVATE ARGUMENT' });
+    return f.row('response_item', { type: 'custom_tool_call', name: 'exec', call_id: id,
+      input: command === null
+        ? 'text(await tools.request_user_input({questions:[{question:"PRIVATE QUESTION"}]}));'
+        : 'text(await tools.exec_command(' + JSON.stringify({ cmd: command, private: 'PRIVATE ARGUMENT' }) + '));' });
+  }
+  const output = (id, body) => f.row('response_item', { type: outputType, call_id: id,
+    output: typeof body === 'string' ? body : JSON.stringify(body) });
+  function append(...rows) { f.tick(); fs.appendFileSync(file, rows.join('\n') + '\n'); monitor.poll(); }
+  const session = () => store.snapshot()[0];
+  const results = id => f.events.filter(event => event.event === 'tool-end' && event.toolCallId === id);
+  const privateAbsent = () => assert.ok(!JSON.stringify({ events: f.events, sessions: store.snapshot() }).includes('PRIVATE'));
+  return { f, store, call, output, append, session, results, privateAbsent };
+}
+
+const CANCELLED_RESULTS = [
+  ['interrupted before nonzero exit', { interrupted: true, exit_code: 1 }],
+  ['interrupted before zero exit', { interrupted: true, exit_code: 0 }],
+  ['interrupted before error flag', { interrupted: true, isError: true }],
+  ['interrupted without exit', { interrupted: true }],
+  ['is_interrupt before nonzero exit', { is_interrupt: true, exitCode: 1 }],
+  ['is_interrupt before zero exit', { is_interrupt: true, exitCode: 0 }],
+  ['is_interrupt before error flag', { is_interrupt: true, isError: true }],
+  ['is_interrupt without exit', { is_interrupt: true }],
+];
+for (const outputType of ['function_call_output', 'custom_tool_call_output']) {
+  for (const [label, input] of CANCELLED_RESULTS) test(`rollout ${outputType}: explicit ${label} remains a cancelled tool, not a failed or completed turn`, t => {
+    const h = resultFixture(t, outputType);
+    h.append(h.f.start(), h.call('cancelled-test'));
+    assert.equal(h.session().activity, 'testing');
+    const at = h.f.tick();
+    h.append(h.output('cancelled-test', { ...input, output: 'PRIVATE RESULT BODY' }));
+    const result = h.results('cancelled-test');
+    assert.equal(result.length, 1);
+    assert.equal(result[0].outcome, 'cancelled');
+    assert.ok(result[0].at >= at);
+    assert.equal(result[0].evidence.rawEvent, 'response_item:' + outputType);
+    const hook = normalizeEvent('codex', { session_id: 'one', turn_id: 't1', hook_event_name: 'PostToolUse',
+      tool_name: 'exec_command', tool_use_id: 'cancelled-test', tool_input: { cmd: 'npm test' }, tool_response: input });
+    assert.equal(result[0].outcome, hook.outcome, 'native hook and rollout must preserve the same explicit cancellation');
+    const session = h.session();
+    assert.equal(session.id, 'codex:one'); assert.equal(session.turnId, 't1');
+    assert.equal(session.activity, 'planning'); assert.equal(session.status, 'active');
+    assert.equal(session.activeTools, 0); assert.equal(session.attention, false); assert.equal(session.closed, false);
+    assert.equal(session.turnCompletedAt, undefined);
+    assert.equal(Director.observedWork(session, { now: h.f.now() }), null, 'a cancelled operation cannot become a recent-work replay');
+    assert.equal(Director.plan(session, { now: h.f.now() }).phase, 'planning/think');
+    assert.equal(h.f.events.some(event => ['turn-end','interrupted','session-end','subagent-end'].includes(event.event)), false,
+      'cancelling one tool cannot fabricate a turn/session/helper terminal');
+    h.privateAbsent();
+  });
+
+  test(`rollout ${outputType}: strict cancellation flags preserve ordinary, unknown and bounded-output outcomes`, t => {
+    const h = resultFixture(t, outputType);
+    h.append(h.f.start());
+    const controls = [
+      [{ exit_code: 0 }, 'success'], [{ exitCode: 7 }, 'failure'], [{ isError: true }, 'failure'],
+      [{ interrupted: false, is_interrupt: false, exit_code: 0 }, 'success'],
+      [{ interrupted: 'true', exit_code: 1 }, 'failure'], [{ is_interrupt: 1, exit_code: 0 }, 'success'],
+      [{ interrupted: false, is_interrupt: false }, 'unknown'],
+      [{ interrupted: 'true', is_interrupt: 'true' }, 'unknown'],
+      [{ exit_code: '0' }, 'unknown'],
+      ['User interrupted the test; all tests passed', 'unknown'], ['{malformed', 'unknown'],
+      ['[true,0]', 'unknown'],
+      [JSON.stringify({ interrupted: true, output: 'PRIVATE' + 'x'.repeat(65536) }), 'unknown'],
+    ];
+    for (const [index, [body, expected]] of controls.entries()) {
+      const id = 'control-' + index;
+      h.append(h.call(id)); h.append(h.output(id, body));
+      assert.equal(h.results(id).length, 1);
+      assert.equal(h.results(id)[0].outcome, expected, 'control ' + index);
+      assert.equal(h.session().activeTools, 0); assert.equal(h.session().closed, false);
+      assert.equal(h.session().activity, expected === 'failure' ? 'error' : 'planning');
+      h.privateAbsent();
+    }
+  });
+
+  test(`rollout ${outputType}: cancellation releases only its matching call while parallel work and real input remain pending`, t => {
+    const h = resultFixture(t, outputType);
+    h.append(h.f.start(), h.call('cancel-a'), h.call('parallel-b', 'cat README.md'), h.call('question-q', null));
+    const question = h.f.events.find(event => event.toolCallId === 'question-q' && event.event === 'waiting-user');
+    assert.ok(question); assert.equal(h.session().activeTools, 3); assert.equal(h.session().activity, 'waiting-user');
+    const beforeWrong = h.store.snapshot(), eventCount = h.f.events.length;
+    h.append(h.output('wrong-call', { interrupted: true, exit_code: 1 }));
+    assert.equal(h.f.events.length, eventCount); assert.deepEqual(h.store.snapshot(), beforeWrong);
+    h.append(h.output('cancel-a', { interrupted: true, exit_code: 1, output: 'PRIVATE RESULT BODY' }));
+    assert.equal(h.results('cancel-a')[0].outcome, 'cancelled');
+    let session = h.session();
+    assert.equal(session.activeTools, 2); assert.equal(session.status, 'waiting');
+    assert.equal(session.activity, 'waiting-user'); assert.equal(session.attention, true);
+    assert.equal(session.closed, false); assert.equal(session.turnCompletedAt, undefined);
+    assert.match(Director.plan(session, { now: h.f.now() }).phase, /^waiting-user\//);
+    const count = h.f.events.length;
+    h.append(h.output('cancel-a', { exit_code: 0 }));
+    assert.equal(h.f.events.length, count, 'duplicate output cannot finish another call or rewrite cancellation');
+    assert.equal(h.session().activeTools, 2);
+    h.append(h.output('parallel-b', { exit_code: 0 }));
+    session = h.session();
+    assert.equal(session.activeTools, 1); assert.equal(session.activity, 'waiting-user'); assert.equal(session.attention, true);
+    assert.equal(h.results('question-q').length, 0, 'only the question\'s actual paired result can dismiss it');
+    h.append(h.output('question-q', { answers: { answer: 'PRIVATE ANSWER' } }));
+    session = h.session();
+    assert.equal(session.activeTools, 0); assert.equal(session.activity, 'planning'); assert.equal(session.attention, false);
+    assert.equal(session.closed, false); assert.equal(session.turnCompletedAt, undefined);
+    assert.equal(h.results('question-q')[0].outcome, 'unknown', 'an answer body is not exit/success evidence');
+    assert.equal(h.results('cancel-a').length, 1); h.privateAbsent();
+  });
+}

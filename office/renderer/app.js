@@ -1424,7 +1424,7 @@
     else if (!actor.motion && !actor.yielding && !trafficWaiters.has(actor.id) && !actor.completing && !actor.departing && !cloneBusy(actor)) text(actor.state, spec.label);
     if (actor.yielding) transitCaption(actor, true);
     if (trafficWaiters.has(actor.id)) transitCaption(actor);
-    actor.button.setAttribute('aria-label', displayName(session) + ' · ' + Scene.providerName(session.provider) + ' · ' + String(session.title || '未命名任务') + ' · ' + fullRelation + '，' + tr(spec.label) + '。' + tr('单击查看详情，双击打招呼。'));
+    actor.button.setAttribute('aria-label', displayName(session) + ' · ' + Scene.providerName(session.provider) + ' · ' + String(session.title || tr('未命名任务')) + ' · ' + fullRelation + '，' + tr(spec.label) + '。' + tr('单击查看详情，双击打招呼。'));
     actor.button.setAttribute('aria-pressed', String(session.id === selectedSession));
   }
   async function react(actor) {
@@ -1654,7 +1654,7 @@
     $('inspect-persona-trait').textContent = language === 'en' ? personality.traitEn : personality.traitZh;
     $('inspect-keepsake').textContent = keepsakeIcon(session);
     $('greet-agent').disabled = !actor || actor.departing || Boolean(spec.stale) || cloneBusy(actor) || actor.holdingFamily;
-    text($('inspect-title'), session.title || '未命名任务');
+    text($('inspect-title'), session.title || tr('未命名任务'));
     const makingRoom = actor && (actor.yielding || actor.node?.dataset.traffic === 'queued');
     text($('inspect-location'), attendance.retired.includes(session.id) || restedClones.has(session.id) ? session.parentId ? '分身暂歇' : '门外休息'
       : makingRoom ? (language === 'en' ? 'Temporarily making room · ' : '临时让路 · ') + zoneName((actor.target || spec).zone)
@@ -1739,7 +1739,7 @@
       row.style.setProperty('--family-color', paletteRegistry.forRoot(cloneLedger.rootFor(session.id) || family?.rootId || session.id).color);
       row.style.marginLeft = '0px';
       const copy = element('span', 'roster-copy');
-      copy.append(element('strong', '', displayName(session)), element('span', 'roster-task', session.title || '未命名任务'));
+      copy.append(element('strong', '', displayName(session)), element('span', 'roster-task', session.title || tr('未命名任务')));
       const parent = familyGraph.byId.get(session.parentId);
       if (parent) { const relation = element('span','roster-relation'); relation.textContent = '↳ ' + I18n.t(language,'identity.parent',{name:displayName(parent)}); copy.append(relation); }
       else if (!session.parentId) { const relation = element('span','roster-relation'); relation.textContent = cloneSummary(session); relation.title = I18n.t(language, 'family.clonesHint'); copy.append(relation); }
@@ -1809,11 +1809,11 @@
     $('attention-jump').hidden = !localAttention.length;
     text($('attention-jump'), localAttention.length + ' 项需要你 →');
     $('status-dot').dataset.status = localAttention.length ? 'waiting' : roomSessions.length ? 'active' : 'empty';
-    let summary = roomSessions.length ? rootCount + ' 项独立任务' + (helpers ? ' · ' + helpers + ' 位临时帮手' : '') : '实时办公室 · 等待任务入驻';
-    if (quiet) summary += ' · ' + quiet + ' 项信号暂未更新';
+    let summary = roomSessions.length ? tr(rootCount + ' 项独立任务') + (helpers ? ' · ' + tr(helpers + ' 位临时帮手') : '') : tr('实时办公室 · 等待任务入驻');
+    if (quiet) summary += ' · ' + tr(quiet + ' 项信号暂未更新');
     if (uniformScale < settings.agentScale - .001) summary += language === 'en' ? ' · fitted to ' + Math.round(uniformScale * 100) + '% for everyone' : ' · 全员适配 ' + Math.round(uniformScale * 100) + '%';
-    text($('room-summary'), summary);
-    $('room-summary').dataset.baseSummary = tr(summary);
+    $('room-summary').textContent = summary;
+    $('room-summary').dataset.baseSummary = summary;
     const stats = snapshot.activityStats;
     const count = key => stats && !stats.error && Number.isInteger(stats[key]) && stats[key] >= 0 ? stats[key] : '—';
     text($('today-total'), count('total'));
@@ -2009,6 +2009,7 @@
   mediaReduce.addEventListener('change', () => applySettings(settings));
   const observer = new ResizeObserver(refreshScale);
   observer.observe(office);
+  window.addEventListener('resize', refreshScale);
   refreshScale();
   $('room-art').addEventListener('error', () => showError('房间背景未能加载，请重新打开应用。'));
 
@@ -2037,6 +2038,7 @@
   const secondsTimer = setInterval(() => { if (!sceneHidden()) { scenery.updateClock(settings, language); festivalStage?.update(sceneContext()); themeEnvironment?.update(sceneContext()); venueStage?.refreshArtwork(); social?.tick(); } }, 1000);
   window.addEventListener('beforeunload', () => {
     destroyed = true;
+    window.removeEventListener('resize', refreshScale);
     document.removeEventListener('visibilitychange', refreshVisibility);
     usageHistory?.dispose();
     setupAssistant?.dispose();

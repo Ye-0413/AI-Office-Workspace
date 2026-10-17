@@ -1,5 +1,5 @@
 {
-  "version": "0.19.0",
+  "version": "0.20.0",
   "publicBody": "original capsule robot; no external sprite references",
   "source": {
     "model": "office/lib/avatar-performance-model.js",
