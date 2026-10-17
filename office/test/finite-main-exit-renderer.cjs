@@ -26,13 +26,23 @@ async function until(code, label, ms = 90000) {
   throw Error(label + ': ' + JSON.stringify(await run(`({audit:crowdAudit.report(),rows:[...document.querySelectorAll('.actor')].map(n=>({id:n.dataset.sessionId,data:{...n.dataset},foot:getComputedStyle(n).transform,state:n.querySelector('.actor-state').textContent}))})`)));
 }
 async function begin(name, sessions, removed = []) { stage = name; console.log('[finite-main-exit]', name); await run(`crowdAudit.begin(${JSON.stringify(name)},${JSON.stringify(sessions.map(s => s.id))},${JSON.stringify(removed)})`); }
-async function finish() {
+async function finish({ minimumScale = 0 } = {}) {
   await until('crowdAudit.report().frames>=31', 'sample thirty-one actual rendered frames');
   const result = await run('crowdAudit.finish()'); assert.deepEqual(result.violations, []); checks.push(result);
+  if (minimumScale) assert.ok(result.minScale >= minimumScale - .00001, 'the dense family must retain its fully proved common size: ' + JSON.stringify(result));
 }
 async function language(value) {
   await run(`(()=>{if(document.documentElement.lang!==${JSON.stringify(value === 'en' ? 'en' : 'zh-CN')})document.getElementById('language-button').click();})()`);
   await until(`document.documentElement.lang===${JSON.stringify(value === 'en' ? 'en' : 'zh-CN')}`, 'the actual language button must apply the requested language');
+}
+const stableFit = count => `${settled(count)}&&[...document.querySelectorAll('.actor')].every(n=>Math.abs(Math.hypot(new DOMMatrixReadOnly(getComputedStyle(n).transform).m11,new DOMMatrixReadOnly(getComputedStyle(n).transform).m12)-Math.hypot(new DOMMatrixReadOnly(n.style.transform).m11,new DOMMatrixReadOnly(n.style.transform).m12))<.00001&&n.getAnimations().every(a=>!(a instanceof CSSTransition&&a.transitionProperty==='transform'&&(a.playState==='running'||a.pending))))`;
+async function preview(name) {
+  const directory = process.env.MINI_OFFICE_EXIT_PREVIEW_DIR;
+  if (!directory) return;
+  fs.mkdirSync(directory, { recursive: true });
+  const rows = await run(`(()=>{const world=document.getElementById('world').getBoundingClientRect();return [...document.querySelectorAll('.actor')].map(n=>{const m=new DOMMatrixReadOnly(getComputedStyle(n).transform),a=crowdActors.get(n.dataset.sessionId);return{id:n.dataset.sessionId,foot:{x:m.m41/12.8,y:m.m42/7.2},scale:Math.hypot(m.m11,m.m12),data:{...n.dataset},target:a?.target,holdingFamily:a?.holdingFamily,rects:['.character-body','.nameplate'].map(s=>{const r=n.querySelector(s).getBoundingClientRect();return{left:r.left,right:r.right,top:r.top,bottom:r.bottom}})}})})()`);
+  fs.writeFileSync(path.join(directory, name + '.json'), JSON.stringify({ observations: snapshot.sessions, rows }, null, 2));
+  fs.writeFileSync(path.join(directory, name + '.png'), (await bounded(win.webContents.capturePage(), 'scenario preview', 3000)).toPNG());
 }
 const guard = setTimeout(() => { console.error('Finite exit fixture timed out: ' + stage); app.exit(1); }, 360000);
 app.whenReady().then(async () => {
@@ -69,14 +79,35 @@ app.whenReady().then(async () => {
   await finish();
 
   const parent = twelve[2], others = twelve.filter(s => s.id !== parent.id), child = task('late-helper', 'planning', parent.id);
+  await until(`${settled(12)}&&[...document.querySelectorAll('.actor')].every(n=>Math.hypot(new DOMMatrixReadOnly(getComputedStyle(n).transform).m11,new DOMMatrixReadOnly(getComputedStyle(n).transform).m12)>=.4-.00001&&n.getAnimations().every(a=>!(a instanceof CSSTransition&&a.transitionProperty==='transform'&&(a.playState==='running'||a.pending))))`, 'the preceding twelve-body restoration must finish at its proved forty-percent baseline');
   await begin('a newly observed real child retains its same departing parent', twelve);
   send(others); await until(`(()=>{const a=crowdActors.get(${JSON.stringify(parent.id)});return a?.departing&&a.navigation?.kind==='exit'&&a.node.dataset.walking==='true'})()`, 'the named parent must already be actually walking out');
+  const parentDeparture = await run(`new Promise(resolve=>{const node=${selector(parent.id)},start=performance.now(),points=new Map();let frames=0;function tick(now){frames++;if(!node?.isConnected)return resolve({frames,gone:true});const m=new DOMMatrixReadOnly(getComputedStyle(node).transform),point={x:m.m41,y:m.m42};points.set(point.x.toFixed(2)+'/'+point.y.toFixed(2),point);if(points.size>=31||now-start>1800)return resolve({frames,distinct:points.size,points:[...points.values()],walking:node.dataset.walking==='true',exit:crowdActors.get(${JSON.stringify(parent.id)})?.navigation?.kind==='exit'});requestAnimationFrame(tick)}requestAnimationFrame(tick)})`);
+  assert.ok(parentDeparture.distinct >= 31 && parentDeparture.walking && parentDeparture.exit, 'a late child must interrupt thirty-one real changing parent foot positions: ' + JSON.stringify(parentDeparture));
+  assert.ok(Math.hypot(parentDeparture.points.at(-1).x - parentDeparture.points[0].x, parentDeparture.points.at(-1).y - parentDeparture.points[0].y) > 20, 'the actual parent must already have left its old foot, not merely own a pre-first-frame Animation');
   send([...others, child]);
   await until(`(()=>{const a=crowdActors.get(${JSON.stringify(parent.id)}),n=${selector(child.id)};return a?.holdingFamily&&!a.departing&&a.navigation?.kind!=='exit'&&a.resumeNavigation?.kind!=='exit'&&n&&getComputedStyle(n).visibility!=='hidden'&&Number(getComputedStyle(n).opacity)>.99})()`, 'the same parent must revoke exit and admit its actual child');
   await until(settled(13), 'the real child must physically reach its planning station while the absent parent remains');
   assert.equal(await run(`(()=>{const p=crowdActors.get(${JSON.stringify(parent.id)}),c=${selector(child.id)};return p.node===exitOriginals.get(p.id).node&&c.dataset.cloneOrigin===p.id&&p.node.dataset.cloneHold==='true'})()`), true);
   await language('zh');
   assert.equal(await run(`${selector(parent.id)}.querySelector('.actor-state').textContent`), '等分身归位');
+  await until(stableFit(13), 'the actual Chinese thirteen-body scale and physical routes must settle before the preview');
+  await preview('thirteen-real-actors');
+  await finish({ minimumScale: .4 });
+  checks.at(-1).parentDeparture = parentDeparture;
+
+  const heldFoot = await run(`(()=>{const a=crowdActors.get(${JSON.stringify(parent.id)}),m=new DOMMatrixReadOnly(getComputedStyle(a.node).transform);return{x:m.m41/12.8,y:m.m42/7.2}})()`);
+  const swapped = others.map(s => s.id === twelve[0].id ? { ...s, activity: 'coding', lastEventAt: Date.now() } : s.id === twelve[8].id ? { ...s, activity: 'reading', lastEventAt: Date.now() } : s);
+  await begin('real function changes cannot borrow an absent held parent as an ordinary mover', [...twelve, child]);
+  send([...swapped, child]);
+  await until(stableFit(13), 'all changed real workers must physically reach their new functional stations around the held parent');
+  assert.equal(await run(`(()=>{const a=crowdActors.get(${JSON.stringify(parent.id)}),m=new DOMMatrixReadOnly(getComputedStyle(a.node).transform),p=${JSON.stringify(heldFoot)};return a.node===exitOriginals.get(a.id).node&&a.holdingFamily&&!a.motion&&!a.navigation&&!a.pendingStation&&Math.abs(m.m41/12.8-p.x)<.001&&Math.abs(m.m42/7.2-p.y)<.001&&Math.abs(a.target.x-p.x)<.001&&Math.abs(a.target.y-p.y)<.001})()`), true, 'the actual settled held parent may neither be assigned a fictional new target nor moved by unrelated work');
+  await preview('thirteen-held-parent-during-function-changes');
+  await finish();
+
+  await begin('restored real functions recover the proved thirteen-body destinations around the same held foot', [...twelve, child]);
+  send([...others, child]);
+  await until(`${stableFit(13)}&&[...document.querySelectorAll('.actor')].every(n=>Math.hypot(new DOMMatrixReadOnly(getComputedStyle(n).transform).m11,new DOMMatrixReadOnly(getComputedStyle(n).transform).m12)>=.4-.00001)`, 'the original real function distribution must finish walking and recover its forty-percent fit before the return audit');
   await finish();
 
   await begin('the child returns to its actual parent before that main exits', others, [child.id, parent.id]);
@@ -87,7 +118,9 @@ app.whenReady().then(async () => {
   const returns = await run(`crowdArrivals.filter(row=>row.id===${JSON.stringify(child.id)}&&row.kind==='return').length`);
   const exits = await run(`crowdArrivals.filter(row=>row.id===${JSON.stringify(parent.id)}&&row.kind==='exit').length`);
   assert.ok(returns >= 1 && exits >= 1, 'both physical endpoints must be observed before disappearance');
-  await finish();
+  await until(stableFit(11), 'all remaining eleven bodies and their common scale must settle after the physical return and exit');
+  await preview('eleven-after-real-return-and-parent-exit');
+  await finish({ minimumScale: .4 });
   await run(`${JSON.stringify([child.id, parent.id])}.forEach(id=>crowdAudit.forget(id))`);
 
   const closing = task('door-closing', 'coding'), arriving = task('door-arriving', 'reading');

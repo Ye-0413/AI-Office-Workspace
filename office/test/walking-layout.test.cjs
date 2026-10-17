@@ -66,7 +66,7 @@ function audit(page,input,footprints=new Map()){
   for(const [id,p]of page.seats){
     assert.equal(Walking.legalPoint(p,{uniformScale:page.uniformScale,footprint:footprintFor(id,input,footprints)}),true,id);
     if(p.fixedStale)assert.equal(Scene.activitySpec(input.find(s=>s.id===id)).stale,true,'only a real stale observation can reserve its last actual corridor point');
-    else assert.ok(Walking.ZONE_AREAS[p.workZone].some(a=>p.x>=a.x1-1e-6&&p.x<=a.x2+1e-6&&p.y>=a.y1-1e-6&&p.y<=a.y2+1e-6),id+' must remain on its own furniture side');
+    else if(!p.fixedHolding)assert.ok(Walking.ZONE_AREAS[p.workZone].some(a=>p.x>=a.x1-1e-6&&p.x<=a.x2+1e-6&&p.y>=a.y1-1e-6&&p.y<=a.y2+1e-6),id+' must remain on its own furniture side');
     for(const [other,q]of page.seats)if(other!==id)assert.equal(Scene.actorsOverlap(p,{uniformScale:page.uniformScale,footprint:footprintFor(id,input,footprints)},q,{uniformScale:page.uniformScale,footprint:footprintFor(other,input,footprints)},page.gap),false);
     for(const holding of page.holdingPoints)assert.equal(Scene.actorsOverlap(p,{uniformScale:page.uniformScale,footprint:footprintFor(id,input,footprints)},holding,{uniformScale:page.uniformScale,footprint:page.envelope},page.gap),false,'the holding pocket is genuinely empty');
     if(page.proofMode==='cooperative')continue;
@@ -95,7 +95,7 @@ function auditTransition(page,input,footprints,current,immovableIds=new Set()){
     positions.set(move.id,{...move.target,ownerId:move.id});staged.delete(move.id);
   }
   assert.equal(staged.size,0);
-  for(const [id,target]of page.seats)assert.deepEqual({x:positions.get(id).x,y:positions.get(id).y},{x:target.x,y:target.y},'every real request and temporary yielder reaches its final target');
+  for(const [id,target]of page.seats)assert.ok(Math.abs(positions.get(id).x-target.x)<.001&&Math.abs(positions.get(id).y-target.y)<.001,'every real request and temporary yielder reaches its final target within the physical arrival threshold');
 }
 
 function auditReturn(page,input,footprints,current){
@@ -135,6 +135,131 @@ function auditOpening(page,input,footprints,current){
   assert.deepEqual(positions.get(proof.parentId),{...proof.source,ownerId:proof.parentId});
   assert.deepEqual(positions.get(proof.childId),{...proof.target,ownerId:proof.childId});
 }
+
+test('thirteen measured bodies retain the twelve-worker scale while a real late child opens from its held parent',()=>{
+  const twelve=mixed(12),parent=twelve[2],child=task('agent-012','planning',{parentId:parent.id}),input=twelve.concat(child);
+  // Minimal synthetic reduction of the real English/Chinese capture: these
+  // are full measured route envelopes, not painted-head approximations.
+  const footprints=new Map(input.map(s=>[s.id,{left:116,right:122,top:121,bottom:93}]));
+  const first=Walking.layoutWalking(twelve,{requestedScale:.65,footprints});
+  const current=new Map([...first.seats].map(([id,p])=>[id,{x:p.x,y:p.y}]));
+  current.get(parent.id).y=83.99999999999999;
+  const immovableIds=new Set([parent.id]);
+  const page=Walking.layoutWalking(input,{requestedScale:.65,footprints,previousSeats:first.seats,currentPositions:current,immovableIds});
+  assert.equal(page.uniformScale,.4);assert.equal(page.proofMode,'cooperative');
+  audit(page,input,footprints);auditTransition(page,input,footprints,current,immovableIds);
+  const opening=Walking.layoutWalking(input,{requestedScale:.65,footprints,previousSeats:page.seats,currentPositions:current,immovableIds,openingDockPairs:new Map([[child.id,parent.id]])});
+  assert.equal(opening.uniformScale,.4);auditOpening(opening,input,footprints,current);
+  assert.deepEqual(opening.openingProof.source,current.get(parent.id));
+});
+
+for(const order of ['descending','interleaved'])test('the thirteen-body hint proves arbitrary '+order+' identities without moving a locked opening source',()=>{
+  const twelve=mixed(12).map((s,i)=>({...s,id:'body-'+String(order==='descending'?12-i:i%2?12-i:i).padStart(2,'0')}));
+  const parent=twelve[2],child=task('body-00-child','planning',{parentId:parent.id}),input=twelve.concat(child),footprints=new Map(input.map(s=>[s.id,{left:116,right:122,top:121,bottom:93}]));
+  const first=Walking.layoutWalking(twelve,{requestedScale:.65,footprints}),current=new Map([...first.seats].map(([id,p])=>[id,{x:p.x,y:p.y}])),immovableIds=new Set([parent.id]);
+  const openingDockPairs=new Map([[child.id,parent.id]]),page=Walking.layoutWalking(input,{requestedScale:.65,footprints,previousSeats:first.seats,currentPositions:current,immovableIds,openingDockPairs});
+  assert.equal(page.uniformScale,.4);audit(page,input,footprints);auditTransition(page,input,footprints,current,immovableIds);
+  assert.ok(!page.transitionProof.moves.some(m=>m.id===parent.id),'a source already at its dock does not move');
+  if(page.openingProof)auditOpening(page,input,footprints,current);
+  else assert.equal(page.openingDeferred,true,'an occupied new child target waits for the real workers to arrive');
+  const arrived=new Map([...page.seats].filter(([id])=>id!==child.id).map(([id,p])=>[id,{x:p.x,y:p.y}]));
+  const ready=Walking.layoutWalking(input,{requestedScale:.65,footprints,previousSeats:page.seats,currentPositions:arrived,immovableIds,openingDockPairs});
+  assert.equal(ready.uniformScale,.4);auditOpening(ready,input,footprints,arrived);
+});
+
+test('a thirteen-body transition can walk a genuinely exiting parent back to its holding dock before the child opens',()=>{
+  const twelve=mixed(12),parent=twelve[2],child=task('agent-012','planning',{parentId:parent.id}),input=twelve.concat(child),footprints=new Map(input.map(s=>[s.id,{left:116,right:122,top:121,bottom:93}]));
+  const first=Walking.layoutWalking(twelve,{requestedScale:.65,footprints}),exit=first.coordinatedProof.schedules.get(parent.id).exit.find(move=>move.id===parent.id&&!move.yielding);
+  const a=exit.path[0],b=exit.path[1],middle={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+  assert.ok(Math.hypot((middle.x-a.x)*12.8,(middle.y-a.y)*7.2)>20,'the source really advanced along a proven exit corridor');
+  const current=new Map([...first.seats].map(([id,p])=>[id,{x:p.x,y:p.y}]));current.set(parent.id,middle);
+  const immovableIds=new Set([parent.id]),page=Walking.layoutWalking(input,{requestedScale:.65,footprints,previousSeats:first.seats,currentPositions:current,immovableIds,openingBusyIds:new Set([parent.id])});
+  assert.equal(page.uniformScale,.4);audit(page,input,footprints);auditTransition(page,input,footprints,current,immovableIds);
+  const holding=page.transitionProof.moves.filter(move=>move.id===parent.id);assert.ok(holding.length);assert.ok(holding.every(move=>!move.yielding&&!move.temporary),'holding is the parent own finite journey, not temporary cooperative permission');
+  const docked=new Map([...page.seats].filter(([id])=>id!==child.id).map(([id,p])=>[id,{x:p.x,y:p.y}]));
+  const ready=Walking.layoutWalking(input,{requestedScale:.65,footprints,previousSeats:page.seats,currentPositions:docked,immovableIds,openingDockPairs:new Map([[child.id,parent.id]])});
+  assert.equal(ready.uniformScale,.4);auditOpening(ready,input,footprints,docked);
+  const all=new Map([...ready.seats].map(([id,p])=>[id,{x:p.x,y:p.y}])),closed=input.map(s=>s.id===child.id?{...s,status:'closed',closed:true}:s);
+  const returning=Walking.layoutWalking(closed,{requestedScale:.65,footprints,previousSeats:ready.seats,currentPositions:all,immovableIds:new Set([parent.id,child.id]),closingDockPairs:new Map([[child.id,parent.id]])});
+  assert.equal(returning.uniformScale,.4);assert.equal(returning.proofMode,'deferred-clone-return');auditReturn(returning,closed,footprints,all);
+});
+
+test('thirteen-body opening evidence caches only the same measured geometry, actual source and owners',()=>{
+  const twelve=mixed(12),parent=twelve[2],child=task('agent-012','planning',{parentId:parent.id}),input=twelve.concat(child),footprints=new Map(input.map(s=>[s.id,{left:116,right:122,top:121,bottom:93}]));
+  const first=Walking.layoutWalking(twelve,{requestedScale:.65,footprints}),current=new Map([...first.seats].map(([id,p])=>[id,{x:p.x,y:p.y}]));
+  const options={requestedScale:.65,footprints,currentPositions:current,immovableIds:new Set([parent.id]),openingDockPairs:new Map([[child.id,parent.id]])};
+  const page=Walking.layoutWalking(input,{...options,previousSeats:first.seats});assert.equal(page.uniformScale,.4);auditOpening(page,input,footprints,current);
+  const pulse=Walking.layoutWalking(input.map(s=>({...s,title:'Observed metadata',lastEventAt:1234})),{...options,previousSeats:page.seats});
+  assert.equal(pulse.cachedProof,true);assert.equal(pulse.openingProof,page.openingProof,'an ordinary observation must not restart a physical proof');
+  const moved=new Map(current);moved.set(parent.id,{x:40.01,y:84});
+  const sourceChanged=Walking.layoutWalking(input,{...options,previousSeats:page.seats,currentPositions:moved});
+  assert.equal(sourceChanged.cachedProof,false);assert.equal(sourceChanged.uniformScale,.4);auditOpening(sourceChanged,input,footprints,moved);
+  const larger=new Map(input.map(s=>[s.id,{left:117,right:123,top:122,bottom:94}]));
+  const measured=Walking.layoutWalking(input,{...options,previousSeats:page.seats,footprints:larger});
+  assert.equal(measured.cachedProof,false);assert.equal(measured.uniformScale,.4);audit(measured,input,larger);auditOpening(measured,input,larger,current);
+  const resized=Walking.layoutWalking(input,{...options,previousSeats:page.seats,requestedScale:1.35});
+  assert.equal(resized.cachedProof,false);assert.equal(resized.uniformScale,.4);auditOpening(resized,input,footprints,current);
+  const released=Walking.layoutWalking(input,{...options,previousSeats:page.seats,immovableIds:new Set()});
+  assert.equal(released.cachedProof,false);auditOpening(released,input,footprints,current);
+  const busy=Walking.layoutWalking(input,{...options,previousSeats:page.seats,openingBusyIds:new Set([twelve[0].id])});
+  assert.equal(busy.cachedProof,false);assert.equal(busy.uniformScale,.4);assert.equal(busy.openingBusyDeferred,false);auditOpening(busy,input,footprints,current);
+  const unpaired=Walking.layoutWalking(input,{...options,previousSeats:page.seats,openingDockPairs:new Map()});
+  assert.equal(unpaired.cachedProof,false);assert.equal(unpaired.openingProof,undefined,'revoking a source owner cannot reuse its endpoint permission');
+});
+
+test('an already held parent remains at its actual dock when thirteen other work-zone ordinals change',()=>{
+  const twelve=mixed(12),parent=twelve[2],child=task('agent-012','planning',{parentId:parent.id}),input=twelve.concat(child),footprints=new Map(input.map(s=>[s.id,{left:116,right:122,top:121,bottom:93}]));
+  const first=Walking.layoutWalking(input,{requestedScale:.65,footprints}),current=new Map([...first.seats].map(([id,p])=>[id,{x:p.x,y:p.y}]));assert.equal(first.uniformScale,.4);
+  const changed=input.map((s,i)=>i===0?{...s,activity:'coding'}:i===8?{...s,activity:'reading'}:s),page=Walking.layoutWalking(changed,{requestedScale:.65,footprints,previousSeats:first.seats,currentPositions:current,immovableIds:new Set([parent.id]),fixedHoldingIds:new Set([parent.id])});
+  assert.deepEqual({x:page.seats.get(parent.id).x,y:page.seats.get(parent.id).y},current.get(parent.id),'requestStation never creates a later ordinary move for an already held parent');
+  assert.ok(!page.transitionProof?.moves.some(move=>move.id===parent.id),'this existing dock has no ordinary own-move owner');
+  audit(page,changed,footprints);auditTransition(page,changed,footprints,current,new Set([parent.id]));
+  const restored=Walking.layoutWalking(input,{requestedScale:.65,footprints,previousSeats:page.seats,currentPositions:page.seats,immovableIds:new Set([parent.id]),fixedHoldingIds:new Set([parent.id])});
+  assert.equal(restored.uniformScale,page.uniformScale,'existing dense actual feet cannot grow before the real move finishes');assert.equal(restored.targetUniformScale,.4);audit(restored,input,footprints);auditTransition(restored,input,footprints,page.seats,new Set([parent.id]));assert.ok(!restored.transitionProof.moves.some(move=>move.id===parent.id));
+  const arrived=Walking.layoutWalking(input,{requestedScale:.65,footprints,previousSeats:restored.seats,currentPositions:restored.seats,immovableIds:new Set([parent.id]),fixedHoldingIds:new Set([parent.id])});
+  assert.equal(arrived.uniformScale,.4);audit(arrived,input,footprints);
+});
+
+test('explicit held feet invalidate their own cache and releasing the owner permits genuine fresh work again',()=>{
+  const parent=task('held-main'),child=task('held-child','planning',{parentId:parent.id}),input=[parent,child],footprints=new Map(input.map(s=>[s.id,{left:116,right:122,top:121,bottom:93}]));
+  const first=Walking.layoutWalking(input,{footprints}),current=new Map([...first.seats].map(([id,p])=>[id,{x:p.x,y:p.y}]));current.set(parent.id,{x:40,y:84});
+  const options={footprints,currentPositions:current,immovableIds:new Set([parent.id]),fixedHoldingIds:new Set([parent.id])};
+  const held=Walking.layoutWalking(input,{...options,previousSeats:first.seats});
+  assert.equal(held.seats.get(parent.id).fixedHolding,true);assert.deepEqual({x:held.seats.get(parent.id).x,y:held.seats.get(parent.id).y},current.get(parent.id));audit(held,input,footprints);auditTransition(held,input,footprints,current,options.immovableIds);
+  const pulse=Walking.layoutWalking(input,{...options,previousSeats:new Map(held.seats)});assert.equal(pulse.cachedProof,true,'copied maps retain only their real unchanged seat proof');
+  const shifted=new Map(current);shifted.set(parent.id,{x:40.01,y:84});
+  const corrected=Walking.layoutWalking(input,{...options,previousSeats:held.seats,currentPositions:shifted});
+  assert.equal(corrected.cachedProof,false);assert.equal(corrected.seats.get(parent.id).x,40.01);assert.ok(!corrected.transitionProof.moves.some(m=>m.id===parent.id));
+  const fresh=input.map(s=>s.id===parent.id?{...s,activity:'reading'}:s),resumed=Walking.layoutWalking(fresh,{...options,previousSeats:corrected.seats,currentPositions:shifted,fixedHoldingIds:new Set(),immovableIds:new Set()});
+  assert.equal(resumed.cachedProof,false);assert.equal(resumed.seats.get(parent.id).fixedHolding,undefined);assert.equal(resumed.seats.get(parent.id).workZone,'library');assert.ok(resumed.transitionProof.moves.some(m=>m.id===parent.id&&!m.yielding),'fresh real work owns a real station journey after the hold is revoked');audit(resumed,fresh,footprints);auditTransition(resumed,fresh,footprints,shifted);
+});
+
+test('a held actual corridor point is preserved without claiming a wrong furniture station',()=>{
+  const parent=task('held-main'),child=task('held-child','planning',{parentId:parent.id}),input=[parent,child],footprints=new Map(input.map(s=>[s.id,{left:116,right:122,top:121,bottom:93}]));
+  const first=Walking.layoutWalking(input,{footprints}),current=new Map([...first.seats].map(([id,p])=>[id,{x:p.x,y:p.y}]));current.set(parent.id,{x:74,y:78});
+  const page=Walking.layoutWalking(input,{footprints,previousSeats:first.seats,currentPositions:current,fixedHoldingIds:new Set([parent.id])});
+  assert.deepEqual({x:page.seats.get(parent.id).x,y:page.seats.get(parent.id).y},current.get(parent.id));assert.equal(page.seats.get(parent.id).area,'held-clone-anchor');assert.equal(page.seats.get(parent.id).fixedStale,undefined);assert.equal(page.visible.find(s=>s.id===parent.id).activity,'coding');audit(page,input,footprints);auditTransition(page,input,footprints,current,new Set([parent.id]));
+});
+
+test('the final real finite main exit remains an independent owner after its last child disappears',()=>{
+  const parent=task('held-main'),child=task('held-child','planning',{parentId:parent.id}),input=[parent,child],footprints=new Map(input.map(s=>[s.id,{left:116,right:122,top:121,bottom:93}]));
+  const first=Walking.layoutWalking(input,{footprints}),current=new Map([...first.seats].map(([id,p])=>[id,{x:p.x,y:p.y}]));
+  const held=Walking.layoutWalking(input,{footprints,previousSeats:first.seats,currentPositions:current,fixedHoldingIds:new Set([parent.id])});
+  const remaining=new Map([[parent.id,current.get(parent.id)]]),page=Walking.layoutWalking([parent],{footprints,previousSeats:held.seats,currentPositions:remaining,fixedHoldingIds:new Set([parent.id]),immovableIds:new Set([parent.id]),finiteExitIds:new Set([parent.id])});
+  assert.ok(page.exitProof);assert.deepEqual(page.exitProof.removedIds,[parent.id]);assert.ok(page.exitProof.moves.some(m=>m.id===parent.id&&!m.yielding&&!m.temporary),'a finite real door journey overrides only the ordinary station prohibition');
+  for(const move of page.exitProof.moves)auditPath(move.path,footprints.get(move.id),page.uniformScale,page.gap,new Map(),footprints);
+});
+
+for(const count of [14,16])test(count+' bodies do not inherit the bounded thirteen-body proof or a larger global search',()=>{
+  const input=mixed(12).concat(task('agent-012','planning',{parentId:'agent-002'}),task('agent-013','reading'),...(count===16?[task('agent-014','coding'),task('agent-015','testing')]:[]));
+  const footprints=new Map(input.map(s=>[s.id,{left:116,right:122,top:121,bottom:93}])),page=Walking.layoutWalking(input,{requestedScale:.65,footprints});
+  assert.equal(page.proofMode,'stationary');assert.equal(page.proofTrials,0,'unproved distributions never enumerate the larger cooperative pool');assert.equal(page.coordinatedProof,null);assert.ok(page.uniformScale<.35);assert.equal(page.readability.needsMoreSpace,true);audit(page,input,footprints);
+});
+
+test('thirteen unmatched work-zone counts use the honest full-cast fallback',()=>{
+  const input=mixed(12).concat(task('agent-012','reading',{parentId:'agent-002'})),footprints=new Map(input.map(s=>[s.id,{left:116,right:122,top:121,bottom:93}]));
+  const page=Walking.layoutWalking(input,{requestedScale:.65,footprints});assert.equal(page.proofTrials,0);assert.equal(page.proofMode,'stationary');assert.equal(page.coordinatedProof,null);audit(page,input,footprints);
+});
 
 for(const f of [{left:122,right:121,top:121,bottom:94},{left:122,right:128,top:122,bottom:94}])test('a pending English-width clone proves its actual left-aisle parent origin with '+f.right+'px right extent',()=>{
   const parent=task('codex:recovery-root'),child=task('codex:recovery-size','coding',{parentId:parent.id}),input=[parent,child],footprints=new Map(input.map(s=>[s.id,f]));

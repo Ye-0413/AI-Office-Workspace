@@ -12,6 +12,10 @@
   const ENTRY_POINT = Object.freeze({ x: 87, y: 78 });
   const HOLDING = Symbol('empty walking holding pocket');
   const HOLDING_CANDIDATES = Object.freeze([{x:50,y:78},{x:30.5,y:44.5},{x:74,y:60},{x:12,y:78},{x:88,y:44.5},{x:93,y:84}].map(Object.freeze));
+  // One measured thirteen-body distribution, not a higher global search
+  // threshold. These zone/ordinal coordinates are only a cheap hint: final
+  // access, actual transition and named clone endpoints must still prove.
+  const THIRTEEN_PROFILE = Object.freeze({scale:.4,holding:{x:30.5,y:82},points:{library:[[8,44],[19,44]],board:[[43,44],[56,44],[69.05,53]],desk:[[40,84],[48.3,84]],bench:[[82,44],[93,44]],sofa:[[8,84],[19,84]],lobby:[[56.6,84],[64.9,84]]}});
   const CORRIDORS = Object.freeze([[{x:31.5,y:44.5},{x:31.5,y:82}],[{x:73.5,y:44.5},{x:73.5,y:82}],[{x:31.5,y:78},{x:82,y:78}],[{x:31.5,y:44.5},{x:73.5,y:44.5}]].map(path=>Object.freeze(path.map(Object.freeze))));
   const OBSTACLES = Object.freeze(Scene.OBSTACLES.map(rect => Object.freeze({ ...rect })));
   const gapForScale = scale => 2 + 10 * Math.max(0, Number(scale) || 0);
@@ -161,7 +165,7 @@
     const ctx=make();let id='__geometry_holding_probe__';while(seats.has(id))id+='x';ctx.actors.set(id,{id,position:ENTRY_POINT,uniformScale:scale,footprint:envelope,staged:true,canYield:false});ctx.sync();ctx.traffic.request(id,pocket);const holding=drain(ctx);if(!holding)return null;
     return {paths:out,schedules,holdingActorId:id,holdingPoint:{...pocket},holdingPath:holding.find(m=>m.id===id)?.path,holdingMoves:holding};
   }
-  function transitionProof(seats,footprints,scale,reservedRects,holdingPoints,immovableIds,current,allowedOverlaps,fixedStale) {
+  function transitionProof(seats,footprints,scale,reservedRects,holdingPoints,immovableIds,current,allowedOverlaps,fixedPositions) {
     const initialPositions=new Map([...current].filter(([id,p])=>seats.has(id)&&validPoint(p)).map(([id,p])=>[id,{x:p.x,y:p.y}]));
     if(!current.size||[...seats].every(([id,p])=>validPoint(current.get(id))&&Math.abs(p.x-current.get(id).x)<.001&&Math.abs(p.y-current.get(id).y)<.001))return {scale,moves:[],initialPositions};
     const actors=new Map([...seats].map(([id])=>{const p=current.get(id);return[id,{id,position:validPoint(p)?{x:p.x,y:p.y}:{...ENTRY_POINT},uniformScale:scale,footprint:footprints.get(id),staged:!validPoint(p),canYield:!immovableIds.has(id)}];}));
@@ -177,9 +181,9 @@
     const traffic=Traffic.createCoordinator({bounds:Scene.actorBounds,legalPoint:(p,a)=>legalPoint(p,{...a,reservedRects}),route:(a,b,s)=>route(a,b,{...s,reservedRects}),gap:gapForScale,obstacles:OBSTACLES,reservedRects,holdingPoints:[...holdingPoints,...HOLDING_CANDIDATES]});
     const sync=()=>traffic.sync([...actors.values()]);sync();
     for(const [id,target]of seats){
-      if(fixedStale.has(id)){
-        const p=fixedStale.get(id);if(Math.abs(p.x-target.x)>.001||Math.abs(p.y-target.y)>.001)return null;
-        continue; // requestStation deliberately never moves a stale body.
+      if(fixedPositions.has(id)){
+        const p=fixedPositions.get(id);if(Math.abs(p.x-target.x)>.001||Math.abs(p.y-target.y)>.001)return null;
+        continue; // Stale or explicitly held bodies have no ordinary station owner.
       }
       if(!traffic.request(id,target,{overlapIds:[...overlaps.get(id)]}))return null;
     }
@@ -288,9 +292,15 @@
     const reservedRects=(options.reservedRects||Scene.CLOCK_RESERVED).filter(r=>r&&['left','right','top','bottom'].every(k=>Number.isFinite(r[k]))),footprints=new Map(visible.map(s=>[s.id,(validFootprint(options.footprints?.get(s.id))?options.footprints.get(s.id):s.parentId?Scene.ACTOR_FOOTPRINT.helper:Scene.ACTOR_FOOTPRINT.root)]));
     const envelope=Object.fromEntries(['left','right','top','bottom'].map(k=>[k,footprints.size?Math.max(...[...footprints.values()].map(f=>f[k])):Scene.ACTOR_FOOTPRINT.root[k]]));
     const workZones=new Map(visible.map(s=>{const spec=Scene.activitySpec(s),old=previous.get(s.id),oldZone=old?.workZone||old?.zone;return[s.id,old&&ZONE_AREAS[oldZone]&&(spec.stale||(Scene.isClosed(s)&&validPoint(old)&&zoneArea(old,oldZone)))?oldZone:spec.zone];}));
+    const thirteenProfile=visible.length===13&&Object.entries(THIRTEEN_PROFILE.points).every(([zone,points])=>[...workZones.values()].filter(value=>value===zone).length===points.length);
     const actualPositions=options.transitionPositions instanceof Map?options.transitionPositions:current;
     const fixedStale=new Map(visible.filter(s=>Scene.activitySpec(s).stale&&validPoint(actualPositions.get(s.id)||previous.get(s.id))).map(s=>{const p=actualPositions.get(s.id)||previous.get(s.id);return[s.id,{x:p.x,y:p.y}];}));
-    const immovableIds=new Set(visible.filter(s=>options.immovableIds?.has(s.id)||Scene.activitySpec(s).stale||Scene.isClosed(s)).map(s=>s.id));
+    // Unlike canYield=false, this explicit runtime fact forbids an ordinary
+    // own station request. A first late-parent rehome or a real in-flight
+    // holding owner is deliberately absent from this set.
+    const fixedHolding=new Map(visible.filter(s=>options.fixedHoldingIds?.has(s.id)&&validPoint(actualPositions.get(s.id))).map(s=>{const p=actualPositions.get(s.id);return[s.id,{x:p.x,y:p.y}];}));
+    const fixedPositions=new Map([...fixedStale,...fixedHolding]);
+    const immovableIds=new Set(visible.filter(s=>options.immovableIds?.has(s.id)||fixedHolding.has(s.id)||Scene.activitySpec(s).stale||Scene.isClosed(s)).map(s=>s.id));
     const closingDockPairs=options.closingDockPairs instanceof Map?options.closingDockPairs:new Map();
     const openingDockPairs=options.openingDockPairs instanceof Map?options.openingDockPairs:new Map();
     const openingDocks=visible.filter(s=>s.parentId&&unique.has(openingDockPairs.get(s.id))&&!validPoint(current.get(s.id))&&validPoint(current.get(openingDockPairs.get(s.id)))).map(s=>({childId:s.id,parentId:openingDockPairs.get(s.id)}));
@@ -298,7 +308,7 @@
     const isObservedAncestor=id=>visible.some(s=>{const seen=new Set();let parent=s.parentId;while(parent&&!seen.has(parent)){if(parent===id)return true;seen.add(parent);parent=unique.get(parent)?.parentId;}return false;});
     const finiteExitIds=new Set(visible.filter(s=>options.finiteExitIds?.has(s.id)&&!s.parentId&&validPoint(current.get(s.id))&&!isObservedAncestor(s.id)).map(s=>s.id));
     const finiteBudget={trials:0};
-    const signature=JSON.stringify([requestedScale,viewport,reservedRects,options.cooperative!==false,options.holdingOccupiedForProof!==false,[...immovableIds].sort(),[...closingDockPairs].sort(([a],[b])=>a.localeCompare(b)),[...openingDockPairs].sort(([a],[b])=>a.localeCompare(b)),openingDockPairs.size?openingBusyIds:null,[...finiteExitIds],finiteExitIds.size?[...(options.allowedOverlaps||[])].sort():null,closingDockPairs.size||openingDockPairs.size||finiteExitIds.size?visible.filter(s=>validPoint(current.get(s.id))).map(s=>[s.id,current.get(s.id).x,current.get(s.id).y]):null,[...fixedStale],visible.map(s=>[s.id,s.parentId||'',workZones.get(s.id),footprints.get(s.id)])]);
+    const signature=JSON.stringify([requestedScale,viewport,reservedRects,options.cooperative!==false,options.holdingOccupiedForProof!==false,[...immovableIds].sort(),[...closingDockPairs].sort(([a],[b])=>a.localeCompare(b)),[...openingDockPairs].sort(([a],[b])=>a.localeCompare(b)),openingDockPairs.size?openingBusyIds:null,[...finiteExitIds],finiteExitIds.size?[...(options.allowedOverlaps||[])].sort():null,closingDockPairs.size||openingDockPairs.size||finiteExitIds.size?visible.filter(s=>validPoint(current.get(s.id))).map(s=>[s.id,current.get(s.id).x,current.get(s.id).y]):null,[...fixedStale],[...fixedHolding],visible.map(s=>[s.id,s.parentId||'',workZones.get(s.id),footprints.get(s.id)])]);
     const targetSignature=seats=>JSON.stringify([...seats].map(([id,p])=>[id,p.x,p.y,p.workZone||p.zone,p.area,p.holdingPoint,p.targetUniformScale]).sort((a,b)=>a[0].localeCompare(b[0])));
     const ratio=(clearance,extent)=>extent>0?clearance/extent:clearance>=0?Infinity:-Infinity;
     let maximum=requestedScale;
@@ -355,7 +365,7 @@
     if(!returningDocks.length&&finiteExitIds.size&&cached&&cached.targets===targetSignature(previous)&&['cooperative','stationary'].includes(priorProofMode)&&visible.length<=previous.size&&visible.every(s=>previous.has(s.id)&&validPoint(current.get(s.id))&&cached.page.visible.find(old=>old.id===s.id)?.parentId===s.parentId)){
       const cap=Math.min(maximum,cached.page.uniformScale),oldSeats=new Map(visible.map(s=>[s.id,previous.get(s.id)]));
       const exitProof=fitFiniteExit(finiteExitIds,oldSeats,footprints,cap,reservedRects,cached.page.holdingPoints||[],immovableIds,current,finiteBudget),scale=exitProof?.scale||cap,gap=gapForScale(scale);
-      const retained=new Map(visible.map(s=>{const old=previous.get(s.id),p=fixedStale.get(s.id)||old;return[s.id,{...old,x:p.x,y:p.y,uniformScale:scale,targetUniformScale:scale,requestedScale,...(workZones.get(s.id)!==(old.workZone||old.zone)?{pendingWorkZone:workZones.get(s.id)}:{})}];}));
+      const retained=new Map(visible.map(s=>{const old=previous.get(s.id),p=fixedPositions.get(s.id)||old;return[s.id,{...old,x:p.x,y:p.y,uniformScale:scale,targetUniformScale:scale,requestedScale,...(workZones.get(s.id)!==(old.workZone||old.zone)?{pendingWorkZone:workZones.get(s.id)}:{})}];}));
       const legal=[...retained].every(([id,p])=>legalPoint(p,{uniformScale:scale,footprint:footprints.get(id),reservedRects,viewport})&&![...retained].some(([other,q])=>other!==id&&Scene.actorsOverlap(p,{uniformScale:scale,footprint:footprints.get(id)},q,{uniformScale:scale,footprint:footprints.get(other)},gap)));
       if(exitProof&&legal){
         Object.defineProperties(retained,{fits:{value:true},unplacedIds:{value:[]}});
@@ -368,7 +378,7 @@
       const retainedIds=new Map(visible.map(s=>[s.id,previous.get(s.id)]));
       const returnProof=fitActualReturn(returningDocks,retainedIds,footprints,cap,reservedRects,cached.page.holdingPoints||[],immovableIds,current);
       const scale=returnProof?.scale||cap,gap=gapForScale(scale);
-      const retained=new Map(visible.map(s=>{const old=previous.get(s.id),p=fixedStale.get(s.id)||old;return[s.id,{...old,x:p.x,y:p.y,uniformScale:scale,targetUniformScale:scale,requestedScale,...(workZones.get(s.id)!==(old.workZone||old.zone)?{pendingWorkZone:workZones.get(s.id)}:{})}];}));
+      const retained=new Map(visible.map(s=>{const old=previous.get(s.id),p=fixedPositions.get(s.id)||old;return[s.id,{...old,x:p.x,y:p.y,uniformScale:scale,targetUniformScale:scale,requestedScale,...(workZones.get(s.id)!==(old.workZone||old.zone)?{pendingWorkZone:workZones.get(s.id)}:{})}];}));
       const legal=[...retained].every(([id,p])=>legalPoint(p,{uniformScale:scale,footprint:footprints.get(id),reservedRects,viewport})&&![...retained].some(([other,q])=>other!==id&&Scene.actorsOverlap(p,{uniformScale:scale,footprint:footprints.get(id)},q,{uniformScale:scale,footprint:footprints.get(other)},gap)));
       if(legal){
         // An explicitly owned returning helper holds a finite real dock. Keep
@@ -383,8 +393,8 @@
     // Prove a more spacious destination first, walk there at the current safe
     // size, and only grow once the actual feet support the already-proven fit.
     const geometryChanged=previous.size!==visible.length||visible.some(s=>{const old=previous.get(s.id);return !old||(old.workZone||old.zone)!==workZones.get(s.id)||old.requestedScale!==requestedScale||(old.targetUniformScale||old.uniformScale)>old.uniformScale+EPS;})||cached&&cached.signature!==signature;
-    if(!options.targetOnly&&visible.length&&visible.length<=12&&previous.size&&geometryChanged){
-      const retained=new Map(visible.filter(s=>(Scene.activitySpec(s).stale||Scene.isClosed(s))&&previous.has(s.id)).map(s=>[s.id,{...previous.get(s.id),...(!Scene.isClosed(s)?current.get(s.id)||{}:{}),workZone:workZones.get(s.id)}]));
+    if(!options.targetOnly&&visible.length&&(visible.length<=12||thirteenProfile)&&previous.size&&geometryChanged){
+      const retained=new Map(visible.filter(s=>(Scene.activitySpec(s).stale||Scene.isClosed(s)||fixedHolding.has(s.id))&&previous.has(s.id)).map(s=>[s.id,{...previous.get(s.id),...(!Scene.isClosed(s)?current.get(s.id)||{}:{}),...(fixedHolding.get(s.id)||{}),workZone:workZones.get(s.id)}]));
       const previousScale=Math.min(...visible.map(s=>previous.get(s.id)?.uniformScale||maximum));
       const goal=layoutWalking(visible,{...options,targetOnly:true,previousSeats:retained,currentPositions:new Map([...current].filter(([id])=>retained.has(id))),transitionPositions:current,transitionMaximum:maximum,transitionPreviousScale:previousScale});
       const scale=Math.min(maximum,goal.uniformScale,maximum+EPS>=goal.uniformScale?goal.uniformScale:previousScale);
@@ -394,7 +404,7 @@
     let proofTrials=0;const PROOF_BUDGET=16;
     const transitionPositions=options.transitionPositions instanceof Map?options.transitionPositions:current;
     const samePoint=(a,b)=>a&&b&&Math.abs(a.x-b.x)<.001&&Math.abs(a.y-b.y)<.001;
-    const seatArea=(p,zone,id)=>zoneArea(p,zone)||(samePoint(p,fixedStale.get(id))?{id:'last-observed-position',labelZh:'最后观察位置',labelEn:'Last observed position'}:null);
+    const seatArea=(p,zone,id)=>zoneArea(p,zone)||(samePoint(p,fixedHolding.get(id))?{id:'held-clone-anchor',labelZh:'分身归位锚点',labelEn:'Clone return anchor'}:samePoint(p,fixedStale.get(id))?{id:'last-observed-position',labelZh:'最后观察位置',labelEn:'Last observed position'}:null);
     function deferEntrance(candidate,scale){
       const blockedByIds=[...fixedStale].filter(([id,p])=>validPoint(actualPositions.get(id))&&Scene.actorsOverlap(p,{uniformScale:scale,footprint:footprints.get(id)},ENTRY_POINT,{uniformScale:scale,footprint:envelope},gapForScale(scale))).map(([id])=>id);
       // This is a real occupied portal, not a general escape hatch for failed
@@ -403,11 +413,11 @@
       return blockedByIds.length?{...candidate,paths:new Map(),holdingPath:[],deferredEntrance:blockedByIds}:null;
     }
     function proveTransition(candidate,scale) {
-      if(!candidate||visible.length>12)return candidate;
+      if(!candidate||visible.length>12&&!thirteenProfile)return candidate;
       const cap=Number.isFinite(options.transitionMaximum)?options.transitionMaximum:maximum;
       const previousScale=Number.isFinite(options.transitionPreviousScale)?options.transitionPreviousScale:scale;
       const physicalScale=Math.min(scale,cap,cap+EPS>=scale?scale:previousScale);
-      const transition=transitionProof(candidate.seats,footprints,physicalScale,reservedRects,[candidate.pocket,...(candidate.yieldPoints||[])],immovableIds,transitionPositions,options.allowedOverlaps,fixedStale);
+      const transition=transitionProof(candidate.seats,footprints,physicalScale,reservedRects,[candidate.pocket,...(candidate.yieldPoints||[])],immovableIds,transitionPositions,options.allowedOverlaps,fixedPositions);
       return transition?{...candidate,transition}:null;
     }
     function place(scale,variant=0,cooperative=false) {
@@ -418,14 +428,14 @@
       const entrance={left:Math.min(entry.left,throat.left),right:Math.max(entry.right,throat.right),top:Math.min(entry.top,throat.top),bottom:Math.max(entry.bottom,throat.bottom)};
       const oldPocket=previous.values().next().value?.holdingPoint;
       const pocketOrder=(validPoint(oldPocket)?[oldPocket]:[]).concat(visible.length>12?[HOLDING_CANDIDATES.at(-1),...HOLDING_CANDIDATES.slice(0,-1)]:HOLDING_CANDIDATES.slice(variant%HOLDING_CANDIDATES.length).concat(HOLDING_CANDIDATES.slice(0,variant%HOLDING_CANDIDATES.length)));
-      const pocket=pocketOrder.find(p=>legalPoint(p,{uniformScale:scale,footprint:envelope,reservedRects,viewport})&&!Scene.boundsOverlap(Scene.actorBounds(p,{uniformScale:scale,footprint:envelope}),entrance,gap+1)&&!visible.some(s=>{const old=fixedStale.get(s.id)||previous.get(s.id);return validPoint(old)&&(fixedStale.has(s.id)||zoneArea(old,workZones.get(s.id)))&&Scene.boundsOverlap(Scene.actorBounds(old,{uniformScale:scale,footprint:footprints.get(s.id)}),Scene.actorBounds(p,{uniformScale:scale,footprint:envelope}),gap+1);}));
+      const pocket=pocketOrder.find(p=>legalPoint(p,{uniformScale:scale,footprint:envelope,reservedRects,viewport})&&!Scene.boundsOverlap(Scene.actorBounds(p,{uniformScale:scale,footprint:envelope}),entrance,gap+1)&&!visible.some(s=>{const old=fixedPositions.get(s.id)||previous.get(s.id);return validPoint(old)&&(fixedPositions.has(s.id)||zoneArea(old,workZones.get(s.id)))&&Scene.boundsOverlap(Scene.actorBounds(old,{uniformScale:scale,footprint:footprints.get(s.id)}),Scene.actorBounds(p,{uniformScale:scale,footprint:envelope}),gap+1);}));
       if(!pocket)return null;
       occupied.push(Scene.actorBounds(pocket,{uniformScale:scale,footprint:envelope}));
       if(visible.length>12)for(const [from,to]of CORRIDORS){const a=Scene.actorBounds(from,{uniformScale:scale,footprint:envelope}),b=Scene.actorBounds(to,{uniformScale:scale,footprint:envelope});occupied.push({left:Math.min(a.left,b.left),right:Math.max(a.right,b.right),top:Math.min(a.top,b.top),bottom:Math.max(a.bottom,b.bottom)});}
       const prove=()=>{const proofSeats=new Map(seats),extra=new Map();if(options.holdingOccupiedForProof===false)extra.set(HOLDING,pocket);else proofSeats.set(HOLDING,pocket);const proofFootprints=new Map(footprints);proofFootprints.set(HOLDING,envelope);return reachability(proofSeats,proofFootprints,scale,envelope,reservedRects,viewport,extra);};
-      const safe=(p,s)=>{if((fixedStale.has(s.id)&&!samePoint(p,fixedStale.get(s.id)))||!seatArea(p,workZones.get(s.id),s.id)||!legalPoint(p,{uniformScale:scale,footprint:footprints.get(s.id),reservedRects,viewport}))return false;const b=Scene.actorBounds(p,{uniformScale:scale,footprint:footprints.get(s.id)});return(fixedStale.has(s.id)||!Scene.boundsOverlap(b,entrance,gap+1))&&!occupied.some(r=>Scene.boundsOverlap(b,r,gap+1));};
-      const remember=(s,p)=>{const a=seatArea(p,workZones.get(s.id),s.id);seats.set(s.id,{x:p.x,y:p.y,zone:workZones.get(s.id),area:a.id,areaLabelZh:a.labelZh,areaLabelEn:a.labelEn,...(fixedStale.has(s.id)?{fixedStale:true}:{})});occupied.push(Scene.actorBounds(p,{uniformScale:scale,footprint:footprints.get(s.id)}));};
-      for(const s of visible)if(fixedStale.has(s.id)){const p=fixedStale.get(s.id);if(!safe(p,s))return null;remember(s,p);}
+      const safe=(p,s)=>{if((fixedPositions.has(s.id)&&!samePoint(p,fixedPositions.get(s.id)))||!seatArea(p,workZones.get(s.id),s.id)||!legalPoint(p,{uniformScale:scale,footprint:footprints.get(s.id),reservedRects,viewport}))return false;const b=Scene.actorBounds(p,{uniformScale:scale,footprint:footprints.get(s.id)});return(fixedPositions.has(s.id)||!Scene.boundsOverlap(b,entrance,gap+1))&&!occupied.some(r=>Scene.boundsOverlap(b,r,gap+1));};
+      const remember=(s,p)=>{const a=seatArea(p,workZones.get(s.id),s.id);seats.set(s.id,{x:p.x,y:p.y,zone:workZones.get(s.id),area:a.id,areaLabelZh:a.labelZh,areaLabelEn:a.labelEn,...(fixedStale.has(s.id)?{fixedStale:true}:{}),...(fixedHolding.has(s.id)?{fixedHolding:true}:{})});occupied.push(Scene.actorBounds(p,{uniformScale:scale,footprint:footprints.get(s.id)}));};
+      for(const s of visible)if(fixedPositions.has(s.id)){const p=fixedPositions.get(s.id);if(!safe(p,s))return null;remember(s,p);}
       for(const s of visible)if(!seats.has(s.id)){const p=previous.get(s.id);if(validPoint(p)&&safe(p,s))remember(s,p);}
       const pending=visible.filter(s=>!seats.has(s.id));
       pending.sort((a,b)=>(ZONE_AREAS[workZones.get(a.id)].reduce((sum,r)=>sum+(r.x2-r.x1)*(r.y2-r.y1),0)-ZONE_AREAS[workZones.get(b.id)].reduce((sum,r)=>sum+(r.x2-r.x1)*(r.y2-r.y1),0))||a.id.localeCompare(b.id));
@@ -476,7 +486,7 @@
       const entrance={left:Math.min(doorBounds.left,throatBounds.left),right:Math.max(doorBounds.right,throatBounds.right),top:Math.min(doorBounds.top,throatBounds.top),bottom:Math.max(doorBounds.bottom,throatBounds.bottom)};
       if(!legalPoint(pocket,{uniformScale:scale,footprint:envelope,reservedRects,viewport})||Scene.boundsOverlap(holdingBounds,entrance,gap+1))return null;
       for(const session of visible){
-        const zone=workZones.get(session.id),index=ordinals.get(zone)||0,point=profile.points[zone]?.[index],fixed=fixedStale.get(session.id);if(!point&&!fixed)return null;
+        const zone=workZones.get(session.id),index=ordinals.get(zone)||0,point=profile.points[zone]?.[index],fixed=fixedPositions.get(session.id);if(!point&&!fixed)return null;
         // A calibrated sprite foot can move the nameplate farther below its
         // anchor. Fit the hint's actual full bottom, then recheck its station.
         const f=footprints.get(session.id);
@@ -484,7 +494,7 @@
         if(!a||!legalPoint(p,{uniformScale:scale,footprint:f,reservedRects,viewport}))return null;
         const bounds=Scene.actorBounds(p,{uniformScale:scale,footprint:f});
         if((!fixed&&Scene.boundsOverlap(bounds,entrance,gap+1))||Scene.boundsOverlap(bounds,holdingBounds,gap+1)||[...seats].some(([id,q])=>Scene.actorsOverlap(p,{uniformScale:scale,footprint:f},q,{uniformScale:scale,footprint:footprints.get(id)},gap+1)))return null;
-        seats.set(session.id,{...p,zone,area:a.id,areaLabelZh:a.labelZh,areaLabelEn:a.labelEn,...(fixed?{fixedStale:true}:{})});
+        seats.set(session.id,{...p,zone,area:a.id,areaLabelZh:a.labelZh,areaLabelEn:a.labelEn,...(fixedStale.has(session.id)?{fixedStale:true}:{}),...(fixedHolding.has(session.id)?{fixedHolding:true}:{})});
       }
       const yieldPoints=(profile.yieldPoints||[]).map(([x,y])=>({x,y:Math.min(y,(viewport.bottom-envelope.bottom*scale)*100/H)})).filter(p=>legalPoint(p,{uniformScale:scale,footprint:envelope,reservedRects,viewport})&&!Scene.boundsOverlap(Scene.actorBounds(p,{uniformScale:scale,footprint:envelope}),entrance,gap+1)&&![...seats].some(([id,q])=>Scene.actorsOverlap(p,{uniformScale:scale,footprint:envelope},q,{uniformScale:scale,footprint:footprints.get(id)},gap+1)));
       const deferred=deferEntrance({seats,pocket,scale,yieldPoints},scale);if(deferred)return deferred;
@@ -492,14 +502,14 @@
       return proof?proveTransition({seats,paths:proof.paths,pocket,holdingPath:proof.holdingPath,coordinated:proof,scale,yieldPoints},scale):null;
     }
     let chosen=null,scale=maximum,upper=maximum;
-    if(options.cooperative!==false&&Traffic?.createCoordinator&&visible.length&&visible.length<=12){
+    if(options.cooperative!==false&&Traffic?.createCoordinator&&visible.length&&(visible.length<=12||thirteenProfile)){
       if(visible.length<=4){
         for(let pass=0;pass<4&&!chosen&&proofTrials<PROOF_BUDGET;pass++){
           for(let variant=0;variant<4&&!chosen&&proofTrials<PROOF_BUDGET;variant++)chosen=place(scale,variant,true);
           if(!chosen){upper=scale;scale*=.82;}
         }
         if(chosen&&scale<maximum){let low=scale,high=upper;for(let pass=0;pass<4&&proofTrials<PROOF_BUDGET;pass++){const mid=(low+high)/2,candidate=place(mid,0,true);if(candidate){low=mid;chosen=candidate;}else high=mid;}scale=low;}
-      }else for(const profile of profiles){const candidate=seeded(profile);if(candidate){chosen=candidate;scale=candidate.scale;break;}}
+      }else for(const profile of thirteenProfile?[THIRTEEN_PROFILE]:profiles){const candidate=seeded(profile);if(candidate){chosen=candidate;scale=candidate.scale;break;}}
     }
     // The stricter all-other-bodies-stationary proof remains a bounded fallback
     // for unmatched work-zone distributions or an unavailable traffic module.

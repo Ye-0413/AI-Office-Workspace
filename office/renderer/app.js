@@ -241,9 +241,16 @@
   function sceneOptions(incoming = snapshot.sessions, exiting = new Set()) {
     const pinned = pinnedDockIds();
     const closingPairs = closingDockPairs();
+    const observedById = new Map(snapshot.sessions.map(session => [session.id, session]));
     for (const [child, parent] of closingPairs) { pinned.add(child); pinned.add(parent); }
     return { requestedScale: settings.agentScale, venue: settings.sceneVenue, footprints: actorFootprints, reservedRects: CLOCK_RESERVED, previousSeats: seats, previousScale: uniformScale, previousRequestedScale: currentPage.requestedScale,
       closingDockPairs: closingPairs, openingDockPairs: openingDockPairs(incoming), finiteExitIds: new Set(exiting),
+      // A settled absent ancestor has no ordinary station route. A first late
+      // descendant, its real holding walk, and fresh work keep their own owners.
+      fixedHoldingIds: new Set([...actors.values()].filter(actor => !actor.entryPending && actor.holdingFamily
+        && !actor.motion && !actor.routeReservation && !actor.navigation && !actor.resumeNavigation
+        && !(observedById.has(actor.id) && hasBodyActivity(observedById.get(actor.id))
+          && attendance.present.some(session => session.id === actor.id))).map(actor => actor.id)),
       openingBusyIds: new Set([...actors.values()].filter(actor => !actor.entryPending && (actor.motion || actor.routeReservation || actor.resumeNavigation || actor.yielding)).map(actor => actor.id)),
       currentPositions: new Map([...actors.values()].filter(actor => !actor.entryPending).map(actor => [actor.id, currentPosition(actor)])),
       immovableIds: new Set([...actors.values()].filter(actor => !actor.entryPending && !canYieldAtStation(actor, pinned)).map(actor => actor.id)),
