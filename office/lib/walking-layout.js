@@ -118,8 +118,12 @@
     for(let pass=0;pass<limit;pass++){
       const move=ctx.traffic.nextAny();
       if(move.kind==='idle')return moves;
-      if(move.kind==='arrived')continue;
+      if(move.kind==='arrived'){
+        if(ctx.afterArrival){if(ctx.afterArrival(move)===false)return null;ctx.sync();}
+        continue;
+      }
       if(move.kind!=='move')return null;
+      if(ctx.validMove&&!ctx.validMove(move))return null;
       const actor=ctx.actors.get(move.id),f=actor.footprint;
       for(let i=1;i<move.path.length;i++){
         const from=move.path[i-1],to=move.path[i],a=pixel(from),b=pixel(to);
@@ -135,6 +139,7 @@
       }
       actor.position={...move.target};actor.staged=false;
       if(!ctx.traffic.finish(move.id,move.token,move.target))return null;
+      if(ctx.afterFinish)ctx.afterFinish(move);
       ctx.sync();moves.push(move);
     }
     return null;
@@ -244,6 +249,38 @@
     if(scale<maximum)for(let pass=0;pass<5;pass++){const mid=(scale+upper)/2,candidate=prove(mid);trials++;if(candidate){scale=mid;proof=candidate;}else upper=mid;}
     return{...proof,trials};
   }
+  function finiteExitProof(exitIds,seats,footprints,scale,reservedRects,holdingPoints,immovableIds,current){
+    // Missing actual coordinates mean a body has not been admitted yet. Keep
+    // its identity/seat in the page, but never invent a ghost at ENTRY which
+    // would make the old door occupant and new arrival wait for each other.
+    if([...exitIds].some(id=>!seats.has(id)||!validPoint(current.get(id))))return null;
+    const unadmittedIds=[...seats.keys()].filter(id=>!validPoint(current.get(id)));
+    const initialPositions=new Map([...seats.keys()].filter(id=>validPoint(current.get(id))).map(id=>[id,{x:current.get(id).x,y:current.get(id).y}]));
+    const actors=new Map([...initialPositions].map(([id,p])=>[id,{id,position:{...p},uniformScale:scale,footprint:footprints.get(id),canYield:!exitIds.has(id)&&!immovableIds.has(id)}]));
+    const traffic=Traffic.createCoordinator({bounds:Scene.actorBounds,legalPoint:(p,a)=>legalPoint(p,{...a,reservedRects}),route:(a,b,s)=>route(a,b,{...s,reservedRects}),gap:gapForScale,obstacles:OBSTACLES,reservedRects,holdingPoints:[...holdingPoints,...HOLDING_CANDIDATES]});
+    const sync=()=>traffic.sync([...actors.values()]);sync();
+    for(const id of exitIds)if(!traffic.request(id,ENTRY_POINT))return null;
+    const removedIds=[],steps=[],ctx={actors,traffic,sync,
+      validMove:move=>exitIds.has(move.id)?!move.temporary&&!move.yielding:!immovableIds.has(move.id),
+      afterFinish:move=>{steps.push(move);if(exitIds.has(move.id)&&Math.abs(move.target.x-ENTRY_POINT.x)<.001&&Math.abs(move.target.y-ENTRY_POINT.y)<.001){actors.delete(move.id);removedIds.push(move.id);}},
+      afterArrival:arrival=>{
+        const actor=actors.get(arrival.id);
+        if(!exitIds.has(arrival.id)||!actor||Math.abs(actor.position.x-ENTRY_POINT.x)>=.001||Math.abs(actor.position.y-ENTRY_POINT.y)>=.001||Math.abs(arrival.target.x-ENTRY_POINT.x)>=EPS||Math.abs(arrival.target.y-ENTRY_POINT.y)>=EPS||!legalPoint(actor.position,{...actor,reservedRects}))return false;
+        steps.push({...arrival,actualPosition:{...actor.position}});actors.delete(arrival.id);removedIds.push(arrival.id);
+      }
+    };
+    const moves=drainProof(ctx,scale,reservedRects,Math.min(1024,seats.size*8+16));
+    if(!moves||removedIds.length!==exitIds.size||[...actors].some(([id,a])=>Math.abs(a.position.x-initialPositions.get(id).x)>.001||Math.abs(a.position.y-initialPositions.get(id).y)>.001))return null;
+    return{scale,moves,steps,initialPositions,unadmittedIds,removedIds,retainedPositions:new Map([...actors].map(([id,a])=>[id,{...a.position}]))};
+  }
+  function fitFiniteExit(exitIds,seats,footprints,maximum,reservedRects,holdingPoints,immovableIds,current,budget){
+    const prove=scale=>{if(budget.trials>=12)return null;budget.trials++;return finiteExitProof(exitIds,seats,footprints,scale,reservedRects,holdingPoints,immovableIds,current);};
+    let scale=maximum,upper=maximum,proof=prove(scale);
+    for(let pass=0;!proof&&pass<7&&budget.trials<12;pass++){upper=scale;scale*=.82;proof=prove(scale);}
+    if(!proof)return null;
+    if(scale<maximum)for(let pass=0;pass<4&&budget.trials<12;pass++){const mid=(scale+upper)/2,candidate=prove(mid);if(candidate){scale=mid;proof=candidate;}else upper=mid;}
+    return{...proof,trials:budget.trials};
+  }
   function layoutWalking(present,options={}) {
     const unique=new Map();for(const session of Array.isArray(present)?present:[])if(session&&typeof session.id==='string'&&session.id)unique.set(session.id,session);
     const visible=[...unique.values()].sort((a,b)=>a.id.localeCompare(b.id)),requestedScale=Scene.actorScale({x:0,y:0},{uniformScale:Math.max(.65,Math.min(1.35,Number(options.requestedScale)||1))});
@@ -258,7 +295,10 @@
     const openingDockPairs=options.openingDockPairs instanceof Map?options.openingDockPairs:new Map();
     const openingDocks=visible.filter(s=>s.parentId&&unique.has(openingDockPairs.get(s.id))&&!validPoint(current.get(s.id))&&validPoint(current.get(openingDockPairs.get(s.id)))).map(s=>({childId:s.id,parentId:openingDockPairs.get(s.id)}));
     const openingBusyIds=visible.filter(s=>options.openingBusyIds?.has(s.id)&&validPoint(current.get(s.id))).map(s=>s.id);
-    const signature=JSON.stringify([requestedScale,viewport,reservedRects,options.cooperative!==false,options.holdingOccupiedForProof!==false,[...immovableIds].sort(),[...closingDockPairs].sort(([a],[b])=>a.localeCompare(b)),[...openingDockPairs].sort(([a],[b])=>a.localeCompare(b)),openingDockPairs.size?openingBusyIds:null,closingDockPairs.size||openingDockPairs.size?visible.filter(s=>validPoint(current.get(s.id))).map(s=>[s.id,current.get(s.id).x,current.get(s.id).y]):null,[...fixedStale],visible.map(s=>[s.id,s.parentId||'',workZones.get(s.id),footprints.get(s.id)])]);
+    const isObservedAncestor=id=>visible.some(s=>{const seen=new Set();let parent=s.parentId;while(parent&&!seen.has(parent)){if(parent===id)return true;seen.add(parent);parent=unique.get(parent)?.parentId;}return false;});
+    const finiteExitIds=new Set(visible.filter(s=>options.finiteExitIds?.has(s.id)&&!s.parentId&&validPoint(current.get(s.id))&&!isObservedAncestor(s.id)).map(s=>s.id));
+    const finiteBudget={trials:0};
+    const signature=JSON.stringify([requestedScale,viewport,reservedRects,options.cooperative!==false,options.holdingOccupiedForProof!==false,[...immovableIds].sort(),[...closingDockPairs].sort(([a],[b])=>a.localeCompare(b)),[...openingDockPairs].sort(([a],[b])=>a.localeCompare(b)),openingDockPairs.size?openingBusyIds:null,[...finiteExitIds],finiteExitIds.size?[...(options.allowedOverlaps||[])].sort():null,closingDockPairs.size||openingDockPairs.size||finiteExitIds.size?visible.filter(s=>validPoint(current.get(s.id))).map(s=>[s.id,current.get(s.id).x,current.get(s.id).y]):null,[...fixedStale],visible.map(s=>[s.id,s.parentId||'',workZones.get(s.id),footprints.get(s.id)])]);
     const targetSignature=seats=>JSON.stringify([...seats].map(([id,p])=>[id,p.x,p.y,p.workZone||p.zone,p.area,p.holdingPoint,p.targetUniformScale]).sort((a,b)=>a[0].localeCompare(b[0])));
     const ratio=(clearance,extent)=>extent>0?clearance/extent:clearance>=0?Infinity:-Infinity;
     let maximum=requestedScale;
@@ -267,6 +307,24 @@
     const physical=anchors.slice(1);for(let i=0;i<physical.length;i++)for(let j=i+1;j<physical.length;j++){const a=physical[i],b=physical[j],key=JSON.stringify([a.id,b.id].sort());if(options.allowedOverlaps?.has(key))continue;const dx=(b.point.x-a.point.x)*W/100,dy=(b.point.y-a.point.y)*H/100;maximum=Math.min(maximum,Math.max((Math.abs(dx)-2)/((dx>=0?a.footprint.right+b.footprint.left:a.footprint.left+b.footprint.right)+10),(Math.abs(dy)-2)/((dy>=0?a.footprint.bottom+b.footprint.top:a.footprint.top+b.footprint.bottom)+10)));}
     if(!(maximum>0))throw new RangeError('Current real body positions have no positive-size non-overlapping walking fit');
     const cached=proofCache.get(previous)||proofBySeat.get(previous.values().next().value);
+    function finishExit(page,cacheHit=false){
+      if(options.targetOnly||!finiteExitIds.size||cacheHit)return page;
+      const proof=fitFiniteExit(finiteExitIds,page.seats,footprints,page.uniformScale,reservedRects,page.holdingPoints||[],immovableIds,current,finiteBudget),scale=proof?.scale||page.uniformScale;
+      const result={...atScale(page,scale),exitOwnerIds:[...finiteExitIds],exitProof:proof,finiteExitDeferred:!proof,exitProofAttempts:finiteBudget.trials};
+      // Growth is deferred until the real exit owners have actually released
+      // their bodies. A cached settled target cannot enlarge this finite fit.
+      result.targetUniformScale=scale;
+      result.seats=new Map([...result.seats].map(([id,p])=>[id,{...p,targetUniformScale:scale}]));
+      Object.defineProperties(result.seats,{fits:{value:true},unplacedIds:{value:[]}});
+      if(!proof)result.fitReason='waiting-for-exit-route';
+      if(result.returnProof&&result.returnProof.scale!==scale)result.returnProof=actualReturnProof(returningDocks,result.seats,footprints,scale,reservedRects,result.holdingPoints||[],immovableIds,current);
+      if(result.openingProof&&result.openingProof.scale!==scale){
+        result.openingProof=actualOpeningProof(openingDocks[0],result.seats,footprints,scale,reservedRects,result.holdingPoints||[],immovableIds,current);
+        result.openingDeferred=!result.openingProof;
+      }
+      const record=proofCache.get(page.seats);if(record)rememberProof(result.seats,{...record,signature,targets:targetSignature(result.seats),page:result});
+      return result;
+    }
     function finishOpening(page,cacheHit=false){
       if(options.targetOnly||!openingDocks.length||cacheHit)return page;
       // One explicit next-admission owner, matching the renderer's staging
@@ -288,12 +346,23 @@
     }
     if(cached&&cached.signature===signature&&cached.targets===targetSignature(previous)){
       const settled=visible.every(s=>{const p=current.get(s.id),q=previous.get(s.id);return validPoint(p)&&Math.abs(p.x-q.x)<.001&&Math.abs(p.y-q.y)<.001;});
-      const scale=Math.min(maximum,settled?(cached.page.targetUniformScale||cached.page.uniformScale):cached.page.uniformScale);
+      const scale=Math.min(maximum,finiteExitIds.size?cached.page.uniformScale:settled?(cached.page.targetUniformScale||cached.page.uniformScale):cached.page.uniformScale);
       const page={...atScale(cached.page,scale),visible,roots:visible.filter(s=>cached.page.rootIdsBySession.get(s.id)===s.id),venue:['workshop','teahouse','observatory'].includes(options.venue)?options.venue:'workshop',cachedProof:true};
-      rememberProof(page.seats,{...cached,targets:targetSignature(page.seats),page});return finishOpening(page,true);
+      rememberProof(page.seats,{...cached,targets:targetSignature(page.seats),page});return finishExit(finishOpening(page,true),true);
     }
     const returningDocks=visible.filter(s=>s.parentId&&unique.has(closingDockPairs.get(s.id))&&options.immovableIds?.has(s.id)&&options.immovableIds?.has(closingDockPairs.get(s.id))&&validPoint(current.get(s.id))&&validPoint(current.get(closingDockPairs.get(s.id)))).map(s=>({childId:s.id,parentId:closingDockPairs.get(s.id)}));
-    const priorProofMode=cached?.page.proofMode==='deferred-clone-return'?cached.page.priorProofMode:cached?.page.proofMode;
+    const priorProofMode=['deferred-clone-return','deferred-main-exit'].includes(cached?.page.proofMode)?cached.page.priorProofMode:cached?.page.proofMode;
+    if(!returningDocks.length&&finiteExitIds.size&&cached&&cached.targets===targetSignature(previous)&&['cooperative','stationary'].includes(priorProofMode)&&visible.length<=previous.size&&visible.every(s=>previous.has(s.id)&&validPoint(current.get(s.id))&&cached.page.visible.find(old=>old.id===s.id)?.parentId===s.parentId)){
+      const cap=Math.min(maximum,cached.page.uniformScale),oldSeats=new Map(visible.map(s=>[s.id,previous.get(s.id)]));
+      const exitProof=fitFiniteExit(finiteExitIds,oldSeats,footprints,cap,reservedRects,cached.page.holdingPoints||[],immovableIds,current,finiteBudget),scale=exitProof?.scale||cap,gap=gapForScale(scale);
+      const retained=new Map(visible.map(s=>{const old=previous.get(s.id),p=fixedStale.get(s.id)||old;return[s.id,{...old,x:p.x,y:p.y,uniformScale:scale,targetUniformScale:scale,requestedScale,...(workZones.get(s.id)!==(old.workZone||old.zone)?{pendingWorkZone:workZones.get(s.id)}:{})}];}));
+      const legal=[...retained].every(([id,p])=>legalPoint(p,{uniformScale:scale,footprint:footprints.get(id),reservedRects,viewport})&&![...retained].some(([other,q])=>other!==id&&Scene.actorsOverlap(p,{uniformScale:scale,footprint:footprints.get(id)},q,{uniformScale:scale,footprint:footprints.get(other)},gap)));
+      if(exitProof&&legal){
+        Object.defineProperties(retained,{fits:{value:true},unplacedIds:{value:[]}});
+        const page={...atScale(cached.page,scale),visible,seats:retained,roots:visible.filter(s=>cached.page.rootIdsBySession.get(s.id)===s.id),rootIdsBySession:new Map([...cached.page.rootIdsBySession].filter(([id])=>unique.has(id))),capacity:visible.length,helperCapacity:visible.filter(s=>s.parentId).length,uniformScale:scale,targetUniformScale:scale,gap,requestedScale,pathsById:new Map(),holdingPaths:[],coordinatedProof:null,transitionProof:null,exitProof,exitOwnerIds:[...finiteExitIds],finiteExitDeferred:false,exitProofAttempts:finiteBudget.trials,proofMode:'deferred-main-exit',priorProofMode,fitReason:'waiting-for-main-exit',transitionDeferred:true,cachedProof:false,venue:['workshop','teahouse','observatory'].includes(options.venue)?options.venue:'workshop'};
+        rememberProof(retained,{signature,targets:targetSignature(retained),page});return finishOpening(page);
+      }
+    }
     if(returningDocks.length&&cached&&cached.targets===targetSignature(previous)&&['cooperative','stationary'].includes(priorProofMode)&&visible.length<=previous.size&&visible.every(s=>previous.has(s.id)&&cached.page.visible.find(old=>old.id===s.id)?.parentId===s.parentId)){
       const cap=Math.min(maximum,cached.page.uniformScale);
       const retainedIds=new Map(visible.map(s=>[s.id,previous.get(s.id)]));
@@ -307,7 +376,7 @@
         // do not shrink everyone to prove that temporary dock lasts forever.
         Object.defineProperties(retained,{fits:{value:true},unplacedIds:{value:[]}});
         const page={...atScale(cached.page,scale),visible,seats:retained,roots:visible.filter(s=>cached.page.rootIdsBySession.get(s.id)===s.id),rootIdsBySession:new Map([...cached.page.rootIdsBySession].filter(([id])=>unique.has(id))),capacity:visible.length,helperCapacity:visible.filter(s=>s.parentId).length,uniformScale:scale,targetUniformScale:scale,gap,requestedScale,pathsById:new Map(),holdingPaths:[],coordinatedProof:null,transitionProof:null,returnProof,proofMode:'deferred-clone-return',priorProofMode,fitReason:returnProof?'waiting-for-clone-return':'waiting-for-return-route',transitionDeferred:true,blockedByIds:[...new Set(returningDocks.flatMap(s=>[s.childId,s.parentId]))].sort(),cachedProof:false,venue:['workshop','teahouse','observatory'].includes(options.venue)?options.venue:'workshop'};
-        rememberProof(retained,{signature,targets:targetSignature(retained),page});return finishOpening(page);
+        rememberProof(retained,{signature,targets:targetSignature(retained),page});return finishExit(finishOpening(page));
       }
     }
     // A dense old foot arrangement may temporarily limit the physical size.
@@ -320,7 +389,7 @@
       const goal=layoutWalking(visible,{...options,targetOnly:true,previousSeats:retained,currentPositions:new Map([...current].filter(([id])=>retained.has(id))),transitionPositions:current,transitionMaximum:maximum,transitionPreviousScale:previousScale});
       const scale=Math.min(maximum,goal.uniformScale,maximum+EPS>=goal.uniformScale?goal.uniformScale:previousScale);
       const page=atScale(goal,scale);
-      rememberProof(page.seats,{signature,targets:targetSignature(page.seats),page});return finishOpening(page);
+      rememberProof(page.seats,{signature,targets:targetSignature(page.seats),page});return finishExit(finishOpening(page));
     }
     let proofTrials=0;const PROOF_BUDGET=16;
     const transitionPositions=options.transitionPositions instanceof Map?options.transitionPositions:current;
@@ -448,7 +517,7 @@
     Object.defineProperties(seats,{fits:{value:true},unplacedIds:{value:[]}});
     const page={visible,seats,roots:visible.filter(s=>rootIdsBySession.get(s.id)===s.id),rootIdsBySession,requestedScale,uniformScale:scale,layoutMode:'walking',gap:gapForScale(scale),stageRect:null,page:0,pages:1,capacity:visible.length,helperCapacity:visible.filter(s=>s.parentId).length,hidden:0,helperOverflow:0,layoutFits:true,pathsById:chosen.paths,envelope,holdingPoints:[chosen.pocket,...(chosen.yieldPoints||[])],holdingPaths:[chosen.holdingPath],corridors:CORRIDORS,readability:{canvasPixels:154*scale,paintedHeadPixels:55*scale,paintedSpanPixels:75*scale,nameplatePixels:220*scale,recommendedMinimumScale:.35,needsMoreSpace:scale<.35,expansionFactor:Math.max(1,.35/scale)},venue:['workshop','teahouse','observatory'].includes(options.venue)?options.venue:'workshop',fitReason:scale<requestedScale-EPS?(scale<.18?'dense-furniture-side-fit':'reachable-furniture-side-fit'):'requested-size',cachedProof:false,proofMode:chosen.coordinated?'cooperative':'stationary',proofTrials,coordinatedProof:chosen.coordinated||null,transitionProof:chosen.transition||null};
     if(chosen.deferredEntrance){page.proofMode='deferred-entrance';page.fitReason='waiting-for-entrance';page.blockedByIds=chosen.deferredEntrance;page.transitionDeferred=true;page.holdingPaths=[];}
-    page.targetUniformScale=scale;rememberProof(seats,{signature,targets:targetSignature(seats),page});return finishOpening(page);
+    page.targetUniformScale=scale;rememberProof(seats,{signature,targets:targetSignature(seats),page});return finishExit(finishOpening(page));
   }
   return Object.freeze({layoutWalking,gapForScale,legalPoint,route,ENTRY_POINT,OBSTACLES,ZONE_AREAS,ZONE_ANCHORS,HOLDING_CANDIDATES,CORRIDORS});
 });

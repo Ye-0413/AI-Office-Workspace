@@ -1,5 +1,5 @@
 {
-  "version": "0.13.0",
+  "version": "0.14.0",
   "publicBody": "original capsule robot with four visible feet; resource-free detached span adapts bitmap fade API; no external sprite references",
   "scope": "production four-foot gait and clone effect overlays; navigation and actor opacity are verified separately in native fixtures",
   "sourceHashes": {

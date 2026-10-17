@@ -218,12 +218,32 @@
     }
     return pairs;
   }
-  function sceneOptions(incoming = snapshot.sessions) {
+  function finiteExitIds(present) {
+    const presentIds = new Set(present.map(session => session.id));
+    const current = new Map(snapshot.sessions.map(session => [session.id, session]));
+    const pinned = pinnedDockIds(), exits = new Set();
+    for (const actor of actors.values()) {
+      if (actor.helper || actor.session.parentId || actor.entryPending || presentIds.has(actor.id)
+        || actor.holdingFamily && !actor.retireRequested || pinned.has(actor.id) || relatedClones(actor).length
+        || present.some(session => cloneLedger.parentChain(session.id).includes(actor.id))) continue;
+      const session = current.get(actor.id);
+      if (session?.parentId) continue;
+      const owned = actor.navigation?.kind === 'exit' || actor.resumeNavigation?.kind === 'exit';
+      const idle = session && !session.disconnected && session.status === 'idle'
+        && (!session.activity || session.activity === 'idle') && !session.attention && !(Number(session.activeTools) > 0);
+      // Attendance has already retired this admitted body. A vanished source,
+      // confirmed close/idle, or its still-owned exit is finite evidence;
+      // uncertainty alone cannot invent a trip to the door.
+      if (owned || !session || Scene.isClosed(session) || idle) exits.add(actor.id);
+    }
+    return exits;
+  }
+  function sceneOptions(incoming = snapshot.sessions, exiting = new Set()) {
     const pinned = pinnedDockIds();
     const closingPairs = closingDockPairs();
     for (const [child, parent] of closingPairs) { pinned.add(child); pinned.add(parent); }
     return { requestedScale: settings.agentScale, venue: settings.sceneVenue, footprints: actorFootprints, reservedRects: CLOCK_RESERVED, previousSeats: seats, previousScale: uniformScale, previousRequestedScale: currentPage.requestedScale,
-      closingDockPairs: closingPairs, openingDockPairs: openingDockPairs(incoming),
+      closingDockPairs: closingPairs, openingDockPairs: openingDockPairs(incoming), finiteExitIds: new Set(exiting),
       openingBusyIds: new Set([...actors.values()].filter(actor => !actor.entryPending && (actor.motion || actor.routeReservation || actor.resumeNavigation || actor.yielding)).map(actor => actor.id)),
       currentPositions: new Map([...actors.values()].filter(actor => !actor.entryPending).map(actor => [actor.id, currentPosition(actor)])),
       immovableIds: new Set([...actors.values()].filter(actor => !actor.entryPending && !canYieldAtStation(actor, pinned)).map(actor => actor.id)),
@@ -356,7 +376,7 @@
   }
   function canYieldAtStation(actor, pinned) {
     return !actor.entryPending && !actor.departing && !cloneBusy(actor)
-      && !actor.holdingFamily && !actor.completing && !actor.spec.stale && !pinned.has(actor.id);
+      && !actor.holdingFamily && !actor.retireRequested && !actor.completing && !actor.spec.stale && !pinned.has(actor.id);
   }
   function canYieldActor(actor, pinned) {
     return canYieldAtStation(actor, pinned) && !actor.motion && !actor.routeReservation;
@@ -453,7 +473,7 @@
             } else finishAtStation(actor);
           }
           renderHelperLinks();
-          if (ok && [...actors.values()].some(child => child.helper && child.entryPending)) queueLayoutRefresh(true);
+          if (ok && (currentPage.exitOwnerIds?.length || [...actors.values()].some(child => child.helper && child.entryPending))) queueLayoutRefresh(true);
           queueTraffic();
         }).catch(error => {
           if (actor.serial !== serial || actors.get(actor.id) !== actor) { pending?.resolve(false); return; }
@@ -598,6 +618,7 @@
   }
   function cancelAction(actor, { dispose = false } = {}) {
     const releasedPhysicalOwner = Boolean(actor.motion || actor.routeReservation || actor.resumeNavigation || actor.yielding);
+    const releasedExitOwner = actor.navigation?.kind === 'exit' || actor.resumeNavigation?.kind === 'exit';
     const hasFadeEvidence = actor.opacityMotion || actor.clonePhase === 'absorbing'
       || actor.node.style.opacity && Number(actor.node.style.opacity) < 1;
     const bodyOpacity = hasFadeEvidence ? Math.max(0, Math.min(1, Number(getComputedStyle(actor.node).opacity) || 0)) : 1;
@@ -649,7 +670,7 @@
     actor.bubble.dataset.show = 'false';
     actor.completing = false;
     queueTraffic();
-    if (!dispose && releasedPhysicalOwner && needsOpeningRefresh()) queueLayoutRefresh(true);
+    if (!dispose && (releasedExitOwner || releasedPhysicalOwner && needsOpeningRefresh())) queueLayoutRefresh(true);
     return actor.serial;
   }
   function queueNavigation() {
@@ -792,8 +813,7 @@
     text(actor.carry, '≡');
     setPose(actor, carrying ? 'clawd-working-carrying.svg' : 'clawd-static-base.svg');
     if (yielding) transitCaption(actor, true);
-    else text(actor.state, actor.clonePhase === 'returning' ? completedCloneReturn(actor.returnReason) ? '结束分身' : '分身暂歇'
-      : Director.plan(actor.session, { now: Date.now(), language }).label || actor.spec.label);
+    else text(actor.state, lifecycleCaption(actor) || Director.plan(actor.session, { now: Date.now(), language }).label || actor.spec.label);
     const points = [];
     let traveled = 0;
     for (let index = 0; index < path.length; index += 1) {
@@ -882,7 +902,7 @@
       position: { ...currentPosition(actor) }
     } }));
     const pendingOpening = [...actors.values()].some(child => child.helper && child.entryPending);
-    queueLayoutRefresh(pendingOpening);
+    queueLayoutRefresh(Boolean(pendingOpening || currentPage.exitOwnerIds?.length));
   }
   function placeOutside(actor, point) {
     if (!actor.entryPending) throw new Error('Only a not-yet-admitted body may set an entry origin');
@@ -1046,13 +1066,18 @@
         && (!current.activity || current.activity === 'idle') && !current.attention && !(Number(current.activeTools) > 0);
       if (!current || Scene.isClosed(current) || idle) depart(child, !current || !Scene.isClosed(current)).catch(showError);
     }
-    if (relatedClones(actor).length) { holdForClones(actor); return; }
+    if (relatedClones(actor).length || currentPage.visible.some(session => cloneLedger.parentChain(session.id).includes(actor.id))) { holdForClones(actor); return; }
+    const proof = currentPage.exitProof;
+    if (actor.holdingFamily && !currentPage.exitOwnerIds?.includes(actor.id)) { queueLayoutRefresh(true); return; }
+    if (currentPage.exitOwnerIds?.includes(actor.id)
+      && (!proof || !proof.removedIds.includes(actor.id) || Math.abs(proof.scale - uniformScale) > .00001)) return;
     actor.holdingFamily = false; actor.node.dataset.cloneHold = 'false';
     const serial = cancelAction(actor); actor.departing = true;
     actor.navigation = { kind: 'exit', inactive, target: ENTRY_POINT };
     text(actor.state, inactive ? '这一轮已歇下' : '会话已结束');
     if (actor.entryPending) { removeActor(actor.id); return; }
     if (!await move(actor, ENTRY_POINT, serial)) return;
+    if (actor.serial !== serial || actors.get(actor.id) !== actor || destroyed) return;
     actualArrival(actor, ENTRY_POINT, serial, 'exit');
     openDoor();
     if (actor.serial === serial) removeActor(actor.id);
@@ -1125,6 +1150,19 @@
     updateEntranceLane(); queueTraffic();
     return actor;
   }
+  function lifecycleCaption(actor) {
+    if (actor.holdingFamily) return '等分身归位';
+    if (actor.clonePhase === 'splitting') return '分身出现';
+    if (['returning', 'absorbing'].includes(actor.clonePhase)) {
+      const navigation = [actor.navigation, actor.resumeNavigation].find(owner => ['return', 'absorb'].includes(owner?.kind));
+      return completedCloneReturn(navigation?.reason || actor.returnReason) ? '结束分身' : '分身暂歇';
+    }
+    if (!actor.helper) {
+      const exit = [actor.navigation, actor.resumeNavigation].find(owner => owner?.kind === 'exit') || actor.retireRequested;
+      if (exit) return exit.inactive ? '这一轮已歇下' : '会话已结束';
+    }
+    return '';
+  }
   function updateActorLabel(actor) {
     const session = actor.session;
     const spec = Scene.activitySpec(session);
@@ -1149,7 +1187,8 @@
     actor.relation.textContent = parent ? I18n.t(language,'identity.parent',{name:displayName(parent)}) : session.parentId ? tr('子任务 · 父任务未在场') : cloneSummary(session);
     actor.relation.title = session.parentId ? actor.relation.textContent : I18n.t(language, 'family.clonesHint');
     text(actor.provider, session.provider === 'claude-code' ? 'Claude' : Scene.providerName(session.provider));
-    if (actor.holdingFamily) text(actor.state, '等分身归位');
+    const lifecycle = lifecycleCaption(actor);
+    if (lifecycle) text(actor.state, lifecycle);
     else if (actor.motion && !actor.departing) text(actor.state, Director.plan(session, { now: Date.now(), language }).label || spec.label);
     else if (!actor.motion && !actor.yielding && !trafficWaiters.has(actor.id) && !actor.completing && !actor.departing && !cloneBusy(actor)) text(actor.state, spec.label);
     if (actor.yielding) transitCaption(actor, true);
@@ -1485,7 +1524,6 @@
       .map(session => cloneLedger.rootFor(session.id) || familyGraph.info.get(session.id)?.rootId || session.id);
     paletteRegistry.update(openFamilies);
     familyGraph = Family.build(snapshot.sessions, { registry: paletteRegistry });
-    measureActorFootprints(attendance.present);
     // Project names remain in the inspector and roster; every project shares
     // this one floor. Saved filters from older builds cannot hide live bodies.
     rooms = Scene.roomsFor(snapshot.sessions);
@@ -1497,7 +1535,8 @@
     const presentBodies = attendance.present.filter(session => !restedClones.has(session.id) || hasBodyActivity(session));
     const bodyIds = new Set(presentBodies.map(session => session.id));
     const retiringBodies = [...actors.values()].filter(actor => !bodyIds.has(actor.id) && !restedClones.has(actor.id)).map(actor => snapshot.sessions.find(session => session.id === actor.id) || actor.session);
-    currentPage = { ...WalkingLayout.layoutWalking(presentBodies.concat(retiringBodies), sceneOptions(presentBodies.concat(retiringBodies))), visible: presentBodies }; page = 0;
+    measureActorFootprints(presentBodies.concat(retiringBodies));
+    currentPage = { ...WalkingLayout.layoutWalking(presentBodies.concat(retiringBodies), sceneOptions(presentBodies.concat(retiringBodies), finiteExitIds(presentBodies))), visible: presentBodies }; page = 0;
     currentPage.routeGeometry = { paths: currentPage.pathsById, scale: currentPage.uniformScale,
       footprints: new Map([...actorFootprints].map(([id, footprint]) => [id, { ...footprint }])) };
     reconcileActors();
