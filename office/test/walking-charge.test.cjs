@@ -9,6 +9,8 @@ function setup(){
   actors.set(actor.id,actor);trafficWaiters.set(actor.id,{actor,serial:7,resolve:value=>resolved.push(value)});
   const traffic={state:()=>({activeMoves:[],maxConcurrent:4,active:null,queued:0}),nextAny:()=>++reservations===1?{kind:'move',id:actor.id,token:11,path:[{x:50,y:78},{x:15,y:44}],target:{x:15,y:44}}:{kind:'wait',reason:'reserved'},cancel:()=>{},finish:()=>{}};
   const context={nextEntryCandidate:()=>null,currentPage:{},window:{},performance,clearTimeout:()=>{},trafficTimer:0,destroyed:false,fitting:false,actors,trafficWaiters,traffic,observedIds:new Set(),syncTraffic:()=>{},cloneAncestor:()=>root,cloneEffect:()=>({ready}),quietSprites:()=>false,queueAdmission:()=>{},clearTrafficBlock:()=>{},trackTrafficBlock:()=>{},updateEntranceLane:()=>{},openDoor:()=>assert.fail('a clone cannot open a fake main entrance'),queueNavigation:()=>{},animateWalk:async()=>{walks++;return true;},currentPosition:value=>value.position,renderHelperLinks:()=>{},queueTraffic:()=>{},transitCaption:()=>{},finishAtStation:()=>{},updateProps:()=>{},showError:()=>assert.fail('a charge must not throw')};
+  // This legacy fixture has no finite slot-transfer owner.
+  Object.assign(context,{transferOwner:null,transferAvailable:()=>false,transferEligible:()=>new Set(),revokeTransfer:()=>{},queueTransferContinuation:()=>{}});
   vm.createContext(context);vm.runInContext(pumpSource,context);return{context,actor,actors,resolved,release,walks:()=>walks};
 }
 test('a materialized clone keeps a real traffic owner during its charge, then starts exactly one physical walk after ready',async()=>{

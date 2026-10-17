@@ -84,6 +84,8 @@ function fixture(options = {}) {
   };
   const timingPath = path.join(__dirname, '../lib/walk-timing.js');
   if (fs.existsSync(timingPath)) context.WalkTiming = require(timingPath);
+  // This legacy fixture has no finite slot-transfer owner.
+  Object.assign(context,{transferOwner:null,transferAvailable:()=>false,transferEligible:()=>new Set(),revokeTransfer:()=>{},queueTransferContinuation:()=>{}});
   vm.createContext(context);
   const names = ['sceneHidden', 'reduced', 'quietSprites', 'actorTransform', 'currentPosition', 'cancelAction', 'queueNavigation', 'requestStation', 'animateWalk', 'finishAtStation'];
   vm.runInContext(names.map(name => productionFunction(name)).join('\n') + '\n' + productionFunction('syncWalkingGait', true), context);

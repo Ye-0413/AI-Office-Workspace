@@ -9,7 +9,9 @@ function harness(){
  const actors=new Map([[actor.id,actor],[helper.id,helper]]),resolved=[],trafficWaiters=new Map([[actor.id,{actor,serial:actor.serial,resolve:ok=>resolved.push(ok)}]]);let leg=0,finished=0,refreshes=0;
  const traffic={state:()=>({activeMoves:[],maxConcurrent:4,active:null,queued:0}),nextAny:()=>++leg<=2?{kind:'move',id:actor.id,token:leg,path:[actor.position,{x:30,y:69}],target:{x:30,y:69},yielding:true,temporary:leg===1}:{kind:'wait',reason:'reserved'},finish:()=>finished++,cancel:()=>{}};
  const context={window:{},performance,clearTimeout:()=>{},trafficTimer:0,destroyed:false,fitting:false,actors,trafficWaiters,traffic,nextEntryCandidate:()=>null,syncTraffic:()=>{},quietSprites:()=>false,clearTrafficBlock:()=>{},trackTrafficBlock:()=>{},currentPosition:a=>a.position,queueNavigation:()=>{},animateWalk:async()=>true,renderHelperLinks:()=>{},queueTraffic:()=>{},transitCaption:()=>{},finishAtStation:()=>{},updateProps:()=>{},queueLayoutRefresh:()=>refreshes++,showError:()=>assert.fail('real tail callback cannot throw'),snapshot:{sessions:[actor.session]},settings:{agentScale:1,sceneVenue:'workshop'},currentPage:{requestedScale:1},uniformScale:.4,seats:new Map(),actorFootprints:new Map(),CLOCK_RESERVED:[],pinnedDockIds:()=>new Set(),closingDockPairs:()=>new Map(),openingDockPairs:()=>new Map(),canYieldAtStation:()=>true,endpointParent:()=>null};
- vm.createContext(context);vm.runInContext(pump+options,context);return{actor,context,resolved,trafficWaiters,finished:()=>finished,refreshes:()=>refreshes};
+ // This legacy fixture has no finite slot-transfer owner.
+  Object.assign(context,{transferOwner:null,transferAvailable:()=>false,transferEligible:()=>new Set(),revokeTransfer:()=>{},queueTransferContinuation:()=>{}});
+  vm.createContext(context);vm.runInContext(pump+options,context);return{actor,context,resolved,trafficWaiters,finished:()=>finished,refreshes:()=>refreshes};
 }
 test('a pending own journey yields to a temporary foot, remains finite-busy through its real return gap, then clears on permanent completion',async()=>{
  const h=harness(),facts=JSON.stringify(h.actor.session);h.context.pumpTraffic();await flush();

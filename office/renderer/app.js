@@ -58,6 +58,8 @@
   let admissionFrame = 0;
   let fitting = false;
   let navigationTimer = 0;
+  let transferOwner = null;
+  let transferContinuation = null;
   let layoutRefreshOwner = null;
   let layoutRefreshRequested = false;
   let clearingActors = false;
@@ -245,12 +247,175 @@
     }
     return exits;
   }
+  // A certificate owns three real requests, never a recorded animation path.
+  // Its source is checked once; expected physical progress must not invalidate
+  // the immutable initial sourceKey on every metadata heartbeat.
+  function transferSamePoint(a, b) {
+    return Boolean(a && b && Math.abs(a.x-b.x) < .001 && Math.abs(a.y-b.y) < .001);
+  }
+  function transferInputs() {
+    const present = attendance.present.filter(session => !restedClones.has(session.id) || hasBodyActivity(session));
+    const ids = new Set(present.map(session => session.id));
+    return present.concat([...actors.values()].filter(actor => !ids.has(actor.id) && !restedClones.has(actor.id))
+      .map(actor => snapshot.sessions.find(session => session.id === actor.id) || actor.session));
+  }
+  function transferPhysicalOwner(actor) {
+    return Boolean(actor.motion || actor.routeReservation || actor.yielding || actor.resumeNavigation
+      || actor.navigation || actor.entryPending || actor.stagedEntry || actor.cloneCharge || cloneBusy(actor) || actor.opacityMotion);
+  }
+  function transferAvailable(incoming) {
+    if (destroyed || fitting || quietSprites() || incoming.length !== actors.size) return false;
+    const state = traffic.state();
+    return !state.queued && !state.activeMoves.length && !trafficWaiters.size
+      && incoming.every(session => { const actor = actors.get(session.id); return actor && !actor.departing && !transferPhysicalOwner(actor); });
+  }
+  function transferEligible(incoming) {
+    const pinned = pinnedDockIds();
+    return new Set(incoming.filter(session => {
+      const actor = actors.get(session.id);
+      return actor && canYieldAtStation(actor, pinned, true) && hasBodyActivity(session)
+        && !Scene.activitySpec(session).stale && !session.attention && !['waiting', 'stale'].includes(session.status);
+    }).map(session => session.id));
+  }
+  function transferSemanticKey(incoming) {
+    const present = new Set(attendance.present.map(session => session.id));
+    const observed = new Map(snapshot.sessions.map(session => [session.id, session]));
+    return JSON.stringify([settings.agentScale, settings.sceneVenue, settings.sceneTheme, language,
+      incoming.slice().sort((a,b) => a.id.localeCompare(b.id)).map(session => {
+        session = observed.get(session.id) || session;
+        const actor = actors.get(session.id), footprint = actorFootprints.get(session.id);
+        return [session.id, session.provider || null, session.parentId || null, session.status || null, session.activity || null,
+          session.turnId || null, session.turnCompletedAt || null, Boolean(session.attention), Boolean(session.disconnected), Boolean(session.closed),
+          present.has(session.id), observed.has(session.id), footprint && ['left','right','top','bottom'].map(key => footprint[key]),
+          Boolean(actor?.holdingFamily), Boolean(actor?.retireRequested), Boolean(actor?.departing), Boolean(actor?.helper)];
+      })]);
+  }
+  function transferValid(owner, incoming = transferInputs()) {
+    if (!owner || transferOwner !== owner || destroyed || fitting || quietSprites()
+      || actors.size !== owner.cast.size || Math.abs(uniformScale-owner.certificate.scale) > .00001
+      || transferSemanticKey(incoming) !== owner.semanticKey) return false;
+    for (const [id, original] of owner.cast) {
+      const actor = actors.get(id);
+      if (actor !== original.actor || actor.serial !== original.serial || actor.node !== original.node
+        || actor.image !== original.image || actor.performance !== original.performance || actor.entryPending || actor.stagedEntry
+        || actor.resumeNavigation || actor.cloneCharge || cloneBusy(actor) || actor.opacityMotion) return false;
+      if (actor.navigation && actor.navigation.transferOwner !== owner) return false;
+      if (actor.routeReservation && actor.routeReservation.transferOwner !== owner) return false;
+      if (actor.pendingStation && actor.pendingStation.transferOwner !== owner) return false;
+      if ((actor.motion || actor.routeReservation || actor.yielding) && !owner.certificate.affectedIds.includes(id)) return false;
+      const target = owner.targets.get(id);
+      if (!target || !transferSamePoint(actor.target, target)) return false;
+    }
+    return true;
+  }
+  function revokeTransfer(reason, skipActor = null, replan = true) {
+    const owner = transferOwner;
+    if (!owner) return;
+    transferOwner = null; transferContinuation = null;
+    delete office.dataset.transferStatus; delete office.dataset.transferStep;
+    for (const [id, original] of owner.cast) {
+      const actor = actors.get(id);
+      if (actor !== original.actor) continue;
+      if (actor.pendingStation?.transferOwner === owner) actor.pendingStation = null;
+      const owned = actor.navigation?.transferOwner === owner || actor.routeReservation?.transferOwner === owner;
+      if (actor !== skipActor && owned && actor.serial === original.serial) cancelAction(actor);
+      else if (actor.navigation?.transferOwner === owner) actor.navigation = null;
+    }
+    if (replan && !destroyed && !clearingActors) queueLayoutRefresh(true);
+  }
+  function acceptTransfer(certificate, incoming) {
+    if (!certificate || certificate.version !== 1 || certificate.kind !== 'two-slot-swap'
+      || certificate.steps?.length !== 3 || certificate.participants?.length !== 2 || !transferAvailable(incoming)
+      || Math.abs(certificate.scale-uniformScale) > .00001 || certificate.initialPositions.length !== actors.size
+      || certificate.finalTargets.length !== actors.size) return false;
+    const targets = new Map(certificate.finalTargets.map(point => [point.id, currentPage.seats.get(point.id)]));
+    if (targets.size !== actors.size || certificate.initialPositions.some(point => !actors.has(point.id) || !transferSamePoint(currentPosition(actors.get(point.id)), point))
+      || certificate.finalTargets.some(point => !transferSamePoint(targets.get(point.id), point))
+      || JSON.stringify([certificate.scale, certificate.finalTargets]) !== certificate.targetKey) return false;
+    const eligible = transferEligible(incoming);
+    if (!certificate.participants.every(id => eligible.has(id))
+      || [...actors.values()].some(actor => actor.pendingStation && !certificate.participants.includes(actor.id))) return false;
+    const now = performance.now();
+    const due = Math.max(...certificate.participants.map(id => {
+      const actor = actors.get(id), pending = actor.pendingStation;
+      return pending && transferSamePoint(pending.seat, targets.get(id)) ? pending.due : now + 1700;
+    }));
+    const owner = transferOwner = { certificate, targets, phase: 'pending', due, index: 0, waiting: false, requestDone: false,
+      semanticKey: transferSemanticKey(incoming), cast: new Map([...actors].map(([id, actor]) => [id,
+        { actor, serial: actor.serial, node: actor.node, image: actor.image, performance: actor.performance }])) };
+    for (const id of certificate.participants) {
+      const actor = actors.get(id);
+      // Retain the original intent deadline. Only this finite owner may consume
+      // it; no old per-actor callback is cancelled until the stable recheck.
+      actor.pendingStation = { seat: targets.get(id), due, transferOwner: owner };
+    }
+    office.dataset.transferStatus = 'pending'; office.dataset.transferStep = '0';
+    return true;
+  }
+  function transferDrained(owner) {
+    const state = traffic.state();
+    return !state.queued && !state.activeMoves.length && !trafficWaiters.size
+      && [...owner.cast.values()].every(({ actor }) => !actor.motion && !actor.routeReservation && !actor.yielding && !actor.resumeNavigation);
+  }
+  function continueTransfer() {
+    const owner = transferOwner;
+    if (!owner) return;
+    if (!transferValid(owner)) { revokeTransfer('owner-changed'); return; }
+    if (owner.phase === 'pending') {
+      if (performance.now() < owner.due) return;
+      if (!transferDrained(owner) || owner.certificate.initialPositions.some(point => !transferSamePoint(currentPosition(actors.get(point.id)), point))) {
+        revokeTransfer('source-changed'); return;
+      }
+      owner.phase = 'running'; office.dataset.transferStatus = 'running';
+      for (const id of owner.certificate.affectedIds) {
+        const actor = actors.get(id);
+        actor.navigation = { kind: 'transfer', target: owner.targets.get(id), transferOwner: owner };
+      }
+      for (const id of owner.certificate.participants) actors.get(id).pendingStation = null;
+    }
+    if (!transferDrained(owner)) return;
+    if (owner.waiting) {
+      if (!owner.requestDone) return;
+      const completed = owner.certificate.steps[owner.index];
+      if (completed.settledPositions.some(point => !transferSamePoint(currentPosition(actors.get(point.id)), point))) {
+        revokeTransfer('drain-endpoint-changed'); return;
+      }
+      owner.index += 1; owner.waiting = false;
+    }
+    if (owner.index === owner.certificate.steps.length) {
+      transferOwner = null; delete office.dataset.transferStatus; delete office.dataset.transferStep;
+      for (const { actor } of owner.cast.values()) if (actor.navigation?.transferOwner === owner) actor.navigation = null;
+      for (const id of owner.certificate.participants) {
+        const actor = actors.get(id), target = owner.targets.get(id);
+        actor.lastZone = target.workZone || target.zone;
+        finishAtStation(actor); actualArrival(actor, target, actor.serial, 'station');
+      }
+      queueLayoutRefresh(true); queueNavigation(); queueTraffic(); return;
+    }
+    const step = owner.certificate.steps[owner.index], actor = actors.get(step.id);
+    owner.waiting = true; owner.requestDone = false;
+    office.dataset.transferStep = String(owner.index);
+    move(actor, step.target, actor.serial, ['reading', 'searching'].includes(actor.session.activity)).then(ok => {
+      if (transferOwner !== owner) return;
+      if (!ok) { revokeTransfer('request-cancelled'); return; }
+      owner.requestDone = true; queueTransferContinuation();
+    }).catch(error => { if (transferOwner === owner) { revokeTransfer('request-failed'); showError(error); } });
+  }
+  function queueTransferContinuation() {
+    if (!transferOwner || transferContinuation || destroyed) return;
+    const owner = transferContinuation = transferOwner;
+    queueMicrotask(() => {
+      if (transferContinuation !== owner) return;
+      transferContinuation = null;
+      if (transferOwner === owner) continueTransfer();
+    });
+  }
   function sceneOptions(incoming = snapshot.sessions, exiting = new Set()) {
     const pinned = pinnedDockIds();
     const closingPairs = closingDockPairs();
     const observedById = new Map(snapshot.sessions.map(session => [session.id, session]));
     for (const [child, parent] of closingPairs) { pinned.add(child); pinned.add(parent); }
-    return { requestedScale: settings.agentScale, venue: settings.sceneVenue, footprints: actorFootprints, reservedRects: CLOCK_RESERVED, previousSeats: seats, previousScale: uniformScale, previousRequestedScale: currentPage.requestedScale,
+    return { allowTransfers: transferAvailable(incoming), transferEligibleIds: transferEligible(incoming), requestedScale: settings.agentScale, venue: settings.sceneVenue, footprints: actorFootprints, reservedRects: CLOCK_RESERVED, previousSeats: seats, previousScale: uniformScale, previousRequestedScale: currentPage.requestedScale,
       closingDockPairs: closingPairs, openingDockPairs: openingDockPairs(incoming), finiteExitIds: new Set(exiting),
       // A settled absent ancestor has no ordinary station route. A first late
       // descendant, its real holding walk, and fresh work keep their own owners.
@@ -388,8 +553,8 @@
   function pinnedDockIds() {
     return new Set([...actors.values()].filter(child => child.cloneCharge || child.entryPending && child.stagedEntry && child.navigation?.kind === 'entry' || ['return', 'absorb'].includes(child.navigation?.kind)).map(child => child.navigation?.parentId).filter(Boolean));
   }
-  function canYieldAtStation(actor, pinned) {
-    return !actor.entryPending && !actor.departing && !cloneBusy(actor)
+  function canYieldAtStation(actor, pinned, ignoreTransfer = false) {
+    return (ignoreTransfer || !transferOwner || !transferOwner.certificate.participants.includes(actor.id)) && !actor.entryPending && !actor.departing && !cloneBusy(actor)
       && !actor.holdingFamily && !actor.retireRequested && !actor.completing && !actor.spec.stale && !pinned.has(actor.id);
   }
   function canYieldActor(actor, pinned) {
@@ -414,7 +579,7 @@
     let progressed = false;
     syncTraffic();
     const trafficState = traffic.state();
-    if (trafficState.activeMoves.length < trafficState.maxConcurrent && ![...actors.values()].some(actor => actor.stagedEntry)) {
+    if (!transferOwner && trafficState.activeMoves.length < trafficState.maxConcurrent && ![...actors.values()].some(actor => actor.stagedEntry)) {
       const next = nextEntryCandidate();
       if (next) {
         const { actor, parent } = next;
@@ -458,11 +623,13 @@
         trafficWaiters.delete(id); actor.node.dataset.traffic = 'arrived';
         actor.yielding = false;
         if (pending) pending.resolve(true); else finishAtStation(actor);
+        queueTransferContinuation();
         progressed = true;
       } else {
         trafficWaiters.delete(id);
         const serial = actor.serial;
-        const routeOwner = actor.routeReservation = { token: reservation.token, serial };
+        const routeOwner = actor.routeReservation = { token: reservation.token, serial, transferOwner };
+        if (transferOwner && (transferOwner.phase !== 'running' || !transferOwner.certificate.steps[transferOwner.index].drainIds.includes(id))) { revokeTransfer('unexpected-mover'); return; }
         actor.cloneCharge = Boolean(splitEffect && !quietSprites());
         actor.node.dataset.cloneCharge = String(actor.cloneCharge);
         if (reservation.yielding) actor.yielding = true;
@@ -486,6 +653,7 @@
               transitCaption(actor, true);
             } else finishAtStation(actor);
           }
+          queueTransferContinuation();
           renderHelperLinks();
           if (ok && (currentPage.exitOwnerIds?.length || [...actors.values()].some(child => child.helper && child.entryPending))) queueLayoutRefresh(true);
           queueTraffic();
@@ -601,6 +769,7 @@
     if (retiredMain && needsOpeningRefresh(actor.id)) queueLayoutRefresh(true);
   }
   function cancelPhysicalRoutes() {
+    revokeTransfer('fit', null, false);
     // Re-fitting owns geometry, never a session's return/retirement intent.
     for (const actor of actors.values()) if (actor.motion || actor.routeReservation || actor.yielding || actor.stagedEntry || trafficWaiters.has(actor.id)) {
       const navigation = actor.navigation || (!actor.entryPending && (actor.motion || actor.routeReservation || actor.yielding) ? { kind: 'station', target: actor.target } : null);
@@ -631,6 +800,7 @@
     });
   }
   function cancelAction(actor, { dispose = false } = {}) {
+    if (transferOwner?.cast.has(actor.id)) revokeTransfer(dispose ? 'dispose' : 'actor-owner-released', actor, !dispose);
     // Finish only the old distance-phase lease, at the composed physical foot.
     if (actor.motion) syncWalkingGait(actor);
     const releasedPhysicalOwner = Boolean(actor.motion || actor.routeReservation || actor.resumeNavigation || actor.yielding);
@@ -698,8 +868,12 @@
     let next = Infinity;
     const now = performance.now();
     const pinnedDocks = pinnedDockIds();
+    if (transferOwner?.phase === 'pending') {
+      if (transferOwner.due <= now) queueTransferContinuation();
+      else next = transferOwner.due;
+    }
     for (const actor of actors.values()) if (actor.pendingStation && !actor.entryPending && !actor.departing && !actor.holdingFamily) {
-      if (pinnedDocks.has(actor.id)) continue;
+      if (pinnedDocks.has(actor.id) || actor.pendingStation.transferOwner === transferOwner && transferOwner) continue;
       if (actor.pendingStation.due <= now) {
         const seat = actor.pendingStation.seat; actor.pendingStation = null;
         settle(actor, seat, true).catch(showError);
@@ -709,6 +883,7 @@
   }
   function requestStation(actor, seat, urgent = false) {
     actor.target = seat;
+    if (transferOwner?.cast.has(actor.id)) return;
     if (actor.entryPending || actor.departing || actor.holdingFamily || actor.spec.stale) return;
     if (['entry', 'return', 'absorb', 'exit'].includes(actor.navigation?.kind)) return;
     const currentTarget = actor.navigation?.target || actor.position;
@@ -1283,6 +1458,7 @@
     visitor.tick();
   }
   function clearActors() {
+    revokeTransfer('clear', null, false);
     const wasClearing = clearingActors;
     clearingActors = true; layoutRefreshOwner = null; layoutRefreshRequested = false;
     try { for (const id of [...actors.keys()]) removeActor(id); }
@@ -1564,10 +1740,22 @@
     const presentBodies = attendance.present.filter(session => !restedClones.has(session.id) || hasBodyActivity(session));
     const bodyIds = new Set(presentBodies.map(session => session.id));
     const retiringBodies = [...actors.values()].filter(actor => !bodyIds.has(actor.id) && !restedClones.has(actor.id)).map(actor => snapshot.sessions.find(session => session.id === actor.id) || actor.session);
-    measureActorFootprints(presentBodies.concat(retiringBodies));
-    currentPage = { ...WalkingLayout.layoutWalking(presentBodies.concat(retiringBodies), sceneOptions(presentBodies.concat(retiringBodies), finiteExitIds(presentBodies))), visible: presentBodies }; page = 0;
-    currentPage.routeGeometry = { paths: currentPage.pathsById, scale: currentPage.uniformScale,
-      footprints: new Map([...actorFootprints].map(([id, footprint]) => [id, { ...footprint }])) };
+    const layoutBodies = presentBodies.concat(retiringBodies);
+    measureActorFootprints(layoutBodies);
+    if (transferOwner && !transferValid(transferOwner, layoutBodies)) revokeTransfer('snapshot-or-geometry', null, false);
+    if (transferOwner) currentPage = { ...currentPage, visible: presentBodies };
+    else {
+      const options = sceneOptions(layoutBodies, finiteExitIds(presentBodies));
+      currentPage = { ...WalkingLayout.layoutWalking(layoutBodies, options), visible: presentBodies };
+      if (currentPage.transferCertificate && !acceptTransfer(currentPage.transferCertificate, layoutBodies)) {
+        // An unequipped/quiet/changed physical cast cannot execute a certificate.
+        // Ask for the ordinary proof instead of issuing its two blocked goals.
+        currentPage = { ...WalkingLayout.layoutWalking(layoutBodies, { ...options, allowTransfers: false }), visible: presentBodies };
+      }
+      currentPage.routeGeometry = { paths: currentPage.pathsById, scale: currentPage.uniformScale,
+        footprints: new Map([...actorFootprints].map(([id, footprint]) => [id, { ...footprint }])) };
+    }
+    page = 0;
     reconcileActors();
     const alive = snapshot.sessions.filter((session) => !Scene.isClosed(session));
     const allRoomSessions = alive.filter((session) => Scene.inRoom(session, selectedProject));
@@ -1654,6 +1842,7 @@
       cancelPhysicalRoutes();
       reflowPending = true;
     }
+    if (transferOwner && (next?.reducedMotion || next?.lowPower || mediaReduce.matches || sceneHidden())) revokeTransfer('quiet', null, false);
     settings = { ...settingsDefaults, ...next, agentScale: nextScale };
     const previousLanguage = language;
     language = settings.language === 'en' ? 'en' : 'zh';
@@ -1771,6 +1960,7 @@
     if (event.key === 'Escape' && !document.querySelector('dialog[open]')) { selectedSession = ''; $('inspector').hidden = true; for (const actor of actors.values()) updateActorLabel(actor); }
   });
   function refreshVisibility() {
+    if (sceneHidden()) revokeTransfer('hidden');
     office.dataset.hidden = String(sceneHidden());
     for (const actor of [...actors.values()]) {
       settleQuietCloneEffects(actor);

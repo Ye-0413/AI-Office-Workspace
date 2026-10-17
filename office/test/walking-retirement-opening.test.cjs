@@ -11,7 +11,9 @@ function harness({body=false,related=true,present=true}={}){
  const context={actors,snapshot:{sessions:[rootSession,childSession]},currentPage:{uniformScale:1,targetUniformScale:1,visible:present?[rootSession,childSession]:[rootSession]},uniformScale:1,layoutRefreshOwner:null,layoutRefreshRequested:false,clearingActors:false,destroyed:false,fitting:false,
   hasBodyActivity:s=>s.status==='active'&&s.activity!=='idle',Scene:{isClosed:s=>s.status==='closed',distance:(a,b)=>Math.hypot(a.x-b.x,a.y-b.y)},cloneLedger:{parentChain:id=>id===childSession.id?[childSession.parentId]:[]},queueMicrotask:fn=>jobs.push(fn),render:()=>renders++,performance,
   cancelAction:a=>{cancels++;a.motion=null;a.navigation=null;},queueNavigation:()=>assert.fail('no real station journey exists at the unchanged actual foot')};
- vm.createContext(context);vm.runInContext(resume+refresh+request,context);return{context,root,childSession,jobs,renders:()=>renders,cancels:()=>cancels,flush:()=>{while(jobs.length)jobs.shift()();}};
+ // This legacy fixture has no finite slot-transfer owner.
+  Object.assign(context,{transferOwner:null,transferAvailable:()=>false,transferEligible:()=>new Set(),revokeTransfer:()=>{},queueTransferContinuation:()=>{}});
+  vm.createContext(context);vm.runInContext(resume+refresh+request,context);return{context,root,childSession,jobs,renders:()=>renders,cancels:()=>cancels,flush:()=>{while(jobs.length)jobs.shift()();}};
 }
 test('fresh main revocation before the first exit frame proves an incoming real split even though no actual arrival will occur',()=>{
  const h=harness(),facts=JSON.stringify(h.context.snapshot),foot={...h.root.position};h.context.resumeActiveActor(h.root);h.context.requestStation(h.root,{...foot});

@@ -7,6 +7,8 @@ function setup(withCancel=false){
   const node={actualOpacity:1,dataset:{},style:{opacity:'1',removeProperty(name){if(name==='transition-property')delete this.transitionProperty;}},animate(frames,options){let resolve,reject;const finished=new Promise((a,b)=>{resolve=a;reject=b;});const motion={frames,options,finished,cancel:()=>reject(new Error('cancelled')),finish:()=>{node.actualOpacity=frames.at(-1).opacity;resolve();}};motions.push(motion);return motion;}};
   const actor={id:'clone',helper:true,serial:1,entryPending:false,node,opacityMotion:null,cloneEffects:new Set(),delays:new Set(),bubble:{dataset:{}},position:{x:20,y:60}};
   const context={getComputedStyle:n=>({opacity:String(n.actualOpacity)}),quietSprites:()=>quiet,cloneBusy:()=>true,cloneAncestor:()=>({id:'root'}),endpointParent:()=>{},trafficWaiters:new Map(),traffic:{cancel:()=>{}},currentPosition:value=>value.position,clonePhase:(value,phase)=>{value.clonePhase=phase;value.node.dataset.clonePhase=phase;},queueTraffic:()=>{},clearTimeout:()=>{}};
+  // This legacy fixture has no finite slot-transfer owner.
+  Object.assign(context,{transferOwner:null,transferAvailable:()=>false,transferEligible:()=>new Set(),revokeTransfer:()=>{},queueTransferContinuation:()=>{}});
   vm.createContext(context);vm.runInContext(withCancel?source.slice(source.indexOf('  function fadeBody('),source.indexOf('  function queueNavigation(')):fadeSource,context);
   return{context,actor,node,motions,fade:target=>context.fadeBody(actor,target),cancel:()=>context.cancelAction(actor),quiet:()=>{quiet=true;}};
 }

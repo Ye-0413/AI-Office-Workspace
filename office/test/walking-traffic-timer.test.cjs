@@ -8,6 +8,8 @@ function harness(){
     setTimeout:callback=>{const id=++sequence;timers.set(id,callback);return id;},clearTimeout:id=>timers.delete(id),
     syncTraffic:()=>{},clearTrafficBlock:()=>{},trackTrafficBlock:()=>{},renderHelperLinks:()=>{},updateProps:()=>{},
     traffic:{state:()=>({activeMoves:[{}],active:{},maxConcurrent:4,queued:1}),nextAny:()=>{searches++;if(nested){nested=false;context.queueTraffic();context.pumpTraffic();}return{kind:'wait',reason:'reserved'};}}};
+  // This legacy fixture has no finite slot-transfer owner.
+  Object.assign(context,{transferOwner:null,transferAvailable:()=>false,transferEligible:()=>new Set(),revokeTransfer:()=>{},queueTransferContinuation:()=>{}});
   vm.createContext(context);vm.runInContext(pump,context);
   return{context,timers,searches:()=>searches,nest:()=>{nested=true;},fire:()=>{const first=timers.entries().next().value;assert.ok(first);timers.delete(first[0]);first[1]();}};
 }

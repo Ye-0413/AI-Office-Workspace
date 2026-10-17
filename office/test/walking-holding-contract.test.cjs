@@ -15,6 +15,8 @@ function harness() {
     pinnedDockIds: () => new Set(), closingDockPairs: () => new Map(), openingDockPairs: () => new Map(),
     currentPosition: a => a.position, canYieldAtStation: () => false, endpointParent: () => null,
     Scene: require('../lib/scene-model.js'), Clones: { isActive: s => s.status === 'active' && s.activity !== 'idle' } };
+  // This legacy fixture has no finite slot-transfer owner.
+  Object.assign(context,{transferOwner:null,transferAvailable:()=>false,transferEligible:()=>new Set(),revokeTransfer:()=>{},queueTransferContinuation:()=>{}});
   vm.createContext(context); vm.runInContext(production('hasBodyActivity') + production('sceneOptions'), context);
   function actor(id, patch = {}) {
     const value = { id, entryPending: false, holdingFamily: true, position: { x: 40, y: 84 }, ...patch };

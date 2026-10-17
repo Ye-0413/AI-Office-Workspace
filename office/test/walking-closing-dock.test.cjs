@@ -6,8 +6,12 @@ function harness(session={id:'child',parentId:'parent',status:'closed',closed:tr
   const parent={id:'parent',helper:false,entryPending:false,position:{x:43,y:44},session:{id:'parent',status:'active',activity:'planning'}},child={id:'child',helper:true,entryPending:false,position:{x:48.3,y:84},navigation:null,session:{id:'child',parentId:'parent',status:'active',activity:'coding'}};
   const actors=new Map([[parent.id,parent],[child.id,child]]);
   const context={cloneLedger:{parentChain:()=>[]},actors,snapshot:{sessions:[parent.session,session]},settings:{agentScale:1,sceneVenue:'workshop'},currentPage:{requestedScale:1},seats:new Map(),uniformScale:.4,actorFootprints:new Map(),CLOCK_RESERVED:[],
-    Scene:{isClosed:s=>s.closed||s.status==='closed'},hasBodyActivity:s=>s.status==='active'&&s.activity!=='idle',
+    Scene:require('../lib/scene-model.js'),hasBodyActivity:s=>s.status==='active'&&s.activity!=='idle',
+    destroyed:false,fitting:false,quietSprites:()=>false,trafficWaiters:new Map(),traffic:{state:()=>({queued:0,activeMoves:[]})},
+    cloneBusy:a=>['splitting','returning','absorbing'].includes(a.clonePhase),
     cloneAncestor:a=>a===child?actors.get('parent'):null,pinnedDockIds:()=>new Set(),currentPosition:a=>a.position,endpointParent:()=>null,canYieldAtStation:(a,pinned)=>!pinned.has(a.id)};
+  // This legacy fixture has no finite slot-transfer owner.
+  Object.assign(context,{transferOwner:null,transferAvailable:()=>false,transferEligible:()=>new Set(),revokeTransfer:()=>{},queueTransferContinuation:()=>{}});
   vm.createContext(context);vm.runInContext(options,context);return{context,parent,child,actors,read:()=>context.sceneOptions()};
 }
 test('the first genuine closed-helper snapshot protects both actual dock bodies before any return owner has been created',()=>{

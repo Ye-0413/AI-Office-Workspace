@@ -20,6 +20,7 @@
   const OBSTACLES = Object.freeze(Scene.OBSTACLES.map(rect => Object.freeze({ ...rect })));
   const gapForScale = scale => 2 + 10 * Math.max(0, Number(scale) || 0);
   function rememberProof(seats,record){proofCache.set(seats,record);for(const seat of seats.values())proofBySeat.set(seat,record);}
+  function freezePlain(value){if(value&&typeof value==='object'&&!Object.isFrozen(value)){for(const child of Object.values(value))freezePlain(child);Object.freeze(value);}return value;}
   function atScale(page,scale){
     const targetUniformScale=page.targetUniformScale||page.uniformScale;
     if(Math.abs(scale-page.uniformScale)<EPS&&page.targetUniformScale)return page;
@@ -120,6 +121,8 @@
   function drainProof(ctx,scale,reservedRects,limit) {
     const moves=[],gap=gapForScale(scale);
     for(let pass=0;pass<limit;pass++){
+      if(ctx.budget&&ctx.budget.drainCalls>=384)return null;
+      if(ctx.budget)ctx.budget.drainCalls++;
       const move=ctx.traffic.nextAny();
       if(move.kind==='idle')return moves;
       if(move.kind==='arrived'){
@@ -148,13 +151,13 @@
     }
     return null;
   }
-  function cooperativeProof(seats,footprints,scale,envelope,reservedRects,pocket,immovableIds,yieldPoints=[]) {
+  function cooperativeProof(seats,footprints,scale,envelope,reservedRects,pocket,immovableIds,yieldPoints=[],budget) {
     if(!Traffic?.createCoordinator)return null;
     const out=new Map(),schedules=new Map();
     const make=()=>{
       const actors=new Map([...seats].map(([id,p])=>[id,{id,position:{x:p.x,y:p.y},uniformScale:scale,footprint:footprints.get(id),canYield:!immovableIds.has(id)}]));
       const traffic=Traffic.createCoordinator({bounds:Scene.actorBounds,legalPoint:(p,a)=>legalPoint(p,{...a,reservedRects}),route:(a,b,s)=>route(a,b,{...s,reservedRects}),gap:gapForScale,obstacles:OBSTACLES,reservedRects,holdingPoints:[pocket,...yieldPoints,...HOLDING_CANDIDATES]});
-      const sync=()=>traffic.sync([...actors.values()]);sync();return{actors,traffic,sync};
+      const sync=()=>traffic.sync([...actors.values()]);sync();return{actors,traffic,sync,budget};
     };
     const drain=ctx=>drainProof(ctx,scale,reservedRects,seats.size*4+8);
     for(const [id,target]of seats){
@@ -192,6 +195,52 @@
     // Missing bodies are geometric portal probes only. Real helpers still
     // leave their real parent under the renderer's own endpoint reservation.
     return {scale,moves,initialPositions,stagedAtPortalIds:[...seats.keys()].filter(id=>!initialPositions.has(id))};
+  }
+  // A certificate describes three owned destination intents, never cached
+  // route authority. Every leg is still proved by the unmodified coordinator
+  // and independently swept above. The two participants cannot auto-yield;
+  // all incidental yielders must return before the next intent is requested.
+  function twoSlotTransferProof(candidate,footprints,scale,envelope,reservedRects,immovableIds,current,fixedPositions,scope,budget,eligibleIds) {
+    const seats=candidate.seats,same=(a,b)=>validPoint(a)&&validPoint(b)&&Math.abs(a.x-b.x)<.001&&Math.abs(a.y-b.y)<.001;
+    if([...seats.keys()].some(id=>!validPoint(current.get(id))))return null;
+    const changed=[...seats.keys()].filter(id=>!same(seats.get(id),current.get(id)));
+    if(changed.length!==2||changed.some(id=>immovableIds.has(id)||fixedPositions.has(id)||eligibleIds&&!eligibleIds.has(id)))return null;
+    if(!same(seats.get(changed[0]),current.get(changed[1]))||!same(seats.get(changed[1]),current.get(changed[0])))return null;
+    const points=ids=>ids.map(id=>({id,x:current.get(id).x,y:current.get(id).y}));
+    const initialPositions=points([...seats.keys()]),finalTargets=[...seats].map(([id,p])=>({id,x:p.x,y:p.y,workZone:p.workZone||p.zone}));
+    const sourceKey=JSON.stringify([scope,initialPositions,scale]),targetKey=JSON.stringify([scale,finalTargets]);
+    // Only a holding pocket with a complete final-access proof is eligible.
+    // A second verified pocket can be supplied by a future profile; unproved
+    // generic holding candidates are never elevated to transfer destinations.
+    const pockets=[candidate.coordinated?.holdingPoint].filter(validPoint).filter((p,i,all)=>all.findIndex(q=>same(p,q))===i).slice(0,2);
+    for(const order of [changed,[...changed].reverse()])for(const pocket of pockets){
+      const planKey=JSON.stringify([sourceKey,targetKey,order,pocket]);
+      if(budget.seen.has(planKey))continue;
+      if(budget.plans>=4||budget.drainCalls>=384)return null;
+      budget.seen.add(planKey);budget.plans++;
+      const actors=new Map([...seats.keys()].map(id=>[id,{id,position:{...current.get(id)},uniformScale:scale,footprint:footprints.get(id),canYield:!immovableIds.has(id)&&!changed.includes(id)}]));
+      const traffic=Traffic.createCoordinator({bounds:Scene.actorBounds,legalPoint:(p,a)=>legalPoint(p,{...a,reservedRects}),route:(a,b,aSpec)=>route(a,b,{...aSpec,reservedRects}),gap:gapForScale,obstacles:OBSTACLES,reservedRects,holdingPoints:[candidate.pocket,...(candidate.yieldPoints||[])]});
+      const sync=()=>traffic.sync([...actors.values()]);sync();
+      const intents=[{id:order[0],target:pocket,final:false},{id:order[1],target:seats.get(order[1]),final:true},{id:order[0],target:seats.get(order[0]),final:true}],moves=[],steps=[];
+      let failed=false;
+      for(const intent of intents){
+        if(!traffic.request(intent.id,intent.target)){failed=true;break;}
+        const phase=drainProof({actors,traffic,sync,budget,validMove:move=>!fixedPositions.has(move.id)&&(!changed.includes(move.id)||!move.yielding)},scale,reservedRects,seats.size*8+16);
+        if(!phase||!same(actors.get(intent.id).position,intent.target)){failed=true;break;}
+        const expected=new Map(initialPositions.map(p=>[p.id,p]));
+        for(const done of [...steps,intent])expected.set(done.id,done.target);
+        if([...actors].some(([id,a])=>!same(a.position,expected.get(id)))){failed=true;break;}
+        moves.push(...phase);steps.push({id:intent.id,target:{x:intent.target.x,y:intent.target.y},final:intent.final,drainIds:[...new Set(phase.map(m=>m.id))],settledPositions:[...actors].map(([id,a])=>({id,x:a.position.x,y:a.position.y}))});
+      }
+      if(failed||[...seats].some(([id,p])=>!same(actors.get(id).position,p)))continue;
+      // Re-run complete future exit/re-entry at the certificate's physical
+      // scale. Its calls share the same budget as every attempted plan.
+      const finalAccess=cooperativeProof(seats,footprints,scale,envelope,reservedRects,candidate.pocket,immovableIds,candidate.yieldPoints||[],budget);
+      if(!finalAccess)continue;
+      const certificate=freezePlain({version:1,kind:'two-slot-swap',scale,sourceKey,targetKey,participants:[...order],affectedIds:[...new Set(moves.map(m=>m.id))],initialPositions,finalTargets,steps,scope});
+      return {transition:{scale,moves,initialPositions:new Map(initialPositions.map(p=>[p.id,{x:p.x,y:p.y}])),stagedAtPortalIds:[],transfer:true},certificate,finalAccess};
+    }
+    return null;
   }
   function actualReturnProof(docks,seats,footprints,scale,reservedRects,holdingPoints,immovableIds,current) {
     const parents=new Set(docks.map(dock=>dock.parentId));
@@ -308,7 +357,14 @@
     const isObservedAncestor=id=>visible.some(s=>{const seen=new Set();let parent=s.parentId;while(parent&&!seen.has(parent)){if(parent===id)return true;seen.add(parent);parent=unique.get(parent)?.parentId;}return false;});
     const finiteExitIds=new Set(visible.filter(s=>options.finiteExitIds?.has(s.id)&&!s.parentId&&validPoint(current.get(s.id))&&!isObservedAncestor(s.id)).map(s=>s.id));
     const finiteBudget={trials:0};
-    const signature=JSON.stringify([requestedScale,viewport,reservedRects,options.cooperative!==false,options.holdingOccupiedForProof!==false,[...immovableIds].sort(),[...closingDockPairs].sort(([a],[b])=>a.localeCompare(b)),[...openingDockPairs].sort(([a],[b])=>a.localeCompare(b)),openingDockPairs.size?openingBusyIds:null,[...finiteExitIds],finiteExitIds.size?[...(options.allowedOverlaps||[])].sort():null,closingDockPairs.size||openingDockPairs.size||finiteExitIds.size?visible.filter(s=>validPoint(current.get(s.id))).map(s=>[s.id,current.get(s.id).x,current.get(s.id).y]):null,[...fixedStale],[...fixedHolding],visible.map(s=>[s.id,s.parentId||'',workZones.get(s.id),footprints.get(s.id)])]);
+    const transferBudget=options._transferBudget||{plans:0,drainCalls:0,seen:new Set()};
+    const slotHints=new Map([...(options.slotHints instanceof Map?options.slotHints:previous)].filter(([id,p])=>unique.has(id)&&validPoint(p)).map(([id,p])=>[id,{...p}]));
+    const transferEligibleIds=options.transferEligibleIds instanceof Set?new Set(options.transferEligibleIds):null;
+    const transferBusyIds=visible.filter(s=>options.openingBusyIds?.has(s.id)&&validPoint(actualPositions.get(s.id))).map(s=>s.id);
+    const transferScope={requestedScale,viewport:{...viewport},reservedRects:reservedRects.map(r=>({...r})),allowTransfers:options.allowTransfers!==false,transferEligibleIds:transferEligibleIds?[...transferEligibleIds].sort():null,participantsAutoYield:false,openingBusyIds:[...transferBusyIds].sort(),allowedOverlaps:[...(options.allowedOverlaps||[])].sort(),immovableIds:[...immovableIds].sort(),fixedHoldingIds:[...fixedHolding.keys()].sort(),openingDockPairs:[...openingDockPairs].map(p=>[...p]),closingDockPairs:[...closingDockPairs].map(p=>[...p]),finiteExitIds:[...finiteExitIds],cast:visible.map(s=>({id:s.id,parentId:s.parentId||null,workZone:workZones.get(s.id),activity:s.activity||null,status:s.status||null,turnId:s.turnId||null,provider:s.provider||null,attention:Boolean(s.attention),disconnected:Boolean(s.disconnected),closed:Boolean(s.closed),footprint:{...footprints.get(s.id)},canYield:!immovableIds.has(s.id),fixedPosition:fixedPositions.has(s.id)?{...fixedPositions.get(s.id)}:null}))};
+    const transferSourceKey=scale=>JSON.stringify([transferScope,visible.filter(s=>validPoint(actualPositions.get(s.id))).map(s=>({id:s.id,x:actualPositions.get(s.id).x,y:actualPositions.get(s.id).y})),scale]);
+    const transferSettingsKey=JSON.stringify([options.allowTransfers!==false,options.allowTransfers!==false?[...transferBusyIds].sort():null,transferEligibleIds?[...transferEligibleIds].sort():null,options.slotHints instanceof Map?[...slotHints].map(([id,p])=>[id,p.x,p.y,p.workZone||p.zone]).sort((a,b)=>a[0].localeCompare(b[0])):null,transferScope.cast.map(s=>[s.id,s.activity,s.status,s.turnId,s.attention,s.disconnected,s.closed])]);
+    const signature=JSON.stringify([transferSettingsKey,requestedScale,viewport,reservedRects,options.cooperative!==false,options.holdingOccupiedForProof!==false,[...immovableIds].sort(),[...closingDockPairs].sort(([a],[b])=>a.localeCompare(b)),[...openingDockPairs].sort(([a],[b])=>a.localeCompare(b)),openingDockPairs.size?openingBusyIds:null,[...finiteExitIds],finiteExitIds.size?[...(options.allowedOverlaps||[])].sort():null,closingDockPairs.size||openingDockPairs.size||finiteExitIds.size?visible.filter(s=>validPoint(current.get(s.id))).map(s=>[s.id,current.get(s.id).x,current.get(s.id).y]):null,[...fixedStale],[...fixedHolding],visible.map(s=>[s.id,s.parentId||'',workZones.get(s.id),footprints.get(s.id)])]);
     const targetSignature=seats=>JSON.stringify([...seats].map(([id,p])=>[id,p.x,p.y,p.workZone||p.zone,p.area,p.holdingPoint,p.targetUniformScale]).sort((a,b)=>a[0].localeCompare(b[0])));
     const ratio=(clearance,extent)=>extent>0?clearance/extent:clearance>=0?Infinity:-Infinity;
     let maximum=requestedScale;
@@ -320,7 +376,7 @@
     function finishExit(page,cacheHit=false){
       if(options.targetOnly||!finiteExitIds.size||cacheHit)return page;
       const proof=fitFiniteExit(finiteExitIds,page.seats,footprints,page.uniformScale,reservedRects,page.holdingPoints||[],immovableIds,current,finiteBudget),scale=proof?.scale||page.uniformScale;
-      const result={...atScale(page,scale),exitOwnerIds:[...finiteExitIds],exitProof:proof,finiteExitDeferred:!proof,exitProofAttempts:finiteBudget.trials};
+      const result={...atScale(page,scale),exitOwnerIds:[...finiteExitIds],transferCertificate:null,exitProof:proof,finiteExitDeferred:!proof,exitProofAttempts:finiteBudget.trials};
       // Growth is deferred until the real exit owners have actually released
       // their bodies. A cached settled target cannot enlarge this finite fit.
       result.targetUniformScale=scale;
@@ -345,7 +401,7 @@
       // proof waits for its endpoint instead of treating a transient foot as
       // a permanent obstacle and needlessly shrinking the whole room.
       const openingProof=fitActualOpening(dock,page.seats,footprints,page.uniformScale,reservedRects,page.holdingPoints||[],immovableIds,current,!busy.length);
-      const result={...atScale(page,openingProof?.scale||page.uniformScale),openingProof,openingDeferred:!openingProof,openingOwnerId:dock.childId,openingBusyDeferred:!openingProof&&busy.length>0,openingBusyIds:busy};
+      const result={...atScale(page,openingProof?.scale||page.uniformScale),openingProof,transferCertificate:null,openingDeferred:!openingProof,openingOwnerId:dock.childId,openingBusyDeferred:!openingProof&&busy.length>0,openingBusyIds:busy};
       if(!openingProof)result.fitReason='waiting-for-split-route';
       if(result.returnProof&&result.returnProof.scale!==result.uniformScale){
         const returnDocks=[...closingDockPairs].filter(([child,parent])=>result.seats.has(child)&&result.seats.has(parent)&&immovableIds.has(child)&&immovableIds.has(parent)).map(([childId,parentId])=>({childId,parentId}));
@@ -354,7 +410,7 @@
       const record=proofCache.get(page.seats);if(record)rememberProof(result.seats,{...record,signature,targets:targetSignature(result.seats),page:result});
       return result;
     }
-    if(cached&&cached.signature===signature&&cached.targets===targetSignature(previous)){
+    if(cached&&cached.signature===signature&&cached.targets===targetSignature(previous)&&(!cached.page.transferCertificate||cached.page.transferCertificate.sourceKey===transferSourceKey(cached.page.transferCertificate.scale))){
       const settled=visible.every(s=>{const p=current.get(s.id),q=previous.get(s.id);return validPoint(p)&&Math.abs(p.x-q.x)<.001&&Math.abs(p.y-q.y)<.001;});
       const scale=Math.min(maximum,finiteExitIds.size?cached.page.uniformScale:settled?(cached.page.targetUniformScale||cached.page.uniformScale):cached.page.uniformScale);
       const page={...atScale(cached.page,scale),visible,roots:visible.filter(s=>cached.page.rootIdsBySession.get(s.id)===s.id),venue:['workshop','teahouse','observatory'].includes(options.venue)?options.venue:'workshop',cachedProof:true};
@@ -369,7 +425,7 @@
       const legal=[...retained].every(([id,p])=>legalPoint(p,{uniformScale:scale,footprint:footprints.get(id),reservedRects,viewport})&&![...retained].some(([other,q])=>other!==id&&Scene.actorsOverlap(p,{uniformScale:scale,footprint:footprints.get(id)},q,{uniformScale:scale,footprint:footprints.get(other)},gap)));
       if(exitProof&&legal){
         Object.defineProperties(retained,{fits:{value:true},unplacedIds:{value:[]}});
-        const page={...atScale(cached.page,scale),visible,seats:retained,roots:visible.filter(s=>cached.page.rootIdsBySession.get(s.id)===s.id),rootIdsBySession:new Map([...cached.page.rootIdsBySession].filter(([id])=>unique.has(id))),capacity:visible.length,helperCapacity:visible.filter(s=>s.parentId).length,uniformScale:scale,targetUniformScale:scale,gap,requestedScale,pathsById:new Map(),holdingPaths:[],coordinatedProof:null,transitionProof:null,exitProof,exitOwnerIds:[...finiteExitIds],finiteExitDeferred:false,exitProofAttempts:finiteBudget.trials,proofMode:'deferred-main-exit',priorProofMode,fitReason:'waiting-for-main-exit',transitionDeferred:true,cachedProof:false,venue:['workshop','teahouse','observatory'].includes(options.venue)?options.venue:'workshop'};
+        const page={...atScale(cached.page,scale),visible,seats:retained,roots:visible.filter(s=>cached.page.rootIdsBySession.get(s.id)===s.id),rootIdsBySession:new Map([...cached.page.rootIdsBySession].filter(([id])=>unique.has(id))),capacity:visible.length,helperCapacity:visible.filter(s=>s.parentId).length,uniformScale:scale,targetUniformScale:scale,gap,requestedScale,pathsById:new Map(),holdingPaths:[],coordinatedProof:null,transitionProof:null,transferCertificate:null,exitProof,exitOwnerIds:[...finiteExitIds],finiteExitDeferred:false,exitProofAttempts:finiteBudget.trials,proofMode:'deferred-main-exit',priorProofMode,fitReason:'waiting-for-main-exit',transitionDeferred:true,cachedProof:false,venue:['workshop','teahouse','observatory'].includes(options.venue)?options.venue:'workshop'};
         rememberProof(retained,{signature,targets:targetSignature(retained),page});return finishOpening(page);
       }
     }
@@ -385,7 +441,7 @@
         // the last proved arrangement until that body actually disappears;
         // do not shrink everyone to prove that temporary dock lasts forever.
         Object.defineProperties(retained,{fits:{value:true},unplacedIds:{value:[]}});
-        const page={...atScale(cached.page,scale),visible,seats:retained,roots:visible.filter(s=>cached.page.rootIdsBySession.get(s.id)===s.id),rootIdsBySession:new Map([...cached.page.rootIdsBySession].filter(([id])=>unique.has(id))),capacity:visible.length,helperCapacity:visible.filter(s=>s.parentId).length,uniformScale:scale,targetUniformScale:scale,gap,requestedScale,pathsById:new Map(),holdingPaths:[],coordinatedProof:null,transitionProof:null,returnProof,proofMode:'deferred-clone-return',priorProofMode,fitReason:returnProof?'waiting-for-clone-return':'waiting-for-return-route',transitionDeferred:true,blockedByIds:[...new Set(returningDocks.flatMap(s=>[s.childId,s.parentId]))].sort(),cachedProof:false,venue:['workshop','teahouse','observatory'].includes(options.venue)?options.venue:'workshop'};
+        const page={...atScale(cached.page,scale),visible,seats:retained,roots:visible.filter(s=>cached.page.rootIdsBySession.get(s.id)===s.id),rootIdsBySession:new Map([...cached.page.rootIdsBySession].filter(([id])=>unique.has(id))),capacity:visible.length,helperCapacity:visible.filter(s=>s.parentId).length,uniformScale:scale,targetUniformScale:scale,gap,requestedScale,pathsById:new Map(),holdingPaths:[],coordinatedProof:null,transitionProof:null,transferCertificate:null,returnProof,proofMode:'deferred-clone-return',priorProofMode,fitReason:returnProof?'waiting-for-clone-return':'waiting-for-return-route',transitionDeferred:true,blockedByIds:[...new Set(returningDocks.flatMap(s=>[s.childId,s.parentId]))].sort(),cachedProof:false,venue:['workshop','teahouse','observatory'].includes(options.venue)?options.venue:'workshop'};
         rememberProof(retained,{signature,targets:targetSignature(retained),page});return finishExit(finishOpening(page));
       }
     }
@@ -396,7 +452,7 @@
     if(!options.targetOnly&&visible.length&&(visible.length<=12||thirteenProfile)&&previous.size&&geometryChanged){
       const retained=new Map(visible.filter(s=>(Scene.activitySpec(s).stale||Scene.isClosed(s)||fixedHolding.has(s.id))&&previous.has(s.id)).map(s=>[s.id,{...previous.get(s.id),...(!Scene.isClosed(s)?current.get(s.id)||{}:{}),...(fixedHolding.get(s.id)||{}),workZone:workZones.get(s.id)}]));
       const previousScale=Math.min(...visible.map(s=>previous.get(s.id)?.uniformScale||maximum));
-      const goal=layoutWalking(visible,{...options,targetOnly:true,previousSeats:retained,currentPositions:new Map([...current].filter(([id])=>retained.has(id))),transitionPositions:current,transitionMaximum:maximum,transitionPreviousScale:previousScale});
+      const goal=layoutWalking(visible,{...options,_transferBudget:transferBudget,slotHints,targetOnly:true,previousSeats:retained,currentPositions:new Map([...current].filter(([id])=>retained.has(id))),transitionPositions:current,transitionMaximum:maximum,transitionPreviousScale:previousScale});
       const scale=Math.min(maximum,goal.uniformScale,maximum+EPS>=goal.uniformScale?goal.uniformScale:previousScale);
       const page=atScale(goal,scale);
       rememberProof(page.seats,{signature,targets:targetSignature(page.seats),page});return finishExit(finishOpening(page));
@@ -418,7 +474,10 @@
       const previousScale=Number.isFinite(options.transitionPreviousScale)?options.transitionPreviousScale:scale;
       const physicalScale=Math.min(scale,cap,cap+EPS>=scale?scale:previousScale);
       const transition=transitionProof(candidate.seats,footprints,physicalScale,reservedRects,[candidate.pocket,...(candidate.yieldPoints||[])],immovableIds,transitionPositions,options.allowedOverlaps,fixedPositions);
-      return transition?{...candidate,transition}:null;
+      if(transition)return {...candidate,transition};
+      if(options.allowTransfers===false||!candidate.coordinated||Math.abs(physicalScale-scale)>EPS||openingDockPairs.size||closingDockPairs.size||finiteExitIds.size||transferBusyIds.length||options.allowedOverlaps?.size)return null;
+      const transfer=twoSlotTransferProof(candidate,footprints,physicalScale,envelope,reservedRects,immovableIds,transitionPositions,fixedPositions,transferScope,transferBudget,transferEligibleIds);
+      return transfer?{...candidate,transition:transfer.transition,transferCertificate:transfer.certificate,coordinated:transfer.finalAccess,paths:transfer.finalAccess.paths,holdingPath:transfer.finalAccess.holdingPath}:null;
     }
     function place(scale,variant=0,cooperative=false) {
       const gap=gapForScale(scale),seats=new Map(),occupied=[],entry=Scene.actorBounds(ENTRY_POINT,{uniformScale:scale,footprint:envelope});
@@ -480,17 +539,34 @@
     ];
     function seeded(profile) {
       if(proofTrials>=PROOF_BUDGET)return null;
-      const scale=Math.min(maximum,profile.scale),gap=gapForScale(scale),ordinals=new Map(),seats=new Map(),pocket=profile.holding;
+      const scale=Math.min(maximum,profile.scale),gap=gapForScale(scale),seats=new Map(),pocket=profile.holding;
       const holdingBounds=Scene.actorBounds(pocket,{uniformScale:scale,footprint:envelope});
       const doorBounds=Scene.actorBounds(ENTRY_POINT,{uniformScale:scale,footprint:envelope}),throatBounds=Scene.actorBounds({x:82,y:78},{uniformScale:scale,footprint:envelope});
       const entrance={left:Math.min(doorBounds.left,throatBounds.left),right:Math.max(doorBounds.right,throatBounds.right),top:Math.min(doorBounds.top,throatBounds.top),bottom:Math.max(doorBounds.bottom,throatBounds.bottom)};
       if(!legalPoint(pocket,{uniformScale:scale,footprint:envelope,reservedRects,viewport})||Scene.boundsOverlap(holdingBounds,entrance,gap+1))return null;
+      const claimed=new Map(),assigned=new Map();
+      const pointFor=(session,index)=>{const point=profile.points[workZones.get(session.id)]?.[index],f=footprints.get(session.id);return point?{x:point[0],y:Math.min(point[1],(viewport.bottom-f.bottom*scale)*100/H)}:null;};
+      const claim=(session,p,index)=>{assigned.set(session.id,p);if(index>=0){const zone=workZones.get(session.id);if(!claimed.has(zone))claimed.set(zone,new Set());claimed.get(zone).add(index);}};
+      // Physical fixed anchors own a matching slot first. An arbitrary fixed
+      // corridor point does not consume an unrelated sorted ordinal.
+      for(const session of visible)if(fixedPositions.has(session.id)){
+        const p=fixedPositions.get(session.id),points=profile.points[workZones.get(session.id)]||[],index=points.findIndex((_,i)=>!claimed.get(workZones.get(session.id))?.has(i)&&samePoint(p,pointFor(session,i)));
+        claim(session,p,index);
+      }
+      // Copied hints retain only exact legal slots in the actor's actual work
+      // zone. They are never substituted for true transition source feet.
+      for(const session of visible)if(!assigned.has(session.id)){
+        const hint=slotHints.get(session.id),zone=workZones.get(session.id);
+        if(!hint||(hint.workZone||hint.zone)!==zone)continue;
+        const index=(profile.points[zone]||[]).findIndex((_,i)=>!claimed.get(zone)?.has(i)&&samePoint(hint,pointFor(session,i)));
+        if(index>=0)claim(session,pointFor(session,index),index);
+      }
+      for(const session of visible)if(!assigned.has(session.id)){
+        const zone=workZones.get(session.id),index=(profile.points[zone]||[]).findIndex((_,i)=>!claimed.get(zone)?.has(i));
+        if(index<0)return null;claim(session,pointFor(session,index),index);
+      }
       for(const session of visible){
-        const zone=workZones.get(session.id),index=ordinals.get(zone)||0,point=profile.points[zone]?.[index],fixed=fixedPositions.get(session.id);if(!point&&!fixed)return null;
-        // A calibrated sprite foot can move the nameplate farther below its
-        // anchor. Fit the hint's actual full bottom, then recheck its station.
-        const f=footprints.get(session.id);
-        ordinals.set(zone,index+1);const p=fixed||{x:point[0],y:Math.min(point[1],(viewport.bottom-f.bottom*scale)*100/H)},a=seatArea(p,zone,session.id);
+        const zone=workZones.get(session.id),fixed=fixedPositions.get(session.id),f=footprints.get(session.id),p=assigned.get(session.id),a=seatArea(p,zone,session.id);
         if(!a||!legalPoint(p,{uniformScale:scale,footprint:f,reservedRects,viewport}))return null;
         const bounds=Scene.actorBounds(p,{uniformScale:scale,footprint:f});
         if((!fixed&&Scene.boundsOverlap(bounds,entrance,gap+1))||Scene.boundsOverlap(bounds,holdingBounds,gap+1)||[...seats].some(([id,q])=>Scene.actorsOverlap(p,{uniformScale:scale,footprint:f},q,{uniformScale:scale,footprint:footprints.get(id)},gap+1)))return null;
@@ -525,7 +601,7 @@
     const rootIdsBySession=new Map();for(const s of visible){const chain=[],seen=new Set();let p=s;while(p?.parentId&&unique.has(p.parentId)&&!seen.has(p.id)){seen.add(p.id);chain.push(p.id);p=unique.get(p.parentId);}const id=p&&seen.has(p.id)?[...chain,p.id].sort()[0]:p?.id||s.id;rootIdsBySession.set(s.id,id);}
     const seats=new Map(visible.map(s=>[s.id,{...chosen.seats.get(s.id),workZone:workZones.get(s.id),helper:Boolean(s.parentId),depth:1,uniformScale:scale,targetUniformScale:scale,requestedScale,holdingPoint:chosen.pocket,layoutMode:'walking'}]));
     Object.defineProperties(seats,{fits:{value:true},unplacedIds:{value:[]}});
-    const page={visible,seats,roots:visible.filter(s=>rootIdsBySession.get(s.id)===s.id),rootIdsBySession,requestedScale,uniformScale:scale,layoutMode:'walking',gap:gapForScale(scale),stageRect:null,page:0,pages:1,capacity:visible.length,helperCapacity:visible.filter(s=>s.parentId).length,hidden:0,helperOverflow:0,layoutFits:true,pathsById:chosen.paths,envelope,holdingPoints:[chosen.pocket,...(chosen.yieldPoints||[])],holdingPaths:[chosen.holdingPath],corridors:CORRIDORS,readability:{canvasPixels:154*scale,paintedHeadPixels:55*scale,paintedSpanPixels:75*scale,nameplatePixels:220*scale,recommendedMinimumScale:.35,needsMoreSpace:scale<.35,expansionFactor:Math.max(1,.35/scale)},venue:['workshop','teahouse','observatory'].includes(options.venue)?options.venue:'workshop',fitReason:scale<requestedScale-EPS?(scale<.18?'dense-furniture-side-fit':'reachable-furniture-side-fit'):'requested-size',cachedProof:false,proofMode:chosen.coordinated?'cooperative':'stationary',proofTrials,coordinatedProof:chosen.coordinated||null,transitionProof:chosen.transition||null};
+    const page={visible,seats,roots:visible.filter(s=>rootIdsBySession.get(s.id)===s.id),rootIdsBySession,requestedScale,uniformScale:scale,layoutMode:'walking',gap:gapForScale(scale),stageRect:null,page:0,pages:1,capacity:visible.length,helperCapacity:visible.filter(s=>s.parentId).length,hidden:0,helperOverflow:0,layoutFits:true,pathsById:chosen.paths,envelope,holdingPoints:[chosen.pocket,...(chosen.yieldPoints||[])],holdingPaths:[chosen.holdingPath],corridors:CORRIDORS,readability:{canvasPixels:154*scale,paintedHeadPixels:55*scale,paintedSpanPixels:75*scale,nameplatePixels:220*scale,recommendedMinimumScale:.35,needsMoreSpace:scale<.35,expansionFactor:Math.max(1,.35/scale)},venue:['workshop','teahouse','observatory'].includes(options.venue)?options.venue:'workshop',fitReason:scale<requestedScale-EPS?(scale<.18?'dense-furniture-side-fit':'reachable-furniture-side-fit'):'requested-size',cachedProof:false,proofMode:chosen.coordinated?'cooperative':'stationary',proofTrials,coordinatedProof:chosen.coordinated||null,transitionProof:chosen.transition||null,transferCertificate:chosen.transferCertificate||null,transferProofAttempts:transferBudget.plans,transferDrainCalls:transferBudget.drainCalls};
     if(chosen.deferredEntrance){page.proofMode='deferred-entrance';page.fitReason='waiting-for-entrance';page.blockedByIds=chosen.deferredEntrance;page.transitionDeferred=true;page.holdingPaths=[];}
     page.targetUniformScale=scale;rememberProof(seats,{signature,targets:targetSignature(seats),page});return finishExit(finishOpening(page));
   }

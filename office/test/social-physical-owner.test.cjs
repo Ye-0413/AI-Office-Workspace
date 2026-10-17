@@ -28,7 +28,9 @@ function harness(){
   animateWalk:()=>new Promise(resolve=>walks.push(resolve)),
   text:(n,value)=>{n.textContent=value;},say(){},actualArrival(){},setPose(){},
   showError:error=>{throw error;},returnClone:()=>assert.fail('ordinary station fixture cannot return a clone'),depart:()=>assert.fail('ordinary station fixture cannot exit')};
- vm.createContext(context);
+ // This legacy fixture has no finite slot-transfer owner.
+  Object.assign(context,{transferOwner:null,transferAvailable:()=>false,transferEligible:()=>new Set(),revokeTransfer:()=>{},queueTransferContinuation:()=>{}});
+  vm.createContext(context);
  vm.runInContext(['syncWalkingGait','cancelAction','cancelPhysicalRoutes','queueNavigation','requestStation','resumeNavigation','pumpTraffic','settle'].map(fn).join('\n'),context);
  return{actor,partner,context,timers,moves,walks,finished,
   reserve(temporary=false){reserves.push({kind:'move',id:actor.id,token:++token,path:[actor.position,{x:40,y:78}],target:{x:40,y:78},temporary,yielding:temporary});context.pumpTraffic();},

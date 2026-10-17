@@ -11,6 +11,8 @@ function harness(){
     office:{dispatchEvent:event=>events.push(event)},CustomEvent:class{constructor(type,options){this.type=type;this.detail=options.detail;}},
     removeActor:id=>{actors.delete(id);context.queueLayoutRefresh(true);},traffic:{clear:()=>{}},$:()=>node,
     getComputedStyle:()=>({transform:'scale(.4)'}),DOMMatrixReadOnly:class{constructor(){this.m11=.4;this.m12=0;}},requestAnimationFrame:()=>1};
+  // This legacy fixture has no finite slot-transfer owner.
+  Object.assign(context,{transferOwner:null,transferAvailable:()=>false,transferEligible:()=>new Set(),revokeTransfer:()=>{},queueTransferContinuation:()=>{}});
   vm.createContext(context);vm.runInContext(refresh+clear+admit,context);
   const actor={id:'actual-body',serial:2,entryPending:false,node:{},position:{x:30,y:69},target:{zone:'desk'}};actors.set(actor.id,actor);
   return{context,actor,jobs,events,renders:()=>renders,resumes:()=>resumes,flush:()=>{while(jobs.length)jobs.shift()();},arrive:serial=>context.actualArrival(actor,{zone:'desk'},serial??actor.serial,'station')};

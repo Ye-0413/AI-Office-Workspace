@@ -9,6 +9,8 @@ function harness(){
     setTimeout:(fn,ms)=>{const id=++sequence;timers.set(id,{fn,at:now+ms});return id;},clearTimeout:id=>timers.delete(id),
     cloneBusy:actor=>['splitting','returning','absorbing'].includes(actor.clonePhase),
     settle:async(actor,seat)=>{moves.push({id:actor.id,seat});actor.navigation={kind:'station',target:seat};},showError:()=>assert.fail('navigation must not throw'),queueTraffic:()=>{},returnClone:async()=>{},depart:async()=>{}};
+  // This legacy fixture has no finite slot-transfer owner.
+  Object.assign(context,{transferOwner:null,transferAvailable:()=>false,transferEligible:()=>new Set(),revokeTransfer:()=>{},queueTransferContinuation:()=>{}});
   vm.createContext(context);vm.runInContext(dockingSource+navigationSource,context);
   function advance(ms){now+=ms;for(const[id,timer]of [...timers])if(timer.at<=now){timers.delete(id);timer.fn();}}
   const actor=(id='root',extra={})=>{const value={id,node:{dataset:{}},position:{x:20,y:44},target:{x:20,y:44,zone:'library'},spec:{stale:false},entryPending:false,departing:false,holdingFamily:false,navigation:null,pendingStation:null,...extra};actors.set(id,value);return value;};

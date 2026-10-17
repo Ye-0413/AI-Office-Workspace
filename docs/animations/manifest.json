@@ -1,5 +1,5 @@
 {
-  "version": "0.17.0",
+  "version": "0.18.0",
   "publicBody": "original capsule robot; no external sprite references",
   "source": {
     "model": "office/lib/avatar-performance-model.js",
@@ -35,7 +35,7 @@
       "frames": 144,
       "fps": 12,
       "seconds": 12,
-      "bytes": 1391895
+      "bytes": 1285166
     },
     {
       "file": "reading.gif",
@@ -54,7 +54,7 @@
       "frames": 144,
       "fps": 12,
       "seconds": 12,
-      "bytes": 1108013
+      "bytes": 1102581
     },
     {
       "file": "searching.gif",
@@ -73,7 +73,7 @@
       "frames": 144,
       "fps": 12,
       "seconds": 12,
-      "bytes": 1231559
+      "bytes": 1218145
     },
     {
       "file": "planning.gif",
@@ -92,7 +92,7 @@
       "frames": 144,
       "fps": 12,
       "seconds": 12,
-      "bytes": 1233653
+      "bytes": 1227342
     },
     {
       "file": "coding.gif",
@@ -111,7 +111,7 @@
       "frames": 144,
       "fps": 12,
       "seconds": 12,
-      "bytes": 1272827
+      "bytes": 1277320
     },
     {
       "file": "designing.gif",
@@ -130,7 +130,7 @@
       "frames": 144,
       "fps": 12,
       "seconds": 12,
-      "bytes": 1103813
+      "bytes": 1103980
     },
     {
       "file": "testing.gif",
@@ -149,7 +149,7 @@
       "frames": 144,
       "fps": 12,
       "seconds": 12,
-      "bytes": 1280867
+      "bytes": 1270738
     },
     {
       "file": "building.gif",
@@ -168,7 +168,7 @@
       "frames": 144,
       "fps": 12,
       "seconds": 12,
-      "bytes": 1166095
+      "bytes": 1155638
     },
     {
       "file": "running.gif",
@@ -187,7 +187,7 @@
       "frames": 144,
       "fps": 12,
       "seconds": 12,
-      "bytes": 1254407
+      "bytes": 1259136
     },
     {
       "file": "waiting-tool.gif",
@@ -206,7 +206,7 @@
       "frames": 144,
       "fps": 12,
       "seconds": 12,
-      "bytes": 843515
+      "bytes": 842852
     },
     {
       "file": "waiting-user.gif",
@@ -225,7 +225,7 @@
       "frames": 144,
       "fps": 12,
       "seconds": 12,
-      "bytes": 848793
+      "bytes": 848112
     },
     {
       "file": "error.gif",
@@ -244,7 +244,7 @@
       "frames": 144,
       "fps": 12,
       "seconds": 12,
-      "bytes": 1169683
+      "bytes": 1161123
     }
   ]
 }
