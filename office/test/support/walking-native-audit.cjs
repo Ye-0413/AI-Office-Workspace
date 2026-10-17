@@ -17,8 +17,13 @@ function installAudit() {
     const route = originalRoute(child);
     if (!route || route.points.length < 2 || route.progress === null) return false;
     const points = route.points;
-    return phase === 'splitting' && Math.hypot(points[0].x - parent.x, points[0].y - parent.y) < .75 && route.progress <= points[1].offset + .0001
-      || phase === 'returning' && Math.hypot(points.at(-1).x - parent.x, points.at(-1).y - parent.y) < .75 && route.progress >= points.at(-2).offset - .0001;
+    // Repeated original vertices have no geometric leg. Their zero-duration
+    // offsets cannot shorten or widen the actual named endpoint segment.
+    const legs = points.slice(1).map((point, index) => ({ from: points[index], to: point }))
+      .filter(leg => Math.hypot(leg.to.x - leg.from.x, leg.to.y - leg.from.y) > .000001);
+    if (!legs.length) return false;
+    return phase === 'splitting' && Math.hypot(points[0].x - parent.x, points[0].y - parent.y) < .75 && route.progress <= legs[0].to.offset + .0001
+      || phase === 'returning' && Math.hypot(points.at(-1).x - parent.x, points.at(-1).y - parent.y) < .75 && route.progress >= legs.at(-1).from.offset - .0001;
   };
   let state = null, frame = 0;
   function fail(message) { if (state.violations.length < 20 && !state.violations.includes(message)) state.violations.push(message); }
@@ -32,6 +37,34 @@ function installAudit() {
     }
     return { points, progress: motion.effect.getComputedTiming().progress };
   }
+  function futureSweepsOverlap(a, b, tolerance = 1) {
+    // All independent positions along both exact line segments are covered.
+    // Their relative centres form a parallelogram. SAT against the full
+    // asymmetric body/nameplate Minkowski window rejects only true overlap;
+    // comparing two enclosing AABBs would also reject their empty corners.
+    const x1 = -b.extents.left - a.extents.right + tolerance;
+    const x2 = a.extents.left + b.extents.right - tolerance;
+    const y1 = -b.extents.top - a.extents.bottom + tolerance;
+    const y2 = a.extents.top + b.extents.bottom - tolerance;
+    if (!(x1 < x2 && y1 < y2)) return false;
+    const relative = [
+      { x: a.from.x - b.from.x, y: a.from.y - b.from.y },
+      { x: a.to.x - b.from.x, y: a.to.y - b.from.y },
+      { x: a.to.x - b.to.x, y: a.to.y - b.to.y },
+      { x: a.from.x - b.to.x, y: a.from.y - b.to.y }
+    ];
+    const window = [{ x:x1,y:y1 },{ x:x2,y:y1 },{ x:x2,y:y2 },{ x:x1,y:y2 }];
+    const axes = [{ x:1,y:0 },{ x:0,y:1 },
+      { x: -(a.to.y-a.from.y), y:a.to.x-a.from.x },
+      { x: -(b.to.y-b.from.y), y:b.to.x-b.from.x }];
+    for (const axis of axes) {
+      const length = Math.hypot(axis.x,axis.y); if (!length) continue;
+      const project = p => (p.x*axis.x+p.y*axis.y)/length;
+      const left = relative.map(project), right = window.map(project);
+      if (Math.max(...left) <= Math.min(...right)+1e-8 || Math.max(...right) <= Math.min(...left)+1e-8) return false;
+    }
+    return true;
+  }
   function remainingRoute(row) {
     const route = originalRoute(row);
     if (!route) return null;
@@ -40,6 +73,7 @@ function installAudit() {
     const future = [{ x: row.x, y: row.y }, ...points.filter(point => point.offset > progress + .00001)];
     const extents = { left: row.x - row.worldBox.left, right: row.worldBox.right - row.x, top: row.y - row.worldBox.top, bottom: row.worldBox.bottom - row.y };
     return future.slice(1).map((point, index) => ({
+      from: future[index], to: point, extents,
       left: Math.min(point.x, future[index].x) - extents.left,
       right: Math.max(point.x, future[index].x) + extents.right,
       top: Math.min(point.y, future[index].y) - extents.top,
@@ -109,7 +143,14 @@ function installAudit() {
         const a = routes[i], b = routes[j];
         if (!a.corridor || !b.corridor) { fail('a moving body has no original route Animation'); continue; }
         state.corridorPairsChecked += 1;
-        if (a.corridor.some(left => b.corridor.some(right => intersection(left, right, 1)))) fail('parallel future body/nameplate corridors intersect: ' + a.id + '/' + b.id);
+        if (a.corridor.some(left => b.corridor.some(right => futureSweepsOverlap(left, right, 1)))) {
+          if (!state.corridorFailure) state.corridorFailure = { at: now, actors: [a.id, b.id].map(id => {
+            const row = moving.find(value => value.id === id);
+            return { id, foot: { x: row.x, y: row.y }, scale: row.scale, worldBox: row.worldBox,
+              route: originalRoute(row), remainingCorridors: remainingRoute(row) };
+          }) };
+          fail('parallel future body/nameplate corridors intersect: ' + a.id + '/' + b.id);
+        }
       }
     }
     const queued = Number(office.dataset.entranceQueue) || 0;
@@ -129,7 +170,7 @@ function installAudit() {
   }
   function report() {
     if (!state) return null;
-    return { name: state.name, frames: state.frames, maxMoving: state.maxMoving, parallelFrames: state.parallelFrames, corridorPairsChecked: state.corridorPairsChecked, maxVisible: state.maxVisible, minScale: state.minScale, lastScale: state.lastScale, maxProgressGapMs: state.maxProgressGapMs, yieldingFrames: state.yieldingFrames, yieldedIds: [...state.yielded], dockedFrames: state.dockedFrames, distinctFootPositions: Object.fromEntries([...state.positions].map(([id, values]) => [id, values.size])), violations: state.violations };
+    return { name: state.name, frames: state.frames, maxMoving: state.maxMoving, parallelFrames: state.parallelFrames, corridorPairsChecked: state.corridorPairsChecked, maxVisible: state.maxVisible, minScale: state.minScale, lastScale: state.lastScale, maxProgressGapMs: state.maxProgressGapMs, yieldingFrames: state.yieldingFrames, yieldedIds: [...state.yielded], dockedFrames: state.dockedFrames, distinctFootPositions: Object.fromEntries([...state.positions].map(([id, values]) => [id, values.size])), violations: state.violations, ...(state.corridorFailure ? { corridorFailure: state.corridorFailure } : {}) };
   }
   window.crowdAudit = {
     begin(name, expected, allowedRemoved = []) {

@@ -9,6 +9,7 @@
   const Clones = window.OfficeClones;
   const Traffic = window.OfficeSceneTraffic;
   const WalkingLayout = window.OfficeWalkingLayout;
+  const WalkTiming = window.OfficeWalkTiming;
   const I18n = window.OfficeI18n;
   const bridge = window.office;
   const $ = (id) => document.getElementById(id);
@@ -624,6 +625,8 @@
     });
   }
   function cancelAction(actor, { dispose = false } = {}) {
+    // Finish only the old distance-phase lease, at the composed physical foot.
+    if (actor.motion) syncWalkingGait(actor);
     const releasedPhysicalOwner = Boolean(actor.motion || actor.routeReservation || actor.resumeNavigation || actor.yielding);
     const releasedExitOwner = actor.navigation?.kind === 'exit' || actor.resumeNavigation?.kind === 'exit';
     const hasFadeEvidence = actor.opacityMotion || actor.clonePhase === 'absorbing'
@@ -660,7 +663,10 @@
       actor.position = currentPosition(actor);
       actor.node.style.transition = 'none';
       actor.node.style.transform = actorTransform(actor.position, actor.helper);
-      actor.motion.cancel();
+      const oldMotion = actor.motion;
+      actor.performance?.locomotion?.(null, oldMotion);
+      if (actor.walkTiming?.motion === oldMotion) actor.walkTiming = null;
+      oldMotion.cancel();
       actor.motion = null;
       void getComputedStyle(actor.node).transform;
       actor.node.style.removeProperty('transition');
@@ -764,6 +770,13 @@
     clearTimeout(actor.bubbleTimer);
     actor.bubbleTimer = setTimeout(() => { actor.bubble.dataset.show = 'false'; }, duration);
   }
+  function syncWalkingGait(actor) {
+    const owner = actor.walkTiming;
+    if (!owner || owner.motion !== actor.motion || owner.serial !== actor.serial) return;
+    const time = Number(owner.motion.currentTime);
+    const sample = owner.plan.sampleAt(Number.isFinite(time) ? time : 0);
+    actor.performance?.locomotion?.({ owner: owner.motion, distanceWorld: sample.pathDistance, speedWorld: sample.worldSpeed, scale: uniformScale });
+  }
   function ensureMotionTicker() {
     if (frameTimer || destroyed || document.hidden || ![...actors.values()].some(actor => actor.motion)) return;
     function tick() {
@@ -772,7 +785,7 @@
       let moving = false;
       for (const actor of actors.values()) {
         if (actor.motion) {
-          const point = currentPosition(actor);
+          syncWalkingGait(actor);
           endpointParent(actor);
           actor.node.style.zIndex = '10';
           moving = true;
@@ -821,24 +834,27 @@
     setPose(actor, carrying ? 'clawd-working-carrying.svg' : 'clawd-static-base.svg');
     if (yielding) transitCaption(actor, true);
     else text(actor.state, lifecycleCaption(actor) || Director.plan(actor.session, { now: Date.now(), language }).label || actor.spec.label);
-    const points = [];
-    let traveled = 0;
-    for (let index = 0; index < path.length; index += 1) {
-      if (index) traveled += Scene.distance(path[index - 1], path[index]);
-      points.push({ transform: actorTransform(path[index], actor.helper), offset: length ? traveled / length : index / (path.length - 1) });
-    }
-    // This is a character crossing a physical room, not a delayed UI transition.
-    const duration = Math.max(360, Math.min(6000, length * 48));
+    // Physical motion keeps every reserved vertex. Exact segment time laws
+    // brake at turns without cutting through an unproved rounded corridor.
+    const plan = WalkTiming.planWalk(path);
+    if (!plan.valid) throw new Error('Invalid physical walking path: ' + plan.reason);
+    const points = plan.vertices.map(vertex => ({ transform: actorTransform(vertex.point, actor.helper), offset: vertex.offset, easing: vertex.easing }));
+    const duration = plan.duration;
     // The same transform also carries a gentle shared fit transition. A walk
     // owns it exclusively until its final inline foot is committed, otherwise
     // removing a filled WAAPI effect exposes a stale CSS transition to origin.
     actor.node.style.transition = 'none';
     const motion = actor.node.animate(points, { duration, easing: 'linear', fill: 'forwards' });
     actor.motion = motion;
+    actor.walkTiming = { motion, serial, plan };
+    syncWalkingGait(actor);
     ensureMotionTicker();
     try { await motion.finished; }
     catch (_) { return false; }
-    if (actor.serial !== serial) return false;
+    if (actor.serial !== serial || actor.motion !== motion) return false;
+    syncWalkingGait(actor);
+    actor.performance?.locomotion?.(null, motion);
+    if (actor.walkTiming?.motion === motion) actor.walkTiming = null;
     actor.position = { x: target.x, y: target.y };
     actor.node.style.transform = actorTransform(actor.position, actor.helper);
     actor.node.style.zIndex = '10';

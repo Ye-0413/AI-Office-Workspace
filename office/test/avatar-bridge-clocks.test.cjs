@@ -26,22 +26,28 @@ function style() {
   };
 }
 
-function fixture({ initialState = 'running' } = {}) {
+function fixture({ initialState = 'running', deferredPause = false } = {}) {
   const motions = [], created = [];
   let css;
   const joint = { style: style() };
   function motion(target, { cssName, state = 'running', duration = Infinity } = {}) {
-    let resolve, reject;
+    let resolve, reject, time = 1200;
     const value = {
-      effect: { target }, currentTime: 1200, playState: state, pending: false, plays: 0, pauses: 0,
+      effect: { target },
+      get currentTime() { return time; },
+      set currentTime(at) { time = at; if (value.playState === 'paused') value.pending = false; },
+      playState: state, pending: false, plays: 0, pauses: 0,
       finished: new Promise((yes, no) => { resolve = yes; reject = no; }),
       play() { value.plays++; value.playState = 'running'; },
-      pause() { value.pauses++; value.playState = 'paused'; },
+      pause() { value.pauses++; value.playState = 'paused'; value.pending = deferredPause; },
       cancel() {
         if (value.playState === 'idle') return;
         value.playState = 'idle'; reject(new Error('cancelled'));
       },
       advance(ms) {
+        // WAAPI pause may commit at the next timeline sample. Setting the
+        // current time during a pending pause instead completes it now.
+        if (value.pending && value.playState === 'paused') { time += ms; value.pending = false; return; }
         if (value.playState !== 'running') return;
         value.currentTime += ms;
         if (value.currentTime >= duration) { value.currentTime = duration; value.playState = 'finished'; resolve(); }
@@ -181,4 +187,23 @@ test('the clock owner waits for every finite joint and prop bridge before resumi
   assert.equal(f.css.playState, 'paused'); assert.equal(f.css.plays, 0);
   f.advance(35); await f.flush();
   assert.equal(f.css.playState, 'running'); assert.equal(f.css.plays, 1);
+});
+
+
+test('walking freeze synchronously holds the observed CSS time before a deferred pause can advance one frame', async () => {
+  const f = fixture({ deferredPause: true }), original = f.css, observed = f.css.currentTime;
+  f.api.freeze();
+  assert.equal(f.css.currentTime, observed);
+  f.advance(13.3); await f.flush();
+  assert.equal(f.css.currentTime, observed, 'a pending pause cannot credit a hidden extra work frame');
+  assert.equal(f.css.pending, false, 'setting the captured time synchronously completes the pending pause');
+  assert.equal(f.css.playState, 'paused');
+  assert.equal(f.layer.getAnimations().includes(original), true);
+  f.advance(360);
+  assert.equal(f.css.currentTime, observed, 'the whole physical route keeps the captured work-clock phase');
+  f.api.thaw(true);
+  assert.equal(f.css, original); assert.equal(f.css.playState, 'running');
+  f.advance(16);
+  assert.equal(f.css.currentTime, observed + 16, 'the original clock resumes from its exact captured phase');
+  assert.equal(f.health.pauses, 0, 'a CSS freeze cannot take the resource-health clock');
 });

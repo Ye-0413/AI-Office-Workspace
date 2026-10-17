@@ -256,7 +256,13 @@
         // here would strand healing when a different work program resumes.
         if (!bridges.has(motion) && typeof motion.animationName !== 'string') continue;
         paused.set(motion, bridgeClockOwner?.clocks.get(motion) || motion.playState);
-        if (motion.playState === 'running' || motion.pending) motion.pause();
+        if (motion.playState === 'running' || motion.pending) {
+          // pause() may commit on the next timeline sample. Hold the phase
+          // actually observed now instead of crediting an extra hidden frame.
+          const at = motion.currentTime;
+          motion.pause();
+          if (Number.isFinite(at)) motion.currentTime = at;
+        }
       }
     }
     function clearTransients() {
@@ -319,6 +325,83 @@
     }
 
     let gait = null;
+    const retiredGaitOwners = new WeakSet();
+    // A fixed world stride bounds cadence at 1.67Hz for the route's 320px/s
+    // ceiling, including dense .4/.1 fits. This is distance synchronisation,
+    // not world-space foot locking or inverse kinematics.
+    const GAIT_WORLD_STRIDE = 192;
+    function gaitNow() {
+      const time = document.timeline?.currentTime;
+      return Number.isFinite(time) ? time : view?.performance?.now?.() || 0;
+    }
+    function gaitMatrix(transform) {
+      const Matrix = view?.DOMMatrixReadOnly || view?.DOMMatrix;
+      const value = new Matrix(transform === 'none' ? undefined : transform);
+      return [value.a, value.b, value.c, value.d, value.e, value.f];
+    }
+    function gaitTakeoverWeight(elapsed) {
+      const progress = Math.max(0, Math.min(1, elapsed / 180));
+      if (progress === 0 || progress === 1) return progress;
+      // The existing 180ms cubic-bezier(.23,1,.32,1), evaluated against the
+      // shared ticker. The whole trajectory blends, not just its first frame.
+      let low = 0, high = 1;
+      for (let pass = 0; pass < 18; pass++) {
+        const t = (low + high) / 2, u = 1 - t;
+        if (3*u*u*t*.23 + 3*u*t*t*.32 + t*t*t < progress) low = t;
+        else high = t;
+      }
+      return 1 - Math.pow(1 - (low + high) / 2, 3);
+    }
+    function locomotion(sample, releasedOwner) {
+      if (destroyed || !gait) return false;
+      const current = gait;
+      if (sample === null) {
+        if (!releasedOwner || current.distanceOwner !== releasedOwner) return false;
+        retiredGaitOwners.add(releasedOwner); current.distanceOwner = null;
+        // Keep the sampled final pose paused until update(walking:false)
+        // transfers it to the ordinary work/freeze owner.
+        return true;
+      }
+      const owner = sample?.owner, distance = sample?.distanceWorld, speed = sample?.speedWorld;
+      if (!owner || !['object', 'function'].includes(typeof owner) || retiredGaitOwners.has(owner)
+        || !Number.isFinite(distance) || distance < 0 || !Number.isFinite(speed) || speed < 0) return false;
+      const elapsed = Number.isFinite(sample.elapsedMs) ? sample.elapsedMs
+        : Number.isFinite(owner.currentTime) ? owner.currentTime : gaitNow();
+      if (!current.distanceDriven) {
+        const actual = new Map(capture().map(item => [item.node, item.transform]));
+        current.phaseMs = Math.max(0, Number(current.entries[0]?.loop.currentTime) || 0);
+        current.distanceDriven = true; current.blendElapsed = 0;
+        for (const entry of current.entries) {
+          entry.before = gaitMatrix(actual.get(entry.node) || 'none');
+          entry.matrices = entry.frames.map(frame => gaitMatrix(frame.transform));
+          entry.loop.pause();
+        }
+        for (const motion of current.takeovers) { motion.cancel(); current.motions.delete(motion); }
+        current.takeovers.clear();
+        actorNode.dataset.locomotionSource = 'distance';
+      }
+      if (current.distanceOwner !== owner) {
+        if (current.distanceOwner) retiredGaitOwners.add(current.distanceOwner);
+        current.distanceOwner = owner; current.lastDistance = distance; current.lastElapsed = elapsed;
+      }
+      const advance = Math.max(0, distance - current.lastDistance);
+      current.lastDistance = Math.max(current.lastDistance, distance);
+      current.phaseMs += advance * 600 / GAIT_WORLD_STRIDE;
+      current.blendElapsed += Math.max(0, elapsed - current.lastElapsed);
+      current.lastElapsed = Math.max(current.lastElapsed, elapsed);
+      const weight = gaitTakeoverWeight(current.blendElapsed);
+      for (const entry of current.entries) {
+        if (weight < 1) {
+          entry.loop.effect.setKeyframes(entry.frames.map((frame, index) => ({ ...frame,
+            transform: 'matrix(' + entry.matrices[index].map((value, axis) =>
+              Number((entry.before[axis] + (value - entry.before[axis]) * weight).toFixed(8))).join(',') + ')' })));
+          entry.blended = true;
+        } else if (entry.blended) { entry.loop.effect.setKeyframes(entry.frames); entry.blended = false; }
+        entry.loop.currentTime = current.phaseMs;
+      }
+      actorNode.dataset.locomotionPhase = String(current.phaseMs);
+      return true;
+    }
     function startGait(canFade) {
       if (gait) return;
       const before = capture();
@@ -327,7 +410,7 @@
       keepPropSnapshot(back); keepPropSnapshot(front);
       stopBridge();
       const motions = new Set();
-      gait = { motions };
+      gait = { motions, entries: [], takeovers: new Set(), distanceOwner: null, distanceDriven: false, phaseMs: 0 };
       actorNode.dataset.locomotion = 'true';
       const carrying = Boolean(actorNode.querySelector?.('.actor-prop[data-carry="true"]'));
       const neutral = 'translate(0px,0px) rotate(0deg)';
@@ -363,7 +446,9 @@
           frames = [{ transform: neutral }, { transform: 'translate(0px,-1px) rotate(.3deg)', offset: .25 },
             { transform: neutral, offset: .5 }, { transform: 'translate(0px,-1px) rotate(-.3deg)', offset: .75 }, { transform: neutral }];
         } else frames = [{ transform: neutral }, { transform: neutral }];
-        const loop = node.animate(curves(frames), timing);
+        const trajectory = curves(frames);
+        const loop = node.animate(trajectory, timing);
+        gait.entries.push({ node, loop, frames: trajectory });
         motions.add(loop);
         loop.finished.catch(() => {});
         // The compositor starts the loop exactly where the 180ms takeover ends.
@@ -371,6 +456,7 @@
         if (Number.isFinite(start)) loop.startTime = start + 180;
         const takeover = node.animate([{ transform: item.transform }, { transform: frames[0].transform }],
           { duration: 180, easing: 'cubic-bezier(.23,1,.32,1)' });
+        gait.takeovers.add(takeover);
         motions.add(takeover);
         takeover.finished.catch(() => {}).finally(() => motions.delete(takeover));
       }
@@ -385,12 +471,15 @@
       const actual = capture();
       const owner = gait;
       gait = null;
+      if (owner.distanceOwner) retiredGaitOwners.add(owner.distanceOwner);
       for (const motion of owner.motions) motion.cancel();
       owner.motions.clear();
       // Keep the last physical stride for a natural fade or work-pose takeover.
       // thawVisual later restores the original inline styles and CSS clock leases.
       for (const item of actual) item.node.style.setProperty('transform', item.transform, 'important');
       delete actorNode.dataset.locomotion;
+      delete actorNode.dataset.locomotionSource;
+      delete actorNode.dataset.locomotionPhase;
       return actual;
     }
 
@@ -509,7 +598,7 @@
     // A single shared media listener cancels finite fades as well as CSS
     // choreography. No wall-time credit is inferred from this local UI event.
     systemMotion = watchReduced(view, () => update(session, { ...inheritedOptions, now: undefined }));
-    return Object.freeze({ update, destroy, get plan() { return last; } });
+    return Object.freeze({ update, locomotion, destroy, get plan() { return last; } });
   }
   return Object.freeze({ create });
 });

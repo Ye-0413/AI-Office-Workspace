@@ -1,5 +1,5 @@
 {
-  "version": "0.15.0",
+  "version": "0.16.0",
   "publicBody": "original capsule robot; no external sprite references",
   "source": {
     "model": "office/lib/avatar-performance-model.js",
@@ -8,7 +8,7 @@
   },
   "sourceHashes": {
     "office/lib/avatar-performance-model.js": "d5744f06c34164ca6d6c71794ed5b4456aea83b0a08720e680a31a1f1910e9c3",
-    "office/renderer/avatar-performance.js": "dc2cc34957cf20cf25c1d2e6f0d32e982bbcfc17222547891b6f79ee391214dd",
+    "office/renderer/avatar-performance.js": "6efe2e878ce152de33991ad973109cf5db823752e7200e6f0d9eabae3965440b",
     "office/renderer/avatar-performance.css": "38c96933a0ff0923ee8bcffa38d0da20d88cc730f4d08b99f270b31b3fe95491",
     "docs/animations/preview-body.js": "62d91da1250ba740843f29f9b69cd2ebb4a85a2c04e370a6b12be1a577a60ff6",
     "office/scripts/render-animation-previews.cjs": "1f1d6175a5df60b6a4c182555435f2832acdabb4e3fbab30cd47fbc3d1badd75"
@@ -35,7 +35,7 @@
       "frames": 144,
       "fps": 12,
       "seconds": 12,
-      "bytes": 1445069
+      "bytes": 1429629
     },
     {
       "file": "reading.gif",
@@ -54,7 +54,7 @@
       "frames": 144,
       "fps": 12,
       "seconds": 12,
-      "bytes": 976729
+      "bytes": 931717
     },
     {
       "file": "searching.gif",
@@ -73,7 +73,7 @@
       "frames": 144,
       "fps": 12,
       "seconds": 12,
-      "bytes": 1063076
+      "bytes": 1096633
     },
     {
       "file": "planning.gif",
@@ -92,7 +92,7 @@
       "frames": 144,
       "fps": 12,
       "seconds": 12,
-      "bytes": 1044388
+      "bytes": 1055164
     },
     {
       "file": "coding.gif",
@@ -111,7 +111,7 @@
       "frames": 144,
       "fps": 12,
       "seconds": 12,
-      "bytes": 1059007
+      "bytes": 1135917
     },
     {
       "file": "designing.gif",
@@ -130,7 +130,7 @@
       "frames": 144,
       "fps": 12,
       "seconds": 12,
-      "bytes": 947068
+      "bytes": 982140
     },
     {
       "file": "testing.gif",
@@ -149,7 +149,7 @@
       "frames": 144,
       "fps": 12,
       "seconds": 12,
-      "bytes": 1024335
+      "bytes": 1122492
     },
     {
       "file": "building.gif",
@@ -168,7 +168,7 @@
       "frames": 144,
       "fps": 12,
       "seconds": 12,
-      "bytes": 966095
+      "bytes": 954750
     },
     {
       "file": "running.gif",
@@ -187,7 +187,7 @@
       "frames": 144,
       "fps": 12,
       "seconds": 12,
-      "bytes": 1160415
+      "bytes": 1112456
     },
     {
       "file": "waiting-tool.gif",
@@ -206,7 +206,7 @@
       "frames": 144,
       "fps": 12,
       "seconds": 12,
-      "bytes": 774130
+      "bytes": 753727
     },
     {
       "file": "waiting-user.gif",
@@ -225,7 +225,7 @@
       "frames": 144,
       "fps": 12,
       "seconds": 12,
-      "bytes": 744207
+      "bytes": 748957
     },
     {
       "file": "error.gif",
@@ -244,7 +244,7 @@
       "frames": 144,
       "fps": 12,
       "seconds": 12,
-      "bytes": 1028987
+      "bytes": 1030914
     }
   ]
 }

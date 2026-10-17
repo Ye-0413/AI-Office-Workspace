@@ -1,28 +1,79 @@
 {
-  "version": "0.15.0",
+  "version": "0.16.0",
   "publicBody": "original capsule robot with four visible feet; resource-free detached span adapts bitmap fade API; no external sprite references",
-  "scope": "production four-foot gait and clone effect overlays; navigation and actor opacity are verified separately in native fixtures",
+  "scope": "production distance-synchronised four-foot joint motion at a fixed screen anchor and clone effect overlays; does not certify room navigation, world foot locking or body collision; those are verified separately in native fixtures",
   "sourceHashes": {
     "office/lib/avatar-performance-model.js": "d5744f06c34164ca6d6c71794ed5b4456aea83b0a08720e680a31a1f1910e9c3",
-    "office/renderer/avatar-performance.js": "dc2cc34957cf20cf25c1d2e6f0d32e982bbcfc17222547891b6f79ee391214dd",
+    "office/lib/walk-timing.js": "2a0fb10aad03e13bea46faafaae86c4922cf54858abf842704b35a38720b3049",
+    "office/renderer/avatar-performance.js": "6efe2e878ce152de33991ad973109cf5db823752e7200e6f0d9eabae3965440b",
     "office/renderer/avatar-performance.css": "38c96933a0ff0923ee8bcffa38d0da20d88cc730f4d08b99f270b31b3fe95491",
     "office/renderer/clone-motion.js": "6e05a742e6d03b29d1016d5aa925a0d12f894f0826b2f6b26f3921605bd80c6c",
     "office/renderer/clone-motion.css": "d6e8a048276af3359e316262f25bb2c59e8429a50dafad5442840eabea30bb78",
     "docs/animations/preview-body.js": "62d91da1250ba740843f29f9b69cd2ebb4a85a2c04e370a6b12be1a577a60ff6",
-    "office/scripts/render-lifecycle-previews.cjs": "cd4e550e54db5301d14aad2952f35dc60fc21a36c8fd18f322fc3824e620a043"
+    "office/scripts/render-lifecycle-previews.cjs": "f7858fb314f8246930d7079c462b688eafc4b2171b81f6645860a4d8497666fb"
   },
   "assets": [
     {
       "file": "walking.gif",
-      "label": "四足步态",
+      "label": "距离同步四足步态",
       "width": 800,
       "height": 420,
       "frames": 96,
       "fps": 48,
       "durationMs": 2000,
-      "distinctPngFrames": 87,
-      "bytes": 240657,
-      "sha256": "aa39b3458921456d9d22e24774208077f04e7d1b84649078bb3b92f4d7a3fe90"
+      "distinctPngFrames": 86,
+      "bytes": 199543,
+      "sha256": "d299a01ab5ddd2faaf76b87b12940cba1dacd1571c5717d1a5c71723185c4a5c",
+      "walkingCertificate": {
+        "inPlace": true,
+        "roomNavigationCertified": false,
+        "worldDistance": 384,
+        "plannedDurationMs": 1800,
+        "samplingDurationMs": 2000,
+        "stillTailMs": 200,
+        "firstStoppedFrameMs": 1812.5,
+        "encodedStillMs": 187.5,
+        "maxSpeedWorld": 320,
+        "worldStride": 192,
+        "completedStrideCycles": 2,
+        "controller": "OfficeAvatarPerformance.locomotion",
+        "clock": "explicit elapsedMs and OfficeWalkTiming.sampleAt; no document.timeline replacement",
+        "sameStrideAnimationObjects": true,
+        "first": {
+          "elapsedMs": 0,
+          "pathDistance": 0,
+          "worldSpeed": 0,
+          "phase": "accelerating",
+          "stridePhaseMs": 0,
+          "loopPhases": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "last": {
+          "elapsedMs": 1979.1666666666667,
+          "pathDistance": 384,
+          "worldSpeed": 0,
+          "phase": "arrived",
+          "stridePhaseMs": 1200,
+          "loopPhases": [
+            1200,
+            1200,
+            1200,
+            1200,
+            1200,
+            1200,
+            1200,
+            1200
+          ]
+        }
+      }
     },
     {
       "file": "split.gif",

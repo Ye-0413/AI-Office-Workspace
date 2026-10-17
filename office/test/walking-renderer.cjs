@@ -1,6 +1,7 @@
 'use strict';
 // Actual production actor nodes move; this isolated profile never connects AI tools.
 const {app,BrowserWindow,ipcMain}=require('electron');
+const {installAudit}=require('./support/walking-native-audit.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const profile=fs.mkdtempSync(path.join(os.tmpdir(),'office-walking-'));
 app.setPath('userData',profile);app.disableHardwareAcceleration();
@@ -33,7 +34,8 @@ app.whenReady().then(async()=>{
   win.webContents.on('render-process-gone',(_,details)=>errors.push('renderer gone: '+details.reason));
   await bounded(win.loadFile(path.join(__dirname,'../renderer/index.html')),'production page load');checkpoint('production page loaded');
   win.webContents.debugger.attach('1.3');await bounded(win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]}),'test media emulation');
-  await run(`window.walkArrivals=[];document.getElementById('office').addEventListener('office:actor-arrival',event=>{const d=event.detail;walkArrivals.push({id:d.actorId,zone:d.zone,serial:d.serial,kind:d.kind,x:d.position.x,y:d.position.y})});void 0`);
+  await run('('+installAudit.toString()+')()');
+  await run(`window.walkArrivals=[];window.walkActors=new Map();document.getElementById('office').addEventListener('office:actor-arrival',event=>{const d=event.detail;walkActors.set(d.actorId,d.actor);walkArrivals.push({id:d.actorId,zone:d.zone,serial:d.serial,kind:d.kind,x:d.position.x,y:d.position.y})});void 0`);
   let main=task('main');send([main]);await until(`${visible(main.id)}&&${query(main.id)}.dataset.walking==='true'`,'main must physically enter from its door');
   const first=await run(`(()=>{const n=${query(main.id)},m=new DOMMatrixReadOnly(getComputedStyle(n).transform);window.originalWalker=n;window.originalWalk=n.getAnimations().find(a=>a.effect.target===n&&a.constructor.name==='Animation');return{x:m.m41/12.8,y:m.m42/7.2,echoes:document.querySelectorAll('.flat-journey').length}})()`);
   assert.ok(Math.hypot(first.x-87,first.y-78)<4,JSON.stringify(first));assert.equal(first.echoes,0);
@@ -76,11 +78,23 @@ app.whenReady().then(async()=>{
   assert.equal(await run(`${query(main.id)}===originalWalker`),true);
   const orphan=task('unknown-parent','coding','codex:unobserved-parent');send([main,orphan]);await until(visible(orphan.id),'a real helper whose parent was never observed cannot stay hidden');assert.equal(await run(`${query(orphan.id)}.dataset.originEvidence==='unobserved-parent'&&${query(orphan.id)}.dataset.cloneOrigin===''&&document.querySelectorAll('.actor').length===2`),true);checks.push('unobserved parent is stated without creating a fake body or fake entrance');
   if(process.env.MINI_OFFICE_WALKING_SHORT!=='1'){
-  const crowd=[main,orphan,...Array.from({length:98},(_,i)=>task('crowd-'+i,['reading','planning','coding','testing'][i%4]))];send(crowd);
-  const started=Date.now();let progress=0,lastProgress=started,maxVisible=0;
-  while(Date.now()-started<150000){const state=await run(`({visible:[...document.querySelectorAll('.actor')].filter(n=>getComputedStyle(n).visibility!=='hidden'&&Number(getComputedStyle(n).opacity)>.99).length,queue:Number(document.getElementById('office').dataset.entranceQueue)})`);maxVisible=Math.max(maxVisible,state.visible);if(state.visible>progress){progress=state.visible;lastProgress=Date.now();}assert.ok(Date.now()-lastProgress<12000,'entrance queue must make finite progress: '+JSON.stringify(state));if(state.visible===100&&state.queue===0)break;await wait(250);}
-  assert.equal(maxVisible,100,'all 100 authoritative bodies must enter without pages or hidden arrivals');await sample('all 100 admitted bodies share one collision-free scale and layer',1100);
-  checks.push({name:'100 real main/helper bodies enter with a finite progressing queue',elapsedMs:Date.now()-started,visible:maxVisible});
+  await until(settled(orphan.id),'the honestly unobserved-parent body must finish its existing restoration before the stress gate');
+  const crowd=[main,orphan,...Array.from({length:98},(_,i)=>task('crowd-'+i,['reading','planning','coding','testing'][i%4]))];
+  await run(`crowdAudit.begin('all hundred bodies from admission through real route and gait completion',${JSON.stringify(crowd.map(s=>s.id))},[])`);
+  const started=Date.now(),deadline=started+150000;let progress=0,lastProgress=started,maxVisible=0,admittedMs=null,settledFrames=0,lastState;
+  send(crowd);
+  while(Date.now()<deadline){
+    const state=await run(`(()=>{const nodes=[...document.querySelectorAll('.actor')],admitted=nodes.filter(n=>getComputedStyle(n).visibility!=='hidden'&&Number(getComputedStyle(n).opacity)>.99),queue=Number(document.getElementById('office').dataset.entranceQueue),audit=crowdAudit.report();const done=admitted.length===100&&queue===0&&admitted.every(n=>{const a=walkActors.get(n.dataset.sessionId);const endpoint=a?!a.motion&&!a.routeReservation&&!a.navigation&&!a.resumeNavigation&&!a.pendingStation&&!a.yielding&&Math.abs(a.position.x-a.target.x)<.001&&Math.abs(a.position.y-a.target.y)<.001:n.dataset.sessionId===${JSON.stringify(orphan.id)};return endpoint&&n.dataset.walking!=='true'&&n.dataset.traffic==='arrived'&&n.dataset.locomotion!=='true'&&n.getAnimations({subtree:true}).every(m=>!(m.constructor.name==='Animation'&&m.effect?.getTiming().iterations!==Infinity&&(m.playState==='running'||m.pending))&&!(m instanceof CSSTransition&&m.transitionProperty==='transform'&&(m.playState==='running'||m.pending)))});return{visible:admitted.length,queue,done,audit}})()`);
+    assert.deepEqual(state.audit.violations,[],'the complete hundred-body moving interval stays audited');lastState=state;maxVisible=Math.max(maxVisible,state.visible);
+    if(state.visible>progress){progress=state.visible;lastProgress=Date.now();}
+    if(admittedMs===null){assert.ok(Date.now()-lastProgress<12000,'entrance queue must make finite progress: '+JSON.stringify(state));if(state.visible===100&&state.queue===0)admittedMs=Date.now()-started;}
+    if(state.done){if(!settledFrames)settledFrames=state.audit.frames;if(state.audit.frames-settledFrames>=31)break;}else settledFrames=0;
+    await wait(100);
+  }
+  assert.equal(maxVisible,100,'all 100 authoritative bodies must enter without pages or hidden arrivals');
+  assert.ok(lastState.done&&settledFrames&&lastState.audit.frames-settledFrames>=31&&Date.now()<=deadline,'the same original 150-second total budget includes real final endpoints and thirty-one settled gait-to-work frames: '+JSON.stringify(lastState));
+  const complete=await run('crowdAudit.finish()');assert.deepEqual(complete.violations,[]);checks.push(complete);
+  checks.push({name:'100 real bodies finish admission, actual routes and gait handoff within the original total budget',admittedMs,elapsedMs:Date.now()-started,settledTailFrames:lastState.audit.frames-settledFrames,visible:maxVisible});
   }
   assert.equal(await run(`document.querySelectorAll('.flat-journey').length`),0);assert.deepEqual(errors,[]);console.log(JSON.stringify({ok:true,coverage:process.env.MINI_OFFICE_WALKING_SHORT==='1'?'core-routes-only':'full-100-body-walking',checks,errors}));
 }).catch(async error=>{
@@ -93,7 +107,7 @@ app.whenReady().then(async()=>{
       evidence.geometry=await bounded(win.webContents.executeJavaScript(`(()=>{
         const world=document.getElementById('world').getBoundingClientRect(),factor=world.width/1280,office=document.getElementById('office');
         const rect=value=>({left:value.left,right:value.right,top:value.top,bottom:value.bottom,width:value.width,height:value.height});
-        return{fit:office.dataset.fitScale,queue:office.dataset.entranceQueue,actors:[...document.querySelectorAll('.actor')].map(node=>{
+        return{audit:window.crowdAudit?.report(),fit:office.dataset.fitScale,queue:office.dataset.entranceQueue,actors:[...document.querySelectorAll('.actor')].map(node=>{
           const style=getComputedStyle(node),matrix=new DOMMatrixReadOnly(style.transform),scale=Math.hypot(matrix.m11,matrix.m12),screen={x:world.left+matrix.m41*factor,y:world.top+matrix.m42*factor};
           const parts=Object.fromEntries(['body','nameplate'].map(part=>{const element=node.querySelector(part==='body'?'.character-body':'.nameplate'),box=element.getBoundingClientRect();return[part,{rect:rect(box),offsets:{left:(screen.x-box.left)/factor/scale,right:(box.right-screen.x)/factor/scale,top:(screen.y-box.top)/factor/scale,bottom:(box.bottom-screen.y)/factor/scale}}];}));
           const dataset=Object.fromEntries(['helper','clonePhase','cloneOrigin','cloneTarget','cloneCharge','endpointOverlap','traffic','trafficHint','walking','bodyFade','stale'].filter(key=>node.dataset[key]!==undefined).map(key=>[key,node.dataset[key]]));
