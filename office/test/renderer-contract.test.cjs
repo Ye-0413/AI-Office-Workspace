@@ -196,10 +196,10 @@ test('a real completed helper turn returns visually while its native session and
   const actor = { id: session.id, session }, parent = { id: session.parentId, departing: false };
   const rested = new Set(), observedIds = new Set([actor.id, parent.id]), spoken = [];
   const actors = new Map([[actor.id, actor], [parent.id, parent]]);
-  let releases = 0;
+  let releases = 0, navigationRequests = 0, trafficRequests = 0;
   const sandbox = { Scene, actors, observedIds,
     say: (_parent, phrase) => spoken.push(phrase), rememberRestedClone: id => rested.add(id),
-    removeActor: id => actors.delete(id), releaseWaitingRoots: () => { releases++; } };
+    removeActor: id => actors.delete(id), releaseWaitingRoots: () => { releases++; }, queueNavigation: () => { navigationRequests++; }, queueTraffic: () => { trafficRequests++; } };
   vm.createContext(sandbox);
   for (const name of ['completedCloneTurn', 'completedCloneReturn', 'finishCloneReturn']) vm.runInContext(functionSource(name), sandbox);
   assert.equal(sandbox.completedCloneTurn(session, 0), true);
@@ -213,6 +213,8 @@ test('a real completed helper turn returns visually while its native session and
   assert.equal(observedIds.has(actor.id), false, 'new real work must split a new visual body from its parent');
   assert.equal(actors.has(actor.id), false);
   assert.equal(releases, 1);
+  assert.equal(navigationRequests, 1, 'physical station planning resumes after an actual absorption');
+  assert.equal(trafficRequests, 1, 'the finite dock reservation releases waiting real routes');
   assert.equal(store.snapshot().find(item => item.id === actor.id).closed, false);
   const ledger = Clones.createLedger().update(store.snapshot(), now);
   assert.deepEqual(ledger.stats(parent.id), { active: 0, total: 1, ended: 0, open: 1, uncertain: 0 });

@@ -1391,3 +1391,6 @@
 .avatar-performance[data-program="error-set-down"] .ap-scene-a{transform:translate(0px,0px) rotate(0deg)}
 .avatar-performance[data-program="error-set-down"][data-animate="true"] .ap-scene-a{animation-name:ap-error-set-down-ap-scene-a}
 @keyframes ap-error-set-down-ap-scene-a{0%,17%{transform:translate(0px,0px) rotate(0deg)}33%,49%,64%,79%{transform:translate(0px,3px) rotate(0deg)}92%,100%{transform:translate(0px,0px) rotate(0deg)}}
+
+/* A real stride owns the limbs; its parent must not add another walking bob. */
+.actor[data-walking="true"][data-locomotion="true"] .character-body{animation:none}

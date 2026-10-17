@@ -55,3 +55,13 @@ test('seasonal gallery covers every real theme with at least 31 distinct animate
  assert.equal(manifest.rooms.completePaintings,43);assert.equal(createHash('sha256').update(fs.readFileSync(path.join(gallery,'rooms.png'))).digest('hex'),manifest.rooms.sha256);
  for(const [name,hash]of Object.entries(manifest.rooms.sourceHashes))assert.equal(createHash('sha256').update(fs.readFileSync(path.join(repo,name))).digest('hex'),hash,'re-export complete rooms after changing '+name);
 });
+
+test('lifecycle previews use current production gait/effects and at least 31 changing poses',()=>{
+ const folder=path.join(dir,'lifecycle'),manifest=JSON.parse(fs.readFileSync(path.join(folder,'manifest.json')));
+ assert.equal(manifest.version,require('../package.json').version);
+ assert.match(manifest.publicBody,/original capsule robot/);assert.equal(manifest.restrictedImageElements,0);assert.equal(manifest.blockedSpriteRequests,0);
+ assert.deepEqual(manifest.assets.map(item=>item.file),['walking.gif','split.gif','absorb.gif']);
+ assert.equal(Object.keys(manifest.sourceHashes).length,7);
+ for(const [name,hash]of Object.entries(manifest.sourceHashes))assert.equal(createHash('sha256').update(fs.readFileSync(path.join(repo,name))).digest('hex'),hash,'re-export lifecycle after changing '+name);
+ for(const item of manifest.assets){const bytes=fs.readFileSync(path.join(folder,item.file)),gif=inspectGif(bytes);assert.equal(bytes.length,item.bytes);assert.equal(createHash('sha256').update(bytes).digest('hex'),item.sha256);assert.ok(bytes.length<5*1024*1024);assert.equal(gif.width,item.width);assert.equal(gif.height,item.height);assert.equal(gif.frames,item.frames);assert.ok(item.fps>=40);assert.ok(item.distinctPngFrames>=31);assert.ok(gif.uniqueImages>=31,item.file+' needs changing encoded image data');assert.equal(gif.loop,0);assert.ok(Math.abs(gif.delay-item.durationMs/10)<=5);}
+});

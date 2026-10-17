@@ -8,6 +8,7 @@
   const Family = window.OfficeFamily;
   const Clones = window.OfficeClones;
   const Traffic = window.OfficeSceneTraffic;
+  const WalkingLayout = window.OfficeWalkingLayout;
   const I18n = window.OfficeI18n;
   const bridge = window.office;
   const $ = (id) => document.getElementById(id);
@@ -29,15 +30,15 @@
   const paletteRegistry = Family.createPaletteRegistry();
   const CLOCK_RESERVED = Scene.CLOCK_RESERVED;
   const ENTRY_POINT = { x: 87, y: 78, zone: 'exit' };
-  const traffic = Traffic.createCoordinator({ reservedRects: CLOCK_RESERVED, gap: Scene.ACTOR_GAP, limit: 256,
-    legalPoint: (point, actor) => Scene.legalActorPoint(point, { ...actor, reservedRects: CLOCK_RESERVED }) });
+  const traffic = Traffic.createCoordinator({ reservedRects: CLOCK_RESERVED, gap: scale => WalkingLayout.gapForScale(scale), limit: 256, maxConcurrent: 4, yieldBatchSize: 1,
+    route: (from, to, actor) => walkingRoute(from, to, actor),
+    holdingPoints: () => currentPage.holdingPoints,
+    legalPoint: (point, actor) => WalkingLayout.legalPoint(point, { ...actor, reservedRects: CLOCK_RESERVED }) });
   const trafficWaiters = new Map();
   let trafficTimer = 0;
   let blockedTrafficTimer = 0;
   let blockedTraffic = null;
   let reflowPending = false;
-  let entranceLane = false;
-  let entranceRenderScheduled = false;
   let attendance = { present: [], entering: [], leaving: [], retired: [] };
   const staticCopy = [];
   const copyWalker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
@@ -51,11 +52,15 @@
   let page = 0;
   let seats = new Map();
   let uniformScale = 1;
-  const pendingArrivals = new Set();
   let admissionFrame = 0;
+  let fitting = false;
+  let navigationTimer = 0;
+  let layoutRefreshOwner = null;
+  let layoutRefreshRequested = false;
+  let clearingActors = false;
+  let propsPending = false;
   const actorFootprints = new Map();
   const footprintCache = new Map();
-  const protectedEntrances = new Map();
   let rooms = [];
   let currentPage = { page: 0, pages: 1, roots: [], visible: [], hidden: 0, helperOverflow: 0 };
   let frameTimer = 0;
@@ -169,22 +174,96 @@
   function actorTransform(point, helper) {
     return 'translate3d(' + (point.x * 12.8).toFixed(2) + 'px,' + (point.y * 7.2).toFixed(2) + 'px,0) scale(' + uniformScale.toFixed(6) + ')';
   }
-  function sceneOptions() {
-    return { requestedScale: settings.agentScale, footprints: actorFootprints, reservedRects: CLOCK_RESERVED, previousSeats: seats, previousScale: uniformScale, previousRequestedScale: currentPage.requestedScale };
+  function nextEntryCandidate(incoming) {
+    const sessions = incoming ? new Map(incoming.map(session => [session.id, session])) : null;
+    const candidates = [...actors.values()].filter(actor => actor.entryPending && (!sessions || sessions.has(actor.id)));
+    if (incoming) for (const session of incoming.slice().sort((a,b) => cloneLedger.parentChain(a.id).length - cloneLedger.parentChain(b.id).length)) {
+      if (!actors.has(session.id)) candidates.push({ id: session.id, session, helper: Boolean(session.parentId), entryPending: true });
+    }
+    const staged = candidates.find(actor => actor.stagedEntry);
+    const ordered = staged ? [staged] : candidates;
+    for (const actor of ordered) {
+      const session = sessions?.get(actor.id) || actor.session;
+      if (Scene.isClosed(session)) continue;
+      const parent = actor.helper ? cloneAncestor(actor) : null;
+      if (parent?.entryPending || parent?.motion || parent?.navigation || parent?.yielding || parent?.routeReservation || parent?.resumeNavigation) continue;
+      // A not-yet-reserved source never pins a parent's queued real journey.
+      // Once staged, its finite reservation owns that source until charge ends.
+      if (parent?.pendingStation && !actor.stagedEntry) continue;
+      return { actor, parent };
+    }
+    return null;
+  }
+  function openingDockPairs(incoming) {
+    const next = nextEntryCandidate(incoming);
+    return new Map(next?.actor.helper && next.parent ? [[next.actor.id, next.parent.id]] : []);
+  }
+  function openingRouteReady(actor, parent) {
+    const proof = currentPage.openingProof, same = (a,b) => a && b && Math.abs(a.x-b.x)<.0005 && Math.abs(a.y-b.y)<.0005;
+    return Boolean(proof && proof.childId === actor.id && proof.parentId === parent.id
+      && Math.abs(proof.scale-uniformScale)<.00001 && same(proof.source,currentPosition(parent)) && same(proof.target,actor.target));
+  }
+  function closingDockPairs() {
+    const current = new Map(snapshot.sessions.map(session => [session.id, session])), pairs = new Map();
+    for (const actor of actors.values()) {
+      if (!actor.helper || actor.entryPending) continue;
+      const session = current.get(actor.id);
+      const owned = ['return', 'absorb'].includes(actor.navigation?.kind)
+        && !(session && hasBodyActivity(session));
+      // The first closed snapshot is planned before reconcileActors starts
+      // returnClone. Reserve exactly the same existing, visible ancestor now.
+      if (!(session && Scene.isClosed(session)) && !owned) continue;
+      const parent = owned ? actors.get(actor.navigation.parentId) || cloneAncestor(actor) : cloneAncestor(actor);
+      if (parent && parent !== actor && !parent.entryPending) pairs.set(actor.id, parent.id);
+    }
+    return pairs;
+  }
+  function sceneOptions(incoming = snapshot.sessions) {
+    const pinned = pinnedDockIds();
+    const closingPairs = closingDockPairs();
+    for (const [child, parent] of closingPairs) { pinned.add(child); pinned.add(parent); }
+    return { requestedScale: settings.agentScale, venue: settings.sceneVenue, footprints: actorFootprints, reservedRects: CLOCK_RESERVED, previousSeats: seats, previousScale: uniformScale, previousRequestedScale: currentPage.requestedScale,
+      closingDockPairs: closingPairs, openingDockPairs: openingDockPairs(incoming),
+      openingBusyIds: new Set([...actors.values()].filter(actor => !actor.entryPending && (actor.motion || actor.routeReservation || actor.resumeNavigation || actor.yielding)).map(actor => actor.id)),
+      currentPositions: new Map([...actors.values()].filter(actor => !actor.entryPending).map(actor => [actor.id, currentPosition(actor)])),
+      immovableIds: new Set([...actors.values()].filter(actor => !actor.entryPending && !canYieldAtStation(actor, pinned)).map(actor => actor.id)),
+      allowedOverlaps: new Set([...actors.values()].flatMap(actor => {
+        const parent = endpointParent(actor);
+        return parent ? [JSON.stringify([actor.id, parent.id].sort())] : [];
+      })) };
   }
   function updateEntranceLane() {
-    const needsLane = actor => !actor.helper && !reduced() && !document.hidden && (actor.entryPending && !actor.restoreEntry || actor.entranceActive);
-    const needed = [...actors.values()].some(needsLane);
-    if (needed === entranceLane || entranceRenderScheduled || destroyed) return;
-    entranceRenderScheduled = true;
-    queueMicrotask(() => {
-      entranceRenderScheduled = false;
-      if (destroyed) return;
-      entranceLane = [...actors.values()].some(needsLane);
-      render();
-    });
+    office.dataset.entranceQueue = String([...actors.values()].filter(actor => actor.entryPending).length);
+    updateSignalSummary();
+  }
+  function updateSignalSummary() {
+    const count = [...actors.values()].filter(actor => actor.entryPending).length;
+    const recent = snapshot.sessions.reduce((latest, session) => Math.max(latest, Scene.timestamp(session.lastEventAt)), 0);
+    const signal = recent ? tr(timeAgo(recent)) : '';
+    $('signal-summary').textContent = signal;
+    const summary = $('room-summary');
+    if (summary.dataset.baseSummary) summary.textContent = summary.dataset.baseSummary
+      + (count ? ' · ' + (language === 'en' ? count + ' waiting to enter' : count + ' 位依次入场') : '');
   }
   function actorGeometry(actor) { return { helper: actor.helper, uniformScale, layoutMode: currentPage.layoutMode, footprint: actorFootprints.get(actor.id) }; }
+  function walkingRoute(from, to, actor) {
+    const proof = currentPage.routeGeometry, seat = currentPage.seats?.get(actor.id);
+    const footprint = actorFootprints.get(actor.id), recorded = proof?.footprints.get(actor.id);
+    const samePoint = (a, b) => a && b && Math.abs(a.x - b.x) < 1e-7 && Math.abs(a.y - b.y) < 1e-7;
+    // The allocator already proved this exact entrance route. Reuse only its
+    // own geometry revision; Traffic still checks every leg against the real
+    // current bodies and remaining moving corridors before reserving it.
+    if (proof && proof.paths === currentPage.pathsById && proof.scale === currentPage.uniformScale
+      && actor.uniformScale === proof.scale && uniformScale === proof.scale
+      && samePoint(from, ENTRY_POINT) && samePoint(to, seat)
+      && recorded && footprint && actor.footprint
+      && ['left', 'right', 'top', 'bottom'].every(key => recorded[key] === footprint[key] && recorded[key] === actor.footprint[key])) {
+      const path = proof.paths.get(actor.id);
+      if (Array.isArray(path) && path.length > 1 && samePoint(path[0], from) && samePoint(path.at(-1), to)
+        && path.every(p => Number.isFinite(p.x) && Number.isFinite(p.y))) return path.map(p => ({ x: p.x, y: p.y }));
+    }
+    return WalkingLayout.route(from, to, actor);
+  }
   function measureActorFootprints(sessions) {
     const frameScale = world.getBoundingClientRect().width / Scene.WORLD.width;
     if (!frameScale) return;
@@ -238,7 +317,6 @@
       actorFootprints.set(session.id, footprint);
     }
     if (grew) {
-      protectEnteringActors();
       cancelPhysicalRoutes(); reflowPending = true;
     }
   }
@@ -247,96 +325,75 @@
     // keeps coding while its route is queued or it temporarily makes room.
     actor.node.dataset.trafficHint = yielding ? 'yielding' : 'queued';
     if (!actor.departing && !cloneBusy(actor) && !actor.holdingFamily) {
-      if (!actor.motion) finishAtStation(actor);
+      if (!actor.motion && actor.node.dataset.walking !== 'true') finishAtStation(actor);
       else text(actor.state, Director.plan(actor.session, { now: Date.now(), language }).label || actor.spec.label);
     }
   }
   function clearTrafficBlock() {
     clearTimeout(blockedTrafficTimer); blockedTrafficTimer = 0; blockedTraffic = null;
   }
-  function protectEnteringActors() {
-    for (const actor of actors.values()) if (!actor.helper && actor.entranceActive && !actor.entryPending && !actor.departing) protectedEntrances.set(actor.id, currentPosition(actor));
-  }
   function reflowBlockedTraffic() {
     clearTrafficBlock();
-    protectEnteringActors();
-    for (const actor of [...actors.values()]) {
-      const reason = actor.returnReason;
-      const parent = actor.helper && actor.departing ? cloneAncestor(actor) : null;
-      const retiring = actor.departing || actor.retireRequested;
-      cancelAction(actor);
-      if (retiring) {
-        if (actor.helper) finishCloneReturn(actor, parent, reason || (Scene.isClosed(actor.session) ? 'ended' : 'resting'));
-        else { openDoor(); removeActor(actor.id); }
-      }
+    // A blocked route cannot complete a real journey. Keep every admitted
+    // body at its actual foot, and ask the allocator for another safe station.
+    for (const { actor } of trafficWaiters.values()) {
+      actor.node.dataset.traffic = 'waiting-space';
+      actor.node.dataset.trafficHint = language === 'en' ? 'Waiting for a clear route' : '等待通道空位';
     }
-    traffic.clear();
     reflowPending = true;
-    // Re-run the same collision-safe layout and page selection. This changes
-    // only visual attendance; real activity, ancestry and counts remain intact.
     render();
   }
   function trackTrafficBlock() {
     const signature = JSON.stringify([...trafficWaiters].map(([id, pending]) => [id, pending.target.x, pending.target.y]).sort());
     const now = performance.now();
     if (!blockedTraffic || blockedTraffic.signature !== signature) blockedTraffic = { signature, since: now };
-    if (now - blockedTraffic.since >= 650) { reflowBlockedTraffic(); return; }
-    if (!blockedTrafficTimer) blockedTrafficTimer = setTimeout(() => { blockedTrafficTimer = 0; pumpTraffic(); }, 680);
+    if (now - blockedTraffic.since >= 2500) { reflowBlockedTraffic(); return; }
+    if (!blockedTrafficTimer) blockedTrafficTimer = setTimeout(() => { blockedTrafficTimer = 0; pumpTraffic(); }, 500);
   }
   function visibleActors() { return [...actors.values()].filter(actor => !actor.entryPending); }
+  function pinnedDockIds() {
+    return new Set([...actors.values()].filter(child => child.cloneCharge || child.entryPending && child.stagedEntry && child.navigation?.kind === 'entry' || ['return', 'absorb'].includes(child.navigation?.kind)).map(child => child.navigation?.parentId).filter(Boolean));
+  }
+  function canYieldAtStation(actor, pinned) {
+    return !actor.entryPending && !actor.departing && !cloneBusy(actor)
+      && !actor.holdingFamily && !actor.completing && !actor.spec.stale && !pinned.has(actor.id);
+  }
+  function canYieldActor(actor, pinned) {
+    return canYieldAtStation(actor, pinned) && !actor.motion && !actor.routeReservation;
+  }
   function syncTraffic() {
+    const pinned = pinnedDockIds();
     traffic.sync([...actors.values()].filter(actor => !actor.entryPending || actor.stagedEntry).map(actor => ({ id: actor.id, position: currentPosition(actor), ...actorGeometry(actor), staged: Boolean(actor.stagedEntry),
-      canYield: !actor.entryPending && !actor.departing && !cloneBusy(actor) && !actor.holdingFamily && !actor.completing && !actor.spec.stale })));
-  }
-  function spaceFree(point, actor, overlapIds = []) {
-    return Scene.legalActorPoint(point, { ...actorGeometry(actor), reservedRects: CLOCK_RESERVED })
-      && visibleActors().every(other => other === actor || overlapIds.includes(other.id)
-        || !Scene.actorsOverlap(point, actorGeometry(actor), currentPosition(other), actorGeometry(other)));
-  }
-  function doorPoint(actor) {
-    const candidates = [];
-    for (const y of [78, 80, 76, 44, 41]) for (const x of [87, 84, 81, 78, 75, 72]) candidates.push({ x, y, zone: 'exit' });
-    return candidates.find(point => spaceFree(point, actor)) || { ...currentPosition(actor), zone: 'exit' };
+      canYield: canYieldActor(actor, pinned) })));
   }
   function queueTraffic() {
     if (trafficTimer || destroyed) return;
     trafficTimer = setTimeout(pumpTraffic, 60);
   }
   function pumpTraffic() {
+    // move() can pump synchronously while a scheduled pump still owns this
+    // handle. Retire it before replacing the owner, not just its variable.
+    clearTimeout(trafficTimer);
     trafficTimer = 0;
     if (destroyed) return;
+    if (fitting) { queueAdmission(); return; }
     let progressed = false;
     syncTraffic();
-    if (!traffic.state().active && !traffic.state().queued && ![...actors.values()].some(actor => actor.defer || actor.queuedSeat)) {
-      for (const actor of actors.values()) if (actor.entryPending) {
-        const parent = actor.helper ? cloneAncestor(actor) : null;
-        const instantEntry = reduced() || document.hidden;
-        if (!actor.helper && !actor.restoreEntry && !instantEntry) {
-          if (!entranceLane) continue;
-          // Request the future doorway walk while still outside. The planner
-          // may first move a worker out of the way; no invisible physical body
-          // is allowed to trap that worker at the portal.
-          settle(actor, actor.target, true).catch(showError);
+    const trafficState = traffic.state();
+    if (trafficState.activeMoves.length < trafficState.maxConcurrent && ![...actors.values()].some(actor => actor.stagedEntry)) {
+      const next = nextEntryCandidate();
+      if (next) {
+        const { actor, parent } = next;
+        // An unobserved ancestor cannot be invented just to stage an entry.
+        if (actor.helper && !parent) {
+          restoreUnobservedHelper(actor).catch(showError); progressed = true;
+        } else if (!actor.helper || openingRouteReady(actor, parent)) {
+          // A positive source proof belongs to this exact helper. Its actual
+          // arrival/slot release re-proves the next pending sibling's source.
+          if (actor.helper) enterClone(actor, actor.target).catch(showError);
+          else settle(actor, actor.target, true).catch(showError);
           progressed = true;
-          break;
         }
-        const point = actor.restoreEntry || instantEntry || actor.helper && quietSprites() ? actor.target : parent ? currentPosition(parent)
-          : ENTRY_POINT;
-        if (!actor.helper && !actor.restoreEntry && !instantEntry && !entranceLane) continue;
-        const overlapIds = parent && !actor.restoreEntry && !quietSprites() ? [parent.id] : [];
-        if (!spaceFree(point, actor, overlapIds)) continue;
-        actor.entryPending = false; actor.node.style.visibility = '';
-        observedIds.add(actor.id);
-        progressed = true;
-        actor.position = { x: point.x, y: point.y };
-        actor.node.style.transform = actorTransform(actor.position, actor.helper);
-        if (actor.restoreEntry) { actor.justEntered = false; finishAtStation(actor); }
-        else if (actor.helper) enterClone(actor, actor.target).catch(showError);
-        else { actor.entranceActive = true; openDoor(); settle(actor, actor.target, true).catch(showError); }
-        syncTraffic();
-        // Materialize one visitor at a time; a later arrival must not enter
-        // the swept path of an already reserved walk.
-        if (!actor.restoreEntry && !instantEntry && !(actor.helper && quietSprites())) break;
       }
     }
     const reservation = traffic.nextAny();
@@ -351,11 +408,16 @@
       clearTrafficBlock();
       const id = reservation.id, actor = actors.get(id), pending = trafficWaiters.get(id);
       if (!actor || actor.entryPending && !actor.stagedEntry) { traffic.cancel(id); return; }
+      let splitEffect = null;
       if (actor.stagedEntry) {
         if (!pending || pending.serial !== actor.serial) { traffic.cancel(id); return; }
         actor.stagedEntry = false; actor.entryPending = false;
         actor.node.style.visibility = '';
-        actor.entranceActive = true; observedIds.add(actor.id); openDoor();
+        actor.node.style.opacity = '1';
+        actor.entranceActive = !actor.helper; observedIds.add(actor.id);
+        if (actor.helper && actor.node.dataset.cloneOrigin) splitEffect = cloneEffect(actor, cloneAncestor(actor) || actor, 'split');
+        else if (!actor.helper) openDoor();
+        updateEntranceLane();
         progressed = true;
       }
       if (reservation.kind === 'arrived') {
@@ -366,9 +428,20 @@
       } else {
         trafficWaiters.delete(id);
         const serial = actor.serial;
+        const routeOwner = actor.routeReservation = { token: reservation.token, serial };
+        actor.cloneCharge = Boolean(splitEffect && !quietSprites());
+        actor.node.dataset.cloneCharge = String(actor.cloneCharge);
         if (reservation.yielding) actor.yielding = true;
-        animateWalk(actor, reservation.path, serial, pending?.carrying, reservation.instant, reservation.yielding).then(ok => {
+        const travel = async () => {
+          if (actor.cloneCharge) await splitEffect.ready;
+          if (actor.serial !== serial || actor.routeReservation !== routeOwner || destroyed) return false;
+          actor.cloneCharge = false; actor.node.dataset.cloneCharge = 'false'; queueNavigation();
+          return animateWalk(actor, reservation.path, serial, pending?.carrying, reservation.instant, reservation.yielding);
+        };
+        travel().then(ok => {
+          if (actor.routeReservation === routeOwner) actor.routeReservation = null;
           traffic.finish(id, reservation.token, currentPosition(actor));
+          if (ok && actor.serial === serial && !reservation.temporary) actor.yielding = false;
           if (pending && ok && reservation.temporary) {
             trafficWaiters.set(id, pending);
             actor.node.dataset.traffic = 'queued';
@@ -377,17 +450,24 @@
             if (reservation.temporary) {
               actor.node.dataset.traffic = 'yielding';
               transitCaption(actor, true);
-            } else { actor.yielding = false; finishAtStation(actor); }
+            } else finishAtStation(actor);
           }
           renderHelperLinks();
+          if (ok && [...actors.values()].some(child => child.helper && child.entryPending)) queueLayoutRefresh(true);
           queueTraffic();
-        }).catch(error => { traffic.cancel(id, currentPosition(actor)); actor.yielding = false; pending?.resolve(false); showError(error); queueTraffic(); });
+        }).catch(error => {
+          if (actor.serial !== serial || actors.get(actor.id) !== actor) { pending?.resolve(false); return; }
+          if (actor.routeReservation === routeOwner) actor.routeReservation = null;
+          actor.cloneCharge = false; actor.node.dataset.cloneCharge = 'false'; traffic.cancel(id, currentPosition(actor)); actor.yielding = false;
+          pending?.resolve(false); showError(error); queueNavigation(); queueTraffic();
+        });
+        progressed = true;
       }
     } else clearTrafficBlock();
     // A blocked room sleeps until a movement completes, a request changes or
     // a real snapshot arrives. Do not burn a permanent polling loop at rest.
     if (progressed) { renderHelperLinks(); updateProps(); }
-    if (progressed && (traffic.state().queued || trafficWaiters.size || [...actors.values()].some(actor => actor.entryPending))) queueTraffic();
+    if (reservation.reason === 'searching' || traffic.state().active || progressed && (traffic.state().queued || trafficWaiters.size || [...actors.values()].some(actor => actor.entryPending))) queueTraffic();
   }
   function currentPosition(actor) {
     if (actor.motion) {
@@ -399,6 +479,25 @@
     return { ...actor.position };
   }
   function cloneBusy(actor) { return ['splitting', 'returning', 'absorbing'].includes(actor.clonePhase); }
+  function endpointParent(actor) {
+    if (!actor.endpointOverlap && actor.helper && cloneBusy(actor) && !actor.entryPending) {
+      const parent = cloneAncestor(actor);
+      if (parent) actor.endpointOverlap = { parentId: parent.id, serial: actor.serial, kind: actor.clonePhase };
+    }
+    const evidence = actor.endpointOverlap;
+    if (!evidence) return null;
+    const parent = actors.get(evidence.parentId);
+    if (!parent || parent === actor || actor.entryPending) { actor.endpointOverlap = null; delete actor.node.dataset.endpointOverlap; return null; }
+    const actualGeometry = value => {
+      const matrix = new DOMMatrixReadOnly(getComputedStyle(value.node).transform);
+      return { ...actorGeometry(value), uniformScale: Math.hypot(matrix.m11, matrix.m12) };
+    };
+    if (!Scene.actorsOverlap(currentPosition(actor), actualGeometry(actor), currentPosition(parent), actualGeometry(parent), currentPage.gap)) {
+      actor.endpointOverlap = null; delete actor.node.dataset.endpointOverlap; return null;
+    }
+    actor.node.dataset.endpointOverlap = parent.id;
+    return parent;
+  }
   function completedCloneTurn(session, previousTurnAt = 0) {
     return Scene.timestamp(session.turnCompletedAt) > previousTurnAt && session.activity === 'idle'
       && !session.disconnected && session.status !== 'stale' && !session.attention && !(Number(session.activeTools) > 0);
@@ -414,10 +513,11 @@
       && !['returning', 'absorbing'].includes(parent.clonePhase) && (!parent.helper || !Scene.isClosed(parent.session))) || null;
   }
   function cloneEffect(actor, anchor, kind) {
-    if (quietSprites() || !anchor) return;
+    if (quietSprites() || !anchor) return null;
     const effect = window.OfficeCloneMotion.burst({ anchor: anchor.node, kind, ownerId: actor.id, asset: assetURL('clawd-static-base.svg') });
     actor.cloneEffects.add(effect);
     effect.finished.finally(() => actor.cloneEffects.delete(effect));
+    return effect;
   }
   function relatedClones(actor) {
     return [...actors.values()].filter(child => child.helper && child !== actor && cloneLedger.parentChain(child.id).includes(actor.id));
@@ -448,22 +548,68 @@
       }
     });
   }
+  function needsOpeningRefresh(ancestorId) {
+    const present = new Set((currentPage.visible || []).map(session => session.id));
+    return snapshot.sessions.some(session => {
+      if (!session.parentId || !present.has(session.id) || Scene.isClosed(session)) return false;
+      const body = actors.get(session.id);
+      if (body && !body.entryPending) return false;
+      const chain = cloneLedger.parentChain(session.id);
+      return chain.some(id => (!ancestorId || id === ancestorId) && actors.has(id) && !actors.get(id).entryPending);
+    });
+  }
   function resumeActiveActor(actor) {
     if (!hasBodyActivity(actor.session) || !actor.departing && !actor.holdingFamily && !actor.retireRequested) return;
+    const retiredMain = !actor.helper && !actor.entryPending;
     cancelAction(actor);
     actor.departing = false; actor.holdingFamily = false; actor.retireRequested = null;
     actor.node.dataset.cloneHold = 'false';
+    if (retiredMain && needsOpeningRefresh(actor.id)) queueLayoutRefresh(true);
   }
   function cancelPhysicalRoutes() {
-    // Fitting and font measurement do not own a seated clone's finite return.
-    // Keep its delay, current pose and effects alive until it finishes or its
-    // actual session resumes. Only obsolete physical routes need cancelling.
-    for (const actor of actors.values()) if (!actor.departing && !actor.holdingFamily
-      && (actor.motion || actor.entryPending || actor.stagedEntry || trafficWaiters.has(actor.id))) cancelAction(actor);
+    // Re-fitting owns geometry, never a session's return/retirement intent.
+    for (const actor of actors.values()) if (actor.motion || actor.routeReservation || actor.yielding || actor.stagedEntry || trafficWaiters.has(actor.id)) {
+      const navigation = actor.navigation || (!actor.entryPending && (actor.motion || actor.routeReservation || actor.yielding) ? { kind: 'station', target: actor.target } : null);
+      const flags = { departing: actor.departing, returnReason: actor.returnReason, clonePhase: actor.clonePhase,
+        cloneTarget: actor.node.dataset.cloneTarget, cloneReason: actor.node.dataset.cloneReason };
+      cancelAction(actor);
+      Object.assign(actor, flags); clonePhase(actor, flags.clonePhase);
+      if (flags.cloneTarget) actor.node.dataset.cloneTarget = flags.cloneTarget;
+      if (flags.cloneReason) actor.node.dataset.cloneReason = flags.cloneReason;
+      actor.resumeNavigation = navigation; actor.navigation = null;
+    }
     traffic.clear();
   }
-  function cancelAction(actor) {
+  function fadeBody(actor, target) {
+    const from = Math.max(0, Math.min(1, Number(getComputedStyle(actor.node).opacity) || 0));
+    if (actor.opacityMotion) { actor.opacityMotion.cancel(); actor.opacityMotion = null; }
+    actor.node.style.transitionProperty = 'transform';
+    actor.node.style.opacity = String(target);
+    if (quietSprites() || Math.abs(from - target) < .00001) {
+      delete actor.node.dataset.bodyFade; actor.node.style.removeProperty('transition-property'); return Promise.resolve(true);
+    }
+    actor.node.dataset.bodyFade = target === 0 ? 'absorb' : 'restore';
+    const motion = actor.node.animate([{ opacity: from }, { opacity: target }], { duration: 220, easing: 'cubic-bezier(.23,1,.32,1)' });
+    actor.opacityMotion = motion;
+    return motion.finished.then(() => true, () => false).then(ok => {
+      if (actor.opacityMotion === motion) { actor.opacityMotion = null; delete actor.node.dataset.bodyFade; actor.node.style.removeProperty('transition-property'); }
+      return ok;
+    });
+  }
+  function cancelAction(actor, { dispose = false } = {}) {
+    const releasedPhysicalOwner = Boolean(actor.motion || actor.routeReservation || actor.resumeNavigation || actor.yielding);
+    const hasFadeEvidence = actor.opacityMotion || actor.clonePhase === 'absorbing'
+      || actor.node.style.opacity && Number(actor.node.style.opacity) < 1;
+    const bodyOpacity = hasFadeEvidence ? Math.max(0, Math.min(1, Number(getComputedStyle(actor.node).opacity) || 0)) : 1;
+    if (actor.helper && cloneBusy(actor) && !actor.entryPending) {
+      const parent = cloneAncestor(actor);
+      if (parent) {
+        actor.endpointOverlap = { parentId: parent.id, serial: actor.serial, kind: actor.clonePhase };
+        endpointParent(actor);
+      }
+    }
     actor.serial += 1;
+    actor.routeReservation = null; actor.cloneCharge = false; actor.node.dataset.cloneCharge = 'false';
     actor.stagedEntry = false;
     actor.yielding = false;
     delete actor.node.dataset.trafficHint;
@@ -478,23 +624,82 @@
     delete actor.node.dataset.cloneTarget;
     delete actor.node.dataset.cloneReason;
     if (actor.opacityMotion) { actor.opacityMotion.cancel(); actor.opacityMotion = null; }
-    if (!pendingArrivals.has(actor.id)) actor.node.style.opacity = '1';
+    actor.node.style.transitionProperty = 'transform';
+    actor.node.style.opacity = String(bodyOpacity);
+    if (!dispose && bodyOpacity < .99999) fadeBody(actor, 1);
+    else { actor.node.style.opacity = dispose ? String(bodyOpacity) : '1'; delete actor.node.dataset.bodyFade; actor.node.style.removeProperty('transition-property'); }
     if (actor.motion) {
       actor.position = currentPosition(actor);
+      actor.node.style.transition = 'none';
       actor.node.style.transform = actorTransform(actor.position, actor.helper);
       actor.motion.cancel();
       actor.motion = null;
+      void getComputedStyle(actor.node).transform;
+      actor.node.style.removeProperty('transition');
     }
     for (const pending of actor.delays) { clearTimeout(pending.timer); pending.resolve(false); }
     actor.delays.clear();
     if (actor.defer) { clearTimeout(actor.defer); actor.defer = 0; }
     actor.queuedSeat = null;
+    actor.navigation = null;
+    actor.resumeNavigation = null;
+    actor.pendingStation = null;
     actor.node.dataset.walking = 'false';
     actor.node.dataset.reaction = 'false';
     actor.bubble.dataset.show = 'false';
     actor.completing = false;
     queueTraffic();
+    if (!dispose && releasedPhysicalOwner && needsOpeningRefresh()) queueLayoutRefresh(true);
     return actor.serial;
+  }
+  function queueNavigation() {
+    clearTimeout(navigationTimer); navigationTimer = 0;
+    if (destroyed || fitting) return;
+    let next = Infinity;
+    const now = performance.now();
+    const pinnedDocks = pinnedDockIds();
+    for (const actor of actors.values()) if (actor.pendingStation && !actor.entryPending && !actor.departing && !actor.holdingFamily) {
+      if (pinnedDocks.has(actor.id)) continue;
+      if (actor.pendingStation.due <= now) {
+        const seat = actor.pendingStation.seat; actor.pendingStation = null;
+        settle(actor, seat, true).catch(showError);
+      } else next = Math.min(next, actor.pendingStation.due);
+    }
+    if (Number.isFinite(next)) navigationTimer = setTimeout(() => { navigationTimer = 0; queueNavigation(); }, Math.max(0, next - performance.now()));
+  }
+  function requestStation(actor, seat, urgent = false) {
+    actor.target = seat;
+    if (actor.entryPending || actor.departing || actor.holdingFamily || actor.spec.stale) return;
+    if (['entry', 'return', 'absorb', 'exit'].includes(actor.navigation?.kind)) return;
+    const currentTarget = actor.navigation?.target || actor.position;
+    // Match the allocator's <.001 per-axis endpoint proof; a tiny real
+    // remaining step must not strand a larger proved fit forever.
+    if (Scene.distance(currentTarget, seat) <= .0005) {
+      actor.pendingStation = null;
+      if (!actor.navigation && !actor.motion && actor.node.dataset.traffic !== 'arrived') actor.node.dataset.traffic = 'arrived';
+      return;
+    }
+    const previous = actor.pendingStation;
+    const unchanged = previous && Scene.distance(previous.seat, seat) <= .08;
+    // Only a stable functional destination owns a new route. Repeated tool
+    // metadata never restarts its deadline or touches a running body/rig.
+    actor.pendingStation = { seat, due: unchanged ? previous.due : performance.now() + (urgent ? 0 : 1700) };
+    queueNavigation();
+  }
+  function resumeNavigation() {
+    if (fitting || destroyed) return;
+    let releasedResume = false;
+    for (const actor of actors.values()) {
+      const navigation = actor.resumeNavigation; actor.resumeNavigation = null;
+      if (!navigation) continue;
+      releasedResume = true;
+      if (navigation.kind === 'return') { actor.departing = false; returnClone(actor, navigation.reason).catch(showError); }
+      else if (navigation.kind === 'exit') { actor.departing = false; depart(actor, navigation.inactive).catch(showError); }
+      else if (navigation.kind === 'holding') moveHolding(actor, actor.target).catch(showError);
+      else if (!actor.entryPending) requestStation(actor, actor.target, true);
+    }
+    queueNavigation(); queueTraffic();
+    if (releasedResume && needsOpeningRefresh()) queueLayoutRefresh(true);
   }
   function delay(actor, milliseconds, serial) {
     if (actor.serial !== serial) return Promise.resolve(false);
@@ -540,9 +745,10 @@
       for (const actor of actors.values()) {
         if (actor.motion) {
           const point = currentPosition(actor);
+          endpointParent(actor);
           actor.node.style.zIndex = '10';
           moving = true;
-        }
+        } else if (actor.endpointOverlap && actors.get(actor.endpointOverlap.parentId)?.motion) endpointParent(actor);
       }
       renderHelperLinks();
       if (moving && !document.hidden) frameTimer = requestAnimationFrame(tick);
@@ -553,8 +759,13 @@
     if (actor.serial !== serial) return false;
     syncTraffic();
     const parent = actor.helper ? cloneAncestor(actor) : null;
-    const overlapIds = parent && (cloneBusy(actor) || actor.justEntered
-      || Scene.actorsOverlap(currentPosition(actor), actorGeometry(actor), currentPosition(parent), actorGeometry(parent))) ? [parent.id] : [];
+    const endpoint = endpointParent(actor);
+    // A fresh clone may already be at its station while its actual main must
+    // leave their interrupted return endpoint. Reuse only that proven pair,
+    // and only when the complete destination is clear of the real child.
+    const separating = [...actors.values()].filter(child => child !== actor && endpointParent(child) === actor
+      && !Scene.actorsOverlap(target, actorGeometry(actor), currentPosition(child), actorGeometry(child), currentPage.gap));
+    const overlapIds = [...new Set([...(parent && (cloneBusy(actor) || actor.justEntered) ? [parent.id] : []), ...(endpoint ? [endpoint.id] : []), ...separating.map(child => child.id)])];
     if (!traffic.request(actor.id, target, { instant: reduced() || document.hidden, overlapIds })) return false;
     actor.node.dataset.traffic = 'queued';
     transitCaption(actor);
@@ -565,12 +776,15 @@
     const target = path.at(-1);
     actor.node.dataset.traffic = 'moving';
     const length = path.slice(1).reduce((sum, point, index) => sum + Scene.distance(path[index], point), 0);
-    if (length < .65 || instant || reduced() || document.hidden) {
+    if (length < .000001 || instant || reduced() || document.hidden) {
+      actor.node.style.transition = 'none';
       actor.position = { x: target.x, y: target.y };
       actor.node.style.transform = actorTransform(actor.position, actor.helper);
       actor.node.style.zIndex = '10';
       actor.arrivedAt = performance.now();
       actor.node.dataset.traffic = 'arrived';
+      void getComputedStyle(actor.node).transform;
+      actor.node.style.removeProperty('transition');
       return true;
     }
     actor.node.dataset.walking = 'true';
@@ -588,6 +802,10 @@
     }
     // This is a character crossing a physical room, not a delayed UI transition.
     const duration = Math.max(360, Math.min(6000, length * 48));
+    // The same transform also carries a gentle shared fit transition. A walk
+    // owns it exclusively until its final inline foot is committed, otherwise
+    // removing a filled WAAPI effect exposes a stale CSS transition to origin.
+    actor.node.style.transition = 'none';
     const motion = actor.node.animate(points, { duration, easing: 'linear', fill: 'forwards' });
     actor.motion = motion;
     ensureMotionTicker();
@@ -599,6 +817,8 @@
     actor.node.style.zIndex = '10';
     actor.motion = null;
     motion.cancel();
+    void getComputedStyle(actor.node).transform;
+    actor.node.style.removeProperty('transition');
     actor.node.dataset.walking = 'false';
     actor.arrivedAt = performance.now();
     actor.node.dataset.traffic = 'arrived';
@@ -613,6 +833,10 @@
     actor.spec = Scene.activitySpec(actor.session);
     actor.node.dataset.walking = 'false';
     const plan = Director.plan(actor.session, { now: Date.now(), language });
+    const previousMeaning = String(actor.lastPhase || '').split('/')[0], nextMeaning = String(plan.phase || '').split('/')[0];
+    if (['stale', 'waiting-user', 'error', 'unknown', 'closed'].includes(previousMeaning) && previousMeaning !== nextMeaning) {
+      clearTimeout(actor.bubbleTimer); actor.bubble.dataset.show = 'false';
+    }
     // A brief observed edit uses the same articulated body and continuous
     // per-activity clocks. Result captions never replace it with a fresh SVG.
     actor.visualWorkActivity = plan.recentWork ? plan.phase.slice('recent-work/'.length) : '';
@@ -633,30 +857,82 @@
     if (actor.session.id === selectedSession) renderInspector();
     updateProps();
   }
+  function queueLayoutRefresh(releasedSlot = false) {
+    if (destroyed || clearingActors) return;
+    const goalScale = Number(currentPage.targetUniformScale || currentPage.uniformScale || uniformScale);
+    if (!releasedSlot && !layoutRefreshRequested && goalScale <= uniformScale + .00001) return;
+    layoutRefreshRequested = true;
+    if (fitting || layoutRefreshOwner) return;
+    const owner = layoutRefreshOwner = {};
+    queueMicrotask(() => {
+      if (layoutRefreshOwner !== owner) return;
+      layoutRefreshOwner = null;
+      if (destroyed || clearingActors) { layoutRefreshRequested = false; return; }
+      if (fitting || !layoutRefreshRequested) return;
+      layoutRefreshRequested = false;
+      // Only a real endpoint or a released allocated slot can request this
+      // refresh. Re-prove the fit from actual feet, preserving every actor.
+      render();
+    });
+  }
+  function actualArrival(actor, seat, serial, kind) {
+    if (destroyed || actor.serial !== serial || actors.get(actor.id) !== actor || actor.entryPending) return;
+    office.dispatchEvent(new CustomEvent('office:actor-arrival', { detail: {
+      actor, actorId: actor.id, zone: seat.zone || actor.target.zone, serial, kind,
+      position: { ...currentPosition(actor) }
+    } }));
+    const pendingOpening = [...actors.values()].some(child => child.helper && child.entryPending);
+    queueLayoutRefresh(pendingOpening);
+  }
+  function placeOutside(actor, point) {
+    if (!actor.entryPending) throw new Error('Only a not-yet-admitted body may set an entry origin');
+    actor.node.style.transition = 'none';
+    actor.position = { x: point.x, y: point.y };
+    actor.node.style.transform = actorTransform(actor.position, actor.helper);
+    void getComputedStyle(actor.node).transform;
+    actor.node.style.removeProperty('transition');
+  }
+  async function moveHolding(actor, seat) {
+    const serial = cancelAction(actor);
+    actor.departing = false; actor.holdingFamily = true; actor.node.dataset.cloneHold = 'true';
+    actor.target = seat; const navigation = actor.navigation = { kind: 'holding', target: seat };
+    if (!await move(actor, seat, serial) || actor.serial !== serial) return;
+    if (actor.navigation === navigation) actor.navigation = null;
+    finishAtStation(actor); actualArrival(actor, seat, serial, 'holding'); queueTraffic();
+  }
+  async function restoreUnobservedHelper(actor) {
+    const serial = cancelAction(actor), seat = actor.target;
+    actor.navigation = { kind: 'restore', target: seat };
+    placeOutside(actor, seat); actor.stagedEntry = true;
+    actor.node.dataset.cloneOrigin = ''; actor.node.dataset.originEvidence = 'unobserved-parent';
+    if (!await move(actor, seat, serial) || actor.serial !== serial) return;
+    actor.navigation = null; actor.justEntered = false;
+    actor.lastZone = seat.zone;
+    finishAtStation(actor); queueTraffic();
+  }
   async function settle(actor, seat, urgent = false) {
     const serial = cancelAction(actor);
     actor.target = seat;
     actor.spec = Scene.activitySpec(actor.session);
     if (actor.spec.stale && !actor.entryPending) { finishAtStation(actor); return; }
-    if (actor.entryPending && !actor.helper && !actor.restoreEntry && !reduced() && !document.hidden) {
+    const navigation = actor.navigation = { kind: actor.entryPending ? 'entry' : 'station', target: seat };
+    if (actor.entryPending && !actor.helper) {
       actor.stagedEntry = true;
-      actor.position = { x: ENTRY_POINT.x, y: ENTRY_POINT.y };
-      actor.node.style.transform = actorTransform(actor.position, false);
-    }
-    // Short bursts of tools in one area should not make a character pace constantly.
-    const dwelling = performance.now() - actor.arrivedAt;
-    if (!urgent && dwelling < 1700 && Scene.distance(actor.position, seat) > 1 && !actor.justEntered) {
-      if (!await delay(actor, 1700 - dwelling, serial)) return;
+      placeOutside(actor, ENTRY_POINT);
     }
     actor.justEntered = false;
     if (!await move(actor, seat, serial, ['reading', 'searching'].includes(actor.session.activity))) return;
+    if (actor.serial !== serial || actors.get(actor.id) !== actor) return;
+    if (actor.navigation === navigation) actor.navigation = null;
     actor.entranceActive = false;
-    protectedEntrances.delete(actor.id);
     updateEntranceLane();
     finishAtStation(actor);
+    actualArrival(actor, seat, serial, navigation.kind);
     const phrase = { library: '找找这里的线索', board: '把思路理一理', desk: '开始动手', bench: '看看运行结果', front: '需要你看一下', sofa: '等下一项工作' }[seat.zone];
     if (phrase && actor.lastZone !== seat.zone) say(actor, phrase, actor.session.activity === 'waiting-user' ? 4500 : 1900);
     actor.lastZone = seat.zone;
+    if (Scene.distance(actor.target, seat) > .0005) requestStation(actor, actor.target);
+    queueNavigation(); queueTraffic();
   }
   function addEffect(kind, point, target) {
     if (quietSprites()) return;
@@ -671,58 +947,28 @@
     ], { duration: kind === 'delivery' ? 1400 : 900, easing: 'cubic-bezier(.77,0,.175,1)' });
     animation.finished.catch(() => {}).finally(() => effect.remove());
   }
-  async function completeTurn(actor, turnAt, restSeat) {
-    const serial = cancelAction(actor);
-    actor.completing = true;
-    actor.target = restSeat || { x: 15, y: 79, zone: 'sofa' };
-    actor.lastTurnAt = turnAt;
-    actor.node.dataset.walking = 'false';
-    text(actor.state, '这一轮已歇下');
-    setPose(actor, 'clawd-static-base.svg');
-    say(actor, '会话还在，等下一轮', 2400);
-    const key = Scene.projectKey(actor.session);
-    archivedTurns.set(key, Math.min(3, (archivedTurns.get(key) || 0) + 1));
-    $('archive-stack').dataset.count = String(archiveCount());
-    const seat = actor.target;
-    if (!await move(actor, seat, serial)) return;
-    actor.entranceActive = false;
-    protectedEntrances.delete(actor.id);
-    updateEntranceLane();
-    actor.completing = false;
-    finishAtStation(actor);
-  }
   async function enterClone(actor, seat) {
     const serial = cancelAction(actor);
     actor.target = seat;
     const parent = cloneAncestor(actor);
     actor.node.dataset.cloneOrigin = parent ? parent.id : '';
-    actor.position = parent ? currentPosition(parent) : { x: seat.x, y: seat.y };
-    actor.node.style.transform = actorTransform(actor.position, true);
+    const navigation = actor.navigation = { kind: 'entry', target: seat, parentId: parent?.id };
+    placeOutside(actor, parent ? currentPosition(parent) : seat);
     actor.node.style.zIndex = '10';
-    if (quietSprites()) {
-      actor.position = { x: seat.x, y: seat.y };
-      actor.node.style.transform = actorTransform(actor.position, true);
-      actor.node.style.zIndex = '10';
-      actor.justEntered = false;
-      finishAtStation(actor);
-      return;
-    }
+    actor.stagedEntry = actor.entryPending;
     clonePhase(actor, 'splitting');
     text(actor.state, '分身出现');
     setPose(actor, 'clawd-static-base.svg');
-    cloneEffect(actor, parent || actor, 'split');
-    const fade = actor.node.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240, easing: 'cubic-bezier(.23,1,.32,1)', fill: 'forwards' });
-    actor.opacityMotion = fade;
-    fade.finished.catch(() => {}).then(() => {
-      if (actor.serial !== serial || actors.get(actor.id) !== actor) return;
-      actor.opacityMotion = null; fade.cancel();
-      clonePhase(actor, 'working');
-    });
     if (!await move(actor, seat, serial)) return;
     if (actor.serial !== serial) return;
     actor.justEntered = false;
+    if (actor.navigation === navigation) actor.navigation = null;
     clonePhase(actor, 'working');
+    actor.lastZone = seat.zone;
     finishAtStation(actor);
+    actualArrival(actor, seat, serial, 'entry');
+    if (Scene.distance(actor.target, seat) > .0005) requestStation(actor, actor.target);
+    queueNavigation(); queueTraffic();
   }
   function finishCloneReturn(actor, parent, reason) {
     if (parent && actors.get(parent.id) === parent && !parent.departing) say(parent, completedCloneReturn(reason) ? '结束分身。' : '分身暂歇。', 2400);
@@ -735,39 +981,7 @@
     observedIds.delete(actor.id);
     removeActor(actor.id);
     releaseWaitingRoots();
-  }
-  function finishQuietClone(actor) {
-    if (!actor.helper || !quietSprites() || !actor.departing && !cloneBusy(actor) && !actor.motion) return;
-    const returning = actor.departing;
-    const reason = actor.returnReason || (Scene.isClosed(actor.session) ? 'ended' : 'resting');
-    const parent = returning ? cloneAncestor(actor) : null;
-    const target = actor.target;
-    cancelAction(actor);
-    if (returning) { actor.departing = true; finishCloneReturn(actor, parent, reason); return; }
-    actor.justEntered = false;
-    // Reduced motion still reserves the destination. Another visible body
-    // may be travelling between the old and newly planned seat layouts.
-    move(actor, target, actor.serial).then(ok => { if (ok && actors.get(actor.id) === actor) finishAtStation(actor); }).catch(showError);
-  }
-  // Bodies occupy their safe seats immediately. Finite echoes explain the
-  // doorway/clone journey without putting a real observer in an invisible queue.
-  function flatJourney(actor, from, to, kind) {
-    if (quietSprites() || $('effects').querySelectorAll('.flat-journey').length >= 8) return;
-    const echo = element('span', 'flat-journey');
-    echo.dataset.kind = kind; echo.dataset.ownerId = actor.id;
-    echo.style.setProperty('--family-color', paletteRegistry.forRoot(cloneLedger.rootFor(actor.id) || actor.id).color);
-    const image = element('img'); image.alt = ''; image.src = assetURL('clawd-static-base.svg'); echo.append(image);
-    $('effects').append(echo);
-    const frames = Array.from({ length: 61 }, (_, i) => {
-      const t = i / 60, progress = t * t * (3 - 2 * t);
-      const x = (from.x + (to.x - from.x) * progress) * 12.8;
-      const y = (from.y + (to.y - from.y) * progress) * 7.2 - Math.sin(t * Math.PI) * 28;
-      return { offset: t, transform: 'translate(' + x + 'px,' + y + 'px) scale(' + uniformScale + ') rotate(' + (Math.sin(t * Math.PI * 6) * 4) + 'deg)', opacity: Math.sin(t * Math.PI) * .6 };
-    });
-    const motion = echo.animate(frames, { duration: 1100, easing: 'linear' });
-    const effect = { cancel() { motion.cancel(); echo.remove(); } };
-    actor.cloneEffects.add(effect);
-    motion.finished.catch(() => {}).finally(() => { actor.cloneEffects.delete(effect); echo.remove(); });
+    queueNavigation(); queueTraffic();
   }
   async function returnClone(actor, reason) {
     if (actor.departing) return;
@@ -775,18 +989,48 @@
     actor.departing = true; actor.returnReason = reason;
     clonePhase(actor, 'returning');
     const parent = cloneAncestor(actor);
+    const navigation = actor.navigation = { kind: 'return', reason, target: parent ? currentPosition(parent) : currentPosition(actor), parentId: parent?.id };
     actor.node.dataset.cloneTarget = parent ? parent.id : '';
     actor.node.dataset.cloneReason = reason;
     text(actor.state, completedCloneReturn(reason) ? '结束分身' : '分身暂歇');
     setPose(actor, 'clawd-static-base.svg');
-    flatJourney(actor, currentPosition(actor), parent ? currentPosition(parent) : currentPosition(actor), 'return');
-    if (!quietSprites() && !await delay(actor, 1100, serial)) return;
+    if (parent) {
+      // A physical docking target stays still for this finite return; its
+      // latest observed functional destination remains queued afterwards.
+      if (parent.motion || parent.navigation?.kind === 'station') {
+        const destination = parent.target;
+        cancelAction(parent); parent.target = destination;
+        requestStation(parent, destination, true);
+      }
+      navigation.target = currentPosition(parent);
+      if (!await move(actor, navigation.target, serial)) return;
+    } else if (!quietSprites() && !await delay(actor, 220, serial)) return;
     if (actor.serial !== serial || destroyed) return;
-    cloneEffect(actor, parent || actor, 'absorb');
+    if (parent) actualArrival(actor, { ...navigation.target, zone: parent.target.zone || 'lobby' }, serial, 'return');
+    clonePhase(actor, 'absorbing');
+    actor.navigation = { ...navigation, kind: 'absorb' };
+    const effect = cloneEffect(actor, parent || actor, 'absorb');
+    if (!quietSprites() && effect) {
+      await effect.ready;
+      if (actor.serial !== serial || actors.get(actor.id) !== actor || destroyed) return;
+      const faded = await Promise.all([effect.finished, fadeBody(actor, 0)]);
+      if (!faded[1]) return;
+    }
+    if (actor.serial !== serial || actors.get(actor.id) !== actor || destroyed) return;
     finishCloneReturn(actor, parent, reason);
+  }
+  function settleQuietCloneEffects(actor) {
+    if (!quietSprites()) return;
+    for (const effect of actor.cloneEffects) effect.cancel();
+    actor.cloneEffects.clear();
+    if (actor.clonePhase === 'absorbing' && actor.navigation?.kind === 'absorb') {
+      const parent = actors.get(actor.navigation.parentId) || cloneAncestor(actor);
+      finishCloneReturn(actor, parent, actor.navigation.reason || actor.returnReason);
+    } else if (actor.opacityMotion && !actor.departing) fadeBody(actor, 1);
   }
   async function depart(actor, inactive = false) {
     if (actor.departing) return;
+    if (actor.entryPending) { removeActor(actor.id); return; }
     if (actor.helper) {
       const completed = inactive && completedCloneTurn(actor.session, actor.lastTurnAt);
       if (completed) actor.lastTurnAt = Scene.timestamp(actor.session.turnCompletedAt);
@@ -805,9 +1049,12 @@
     if (relatedClones(actor).length) { holdForClones(actor); return; }
     actor.holdingFamily = false; actor.node.dataset.cloneHold = 'false';
     const serial = cancelAction(actor); actor.departing = true;
+    actor.navigation = { kind: 'exit', inactive, target: ENTRY_POINT };
     text(actor.state, inactive ? '这一轮已歇下' : '会话已结束');
-    flatJourney(actor, currentPosition(actor), ENTRY_POINT, 'leave'); openDoor();
-    if (!quietSprites() && !await delay(actor, 1100, serial)) return;
+    if (actor.entryPending) { removeActor(actor.id); return; }
+    if (!await move(actor, ENTRY_POINT, serial)) return;
+    actualArrival(actor, ENTRY_POINT, serial, 'exit');
+    openDoor();
     if (actor.serial === serial) removeActor(actor.id);
   }
   function makeActor(session, seat) {
@@ -842,11 +1089,9 @@
     button.append(body, plate, mark, bubble);
     node.append(shadow, arrival, carry, button);
     actorsLayer.append(node);
-    const restored = observedIds.has(session.id) && (reflowPending || !attendance.entering.includes(session.id))
-      || snapshotReceived === 1 && !session.parentId;
     const helper = Boolean(session.parentId);
-    const actor = { id: session.id, session, spec: Scene.activitySpec(session), node, button, body, image, title, relation, provider, state, bubble, carry, arrival, position: { x: seat.x, y: seat.y }, target: seat, helper, serial: 0, delays: new Set(), cloneEffects: new Set(), clonePhase: helper ? 'working' : '', motion: null, lastTurnAt: Scene.timestamp(session.turnCompletedAt), arrivedAt: -10000, lastZone: restored ? seat.zone : '', currentAsset: '', wantedAsset: '', bubbleTimer: 0, defer: 0, justEntered: !restored, completing: false, departing: false, holdingFamily: false, retireRequested: null, entryPending: false, restoreEntry: restored };
-    node.style.visibility = 'visible';
+    const actor = { id: session.id, session, spec: Scene.activitySpec(session), node, button, body, image, title, relation, provider, state, bubble, carry, arrival, position: { ...ENTRY_POINT }, target: seat, helper, serial: 0, delays: new Set(), cloneEffects: new Set(), clonePhase: helper ? 'working' : '', motion: null, lastTurnAt: Scene.timestamp(session.turnCompletedAt), arrivedAt: -10000, lastZone: '', currentAsset: '', wantedAsset: '', bubbleTimer: 0, defer: 0, justEntered: true, completing: false, departing: false, holdingFamily: false, retireRequested: null, entryPending: true, navigation: null, pendingStation: null, resumeNavigation: null };
+    node.style.visibility = 'hidden'; node.style.opacity = '1';
     node.dataset.clonePhase = actor.clonePhase;
     actor.performance = window.OfficeAvatarPerformance.create({ actorNode: node, body, image, session, clockRegistry: performanceClocks });
     actor.appearance = window.OfficeFamilyAppearance.create({ actorNode: node, body, image });
@@ -876,20 +1121,8 @@
     actor.fallback = window.OfficeAvatarFallback?.create({ actorNode: node, body, image });
     actors.set(session.id, actor);
     observedIds.add(actor.id);
-    if (!restored && !quietSprites()) {
-      // A new body waits only for its actual visible envelope to be clear.
-      // This shared RAF is independent of traffic and all AI state.
-      node.style.opacity = '0'; pendingArrivals.add(actor.id); queueAdmission();
-    }
     setPose(actor, actor.spec.asset);
-    finishAtStation(actor);
-    if (!restored) {
-      const parent = actor.helper ? cloneAncestor(actor) : null;
-      node.dataset.cloneOrigin = parent ? parent.id : '';
-      flatJourney(actor, parent ? currentPosition(parent) : actor.helper ? seat : ENTRY_POINT, seat, actor.helper ? 'split' : 'enter');
-      if (!actor.helper) openDoor();
-      else cloneEffect(actor, parent || actor, 'split');
-    }
+    updateEntranceLane(); queueTraffic();
     return actor;
   }
   function updateActorLabel(actor) {
@@ -917,6 +1150,7 @@
     actor.relation.title = session.parentId ? actor.relation.textContent : I18n.t(language, 'family.clonesHint');
     text(actor.provider, session.provider === 'claude-code' ? 'Claude' : Scene.providerName(session.provider));
     if (actor.holdingFamily) text(actor.state, '等分身归位');
+    else if (actor.motion && !actor.departing) text(actor.state, Director.plan(session, { now: Date.now(), language }).label || spec.label);
     else if (!actor.motion && !actor.yielding && !trafficWaiters.has(actor.id) && !actor.completing && !actor.departing && !cloneBusy(actor)) text(actor.state, spec.label);
     if (actor.yielding) transitCaption(actor, true);
     if (trafficWaiters.has(actor.id)) transitCaption(actor);
@@ -924,7 +1158,7 @@
     actor.button.setAttribute('aria-pressed', String(session.id === selectedSession));
   }
   async function react(actor) {
-    if (actor.departing || actor.spec.stale || cloneBusy(actor) || actor.holdingFamily) return;
+    if (actor.entryPending || actor.navigation || actor.motion || actor.departing || actor.spec.stale || cloneBusy(actor) || actor.holdingFamily) return;
     if (actor.session.activity === 'waiting-user' || actor.session.activity === 'error') {
       say(actor, '请回原工具看一下', 3000);
       selectSession(actor.id);
@@ -957,19 +1191,19 @@
   function removeActor(id) {
     const actor = actors.get(id);
     if (!actor) return;
-    cancelAction(actor);
+    const releasedSlot = currentPage.seats?.has(id);
+    cancelAction(actor, { dispose: true });
     clearTimeout(actor.bubbleTimer);
-    pendingArrivals.delete(actor.id);
     actor.fallback?.destroy();
     if (actor.performance) { actor.performance.update(actor.session, { now: Date.now(), hidden: true }); actor.performance.destroy(); }
     if (actor.appearance) actor.appearance.destroy();
     actor.node.remove();
     actors.delete(id);
-    protectedEntrances.delete(id);
     updateEntranceLane();
     renderHelperLinks();
     if (selectedSession === id) { selectedSession = ''; $('inspector').hidden = true; }
     refreshQuietPresentation();
+    if (releasedSlot) queueLayoutRefresh(true);
   }
   function refreshQuietPresentation() {
     // Keep navigation available when a different room still has observed work.
@@ -981,7 +1215,10 @@
     visitor.tick();
   }
   function clearActors() {
-    for (const id of [...actors.keys()]) removeActor(id);
+    const wasClearing = clearingActors;
+    clearingActors = true; layoutRefreshOwner = null; layoutRefreshRequested = false;
+    try { for (const id of [...actors.keys()]) removeActor(id); }
+    finally { clearingActors = wasClearing; }
     seats = new Map();
     traffic.clear();
     $('helper-links').replaceChildren();
@@ -989,7 +1226,7 @@
     $('effects').replaceChildren();
   }
   function queueAdmission() {
-    if (admissionFrame || destroyed || !pendingArrivals.size) return;
+    if (admissionFrame || destroyed || !fitting) return;
     admissionFrame = requestAnimationFrame(admitBodies);
   }
   function admitBodies() {
@@ -998,8 +1235,7 @@
     const cast = [...actors.values()].map(actor => {
       const matrix = new DOMMatrixReadOnly(getComputedStyle(actor.node).transform);
       const scale = Math.hypot(matrix.m11, matrix.m12);
-      return { actor, bounds: Scene.actorBounds({ x: matrix.m41 / 12.8, y: matrix.m42 / 7.2 },
-        { uniformScale: scale, footprint: actorFootprints.get(actor.id) }), scale };
+      return { scale };
     });
     // A newcomer uses the destination scale. Keep its finite arrival at that
     // same scale as everyone else; do not expose a smaller body halfway through
@@ -1008,14 +1244,8 @@
     // above 1 can round by 0.000005. Exact string equality would strand a new
     // body forever even after its transition has completely finished.
     const sameScale = cast.every(item => Math.abs(item.scale - uniformScale) <= .00001);
-    for (const id of [...pendingArrivals]) {
-      const item = cast.find(item => item.actor.id === id);
-      if (!item) { pendingArrivals.delete(id); continue; }
-      if (sameScale && cast.every(other => other === item || !Scene.boundsOverlap(item.bounds, other.bounds, 0))) {
-        item.actor.node.style.opacity = '1'; pendingArrivals.delete(id);
-      }
-    }
-    queueAdmission();
+    if (sameScale) { fitting = false; if (layoutRefreshRequested) queueLayoutRefresh(); else resumeNavigation(); }
+    else queueAdmission();
   }
   function hasBodyActivity(session) {
     // Unknown activity is a valid live body, even without a classified tool.
@@ -1027,21 +1257,24 @@
     const sessionMap = new Map(snapshot.sessions.map(session => [session.id, session]));
     const visibleIds = new Set(currentPage.visible.map(session => session.id));
     const nextSeats = currentPage.seats;
-    const layoutChanged = reflowPending || Math.abs(uniformScale - currentPage.uniformScale) > .000001
-      || [...nextSeats].some(([id, seat]) => !seats.has(id) || Scene.distance(seats.get(id), seat) > .01);
-    // Stable anchors never jump on a heartbeat, new arrival or work-zone
-    // change. CSS retargets the shared scale from its current rendered value.
+    const scaleChanged = Math.abs(uniformScale - currentPage.uniformScale) > .000001;
+    if (scaleChanged) { cancelPhysicalRoutes(); fitting = true; }
     uniformScale = currentPage.uniformScale;
-    for (const actor of actors.values()) {
-      const seat = nextSeats.get(actor.id);
-      if (seat) {
-        actor.position = { x: seat.x, y: seat.y }; actor.target = seat;
-        actor.node.style.transform = actorTransform(seat, actor.helper);
-      }
-    }
+    // Snapshot reconciliation never writes a desired station into a physical
+    // foot point. Only a completed/interrupted real walk owns that coordinate.
+    if (scaleChanged) for (const actor of actors.values()) actor.node.style.transform = actorTransform(actor.position, actor.helper);
     for (const actor of [...actors.values()]) if (!visibleIds.has(actor.id)) {
       const next = sessionMap.get(actor.id);
       actor.session = next || actor.session; actor.spec = Scene.activitySpec(actor.session);
+      const newDescendant = !actor.helper && actor.departing && currentPage.visible.some(session => cloneLedger.parentChain(session.id).includes(actor.id));
+      if (newDescendant) {
+        // A late real descendant extends the visual ancestor anchor; it does
+        // not reopen the ended AI session. Stop its exit at the actual foot
+        // and walk to a safe holding dock before the new split starts.
+        actor.departing = false; holdForClones(actor);
+        moveHolding(actor, nextSeats.get(actor.id) || actor.target).catch(showError);
+        continue;
+      }
       depart(actor, !Scene.isClosed(actor.session)).catch(showError);
     }
     for (const session of currentPage.visible.slice().sort((a,b) => cloneLedger.parentChain(a.id).length - cloneLedger.parentChain(b.id).length)) {
@@ -1053,12 +1286,7 @@
       const old = actor.session, previousTurn = actor.lastTurnAt;
       actor.session = session; actor.spec = Scene.activitySpec(session); actor.helper = Boolean(session.parentId);
       resumeActiveActor(actor);
-      if (layoutChanged) {
-        actor.position = { x: seat.x, y: seat.y }; actor.target = seat;
-        actor.entryPending = false; actor.stagedEntry = false; actor.entranceActive = false;
-        actor.node.style.visibility = 'visible'; if (!pendingArrivals.has(actor.id)) actor.node.style.opacity = '1';
-        actor.node.style.transform = actorTransform(seat, actor.helper); actor.node.style.zIndex = '10';
-      }
+      actor.target = seat;
       updateActorLabel(actor);
       const completedAt = Scene.timestamp(session.turnCompletedAt);
       if (actor.helper && completedCloneTurn(session, previousTurn)) {
@@ -1072,13 +1300,14 @@
         }
         if (old.activity !== session.activity) social?.update();
         if (!actor.departing && actor.node.dataset.reaction !== 'true') finishAtStation(actor);
+        requestStation(actor, seat, Boolean(endpointParent(actor)));
       }
     }
     seats = nextSeats; reflowPending = false;
     office.dataset.layout = currentPage.layoutMode;
     office.dataset.flat = 'true';
     office.dataset.fitScale = uniformScale.toFixed(4);
-    queueAdmission();
+    queueAdmission(); if (!fitting) resumeNavigation(); queueNavigation(); queueTraffic(); updateEntranceLane();
     renderHelperLinks(); updateProps();
   }
   function renderHelperLinks() {
@@ -1110,11 +1339,24 @@
     layer.replaceChildren(fragments);
   }
   function updateProps() {
-    const activeZones = new Set();
-    for (const actor of actors.values()) if (!actor.motion && !actor.departing && !actor.spec.stale) activeZones.add(actor.spec.zone);
-    for (const prop of world.querySelectorAll('[data-zone-prop]')) prop.dataset.active = String(activeZones.has(prop.dataset.zoneProp));
-    for (const label of world.querySelectorAll('[data-zone-label]')) label.dataset.active = String(activeZones.has(label.dataset.zoneLabel));
-    $('archive-stack').dataset.count = String(archiveCount());
+    if (propsPending || destroyed) return;
+    propsPending = true;
+    queueMicrotask(() => {
+      propsPending = false;
+      if (destroyed) return;
+      const activeZones = new Set();
+      for (const actor of actors.values()) if (!actor.entryPending && !actor.motion && !actor.departing && !actor.holdingFamily && !actor.spec.stale) activeZones.add(actor.lastZone || actor.spec.zone);
+      for (const prop of world.querySelectorAll('[data-zone-prop]')) {
+        const active = String(activeZones.has(prop.dataset.zoneProp));
+        if (prop.dataset.active !== active) prop.dataset.active = active;
+      }
+      for (const label of world.querySelectorAll('[data-zone-label]')) {
+        const active = String(activeZones.has(label.dataset.zoneLabel));
+        if (label.dataset.active !== active) label.dataset.active = active;
+      }
+      const archive = $('archive-stack'), count = String(archiveCount());
+      if (archive.dataset.count !== count) archive.dataset.count = count;
+    });
   }
   function selectSession(id) {
     const session = snapshot.sessions.find((item) => item.id === id);
@@ -1255,7 +1497,9 @@
     const presentBodies = attendance.present.filter(session => !restedClones.has(session.id) || hasBodyActivity(session));
     const bodyIds = new Set(presentBodies.map(session => session.id));
     const retiringBodies = [...actors.values()].filter(actor => !bodyIds.has(actor.id) && !restedClones.has(actor.id)).map(actor => snapshot.sessions.find(session => session.id === actor.id) || actor.session);
-    currentPage = { ...Scene.layoutStableAll(presentBodies.concat(retiringBodies), sceneOptions()), visible: presentBodies }; page = 0;
+    currentPage = { ...WalkingLayout.layoutWalking(presentBodies.concat(retiringBodies), sceneOptions(presentBodies.concat(retiringBodies))), visible: presentBodies }; page = 0;
+    currentPage.routeGeometry = { paths: currentPage.pathsById, scale: currentPage.uniformScale,
+      footprints: new Map([...actorFootprints].map(([id, footprint]) => [id, { ...footprint }])) };
     reconcileActors();
     const alive = snapshot.sessions.filter((session) => !Scene.isClosed(session));
     const allRoomSessions = alive.filter((session) => Scene.inRoom(session, selectedProject));
@@ -1279,6 +1523,7 @@
     if (quiet) summary += ' · ' + quiet + ' 项信号暂未更新';
     if (uniformScale < settings.agentScale - .001) summary += language === 'en' ? ' · fitted to ' + Math.round(uniformScale * 100) + '% for everyone' : ' · 全员适配 ' + Math.round(uniformScale * 100) + '%';
     text($('room-summary'), summary);
+    $('room-summary').dataset.baseSummary = tr(summary);
     const stats = snapshot.activityStats;
     const count = key => stats && !stats.error && Number.isInteger(stats[key]) && stats[key] >= 0 ? stats[key] : '—';
     text($('today-total'), count('total'));
@@ -1291,8 +1536,7 @@
     $('activity-stats').title = stats?.error ? (language === 'en' ? 'Saving or restoring today’s observed count failed; the count may be incomplete.' : '今日观察统计保存或恢复失败，数据可能不完整。')
       : language === 'en' ? 'Unique agents observed working today in Hong Kong time, across all projects. The count may omit activity before observation began.'
         : '按香港时间统计今天实际观察到工作的独立 Agent，涵盖所有项目；开始观察前的活动可能未计入。';
-    const recent = roomSessions.reduce((latest, session) => Math.max(latest, Scene.timestamp(session.lastEventAt)), 0);
-    text($('signal-summary'), recent ? timeAgo(recent) : '');
+    updateSignalSummary();
     $('pagination').hidden = currentPage.pages <= 1;
     $('roster-button').hidden = allRoomSessions.length === 0;
     text($('roster-button'), '全部 ' + allRoomSessions.length + ' 位伙伴');
@@ -1332,7 +1576,6 @@
     const nextScale = Number.isFinite(requestedScale) && requestedScale > 0 ? Math.max(.65, Math.min(1.35, requestedScale)) : 1;
     const scaleChanged = oldScale !== nextScale;
     if (scaleChanged) {
-      protectEnteringActors();
       cancelPhysicalRoutes();
       reflowPending = true;
     }
@@ -1349,17 +1592,11 @@
     $('setting-sceneTime').value = settings.sceneTime;
     $('setting-agentScale').value = String(Math.round(settings.agentScale * 100));
     text($('agent-scale-value'), Math.round(settings.agentScale * 100) + '%');
+    if (reduced() && [...actors.values()].some(actor => actor.motion)) cancelPhysicalRoutes();
     for (const actor of [...actors.values()]) {
-      finishQuietClone(actor);
+      settleQuietCloneEffects(actor);
       if (!actors.has(actor.id)) continue;
-      if (reduced() && actor.motion) {
-        const target = actor.target;
-        const wasDeparting = actor.departing;
-        cancelAction(actor);
-        if (wasDeparting && (attendance.retired.includes(actor.id) || Scene.isClosed(actor.session))) { if (!actor.helper) openDoor(); removeActor(actor.id); continue; }
-        actor.departing = false;
-        settle(actor, target, true).catch(showError);
-      } else setPose(actor, actor.wantedAsset || actor.spec.asset);
+      setPose(actor, actor.wantedAsset || actor.spec.asset);
       updateActorLabel(actor);
       if (previousLanguage !== language) { clearTimeout(actor.bubbleTimer); actor.bubble.dataset.show = 'false'; }
     }
@@ -1460,7 +1697,10 @@
   });
   document.addEventListener('visibilitychange', () => {
     office.dataset.hidden = String(document.hidden);
-    for (const actor of [...actors.values()]) { finishQuietClone(actor); if (actors.has(actor.id)) setPose(actor, actor.wantedAsset || actor.spec.asset); }
+    for (const actor of [...actors.values()]) {
+      settleQuietCloneEffects(actor);
+      if (actors.has(actor.id)) setPose(actor, actor.wantedAsset || actor.spec.asset);
+    }
     renderHelperLinks();
     visitor.tick();
     venueStage?.update(sceneContext()); festivalStage?.update(sceneContext()); themeEnvironment?.update(sceneContext()); social?.update();
@@ -1492,9 +1732,7 @@
     scenery.update(settings, language);
     festivalStage?.update(sceneContext()); venueStage?.update(sceneContext()); themeEnvironment?.update(sceneContext());
     renderInspector();
-    const roomSessions = snapshot.sessions.filter((session) => Scene.inRoom(session, selectedProject) && !Scene.isClosed(session));
-    const recent = roomSessions.reduce((latest, session) => Math.max(latest, Scene.timestamp(session.lastEventAt)), 0);
-    text($('signal-summary'), recent ? timeAgo(recent) : '');
+    updateSignalSummary();
   }, 12000);
   const secondsTimer = setInterval(() => { if (!document.hidden) { scenery.updateClock(settings, language); festivalStage?.update(sceneContext()); themeEnvironment?.update(sceneContext()); venueStage?.refreshArtwork(); social?.tick(); } }, 1000);
   window.addEventListener('beforeunload', () => {
@@ -1506,8 +1744,9 @@
     scenery.destroy();
     clearInterval(clockTimer);
     clearInterval(secondsTimer);
+    clearTimeout(navigationTimer);
     cancelAnimationFrame(frameTimer);
-    cancelAnimationFrame(admissionFrame); pendingArrivals.clear();
+    cancelAnimationFrame(admissionFrame);
     clearTimeout(trafficTimer);
     clearTrafficBlock();
     clearTimeout(doorTimer);

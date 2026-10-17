@@ -144,9 +144,10 @@
     // remains an isolated <image>; no restricted SVG markup is embedded here.
     const crop = (name, content) => `<clipPath id="${id}-${name}">${content}</clipPath>`;
     const use = name => `<use href="#${id}-source" clip-path="url(#${id}-${name})"/>`;
-    svg.innerHTML = `<defs><image id="${id}-source" href="../assets/avatars/${Model.ASSET}" x="40" y="40" width="75" height="80"/>${crop('torso', '<path clip-rule="evenodd" d="M50 70h55v35H50ZM60 80v10h5V80ZM90 80v10h5V80Z"/>')}${crop('patch', '<path d="M60 72h5v5h-5ZM90 72h5v5h-5Z"/>')}${crop('eyes', '<path d="M60 80h5v10h-5ZM90 80h5v10h-5Z"/>')}${crop('left', '<path d="M40 85h10v10H40Z"/>')}${crop('right', '<path d="M105 85h10v10h-10Z"/>')}${crop('foot1', '<path d="M55 105h5v10h-5Z"/>')}${crop('foot2', '<path d="M65 105h5v10h-5Z"/>')}${crop('foot3', '<path d="M85 105h5v10h-5Z"/>')}${crop('foot4', '<path d="M95 105h5v10h-5Z"/>')}</defs><g class="ap-feet"><g class="ap-foot ap-foot-1">${use('foot1')}</g><g class="ap-foot ap-foot-2">${use('foot2')}</g><g class="ap-foot ap-foot-3">${use('foot3')}</g><g class="ap-foot ap-foot-4">${use('foot4')}</g></g><g class="ap-upper"><g class="ap-torso">${use('torso')}<g transform="translate(0 -64) scale(1 2)">${use('patch')}</g></g><g class="ap-eyes"><g class="ap-blink">${use('eyes')}</g></g><g class="ap-props-back"></g><g class="ap-arm ap-arm-left">${use('left')}</g><g class="ap-arm ap-arm-right">${use('right')}</g><g class="ap-props-front"></g></g>`;
+    svg.innerHTML = `<defs><image id="${id}-source" href="../assets/avatars/${Model.ASSET}" x="40" y="40" width="75" height="80"/>${crop('torso', '<path clip-rule="evenodd" d="M50 70h55v35H50ZM60 80v10h5V80ZM90 80v10h5V80Z"/>')}${crop('patch', '<path d="M60 72h5v5h-5ZM90 72h5v5h-5Z"/>')}${crop('eyes', '<path d="M60 80h5v10h-5ZM90 80h5v10h-5Z"/>')}${crop('left', '<path d="M40 85h10v10H40Z"/>')}${crop('right', '<path d="M105 85h10v10h-10Z"/>')}${crop('foot1', '<path d="M55 105h5v10h-5Z"/>')}${crop('foot2', '<path d="M65 105h5v10h-5Z"/>')}${crop('foot3', '<path d="M85 105h5v10h-5Z"/>')}${crop('foot4', '<path d="M95 105h5v10h-5Z"/>')}</defs><g class="ap-feet"><g class="ap-foot ap-foot-1">${use('foot1')}</g><g class="ap-foot ap-foot-2">${use('foot2')}</g><g class="ap-foot ap-foot-3">${use('foot3')}</g><g class="ap-foot ap-foot-4">${use('foot4')}</g></g><g class="ap-upper"><g class="ap-torso">${use('torso')}<g transform="translate(0 -64) scale(1 2)">${use('patch')}</g></g><g class="ap-eyes"><g class="ap-blink">${use('eyes')}</g></g><g class="ap-props-back"></g><g class="ap-props-transit"></g><g class="ap-arm ap-arm-left">${use('left')}</g><g class="ap-arm ap-arm-right">${use('right')}</g><g class="ap-props-front"></g></g>`;
     const back = svg.querySelector('.ap-props-back');
     const front = svg.querySelector('.ap-props-front');
+    const transit = svg.querySelector('.ap-props-transit');
     layer.append(svg);
     body.append(layer);
     let last = null;
@@ -157,6 +158,8 @@
     let clockIdentity = '', lastNow = null;
     let clockLease = null;
     const bridges = new Set();
+    let bridgeClockOwner = null;
+    const transients = new Set();
     let ghost = null;
     const view = document.defaultView;
     let systemMotion = null, inheritedOptions = {};
@@ -166,9 +169,39 @@
     const fades = new Set(), paused = new Map();
     let frozen = [];
     const joints = () => typeof svg.querySelectorAll === 'function' ? [...svg.querySelectorAll('.ap-upper,.ap-eyes,.ap-arm,.ap-foot')] : [];
-    function stopBridge() {
+    function releaseBridgeClocks(owner, resume = true) {
+      if (!owner || bridgeClockOwner !== owner) return;
+      bridgeClockOwner = null;
+      const live = new Set(layer.getAnimations?.({ subtree: true }) || []);
+      for (const [motion, state] of owner.clocks) if (resume && !destroyed
+        && state === 'running' && motion.playState === 'paused'
+        && !paused.has(motion) && live.has(motion)) motion.play();
+    }
+    function holdBridgeClocks() {
+      const owner = { clocks: new Map() };
+      bridgeClockOwner = owner;
+      for (const motion of layer.getAnimations?.({ subtree: true }) || []) {
+        if (typeof motion.animationName !== 'string') continue;
+        owner.clocks.set(motion, motion.playState);
+        if (motion.playState === 'running' || motion.pending) {
+          // Freeze the same CSS object at the phase used by the bridge's
+          // target. Letting it run behind that static target causes a jump
+          // when the finite transform effect ends 180ms later.
+          if (motion.currentTime === null) motion.currentTime = 0;
+          motion.pause();
+        }
+      }
+      return owner;
+    }
+    function finishBridgeClocks(owner) {
+      Promise.allSettled([...bridges].map(motion => motion.finished)).then(() => {
+        releaseBridgeClocks(owner);
+      });
+    }
+    function stopBridge(resumeClocks = true) {
       for (const motion of bridges) motion.cancel();
       bridges.clear();
+      releaseBridgeClocks(bridgeClockOwner, resumeClocks);
       if (ghost) { ghost.remove(); ghost = null; }
     }
     function animate(node, frames) {
@@ -211,7 +244,7 @@
       // Capture the actual composed pose, including an interrupted 180ms
       // bridge and its outgoing object. Pause the original CSS clocks instead
       // of changing program selectors or rebuilding any body crop.
-      const nodes = [...svg.querySelectorAll('.ap-upper,.ap-eyes,.ap-blink,.ap-arm,.ap-foot,.ap-props-back,.ap-props-back *,.ap-props-front,.ap-props-front *')];
+      const nodes = [...svg.querySelectorAll('.ap-upper,.ap-eyes,.ap-blink,.ap-arm,.ap-foot,.ap-props-back,.ap-props-back *,.ap-props-front,.ap-props-front *')].filter(node => !transit?.contains(node));
       frozen = nodes.map(node => {
         const style = view.getComputedStyle(node);
         const values = ['transform', 'opacity'].map(name => ({ name, value: node.style.getPropertyValue(name), priority: node.style.getPropertyPriority(name), computed: style[name] }));
@@ -222,9 +255,29 @@
         // Resource-health fades have a separate finite owner. Pausing them
         // here would strand healing when a different work program resumes.
         if (!bridges.has(motion) && typeof motion.animationName !== 'string') continue;
-        paused.set(motion, motion.playState);
+        paused.set(motion, bridgeClockOwner?.clocks.get(motion) || motion.playState);
         if (motion.playState === 'running' || motion.pending) motion.pause();
       }
+    }
+    function clearTransients() {
+      for (const item of transients) { item.motion.cancel(); item.node.remove(); }
+      transients.clear();
+    }
+    function keepPropSnapshot(source) {
+      if (!transit || !source.childNodes.length || opacity(source, 1) < .001) return;
+      // A bridge can already contain an outgoing prop at partial opacity.
+      // Snapshot that composed subtree before its old owner cancels. These
+      // finite copies survive a quick walk/work interruption independently.
+      const copy = source.cloneNode(true);
+      for (const node of [copy, ...copy.querySelectorAll('*')]) node.style.setProperty('animation', 'none', 'important');
+      const from = opacity(source, 1);
+      copy.style.setProperty('opacity', '0');
+      transit.append(copy);
+      const motion = copy.animate([{ opacity: from }, { opacity: 0 }],
+        { duration: 180, easing: 'cubic-bezier(.23,1,.32,1)' });
+      const item = { node: copy, motion };
+      transients.add(item);
+      motion.finished.catch(() => {}).finally(() => { copy.remove(); transients.delete(item); });
     }
     function thawVisual(resume = false) {
       for (const item of frozen) for (const value of item.values) {
@@ -232,7 +285,8 @@
         else item.node.style.removeProperty(value.name);
       }
       frozen = [];
-      for (const [motion, state] of paused) if (resume && state === 'running' && motion.playState === 'paused') motion.play();
+      for (const [motion, state] of paused) if (resume && state === 'running' && motion.playState === 'paused'
+        && !bridgeClockOwner?.clocks.has(motion)) motion.play();
       paused.clear();
     }
     function fadePresence(active) {
@@ -255,13 +309,89 @@
       presence = active ? 'entering' : 'exiting';
     }
     function settleInactive() {
-      stopFade(); stopBridge();
+      stopGait(); stopFade(); stopBridge(false); clearTransients();
       layer.hidden = true; layer.style.opacity = '0';
       layer.dataset.animate = 'false';
       thawVisual(false);
       body.classList.remove('has-avatar-performance');
       if (bitmap) bitmap.style.opacity = '1';
       presence = 'inactive';
+    }
+
+    let gait = null;
+    function startGait(canFade) {
+      if (gait) return;
+      const before = capture();
+      stopFade(true);
+      freezeVisual();
+      keepPropSnapshot(back); keepPropSnapshot(front);
+      stopBridge();
+      const motions = new Set();
+      gait = { motions };
+      actorNode.dataset.locomotion = 'true';
+      const carrying = Boolean(actorNode.querySelector?.('.actor-prop[data-carry="true"]'));
+      const neutral = 'translate(0px,0px) rotate(0deg)';
+      const timing = { duration: 600, iterations: Infinity, easing: 'linear' };
+      const start = document.timeline?.currentTime;
+      const curves = frames => frames.map((frame, index) => index < frames.length - 1
+        ? { easing: 'cubic-bezier(.77,0,.175,1)', ...frame } : frame);
+      for (const item of before) {
+        const node = item.node;
+        node.style.removeProperty('transform');
+        let frames;
+        if (node.classList.contains('ap-foot')) {
+          const index = [...svg.querySelectorAll('.ap-foot')].indexOf(node);
+          const first = index % 2 === 0;
+          frames = [
+            { transform: neutral, offset: 0 },
+            { transform: first ? 'translate(1.5px,-2.5px) rotate(-5deg)' : 'translate(-1px,0px) rotate(4deg)', offset: .25 },
+            { transform: neutral, offset: .5 },
+            { transform: first ? 'translate(-1px,0px) rotate(4deg)' : 'translate(1.5px,-2.5px) rotate(-5deg)', offset: .75 },
+            { transform: neutral, offset: 1 }
+          ];
+        } else if (node.classList.contains('ap-arm')) {
+          const left = node.classList.contains('ap-arm-left'), direction = left ? 1 : -1;
+          const hold = 'translate(3px,4px) rotate(5deg)';
+          frames = carrying && !left ? [{ transform: hold }, { transform: hold }] : [
+            { transform: neutral, offset: 0 },
+            { transform: `translate(${-direction}px,1px) rotate(${direction * 5}deg)`, offset: .25 },
+            { transform: neutral, offset: .5 },
+            { transform: `translate(${direction}px,-1px) rotate(${-direction * 5}deg)`, offset: .75 },
+            { transform: neutral, offset: 1 }
+          ];
+        } else if (node.classList.contains('ap-upper')) {
+          frames = [{ transform: neutral }, { transform: 'translate(0px,-1px) rotate(.3deg)', offset: .25 },
+            { transform: neutral, offset: .5 }, { transform: 'translate(0px,-1px) rotate(-.3deg)', offset: .75 }, { transform: neutral }];
+        } else frames = [{ transform: neutral }, { transform: neutral }];
+        const loop = node.animate(curves(frames), timing);
+        motions.add(loop);
+        loop.finished.catch(() => {});
+        // The compositor starts the loop exactly where the 180ms takeover ends.
+        // No JS timer or repeated first-frame jump occurs on later strides.
+        if (Number.isFinite(start)) loop.startTime = start + 180;
+        const takeover = node.animate([{ transform: item.transform }, { transform: frames[0].transform }],
+          { duration: 180, easing: 'cubic-bezier(.23,1,.32,1)' });
+        motions.add(takeover);
+        takeover.finished.catch(() => {}).finally(() => motions.delete(takeover));
+      }
+      for (const props of [back, front]) props.style.setProperty('opacity', '0');
+      layer.hidden = false;
+      body.classList.add('has-avatar-performance');
+      if (canFade) fadePresence(true);
+      else { layer.style.opacity = '1'; if (bitmap) bitmap.style.opacity = '0'; presence = 'active'; }
+    }
+    function stopGait() {
+      if (!gait) return [];
+      const actual = capture();
+      const owner = gait;
+      gait = null;
+      for (const motion of owner.motions) motion.cancel();
+      owner.motions.clear();
+      // Keep the last physical stride for a natural fade or work-pose takeover.
+      // thawVisual later restores the original inline styles and CSS clock leases.
+      for (const item of actual) item.node.style.setProperty('transform', item.transform, 'important');
+      delete actorNode.dataset.locomotion;
+      return actual;
     }
 
     function update(value = session, options = {}) {
@@ -289,14 +419,22 @@
       const changed = !visual || visual.program !== plan.program || visual.kind !== plan.kind;
       const quiet = Boolean(options.reducedMotion || options.lowPower || options.hidden);
       const canFade = Boolean(view?.getComputedStyle && layer.animate && bitmap?.animate && !quiet);
+      // Locomotion is visual evidence of a real route, never an AI work kind.
+      // The same crops and health owner continue to render its stepping feet.
+      if (options.walking && !options.reaction && canFade && joints().length) {
+        startGait(canFade);
+        if (actorNode.dataset.performance !== 'none') actorNode.dataset.performance = 'none';
+        if (actorNode.dataset.performanceProgram) actorNode.dataset.performanceProgram = '';
+        last = plan;
+        return plan;
+      }
+      const wasWalking = Boolean(gait), walkingPose = wasWalking ? stopGait() : null;
       if (!plan.active) {
-        // A flat clone's return can be interrupted by fresh observed work.
-        // Its seated body must retain the same joints and CSS clocks while
-        // the separate journey echo travels home. Real walking still gives
-        // the bitmap its immediate navigation ownership.
-        const returning = plan.reason === 'departing' && !options.walking && !options.reaction;
-        const natural = ['stale', 'unclassified', 'closed'].includes(plan.reason) || returning;
-        if (natural && visual?.animate && canFade) {
+        // Natural inactive states keep the actual final joint pose during
+        // the finite handoff. The original work clocks remain suspended.
+        const returning = plan.reason === 'departing' && !options.reaction;
+        const natural = ['stale', 'unclassified', 'closed', 'walking'].includes(plan.reason) || returning;
+        if (natural && (visual?.animate || wasWalking) && canFade) {
           if (presence === 'active' || presence === 'entering') {
             stopFade(true); freezeVisual(); fadePresence(false);
           }
@@ -305,12 +443,12 @@
         last = plan;
         return plan;
       }
-      const resuming = Boolean(visual && presence !== 'active' && presence !== 'entering');
-      const blend = changed && plan.animate;
-      const before = blend ? capture() : [];
-      const oldProps = blend ? retainProps() : null;
+      const resuming = Boolean(wasWalking || visual && presence !== 'active' && presence !== 'entering');
+      const blend = (changed || wasWalking) && plan.animate;
+      const before = blend ? walkingPose || capture() : [];
+      const oldProps = blend && !wasWalking ? retainProps() : null;
       if (resuming || !plan.animate) { stopFade(true); thawVisual(plan.animate && !changed); }
-      if (changed || !plan.animate) stopBridge();
+      if (changed || wasWalking || !plan.animate) stopBridge(plan.animate);
       // No DOM writes for unchanged snapshots: animation timelines stay alive.
       if (changed) {
         // The hands must stay above their held objects: putting the laptop or
@@ -334,6 +472,7 @@
         else { layer.style.opacity = '1'; if (bitmap) bitmap.style.opacity = '0'; presence = 'active'; }
       }
       if (blend) {
+        const clockOwner = holdBridgeClocks();
         for (const item of before) {
           const target = view.getComputedStyle(item.node).transform;
           if (item.transform !== target) animate(item.node, [{ transform: item.transform }, { transform: target }]);
@@ -344,6 +483,7 @@
           const fading = animate(oldProps, [{ opacity: 1 }, { opacity: 0 }]);
           if (fading) fading.finished.catch(() => {}).finally(() => { oldProps.remove(); if (ghost === oldProps) ghost = null; });
         }
+        finishBridgeClocks(clockOwner);
       }
       visual = plan; last = plan;
       return plan;
@@ -352,8 +492,8 @@
       if (destroyed) return;
       destroyed = true;
       systemMotion?.destroy();
-      stopFade(); thawVisual(false);
-      stopBridge();
+      stopGait(); stopFade(); thawVisual(false);
+      stopBridge(false); clearTransients();
       if (clockLease) { clockLease.release(); clockLease = null; }
       visibleClocks.clear();
       body.classList.remove('has-avatar-performance');

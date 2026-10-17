@@ -10,6 +10,16 @@
 
 [返回项目首页](../../README.md) · [动作清单与轮换逻辑](../../office/lib/avatar-performance-model.js) · [关节动画 CSS](../../office/renderer/avatar-performance.css) · [角色与工作道具渲染](../../office/renderer/avatar-performance.js)
 
+## 步态与分身特效
+
+这些是 0.13 的实际四足关节步态和分身特效，独立于上面的 88 套工作动作。每张图按 48 fps 采样，共 96 帧，至少有 31 幅不同的实际画面。分身凝聚准备为 300 毫秒，归返准备为 680 毫秒，烟雾、光环与粒子持续 900 毫秒。公开图只演示步态或特效；房间路线、父级停靠和身体吸收另由原生窗口测试验证。
+
+![四足步态](lifecycle/walking.gif)
+![分身凝聚特效](lifecycle/split.gif)
+![分身归返特效](lifecycle/absorb.gif)
+
+使用同一原创示意角色。资源适配器仅以无图片资源的离线元素提供透明度接口，未改关节步态或特效；不会读取受限角色文件。可用 `electron scripts/render-lifecycle-previews.cjs` 重新导出，源码摘要和帧数记于[清单](lifecycle/manifest.json)。
+
 ## 阅读 / Reading · 8 种
 
 翻阅、批注、对照与图解阅读，各自有不同的视线、手势和纸面道具。

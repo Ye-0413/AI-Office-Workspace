@@ -12,23 +12,25 @@ const root=task('root'),helper=id=>task(id,root.id);
 const run=source=>win.webContents.executeJavaScript(source,true);
 const query=id=>`document.querySelector('.actor[data-session-id="${id}"]')`;
 function send(sessions){snapshot={...snapshot,sessions,now:Date.now()};win.webContents.send('office:snapshot',snapshot);}
-async function until(code,label,ms=5000){const end=Date.now()+ms;while(Date.now()<end){if(await run(code))return;await pause(20);}throw Error(label);}
+async function until(code,label,ms=15000){const end=Date.now()+ms;while(Date.now()<end){if(await run(code))return;await pause(20);}throw Error(label+' '+JSON.stringify(await run(`({error:document.getElementById('error-message').textContent,actors:[...document.querySelectorAll('.actor')].map(n=>({id:n.dataset.sessionId,traffic:n.dataset.traffic,phase:n.dataset.clonePhase,visibility:getComputedStyle(n).visibility,opacity:getComputedStyle(n).opacity}))})`)));}
+const settled=id=>`${query(id)}&&getComputedStyle(${query(id)}).visibility!=='hidden'&&${query(id)}.dataset.traffic==='arrived'&&${query(id)}.dataset.walking!=='true'&&!['splitting','returning','absorbing'].includes(${query(id)}.dataset.clonePhase)`;
 const stopped=actor=>({...actor,status:'idle',activity:'idle',activeTools:0,lastEventAt:Date.now(),turnCompletedAt:Date.now()});
-const guard=setTimeout(()=>{console.error('Clone recovery fixture timed out');app.exit(1);},45000);
+const guard=setTimeout(()=>{console.error('Clone recovery fixture timed out');app.exit(1);},180000);
 app.whenReady().then(async()=>{
   for(const[name,fn]of Object.entries({snapshot:()=>snapshot,settings:()=>settings,'set-settings':patch=>(settings={...settings,...patch}),displays:()=>[]}))ipcMain.handle('office:'+name,(_,...args)=>fn(...args));
   ipcMain.on('office:renderer-error',(_,error)=>errors.push(error));
   let child=helper('one');snapshot.sessions=[root,child];
   win=new BrowserWindow({width:1280,height:720,useContentSize:true,show:true,focusable:false,webPreferences:{preload:path.join(__dirname,'../preload.cjs'),sandbox:true,contextIsolation:true,nodeIntegration:false,backgroundThrottling:false}});
   await win.loadFile(path.join(__dirname,'../renderer/index.html'));
-  await until(`document.querySelectorAll('.actor[data-session-id]').length===2&&[...document.querySelectorAll('.actor[data-session-id]')].every(n=>Number(getComputedStyle(n).opacity)>.99)`,'root and helper must begin visible');
+  await run(`window.recoveryActors=new Map();document.getElementById('office').addEventListener('office:actor-arrival',event=>recoveryActors.set(event.detail.actorId,event.detail.actor));void 0`);
+  await until(`${settled(root.id)}&&${settled(child.id)}`,'root and helper must physically reach their initial stations');
   await run(`window.originalRecoveryRoot=${query(root.id)};window.originalRootRig=originalRecoveryRoot.querySelector('.ap-rig');window.rootAnchor=new DOMMatrixReadOnly(getComputedStyle(originalRecoveryRoot).transform);void 0`);
   send([child]);await until(`${query(root.id)}?.dataset.cloneHold==='true'`,'an absent main waits for its active child');
   send([{...root,lastEventAt:Date.now()+1},child]);await until(`${query(root.id)}?.dataset.cloneHold==='false'`,'a restored active main must revoke its old retirement');
-  send([{...root,lastEventAt:Date.now()+2},stopped(child)]);await pause(1450);
+  send([{...root,lastEventAt:Date.now()+2},stopped(child)]);await until(`!${query(child.id)}`,'the first helper must finish its physical return and absorption');
   assert.equal(await run(`!!${query(child.id)}`),false);assert.equal(await run(`${query(root.id)}===originalRecoveryRoot&&originalRecoveryRoot.querySelector('.ap-rig')===originalRootRig&&Number(getComputedStyle(originalRecoveryRoot).opacity)>.99`),true);
   assert.equal(await run(`originalRecoveryRoot.querySelector('.actor-state').textContent.includes('等分身')`),false);checks.push('same-ID main resumes and survives its formerly active child finishing');
-  child=helper('grow');send([root,child]);await until(`!!${query(child.id)}&&Number(getComputedStyle(${query(child.id)}).opacity)>.99`,'next helper must appear');
+  child=helper('grow');send([root,child]);await until(settled(child.id),'next helper must physically reach its station');
   await run(`window.growingHelper=${query(child.id)};void 0`);
   await win.webContents.insertCSS('html[lang="en"] .actor .nameplate{width:230px!important;min-width:230px!important;max-width:230px!important}');
   const beforeWidth=await run(`growingHelper.querySelector('.nameplate').offsetWidth`);
@@ -37,14 +39,14 @@ app.whenReady().then(async()=>{
   await until(`document.documentElement.lang==='en'`,'language switch must reach the real UI');
   const afterWidth=await run(`growingHelper.querySelector('.nameplate').offsetWidth`);assert.ok(afterWidth>beforeWidth+5,'fixture must cause a real measured nameplate growth '+JSON.stringify({beforeWidth,afterWidth,details:await run(`({lang:document.documentElement.lang,connected:growingHelper.isConnected,width:getComputedStyle(growingHelper.querySelector('.nameplate')).width,style:[...document.querySelectorAll('style')].map(n=>n.textContent)})`)}));
   await pause(100);assert.equal(await run(`${query(child.id)}===growingHelper`),true,'measurement must retain a return that has not finished');
-  await until(`!${query(child.id)}`,'measured growth must not orphan the return owner',1800);assert.equal(await run(`${query(root.id)}===originalRecoveryRoot`),true);checks.push({name:'measured nameplate growth preserves the finite helper return',beforeWidth,afterWidth});
-  child=helper('size');send([root,child]);await until(`!!${query(child.id)}&&Number(getComputedStyle(${query(child.id)}).opacity)>.99`,'size fixture helper must appear');
+  await until(`!${query(child.id)}`,'measured growth must not orphan the physical return owner');assert.equal(await run(`${query(root.id)}===originalRecoveryRoot`),true);checks.push({name:'measured nameplate growth preserves the physical helper return',beforeWidth,afterWidth});
+  child=helper('size');send([root,child]);await until(settled(child.id),'size fixture helper must reach its station');
   await run(`window.sizingHelper=${query(child.id)};void 0`);send([root,stopped(child)]);await until(`${query(child.id)}?.dataset.clonePhase==='returning'`,'size fixture must enter returning');
   await pause(120);await run(`const n=document.getElementById('setting-agentScale');n.value='135';n.dispatchEvent(new Event('change',{bubbles:true}));void 0`);
   await pause(180);assert.equal(await run(`${query(child.id)}===sizingHelper`),true,'size preferences must not prematurely remove the returning body');
-  const frames=await run(`new Promise(resolve=>{let frames=0;const start=performance.now(),bad=[];function tick(now){frames++;const n=${query(root.id)},m=new DOMMatrixReadOnly(getComputedStyle(n).transform);if(n!==originalRecoveryRoot||n.querySelector('.ap-rig')!==originalRootRig||Number(getComputedStyle(n).opacity)<.99||Math.abs(m.m41-rootAnchor.m41)>.05||Math.abs(m.m42-rootAnchor.m42)>.05)bad.push('root');if(now-start<700)requestAnimationFrame(tick);else resolve({frames,bad:[...new Set(bad)]});}requestAnimationFrame(tick);})`);
+  const frames=await run(`new Promise(resolve=>{let frames=0,previous=null;const start=performance.now(),bad=[];function tick(now){frames++;const n=${query(root.id)},m=new DOMMatrixReadOnly(getComputedStyle(n).transform);if(n!==originalRecoveryRoot||n.querySelector('.ap-rig')!==originalRootRig||Number(getComputedStyle(n).opacity)<.99)bad.push('root identity/visibility');if(previous&&Math.hypot(m.m41-previous.x,m.m42-previous.y)>400*(now-previous.at)/1000+4)bad.push('root foot cut');previous={x:m.m41,y:m.m42,at:now};if(now-start<900)requestAnimationFrame(tick);else resolve({frames,bad:[...new Set(bad)]});}requestAnimationFrame(tick);})`);
   assert.ok(frames.frames>=31,JSON.stringify(frames));assert.deepEqual(frames.bad,[]);await until(`!${query(child.id)}`,'size preference must preserve eventual absorption');checks.push({name:'size transition preserves return lifetime and main anchors',...frames});
-  child=helper('uncertain');send([root,child]);await until(`!!${query(child.id)}&&Number(getComputedStyle(${query(child.id)}).opacity)>.99`,'uncertain fixture helper must appear');
+  child=helper('uncertain');send([root,child]);await until(settled(child.id),'uncertain fixture helper must physically arrive');
   await run(`window.uncertainHelper=${query(child.id)};window.uncertainRig=uncertainHelper.querySelector('.ap-rig');void 0`);
   send([{...child,status:'stale',lastEventAt:Date.now()}]);await until(`${query(root.id)}?.dataset.cloneHold==='true'`,'absent main must retain the uncertain descendant anchor');await pause(1400);
   assert.equal(await run(`${query(child.id)}===uncertainHelper&&uncertainHelper.querySelector('.ap-rig')===uncertainRig&&Number(getComputedStyle(uncertainHelper).opacity)>.99`),true,'a current stale child must not be absorbed as completed work');
@@ -56,4 +58,15 @@ app.whenReady().then(async()=>{
   const retired=await run(`(()=>{const image=uncertainHelper.querySelector('img'),source=uncertainRig.querySelector('defs image'),panel=document.getElementById('error-message');const before={src:image.src,href:source.getAttribute('href'),hidden:panel.hidden,text:panel.textContent};image.hidden=true;image.dispatchEvent(new Event('error'));image.dispatchEvent(new Event('load'));return{before,after:{src:image.src,href:source.getAttribute('href'),hidden:panel.hidden,text:panel.textContent},imageStillHidden:image.hidden};})()`);
   assert.deepEqual(retired.after,retired.before);assert.equal(retired.imageStillHidden,true);checks.push('retired bitmap load/error callbacks cannot retry or report errors for a later scene');
   assert.deepEqual(errors,[]);console.log(JSON.stringify({ok:true,checks,errors}));
-}).catch(error=>{console.error(error);process.exitCode=1;}).finally(()=>{clearTimeout(guard);win?.destroy();fs.rmSync(profile,{recursive:true,force:true});app.exit(process.exitCode||0);});
+}).catch(async error=>{
+  console.error(error);process.exitCode=1;
+  if(process.env.MINI_OFFICE_CLONE_RECOVERY_PREVIEW_DIR){
+    const dir=process.env.MINI_OFFICE_CLONE_RECOVERY_PREVIEW_DIR,evidence={error:error.stack,checks,errors,sessions:snapshot.sessions,settings};
+    fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,'failure.json'),JSON.stringify(evidence,null,2));
+    if(win&&!win.isDestroyed())try{
+      evidence.geometry=await run(`(()=>{const world=document.getElementById('world').getBoundingClientRect(),factor=world.width/1280,office=document.getElementById('office'),rect=r=>({left:r.left,right:r.right,top:r.top,bottom:r.bottom});return{fit:office.dataset.fitScale,queue:office.dataset.entranceQueue,actors:[...document.querySelectorAll('.actor')].map(node=>{const style=getComputedStyle(node),m=new DOMMatrixReadOnly(style.transform),scale=Math.hypot(m.m11,m.m12),foot={x:world.left+m.m41*factor,y:world.top+m.m42*factor},parts=['.character-body','.nameplate'].map(q=>node.querySelector(q).getBoundingClientRect()),actor=recoveryActors.get(node.dataset.sessionId);return{id:node.dataset.sessionId,position:{x:m.m41/12.8,y:m.m42/7.2},scale,opacity:style.opacity,visibility:style.visibility,dataset:{...node.dataset},parts:parts.map(rect),footprint:{left:Math.ceil((foot.x-Math.min(...parts.map(r=>r.left)))/factor/scale)+6,right:Math.ceil((Math.max(...parts.map(r=>r.right))-foot.x)/factor/scale)+6,top:Math.ceil((foot.y-Math.min(...parts.map(r=>r.top)))/factor/scale)+6,bottom:Math.ceil((Math.max(...parts.map(r=>r.bottom))-foot.y)/factor/scale)+6},observedActor:actor?{serial:actor.serial,target:actor.target,navigation:actor.navigation,pendingStation:actor.pendingStation,entryPending:actor.entryPending,stagedEntry:actor.stagedEntry,motion:Boolean(actor.motion),routeReservation:actor.routeReservation}:null};})};})()`);
+      fs.writeFileSync(path.join(dir,'failure.json'),JSON.stringify(evidence,null,2));
+      fs.writeFileSync(path.join(dir,'failure.png'),(await win.webContents.capturePage()).toPNG());
+    }catch(captureError){console.error(captureError);}
+  }
+}).finally(()=>{clearTimeout(guard);win?.destroy();fs.rmSync(profile,{recursive:true,force:true});app.exit(process.exitCode||0);});

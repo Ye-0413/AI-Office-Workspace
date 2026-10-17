@@ -41,6 +41,20 @@ app.whenReady().then(async () => {
   assert.equal(await evaluate('items.every(item => item.body.querySelector("img").naturalWidth > 0)'), true);
   assert.equal(await evaluate('items.every(item=>getComputedStyle(item.body.querySelector(".ap-torso")).filter!=="none")'),true,'production family colour filters reach every actual body');
   assert.equal(await evaluate('items.every(item=>[...item.body.querySelectorAll(".ap-props-back *,.ap-eyes")].every(node=>getComputedStyle(node).filter==="none"))'),true,'new original work objects and expressive eyes are never colour filtered');
+  // An initial joint bridge legitimately pauses and resumes the original CSS
+  // clocks. Start the metadata comparison after those real finite owners end,
+  // rather than treating a pending/paused startTime as a replay baseline.
+  await evaluate(`(async()=>{
+    const finite=items.flatMap(item=>item.body.getAnimations({subtree:true})).filter(animation=>Number.isFinite(Number(animation.effect.getTiming().iterations)));
+    await Promise.allSettled(finite.map(animation=>animation.finished));
+    await new Promise(resolve=>requestAnimationFrame(resolve));
+    const css=items.flatMap(item=>item.body.getAnimations({subtree:true})).filter(animation=>animation.constructor.name==='CSSAnimation');
+    await Promise.all(css.map(animation=>animation.ready));
+    window.metadataClocks=items.map(item=>item.body.getAnimations({subtree:true}));
+    return true;
+  })()`);
+  assert.equal(await evaluate('metadataClocks.every(clocks=>clocks.every(animation=>animation.constructor.name!=="CSSAnimation"||animation.startTime!==null&&Number.isFinite(animation.currentTime)))'),true,'the initial bridge has released every CSS clock before the metadata baseline');
+  assert.equal(await evaluate('items.every(item=>item.body.getAnimations({subtree:true}).every(animation=>animation.constructor.name!=="Animation"||!animation.effect.target.matches(".ap-upper,.ap-eyes,.ap-arm,.ap-foot")))'),true,'the baseline has no live finite joint-bridge owner');
   const original = await evaluate('items.map(item=>({kind:item.actor.dataset.performance,program:item.actor.dataset.performanceProgram,signature:JSON.stringify([...item.body.querySelectorAll(".ap-upper,.ap-arm,.ap-eyes,.ap-foot")].map(node=>node.getAnimations().map(animation=>animation.effect.getKeyframes().map(frame=>({offset:frame.offset,transform:frame.transform,opacity:frame.opacity}))))),jointCount:[...item.body.querySelectorAll(".ap-upper,.ap-arm,.ap-eyes,.ap-foot")].filter(node=>getComputedStyle(node).animationName!=="none").length,count:item.body.getAnimations({subtree:true}).length,transforms:[...item.body.querySelectorAll(".ap-upper,.ap-arm,.ap-eyes")].map(node=>getComputedStyle(node).transform),timelines:item.body.getAnimations({subtree:true}).map(animation=>animation.startTime)}))');
   // Count the actual body joints, not decorative props/cursors. A temple
   // scratch legitimately parks the notebook while three joints keep moving.
@@ -48,7 +62,9 @@ app.whenReady().then(async () => {
   await delay(350);
   const later = await evaluate('items.map(item=>[...item.body.querySelectorAll(".ap-upper,.ap-arm,.ap-eyes")].map(node=>getComputedStyle(node).transform))');
   assert.ok(original.filter((item, index) => JSON.stringify(item.transforms) !== JSON.stringify(later[index])).length >= Math.floor(totalPrograms * .3), 'native joint poses move while other characters hold deliberate rests');
-  await evaluate('items.forEach(item=>item.performance.update({...item.session,title:"Metadata update",lastEventAt:Date.now()},{now:1000}))');
+  await evaluate('window.beforeMetadataTimes=metadataClocks.map(clocks=>clocks.map(animation=>animation.currentTime));items.forEach(item=>item.performance.update({...item.session,title:"Metadata update",lastEventAt:Date.now()},{now:1000}));void 0');
+  assert.equal(await evaluate('items.every((item,index)=>{const live=item.body.getAnimations({subtree:true});return live.length===metadataClocks[index].length&&live.every((animation,slot)=>animation===metadataClocks[index][slot]);})'),true,'metadata retains the exact original animation objects');
+  assert.equal(await evaluate('metadataClocks.every((clocks,index)=>clocks.every((animation,slot)=>animation.currentTime>=beforeMetadataTimes[index][slot]-.01))'),true,'metadata never resets an existing animation playhead');
   const sameTimelines = await evaluate('items.map(item=>item.body.getAnimations({subtree:true}).map(animation=>animation.startTime))');
   assert.deepEqual(sameTimelines, original.map(item => item.timelines), 'metadata does not replay any CSS timeline');
   for (const kind of Object.values(Model.KINDS)) {
@@ -197,13 +213,16 @@ app.whenReady().then(async () => {
     const transitions=[],frames=[];
     const update=(value,options)=>{const before=sample();controller.update(value,options);transitions.push({before,after:sample()});};
     for(let frame=0;frame<60;frame++){
-      if(frame===2)update(idle,{now:100,departing:true});
-      if(frame===5)update({...idle,title:'metadata while returning'},{now:150,departing:true});
+      if(frame===2)update(idle,{now:100,departing:true,walking:true});
+      if(frame===5)update({...idle,title:'metadata while returning'},{now:150,departing:true,walking:true});
       if(frame===10)update(session,{now:200});
-      if(frame===18)update(idle,{now:250,departing:true});
+      if(frame===18)update(idle,{now:250,departing:true,walking:true});
       if(frame===20)update(session,{now:300});
       if(frame===29)update(idle,{now:350,departing:true});
       if(frame===34)update(session,{now:400});
+      if(frame===42)update(session,{now:410,walking:true});
+      if(frame===45)update({...session,title:'metadata during an actual station walk'},{now:420,walking:true});
+      if(frame===49)update(session,{now:430});
       await raf();frames.push(sample());
     }
     await wait(250);const active=sample();
@@ -237,11 +256,13 @@ app.whenReady().then(async () => {
   assert.equal(returningPresence.resumed.rig,1);assert.equal(returningPresence.resumed.bitmap,0);assert.equal(returningPresence.resumed.identity,true);assert.equal(returningPresence.resumed.sameClocks,true);
   assert.ok(returningPresence.resumed.times.every((time,i)=>time>=returningPresence.firstTimes[i]&&time>5200),'rapid helper returns never rewind a native CSS clock');
   assert.equal(returningPresence.returnedProgram,returningPresence.firstProgram,'departing time does not count as observed visible work');
-  for(const mode of ['walking','hidden','lowPower','reduced'])assert.deepEqual(returningPresence[mode],{hidden:true,animations:0},mode+' retains immediate lifecycle/quiet ownership');
+  assert.equal(returningPresence.walking.hidden,false,'a real return keeps the same visible rig for its physical stride');
+  assert.ok(returningPresence.walking.animations>0,'walking retains paused native CSS clocks and independent stride motions');
+  for(const mode of ['hidden','lowPower','reduced'])assert.deepEqual(returningPresence[mode],{hidden:true,animations:0},mode+' retains immediate lifecycle/quiet ownership');
   assert.deepEqual(returningPresence.destroyed,{rigs:0,animations:0});assert.equal(returningPresence.factsUnchanged,true);
   await evaluate('(()=>{const item=items[0];item.performance.update(item.session,{now:item.performance.plan.programMs*3+3});item.performance.update(item.session,{now:item.performance.plan.programMs*3+3,reducedMotion:true})})()');
   assert.equal(await evaluate('items[0].body.getAnimations({subtree:true}).length'), 0, 'quiet preference cancels an in-flight bridge immediately');
-  for (const preference of ['reducedMotion', 'lowPower', 'hidden', 'walking', 'reaction', 'departing']) {
+  for (const preference of ['reducedMotion', 'lowPower', 'hidden', 'reaction']) {
     await evaluate(`items.forEach(item=>item.performance.update(item.session,{${preference}:true}))`);
     assert.equal(await evaluate('items.reduce((sum,item)=>sum+item.body.getAnimations({subtree:true}).length,0)'), 0, preference + ' stops native animation timelines');
   }

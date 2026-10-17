@@ -17,10 +17,11 @@ app.whenReady().then(async()=>{
   ipcMain.on('office:renderer-error',(_,error)=>errors.push(error));
   win=new BrowserWindow({width:1280,height:720,useContentSize:true,show:true,focusable:false,webPreferences:{preload:path.join(__dirname,'../preload.cjs'),sandbox:true,contextIsolation:true,nodeIntegration:false,backgroundThrottling:false}});
   await win.loadFile(path.join(__dirname,'../renderer/index.html'));
+  await run(`window.lightActors=new Map();document.getElementById('office').addEventListener('office:actor-arrival',event=>lightActors.set(event.detail.actorId,event.detail.actor));void 0`);
   win.webContents.debugger.attach('1.3');
   await win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]});
   await until(`document.getElementById('office').dataset.fullTheme==='true'&&document.querySelector('.venue-stage').dataset.artState==='ready'`,'complete aurora must load');
-  await until(`document.querySelectorAll('.actor').length===2&&[...document.querySelectorAll('.actor')].every(n=>Number(getComputedStyle(n).opacity)>.99)`,'both fixture actors must appear');
+  await until(`document.getElementById('office').dataset.entranceQueue==='0'&&document.querySelectorAll('.actor').length===2&&[...document.querySelectorAll('.actor')].every(n=>{const a=lightActors.get(n.dataset.sessionId);return a&&!a.pendingStation&&!a.navigation&&!a.motion&&!a.routeReservation&&!a.resumeNavigation&&!a.yielding&&Math.abs(a.position.x-a.target.x)<.001&&Math.abs(a.position.y-a.target.y)<.001&&getComputedStyle(n).visibility!=='hidden'&&Number(getComputedStyle(n).opacity)>.99&&n.dataset.traffic==='arrived'&&n.dataset.walking!=='true'&&!n.getAnimations().some(m=>m.pending||m.playState==='running');})`,'both fixture actors must physically settle before the fixed light baseline');
   await run(`window.retainedLightActors=[...document.querySelectorAll('.actor')].map(node=>({node,rig:node.querySelector('.ap-rig'),transform:node.style.transform}));window.retainedLightViews=[...document.querySelectorAll('.harbour-view,.door-theme-wash')];void 0`);
   const palettes=new Set();
   for(const phase of ['dawn','morning','afternoon','sunset','night']){

@@ -1,9 +1,12 @@
-/* Short, local smoke identifies a real parent/child boundary, never a task result. */
-.clone-effect{position:absolute;left:0;top:0;width:0;height:0;z-index:8;pointer-events:none}
-.clone-ring{position:absolute;display:block;left:-50px;top:-18px;width:100px;height:29px;border:2px dashed var(--family-color,#a3ad83);border-radius:50%;opacity:0}
-.clone-smoke{position:absolute;display:block;width:35px;height:29px;background:#f0e6caf2;box-shadow:inset 0 -5px 0 #bcbd9d66;clip-path:polygon(0 37%,14% 37%,14% 17%,33% 17%,33% 0,66% 0,66% 17%,86% 17%,86% 37%,100% 37%,100% 83%,83% 83%,83% 100%,17% 100%,17% 83%,0 83%);opacity:0}
-.clone-echo{position:absolute;left:-77px;top:-128px;width:154px;height:129px;opacity:0;transform-origin:50% 100%}
-.clone-echo img{position:absolute;width:48.3871%;height:61.5385%;left:25.8064%;top:30.7692%;image-rendering:pixelated;filter:sepia(.15);pointer-events:none}
+/* Original local smoke, never an extra actor or a replacement for real walking. */
+.clone-effect{position:absolute;left:0;top:0;width:0;height:0;z-index:-1;pointer-events:none;color:var(--family-color,#a3ad83)}
+.clone-effect i{position:absolute;display:block;opacity:0;pointer-events:none;transform-origin:center}
+.clone-focus{left:-39px;top:-69px;width:78px;height:55px;border-radius:45%;background:radial-gradient(ellipse,#f6edcb28,transparent 70%)}
+.clone-ring{left:-51px;top:-19px;width:102px;height:25px;border:1px dashed currentColor;border-radius:50%;box-shadow:0 0 0 1px #f0e6c526}
+.clone-ring-inner{left:-35px;top:-15px;width:70px;height:17px;border-style:solid;border-color:#e7ddbba6;box-shadow:none}
+.clone-smoke{width:27px;height:23px;background:#eee8d3d6;box-shadow:inset 0 -4px 0 #a6b39a40;clip-path:polygon(0 37%,15% 37%,15% 17%,34% 17%,34% 0,66% 0,66% 17%,85% 17%,85% 37%,100% 37%,100% 82%,82% 82%,82% 100%,18% 100%,18% 82%,0 82%)}
+.clone-curl{width:20px;height:27px;border:1px solid #f3eaccad;border-right-color:transparent;border-bottom-color:transparent;border-radius:65% 35% 70% 30%}
+.clone-mote{width:3px;height:5px;border:1px solid currentColor;background:#f3e9c988;border-radius:1px}
 .actor[data-clone-phase="returning"] .nameplate,.actor[data-clone-phase="absorbing"] .nameplate{border-style:dashed}
 .actor[data-clone-hold="true"] .actor-state{color:#737e5d}
 .office[data-reduced-motion="true"] .clone-effect,.office[data-low-power="true"] .clone-effect,.office[data-hidden="true"] .clone-effect{display:none}

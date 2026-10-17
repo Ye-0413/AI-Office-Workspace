@@ -14,8 +14,9 @@ const errors=[],expectedFailures=[],checks=[],pause=ms=>new Promise(r=>setTimeou
 const preview=process.env.MINI_OFFICE_PREVIEW_DIR;
 const run=source=>win.webContents.executeJavaScript(source,true);
 const allBody=condition=>`[...document.querySelectorAll('.actor[data-session-id]')].length===2&&[...document.querySelectorAll('.character-body')].every(b=>${condition})`;
+const allArrived=`document.getElementById('office').dataset.entranceQueue==='0'&&[...document.querySelectorAll('.actor[data-session-id]')].length===2&&[...document.querySelectorAll('.actor[data-session-id]')].every(n=>{const actor=fallbackActors.get(n.dataset.sessionId);return actor&&!actor.pendingStation&&!actor.navigation&&!actor.motion&&!actor.routeReservation&&!actor.resumeNavigation&&!actor.yielding&&Math.abs(actor.position.x-actor.target.x)<.001&&Math.abs(actor.position.y-actor.target.y)<.001&&getComputedStyle(n).visibility!=='hidden'&&Number(getComputedStyle(n).opacity)>.99&&n.dataset.traffic==='arrived'&&n.dataset.walking!=='true'&&!n.getAnimations().some(animation=>animation.pending||animation.playState==='running');})`;
 const send=sessions=>{snapshot={...snapshot,sessions,now:Date.now()};win.webContents.send('office:snapshot',snapshot);};
-async function until(source,label,ms=6000){const end=Date.now()+ms;while(Date.now()<end){if(await run(source))return;await pause(20);}throw Error(label+' '+JSON.stringify(await run(`({bodies:[...document.querySelectorAll('.character-body')].map(b=>({bitmap:b.dataset.bitmapHealth,rig:b.dataset.rigHealth,healing:b.dataset.rigHealing,staticHealing:b.dataset.bitmapHealing,filter:getComputedStyle(b.querySelector('img')).filter})),errors:document.getElementById('error-message').textContent})`)));}
+async function until(source,label,ms=6000){const end=Date.now()+ms;while(Date.now()<end){if(await run(source))return;await pause(20);}throw Error(label+' '+JSON.stringify(await run(`({hidden:document.hidden,visibility:document.visibilityState,mediaReduced:matchMedia('(prefers-reduced-motion: reduce)').matches,officeQuiet:{reduced:document.getElementById('office').dataset.reducedMotion,lowPower:document.getElementById('office').dataset.lowPower},trace:(window.fallbackTrace||[]).slice(-20),bodies:[...document.querySelectorAll('.character-body')].map(b=>({bitmap:b.dataset.bitmapHealth,rig:b.dataset.rigHealth,healing:b.dataset.rigHealing,staticHealing:b.dataset.bitmapHealing,filter:getComputedStyle(b.querySelector('img')).filter})),errors:document.getElementById('error-message').textContent})`)));}
 async function screen(name){if(preview){fs.mkdirSync(preview,{recursive:true});fs.writeFileSync(path.join(preview,name+'.png'),(await win.webContents.capturePage()).toPNG());}}
 function frozenPixels(capture){
   const size=capture.getSize(),pixels=Buffer.from(capture.toBitmap());
@@ -91,7 +92,9 @@ app.whenReady().then(async()=>{
     callback({cancel:blocked});
   });
   await win.loadFile(path.join(__dirname,'../renderer/index.html'));
+  await run(`window.fallbackActors=new Map();window.fallbackTrace=[];document.getElementById('office').addEventListener('office:actor-arrival',event=>fallbackActors.set(event.detail.actorId,event.detail.actor));const trace=()=>{fallbackTrace.push({at:performance.now(),hidden:document.hidden,mediaReduced:matchMedia('(prefers-reduced-motion: reduce)').matches,bodies:[...document.querySelectorAll('.actor[data-session-id]')].map(n=>({id:n.dataset.sessionId,traffic:n.dataset.traffic,walking:n.dataset.walking,rig:n.querySelector('.character-body').dataset.rigHealth,healing:n.querySelector('.character-body').dataset.rigHealing}))});if(fallbackTrace.length>200)fallbackTrace.shift();};new MutationObserver(trace).observe(document.getElementById('actors'),{subtree:true,attributes:true,attributeFilter:['data-rig-health','data-rig-healing']});document.addEventListener('visibilitychange',trace);void 0`);
   await until(allBody(`b.dataset.bitmapHealth==='failed'&&b.dataset.rigHealth==='failed'`),'both bitmap and rig must fail through real local requests');
+  await until(allArrived,'both real main bodies must finish their physical entrance before fixed-position compositor controls',20000);
   await until(`document.querySelector('.venue-stage')?.dataset.artState==='ready'&&document.getElementById('room-art').dataset.theme==='spring'&&!document.querySelector('.venue-art-buffer')`,'reference room artwork must finish its real transition');await pause(450);
   // Only fixture preparation is hidden, before any continuity samples begin.
   // Capture the actual room beneath the same already positioned bodies, then
@@ -162,6 +165,10 @@ app.whenReady().then(async()=>{
   assert.ok(healed.flat().some(r=>r.healthAlpha>0&&r.healthAlpha<1),'actual CSS filter alpha must interpolate during healing');
   assert.ok(healed.flat().some(r=>/opacity\((?:0\.|1\))/ .test(r.filter)),'health alpha is composed with the live family filter');
   await screen('healed-native-to-artwork');checks.push({name:'36 captured healing/stale/different-work frames preserve original bodies, joints and family-colour coverage',frames:healed.length,minTinted:Math.min(...healed.flat().map(r=>r.coverage.tinted)),minCoreTinted:Math.min(...healed.flat().map(r=>r.coverage.coreTinted)),minMedianAlpha:Math.min(...healed.flat().map(r=>r.coverage.medianAlpha))});
+  // The next independent resource fault requires a shared retry window.
+  // Finish the real planning journeys so their asynchronous route endpoints
+  // cannot legitimately start separate per-body retries during preparation.
+  await until(allArrived,'both real planning journeys must finish before preparing the second shared healing window',20000);
   // A second failure is scheduled by actual RAFs while the next heal is
   // demonstrably active; capture latency cannot move it outside that window.
   blockArtwork=true;
@@ -179,7 +186,9 @@ app.whenReady().then(async()=>{
   // Start a fresh observed activity so this short same-work resource check
   // cannot accidentally cross the previous program's legitimate slow cycle.
   send(tasks.map(t=>({...t,activity:'coding',lastEventAt:Date.now()})));
-  await until(`[...document.querySelectorAll('.avatar-performance')].every(n=>n.dataset.kind==='keyboard')`,'fresh coding performance must precede same-clock fault check');await pause(250);
+  await until(`[...document.querySelectorAll('.avatar-performance')].every(n=>n.dataset.kind==='keyboard')`,'fresh coding performance must precede same-clock fault check');
+  await until(allArrived,'both actual coding journeys must finish before the independent same-clock resource baseline',20000);
+  await run(`(async()=>{const bodies=[...document.querySelectorAll('.character-body')],finite=bodies.flatMap(b=>b.getAnimations({subtree:true})).filter(a=>Number.isFinite(Number(a.effect.getTiming().iterations)));await Promise.allSettled(finite.map(a=>a.finished));await new Promise(resolve=>requestAnimationFrame(resolve));await Promise.all(bodies.flatMap(b=>b.getAnimations({subtree:true})).filter(a=>typeof a.animationName==='string').map(a=>a.ready));})()`);
   const bitmapBefore=await run(`[...document.querySelectorAll('.character-body>img')].map(n=>n.src)`);
   await run(`window.currentHealthClocks=originalBodies.map(old=>old.node.querySelector('.avatar-performance').getAnimations({subtree:true}).filter(a=>typeof a.animationName==='string').map(a=>({a,time:a.currentTime})));void 0`);
   blockArtwork=true;

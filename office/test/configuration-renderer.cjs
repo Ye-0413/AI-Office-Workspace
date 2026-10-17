@@ -19,6 +19,7 @@ let snapshot = { mode: 'live', now: Date.now(), sessions: [], connections: [], d
 const errors = [];
 const checks = [];
 const invokeCalls = [];
+let connectionResult = { ok: true, message: 'fixture only' };
 const task = (id, activity, patch = {}) => ({ id, provider: 'codex', sessionId: id, title: ({ a: '修复登录', b: '检查构建', c: '调整界面' })[id] || id, projectPath: '/fixture/office', projectName: 'Fixture Office', activity, status: 'active', lastEventAt: Date.now() - 60000, toolName: '', summary: 'native renderer fixture', evidence: { source: 'official-hook', rawEvent: 'PreToolUse', confidence: 'high' }, activeTools: 1, attention: false, disconnected: false, closed: false, events: [], ...patch });
 const evaluate = source => win.webContents.executeJavaScript(source, true);
 async function until(source, message, milliseconds = 24000) {
@@ -45,7 +46,7 @@ app.whenReady().then(async () => {
   bind('settings', () => settings);
   bind('setup-status', () => ({ running: false, rows: [], totals: { configured: 0, failed: 0, skipped: 0, pending: 0 } }));
   bind('set-settings', patch => { settings = { ...settings, ...patch }; return settings; });
-  bind('connect', () => ({ ok: true, message: 'fixture only' }));
+  bind('connect', () => connectionResult);
   bind('displays', () => [{ id: 1, label: 'Fixture display', width: 1280, height: 720, primary: true }]);
   bind('move-display', () => ({ id: 1 }));
   bind('open-source', () => ({ opened: true }));
@@ -134,6 +135,24 @@ app.whenReady().then(async () => {
     await evaluate(`document.getElementById('connections-dialog').close();document.getElementById('language-button').click()`);await wait(100);
     assert.equal(await evaluate(`document.querySelector('.provider-actions button').textContent`),'Reload plugin');
     await evaluate(`document.getElementById('language-button').click();document.getElementById('provider-search').value='';document.getElementById('provider-search').dispatchEvent(new Event('input',{bubbles:true}))`);await wait(100);
+  });
+
+  await check('a real IPC error remains readable beside the live Hong Kong clock in both languages and window sizes', async () => {
+    connectionResult={ok:false,error:'本机配置暂不可用，请稍后重试。 Local setup is temporarily unavailable.'};
+    for(const size of [[1280,720],[800,450]]){
+      win.setContentSize(...size);await wait(100);
+      for(const language of ['zh','en']){
+        if((settings.language||'zh')!==language){await evaluate(`document.getElementById('language-button').click()`);await wait(80);}
+        await evaluate(`document.getElementById('connections-button').click();document.getElementById('provider-search').value='hermes';document.getElementById('provider-search').dispatchEvent(new Event('input',{bubbles:true}));document.querySelector('.provider-actions button').click();void 0`);
+        await until(`!document.getElementById('error-message').hidden`,'the failed isolated IPC call must reach the actual alert');
+        await evaluate(`document.getElementById('connections-dialog').close();void 0`);
+        const bounds=await evaluate(`(()=>{const error=document.getElementById('error-message'),clock=document.getElementById('day-clock'),a=error.getBoundingClientRect(),b=clock.getBoundingClientRect(),button=error.querySelector('button').getBoundingClientRect();return{text:error.textContent,role:error.getAttribute('role'),hit:a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top,inside:a.left>=0&&a.right<=innerWidth&&a.top>=0&&a.bottom<=innerHeight,closeInside:button.left>=a.left&&button.right<=a.right&&button.top>=a.top&&button.bottom<=a.bottom,time:document.getElementById('hk-clock').textContent,date:document.getElementById('hk-date').textContent,clockTarget:document.elementFromPoint((b.left+b.right)/2,(b.top+b.bottom)/2)?.closest('#day-clock')===clock}})()`);
+        assert.match(bounds.text,/temporarily unavailable/);assert.equal(bounds.role,'alert');assert.equal(bounds.hit,false,JSON.stringify(bounds));assert.equal(bounds.inside,true);assert.equal(bounds.closeInside,true);assert.equal(bounds.clockTarget,true,'the real clock stays visible and interactive');assert.match(bounds.time,/\d{2}:\d{2}/);assert.ok(bounds.date.length>8);
+        if(size[0]===1280&&language==='zh')await capture('error-beside-clock');
+        await evaluate(`document.getElementById('dismiss-error').click();void 0`);assert.equal(await evaluate(`document.getElementById('error-message').hidden`),true);
+      }
+    }
+    connectionResult={ok:true,message:'fixture only'};
   });
 
   assert.deepEqual(errors, []);

@@ -3,6 +3,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const Scene = require('../lib/scene-model.js');
 const Traffic = require('../lib/scene-traffic.js');
+const Walking = require('../lib/walking-layout.js');
 
 // Pixel bounds use the same affine depth transform as production geometry.
 function bounds(p, actor = {}) {
@@ -189,17 +190,20 @@ test('bounded queues and removed actors never retain a movement reservation', ()
   assert.equal(traffic.sync([a, b, actor('c', 50)]), false);
   assert.equal(traffic.next('b').reason, 'invalid-scene');
 });
-test('actual shared geometry completes a two-actor swap at all supported scale stops', () => {
+test('actual shared geometry completes a two-actor swap at all requested scale stops after a safe full-body room fit', () => {
   for (const scale of [.65, 1, 1.35]) {
-    const traffic = Traffic.createCoordinator(), movers = [actor('a', 20, 43, { scale }), actor('b', 80, 43, { scale })];
+    const page=Walking.layoutWalking([{id:'a',activity:'reading',status:'active'},{id:'b',activity:'testing',status:'active'}],{requestedScale:scale});
+    const traffic = Traffic.createCoordinator({route:Walking.route,legalPoint:Walking.legalPoint,gap:Walking.gapForScale,reservedRects:Scene.CLOCK_RESERVED,holdingPoints:page.holdingPoints});
+    const movers = ['a','b'].map(id=>actor(id,page.seats.get(id).x,page.seats.get(id).y,{uniformScale:page.uniformScale}));
+    for(const mover of movers)assert.equal(Walking.legalPoint(mover.position,mover),true,'the actual shared scale starts from complete legal body/nameplate bounds');
     traffic.sync(movers); traffic.request('a', movers[1].position); traffic.request('b', movers[0].position);
     let legs = 0;
     for (let round = 0; round < 5 && traffic.state().queued; round += 1) for (const mover of movers) {
       const plan = traffic.next(mover.id); if (plan.kind !== 'move') continue;
       for (let i = 1; i < plan.path.length; i += 1) for (let step = 0; step <= 100; step += 1) {
         const from = plan.path[i - 1], to = plan.path[i], p = { x: from.x + (to.x - from.x) * step / 100, y: from.y + (to.y - from.y) * step / 100 };
-        assert.equal(Scene.legalActorPoint(p, mover), true);
-        for (const other of movers) if (other !== mover) assert.equal(Scene.actorsOverlap(p, mover, other.position, other, 0), false);
+        assert.equal(Walking.legalPoint(p, mover), true);
+        for (const other of movers) if (other !== mover) assert.equal(Scene.actorsOverlap(p, mover, other.position, other, page.gap-.01), false);
       }
       mover.position = plan.target; traffic.finish(mover.id, plan.token); traffic.sync(movers); legs += 1;
     }
@@ -224,7 +228,7 @@ test('a proven stationary doorway blocker yields, newcomer walks in, then blocke
     const bodies = [actor('A', 60, 72), actor('B', 81, 45), actor('C', 30, 46), actor('D', 87, 78)];
     const original = new Map(bodies.map(a => [a.id, { ...a.position }]));
     traffic.sync(reverse ? bodies.slice().reverse() : bodies);
-    traffic.request('D', { x: 28, y: 81 });
+    traffic.request('D', { x: 28, y: 80 });
     const plans = [];
     for (let i = 0; i < 6; i += 1) {
       const plan = traffic.nextAny(); if (plan.kind === 'idle') break;
@@ -239,7 +243,7 @@ test('a proven stationary doorway blocker yields, newcomer walks in, then blocke
       moving.position = plan.target; assert.equal(traffic.finish(plan.id, plan.token, moving.position), true); traffic.sync(bodies);
     }
     assert.deepEqual(plans.map(p => [p.id, p.yielding, p.temporary]), [['A', true, true], ['D', false, false], ['A', true, false]]);
-    assert.deepEqual(bodies.find(a => a.id === 'D').position, { x: 28, y: 81 });
+    assert.deepEqual(bodies.find(a => a.id === 'D').position, { x: 28, y: 80 });
     for (const id of ['A', 'B', 'C']) assert.deepEqual(bodies.find(a => a.id === id).position, original.get(id));
     assert.equal(traffic.state().queued, 0); assert.equal(traffic.nextAny().kind, 'idle');
     return plans.map(p => ({ id: p.id, path: p.path, temporary: p.temporary }));
@@ -249,7 +253,7 @@ test('a proven stationary doorway blocker yields, newcomer walks in, then blocke
 test('a cancelled arrival still lets its cooperative blocker return; protected phases never yield', () => {
   const make = canYield => {
     const traffic = Traffic.createCoordinator({ gap: Scene.ACTOR_GAP }), bodies = [actor('A', 60, 72, { canYield }), actor('B', 81, 45), actor('C', 30, 46), actor('D', 87, 78)];
-    traffic.sync(bodies); traffic.request('D', { x: 28, y: 81 }); return { traffic, bodies };
+    traffic.sync(bodies); traffic.request('D', { x: 28, y: 80 }); return { traffic, bodies };
   };
   const blocked = make(false); assert.deepEqual(blocked.traffic.nextAny(), { kind: 'wait', reason: 'blocked' });
   const { traffic, bodies } = make(true), outward = traffic.nextAny();

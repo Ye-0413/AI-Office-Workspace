@@ -16,9 +16,10 @@
   const CLOCK_RESERVED = Object.freeze([Object.freeze({ left: 470, top: 65, right: 830, bottom: 175 })]);
   // Local CSS pixels around the actor's feet. This includes the clipped body,
   // all three name-tag lines, its family border and the selected keepsake.
+  // The button starts at -115: the source feet at y=115 meet the route anchor.
   const ACTOR_FOOTPRINT = Object.freeze({
-    root: Object.freeze({ left: 112, right: 120, top: 132, bottom: 78 }),
-    helper: Object.freeze({ left: 116, right: 124, top: 132, bottom: 76 }),
+    root: Object.freeze({ left: 112, right: 120, top: 118, bottom: 92 }),
+    helper: Object.freeze({ left: 116, right: 124, top: 118, bottom: 90 }),
   });
   const ZONES = Object.freeze({
     library: { name: '资料书架', x: 19, y: 44, seats: [[19, 44], [30, 46], [7, 44], [30, 70], [15, 83]] },
