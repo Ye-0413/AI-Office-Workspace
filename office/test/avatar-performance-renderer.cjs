@@ -175,6 +175,70 @@ app.whenReady().then(async () => {
   assert.equal(presence.returnedProgram,presence.firstProgram,'a long inactive interval does not rotate the per-kind work program');
   assert.equal(presence.active.rig,1);assert.equal(presence.active.bitmap,0);assert.equal(presence.closed.rig,0);assert.equal(presence.closed.bitmap,1);assert.equal(presence.returnedFrame.rig,1);assert.equal(presence.returnedFrame.bitmap,0);
   assert.deepEqual(presence.hidden,{count:0,layerHidden:true,imageOpacity:1});assert.deepEqual(presence.quiet,{count:0,opacity:1});assert.equal(presence.factsUnchanged,true);
+  const returningPresence = await evaluate(`(async()=>{
+    const actor=document.createElement('div');actor.className='fixture';
+    const body=document.createElement('span');body.className='character-body';
+    const image=document.createElement('img');image.src='../assets/avatars/clawd-static-base.svg';body.append(image);actor.append(body);document.body.append(actor);
+    const session={id:'codex:return-continuity',provider:'codex',parentId:'codex:real-root',activity:'coding',status:'active'};
+    const idle={...session,activity:'idle',status:'idle',turnCompletedAt:4900},facts=JSON.stringify([session,idle]);
+    const clockRegistry=OfficeAvatarPerformanceModel.createClockRegistry({limit:8});
+    const controller=OfficeAvatarPerformance.create({actorNode:actor,body,session,clockRegistry});controller.update(session,{now:0});
+    const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms)),raf=()=>new Promise(resolve=>requestAnimationFrame(resolve));
+    await wait(220);
+    const layer=body.querySelector('.avatar-performance'),rig=body.querySelector('.ap-rig'),prop=body.querySelector('.ap-props-back').firstElementChild;
+    const clocks=layer.getAnimations({subtree:true}).filter(a=>a.effect.getTiming().iterations===Infinity);
+    for(const animation of clocks)animation.currentTime=5276;
+    await raf();
+    const firstTimes=clocks.map(a=>a.currentTime),firstProgram=controller.plan.program;
+    const sample=()=>({rig:Number(getComputedStyle(layer).opacity),bitmap:Number(getComputedStyle(image).opacity),hidden:layer.hidden,animate:layer.dataset.animate,
+      joints:[...rig.querySelectorAll('.ap-upper,.ap-arm,.ap-eyes,.ap-foot')].map(n=>{const m=new DOMMatrixReadOnly(getComputedStyle(n).transform);return[m.a,m.b,m.c,m.d,m.e,m.f]}),
+      identity:body.querySelector('.ap-rig')===rig&&body.querySelector('.ap-props-back').firstElementChild===prop,
+      sameClocks:clocks.every(a=>layer.getAnimations({subtree:true}).includes(a)),times:clocks.map(a=>a.currentTime)});
+    const transitions=[],frames=[];
+    const update=(value,options)=>{const before=sample();controller.update(value,options);transitions.push({before,after:sample()});};
+    for(let frame=0;frame<60;frame++){
+      if(frame===2)update(idle,{now:100,departing:true});
+      if(frame===5)update({...idle,title:'metadata while returning'},{now:150,departing:true});
+      if(frame===10)update(session,{now:200});
+      if(frame===18)update(idle,{now:250,departing:true});
+      if(frame===20)update(session,{now:300});
+      if(frame===29)update(idle,{now:350,departing:true});
+      if(frame===34)update(session,{now:400});
+      await raf();frames.push(sample());
+    }
+    await wait(250);const active=sample();
+    update(idle,{now:450,departing:true});await wait(260);
+    const retired=sample(),paused=clocks.every(a=>a.playState==='paused'),pausedTimes=clocks.map(a=>a.currentTime);
+    controller.update(idle,{now:90000000,departing:true});await wait(40);
+    const heldTimes=clocks.map(a=>a.currentTime);
+    const returned=controller.update(session,{now:90000001});await wait(250);const resumed=sample();
+    controller.update(idle,{now:90000002,departing:true,walking:true});
+    const walking={hidden:layer.hidden,animations:body.getAnimations({subtree:true}).length};
+    controller.update(session,{now:90000003});controller.update(idle,{now:90000004,departing:true,hidden:true});
+    const hidden={hidden:layer.hidden,animations:body.getAnimations({subtree:true}).length};
+    controller.update(session,{now:90000005});controller.update(idle,{now:90000006,departing:true,lowPower:true});
+    const lowPower={hidden:layer.hidden,animations:body.getAnimations({subtree:true}).length};
+    controller.update(session,{now:90000007});controller.update(idle,{now:90000008,departing:true,reducedMotion:true});
+    const reduced={hidden:layer.hidden,animations:body.getAnimations({subtree:true}).length};
+    controller.destroy();const destroyed={rigs:body.querySelectorAll('.avatar-performance').length,animations:body.getAnimations({subtree:true}).length};actor.remove();
+    return{frames,transitions,firstTimes,active,retired,paused,pausedTimes,heldTimes,resumed,firstProgram,returnedProgram:returned.program,walking,hidden,lowPower,reduced,destroyed,factsUnchanged:JSON.stringify([session,idle])===facts};
+  })()`);
+  assert.equal(returningPresence.frames.length,60,'rapid completed/helper returns sample at least 31 real native frames');
+  assert.ok(returningPresence.frames.every(frame=>frame.identity&&frame.sameClocks&&!frame.hidden&&frame.animate==='true'),'all interrupted returns retain actual rig, props and native CSS Animation identities');
+  assert.ok(new Set(returningPresence.frames.map(frame=>JSON.stringify([frame.rig,frame.bitmap,frame.joints]))).size>=31,'helper returns contain at least 31 distinct rendered poses/opacity samples');
+  for(const transition of returningPresence.transitions){
+    assert.ok(Math.abs(transition.before.rig-transition.after.rig)<.025,'return cancellation resumes the actually rendered rig opacity');
+    assert.ok(Math.abs(transition.before.bitmap-transition.after.bitmap)<.025,'return cancellation resumes the actually rendered bitmap opacity');
+    for(let i=0;i<transition.before.joints.length;i++)for(let axis=0;axis<6;axis++)assert.ok(Math.abs(transition.before.joints[i][axis]-transition.after.joints[i][axis])<.12,'completed/helper return never snaps a joint back to its default');
+  }
+  assert.equal(returningPresence.active.rig,1);assert.equal(returningPresence.active.bitmap,0);
+  assert.equal(returningPresence.retired.rig,0);assert.equal(returningPresence.retired.bitmap,1);assert.equal(returningPresence.retired.hidden,false);assert.equal(returningPresence.retired.sameClocks,true);assert.equal(returningPresence.paused,true);
+  assert.deepEqual(returningPresence.heldTimes,returningPresence.pausedTimes,'a long inactive return keeps the original joint clocks frozen');
+  assert.equal(returningPresence.resumed.rig,1);assert.equal(returningPresence.resumed.bitmap,0);assert.equal(returningPresence.resumed.identity,true);assert.equal(returningPresence.resumed.sameClocks,true);
+  assert.ok(returningPresence.resumed.times.every((time,i)=>time>=returningPresence.firstTimes[i]&&time>5200),'rapid helper returns never rewind a native CSS clock');
+  assert.equal(returningPresence.returnedProgram,returningPresence.firstProgram,'departing time does not count as observed visible work');
+  for(const mode of ['walking','hidden','lowPower','reduced'])assert.deepEqual(returningPresence[mode],{hidden:true,animations:0},mode+' retains immediate lifecycle/quiet ownership');
+  assert.deepEqual(returningPresence.destroyed,{rigs:0,animations:0});assert.equal(returningPresence.factsUnchanged,true);
   await evaluate('(()=>{const item=items[0];item.performance.update(item.session,{now:item.performance.plan.programMs*3+3});item.performance.update(item.session,{now:item.performance.plan.programMs*3+3,reducedMotion:true})})()');
   assert.equal(await evaluate('items[0].body.getAnimations({subtree:true}).length'), 0, 'quiet preference cancels an in-flight bridge immediately');
   for (const preference of ['reducedMotion', 'lowPower', 'hidden', 'walking', 'reaction', 'departing']) {
@@ -213,5 +277,5 @@ app.whenReady().then(async () => {
   assert.equal(await evaluate('document.querySelectorAll(".avatar-performance").length'), 0);
   assert.equal(await evaluate('document.getAnimations().length'), 0);
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ ok: true, programs: original.map(item => item.program), nativeChecks: ['artwork', 'joint motion', '88 distinct joint trajectories', 'metadata continuity', 'interruptible pose and prop bridge', '45 actual interrupted stale/unknown/closed continuity frames', 'same paused and resumed native joint clocks', 'quiet modes', 'lifecycle suspension', 'native page-return clock continuity', 'family body colour with unchanged work props', 'rotated prop bounds', 'destroy cleanup'], preview: process.env.MINI_OFFICE_PREVIEW_DIR || null }));
+  console.log(JSON.stringify({ ok: true, programs: original.map(item => item.program), nativeChecks: ['artwork', 'joint motion', '88 distinct joint trajectories', 'metadata continuity', 'interruptible pose and prop bridge', '45 actual interrupted stale/unknown/closed continuity frames', '60 actual interrupted completed-helper return frames', 'same paused and resumed native joint clocks', 'quiet modes', 'lifecycle suspension', 'native page-return clock continuity', 'family body colour with unchanged work props', 'rotated prop bounds', 'destroy cleanup'], preview: process.env.MINI_OFFICE_PREVIEW_DIR || null }));
 }).catch(error => { console.error(error); process.exitCode = 1; }).finally(() => { clearTimeout(watchdog); if (win && !win.isDestroyed()) win.destroy(); fs.rmSync(scratch, { recursive: true, force: true }); app.exit(process.exitCode || 0); });

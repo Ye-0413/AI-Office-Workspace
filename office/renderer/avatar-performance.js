@@ -219,6 +219,9 @@
       });
       for (const item of frozen) for (const value of item.values) item.node.style.setProperty(value.name, value.computed, 'important');
       for (const motion of layer.getAnimations?.({ subtree: true }) || []) {
+        // Resource-health fades have a separate finite owner. Pausing them
+        // here would strand healing when a different work program resumes.
+        if (!bridges.has(motion) && typeof motion.animationName !== 'string') continue;
         paused.set(motion, motion.playState);
         if (motion.playState === 'running' || motion.pending) motion.pause();
       }
@@ -287,7 +290,12 @@
       const quiet = Boolean(options.reducedMotion || options.lowPower || options.hidden);
       const canFade = Boolean(view?.getComputedStyle && layer.animate && bitmap?.animate && !quiet);
       if (!plan.active) {
-        const natural = ['stale', 'unclassified', 'closed'].includes(plan.reason);
+        // A flat clone's return can be interrupted by fresh observed work.
+        // Its seated body must retain the same joints and CSS clocks while
+        // the separate journey echo travels home. Real walking still gives
+        // the bitmap its immediate navigation ownership.
+        const returning = plan.reason === 'departing' && !options.walking && !options.reaction;
+        const natural = ['stale', 'unclassified', 'closed'].includes(plan.reason) || returning;
         if (natural && visual?.animate && canFade) {
           if (presence === 'active' || presence === 'entering') {
             stopFade(true); freezeVisual(); fadePresence(false);

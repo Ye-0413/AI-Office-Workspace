@@ -1,0 +1,12 @@
+/* Native backup occupies exactly the existing 154×129 body canvas. */
+@property --avatar-art-alpha{syntax:"<number>";inherits:false;initial-value:1}
+.character-body[data-bitmap-health]>img.avatar-fallback-managed{filter:var(--family-body-filter,opacity(1)) opacity(var(--avatar-art-alpha))}
+/* Key each opaque source before its health alpha. Keying the composed .75
+   alpha torso instead would lose the exact skin mask midway through a heal. */
+.character-body[data-rig-healing="true"] :is(.ap-torso,.ap-foot){filter:none}
+.character-body[data-rig-healing="true"] :is(.ap-torso,.ap-foot) use{filter:var(--family-body-filter,none)}
+.avatar-native-fallback{position:absolute;inset:0;display:block;width:154px;height:129px;pointer-events:none;shape-rendering:geometricPrecision;overflow:hidden}
+.avatar-native-fallback[data-active="false"]{display:none}
+.avatar-native-fallback .af-shell,.avatar-native-fallback .af-foot{filter:var(--family-body-filter,none)}
+.avatar-native-fallback .af-hand-fill{filter:var(--family-hand-filter,none)}
+.avatar-native-fallback .af-hand-ring{stroke:var(--family-hand-edge,#294751);vector-effect:non-scaling-stroke}

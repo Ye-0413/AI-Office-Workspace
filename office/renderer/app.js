@@ -133,6 +133,7 @@
   function setPose(actor, name, replay = false) {
     const performanceSession = actor.visualWorkActivity ? { ...actor.session, activity: actor.visualWorkActivity } : actor.session;
     const performance = actor.performance && actor.performance.update(performanceSession, { now: Date.now(), reducedMotion: reduced(), lowPower: settings.lowPower, hidden: document.hidden || actor.entryPending, walking: Boolean(actor.motion) || actor.node.dataset.walking === 'true', reaction: false, departing: actor.departing, stale: actor.spec.stale });
+    actor.fallback?.retry();
     const asset = quietSprites() ? 'clawd-static-base.svg' : performance && performance.active ? performance.asset : name;
     actor.wantedAsset = name;
     const recoverBitmap = actor.image.hidden && actor.image.complete;
@@ -238,8 +239,7 @@
     }
     if (grew) {
       protectEnteringActors();
-      for (const actor of actors.values()) cancelAction(actor);
-      traffic.clear(); reflowPending = true;
+      cancelPhysicalRoutes(); reflowPending = true;
     }
   }
   function transitCaption(actor, yielding = false) {
@@ -439,8 +439,28 @@
   function releaseWaitingRoots() {
     queueMicrotask(() => {
       if (destroyed) return;
-      for (const actor of actors.values()) if (!actor.helper && actor.retireRequested && !actor.departing) depart(actor, actor.retireRequested.inactive).catch(showError);
+      for (const actor of actors.values()) if (!actor.helper && actor.retireRequested && !actor.departing) {
+        const current = snapshot.sessions.find(session => session.id === actor.id);
+        if (current && attendance.present.some(session => session.id === actor.id) && hasBodyActivity(current)) {
+          actor.session = current; actor.spec = Scene.activitySpec(current);
+          resumeActiveActor(actor); updateActorLabel(actor); finishAtStation(actor);
+        } else depart(actor, actor.retireRequested.inactive).catch(showError);
+      }
     });
+  }
+  function resumeActiveActor(actor) {
+    if (!hasBodyActivity(actor.session) || !actor.departing && !actor.holdingFamily && !actor.retireRequested) return;
+    cancelAction(actor);
+    actor.departing = false; actor.holdingFamily = false; actor.retireRequested = null;
+    actor.node.dataset.cloneHold = 'false';
+  }
+  function cancelPhysicalRoutes() {
+    // Fitting and font measurement do not own a seated clone's finite return.
+    // Keep its delay, current pose and effects alive until it finishes or its
+    // actual session resumes. Only obsolete physical routes need cancelling.
+    for (const actor of actors.values()) if (!actor.departing && !actor.holdingFamily
+      && (actor.motion || actor.entryPending || actor.stagedEntry || trafficWaiters.has(actor.id))) cancelAction(actor);
+    traffic.clear();
   }
   function cancelAction(actor) {
     actor.serial += 1;
@@ -776,9 +796,11 @@
     for (const child of relatedClones(actor)) if (!child.departing) {
       const current = snapshot.sessions.find(session => session.id === child.id);
       if (current) { child.session = current; child.spec = Scene.activitySpec(current); }
-      // Active descendants retain their bodies and ancestor anchor until their
-      // own observed turn ends; the root can wait at its seat.
-      if (!current || Scene.isClosed(current) || !hasBodyActivity(current)) depart(child, !current || !Scene.isClosed(current)).catch(showError);
+      // Missing work evidence is not evidence that a descendant finished.
+      // Keep uncertain current bodies and their ancestor anchor in place.
+      const idle = current && !current.disconnected && current.status === 'idle'
+        && (!current.activity || current.activity === 'idle') && !current.attention && !(Number(current.activeTools) > 0);
+      if (!current || Scene.isClosed(current) || idle) depart(child, !current || !Scene.isClosed(current)).catch(showError);
     }
     if (relatedClones(actor).length) { holdForClones(actor); return; }
     actor.holdingFamily = false; actor.node.dataset.cloneHold = 'false';
@@ -831,10 +853,12 @@
     node.style.transform = actorTransform(actor.position, actor.helper);
     node.style.zIndex = '10';
     image.addEventListener('error', () => {
+      if (destroyed || actors.get(actor.id) !== actor) return;
       if (actor.currentAsset !== 'clawd-static-base.svg') { actor.currentAsset = 'clawd-static-base.svg'; image.dataset.asset = 'clawd-static-base.svg'; image.src = assetURL('clawd-static-base.svg'); }
-      else { image.hidden = true; showError('角色素材暂未加载，后续状态更新会重试。任务状态仍在观察。'); }
+      else { image.hidden = true; showError(language === 'en' ? 'Character artwork is temporarily unavailable. A backup body is shown while observation continues.' : '角色素材暂未加载，已显示备用身体；后续更新会重试，任务仍在观察。'); }
     });
     image.addEventListener('load', () => {
+      if (destroyed || actors.get(actor.id) !== actor) return;
       // A failed fallback hides only the failed bitmap. A later valid pose
       // must restore it, including walking and reduced-motion appearances.
       if (image.naturalWidth > 0) {
@@ -849,6 +873,7 @@
     button.addEventListener('dblclick', () => react(actor));
     button.addEventListener('keydown', (event) => { if (event.key === ' ' && event.shiftKey) { event.preventDefault(); react(actor); } });
     updateActorLabel(actor);
+    actor.fallback = window.OfficeAvatarFallback?.create({ actorNode: node, body, image });
     actors.set(session.id, actor);
     observedIds.add(actor.id);
     if (!restored && !quietSprites()) {
@@ -935,6 +960,7 @@
     cancelAction(actor);
     clearTimeout(actor.bubbleTimer);
     pendingArrivals.delete(actor.id);
+    actor.fallback?.destroy();
     if (actor.performance) { actor.performance.update(actor.session, { now: Date.now(), hidden: true }); actor.performance.destroy(); }
     if (actor.appearance) actor.appearance.destroy();
     actor.node.remove();
@@ -1026,7 +1052,7 @@
       if (!actor) { makeActor(session, seat); continue; }
       const old = actor.session, previousTurn = actor.lastTurnAt;
       actor.session = session; actor.spec = Scene.activitySpec(session); actor.helper = Boolean(session.parentId);
-      if (actor.departing && hasBodyActivity(session)) { cancelAction(actor); actor.departing = false; }
+      resumeActiveActor(actor);
       if (layoutChanged) {
         actor.position = { x: seat.x, y: seat.y }; actor.target = seat;
         actor.entryPending = false; actor.stagedEntry = false; actor.entranceActive = false;
@@ -1307,17 +1333,7 @@
     const scaleChanged = oldScale !== nextScale;
     if (scaleChanged) {
       protectEnteringActors();
-      // Capture physical positions before changing the transform scale.
-      for (const actor of [...actors.values()]) {
-        const returning = actor.helper && actor.departing;
-        const reason = actor.returnReason;
-        const parent = returning ? cloneAncestor(actor) : null;
-        const leaving = actor.departing && !actor.helper;
-        cancelAction(actor);
-        if (returning) finishCloneReturn(actor, parent, reason || (Scene.isClosed(actor.session) ? 'ended' : 'resting'));
-        else if (leaving) { openDoor(); removeActor(actor.id); }
-      }
-      traffic.clear();
+      cancelPhysicalRoutes();
       reflowPending = true;
     }
     settings = { ...settingsDefaults, ...next, agentScale: nextScale };
