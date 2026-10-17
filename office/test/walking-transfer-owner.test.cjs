@@ -88,7 +88,7 @@ function installRender(h,{unexpectedLayout=false}={}){
   finiteExitIds:()=>new Set(),sceneOptions:()=>({currentPositions:new Map([...c.actors].map(([id,a])=>[id,{...a.position}]))}),
   WalkingLayout:{layoutWalking:(rows,options)=>{calls++;if(unexpectedLayout)assert.fail('metadata cannot rerun allocation during certified progress');assert.deepEqual(options.currentPositions.get('owner-000'),h.actors.get('owner-000').position);return{...page,transferCertificate:null};}},
   reconcileActors:()=>{for(const actor of c.actors.values()){actor.session=c.snapshot.sessions.find(s=>s.id===actor.id)||actor.session;c.requestStation(actor,c.currentPage.seats.get(actor.id));}}});
- vm.runInContext(production('render'),c);return()=>calls;
+ vm.runInContext(production('nameplateMode')+production('render'),c);return()=>calls;
 }
 test('the full production render preserves the exact certified seats and owner during moving metadata heartbeats',async()=>{
  const h=harness(),owner=h.accept();await h.advance(1700);const seats=h.context.currentPage.seats,certificate=owner.certificate,calls=installRender(h,{unexpectedLayout:true});

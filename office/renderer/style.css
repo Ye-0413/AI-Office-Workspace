@@ -247,3 +247,22 @@
 
 /* The cropped source feet end at y=115; anchor the body to the floor at every scale. */
 .actor>.actor-button{top:-115px}
+
+/* One bounded paper label: identifiers never compete with the family token. */
+.office[data-flat="true"] .actor .nameplate,
+.office[data-flat="true"] .actor[data-helper="true"] .nameplate{display:grid;grid-template-columns:minmax(0,1fr) max-content 21px;grid-template-rows:24px 16px 13px;column-gap:4px;row-gap:2px;align-items:center;align-content:center;padding:4px 8px 5px;width:220px;min-width:220px;max-width:220px;height:70px}
+.office[data-flat="true"] .actor .actor-title,
+.office[data-flat="true"] .actor[data-helper="true"] .actor-title{grid-column:1;grid-row:1;display:block;min-width:0;width:100%;max-width:none;font-size:16px;line-height:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.office[data-flat="true"] .actor .actor-relation{grid-column:1/-1;grid-row:2;min-width:0;width:100%;max-width:none;font-size:11px;line-height:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.office[data-flat="true"] .actor .actor-subline,
+.office[data-flat="true"] .actor[data-helper="true"] .actor-subline{grid-column:1/-1;grid-row:3;display:flex;min-width:0;width:100%;max-width:none;justify-content:center;font-size:11px;line-height:13px}
+.office[data-flat="true"] .actor .family-badge{position:static;grid-column:2;grid-row:1;align-self:center;justify-self:end}
+.office[data-flat="true"] .actor .actor-keepsake{position:relative;right:auto;top:auto;grid-column:3;grid-row:1;align-self:center;justify-self:center}
+/* Density is an observed cast fact, never a response to the solved scale. */
+.office[data-flat="true"][data-nameplate-mode="compact"] .actor .nameplate,
+.office[data-flat="true"][data-nameplate-mode="compact"] .actor[data-helper="true"] .nameplate{grid-template-rows:30px 18px;row-gap:3px}
+.office[data-flat="true"][data-nameplate-mode="compact"] .actor .actor-title,
+.office[data-flat="true"][data-nameplate-mode="compact"] .actor[data-helper="true"] .actor-title{font-size:26px;line-height:30px}
+.office[data-flat="true"][data-nameplate-mode="compact"] .actor .actor-relation{font-size:14px;line-height:18px}
+.office[data-flat="true"][data-nameplate-mode="compact"] .actor .actor-subline,
+.office[data-flat="true"][data-nameplate-mode="compact"] .actor[data-helper="true"] .actor-subline{display:none}

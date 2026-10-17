@@ -11,10 +11,10 @@
   const DURATION = 1400, BRIDGE_WAIT = 240, EXIT = 160, STATION_INTERVAL = 2400;
   const ACTIVITIES = Object.freeze({ reading: 'library', searching: 'library', planning: 'board', designing: 'board', coding: 'desk', building: 'bench', testing: 'bench', running: 'bench' });
   const MOUNTS = Object.freeze({
-    library: Object.freeze([[308,250],[235,250],[185,250],[235,145],[285,150],[185,145]]),
+    library: Object.freeze([[308,250],[235,250],[185,250],[235,145],[285,150],[185,145],[270,250]]),
     board: Object.freeze([[775,205],[492,205],[640,205]]),
     desk: Object.freeze([[550,345],[750,365],[475,355]]),
-    bench: Object.freeze([[1130,145],[1040,165],[1190,180],[1215,245],[995,235]])
+    bench: Object.freeze([[1130,145],[1040,165],[1190,180],[1215,245],[995,235],[995,250]])
   });
   const PROGRAMS = Object.freeze({
     workshop: Object.freeze({library:'field-book',board:'blueprint-links',desk:'circuit-spool',bench:'bench-dial'}),
@@ -75,8 +75,24 @@
       for (const actor of cast) {
         if(!actor.node?.isConnected || actor.entryPending)continue;
         const style=view.getComputedStyle(actor.node); if(style.display==='none' || style.visibility==='hidden' || Number(style.opacity)<.01)continue;
+        // A moving body already owns a known endpoint. Reserve the same
+        // measured parts there too, so a nearby response does not begin in
+        // space that this peer will occupy as its current route finishes.
+        // This is an endpoint reservation, not a future-corridor guarantee.
+        const navigation=[actor.navigation,actor.resumeNavigation].find(value=>value && typeof value==='object' && typeof value.kind==='string' && value.kind.trim() && point(value.target));
+        const reservation=actor.routeReservation;
+        const reserved=Number.isSafeInteger(actor.serial) && actor.serial>=0 && reservation
+          && Number.isSafeInteger(reservation.token) && reservation.token>0 && reservation.serial===actor.serial;
+        const moving=actor.motion || actor.walking || reserved || actor.yielding===true || navigation;
+        const endpoint=navigation?.target || actor.target;
+        const foot=moving && physical(actor);
+        const dx=point(foot) && point(endpoint)?(endpoint.x-foot.x)*12.8:0;
+        const dy=point(foot) && point(endpoint)?(endpoint.y-foot.y)*7.2:0;
         for(const part of actor.node.querySelectorAll('.character-body,.nameplate,.actor-title,.actor-relation,.actor-subline,.family-badge,.actor-keepsake')) {
-          const b=part.getBoundingClientRect(); if(b.width && b.height)rectangles.push({left:(b.left-room.left)*fx,right:(b.right-room.left)*fx,top:(b.top-room.top)*fy,bottom:(b.bottom-room.top)*fy});
+          const b=part.getBoundingClientRect(); if(!(b.width && b.height))continue;
+          const bounds={left:(b.left-room.left)*fx,right:(b.right-room.left)*fx,top:(b.top-room.top)*fy,bottom:(b.bottom-room.top)*fy};
+          rectangles.push(bounds);
+          if(Math.hypot(dx,dy)>.001)rectangles.push({left:bounds.left+dx,right:bounds.right+dx,top:bounds.top+dy,bottom:bounds.bottom+dy});
         }
       }
       // Existing interactive room art is above this furniture layer. Reserve

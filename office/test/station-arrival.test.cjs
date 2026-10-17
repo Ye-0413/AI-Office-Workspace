@@ -245,3 +245,208 @@ test('all twelve programs retain a safe furniture mount beside the real catalog 
     f.api.destroy();assert.equal(f.raf.size,0);
   }
 });
+
+// Recorded native full-mode bench endpoint, world1280x720 at origin0. These
+// are observed DOM rectangles, not sampled character pixels or approximate
+// Scene.actorBounds. The controller still owns filtering and source padding.
+function capturedFullBenchComposition(f){
+  const position={x:89.375,y:40.9};
+  f.actor.serial=4;f.actor.position=position;
+  f.actor.target={...position,zone:'bench',workZone:'bench',area:'bench-front'};
+  f.actor.node.style.transform='matrix(1,0,0,1,1144,294.48)';
+  const actorRects=[
+    ['character-body',[1067,179.48001098632812,1221,308.4800109863281]],
+    ['nameplate',[1034,311.4800109863281,1254,381.4800109863281]],
+    ['actor-title',[1043,320.4800109863281,1197,340.4800109863281]],
+    ['actor-relation',[1043,344.4800109863281,1245,360.4800109863281]],
+    ['actor-subline',[1043,362.4800109863281,1245,375.4800109863281]],
+    ['actor-keepsake',[1224,322.9800109863281,1245,343.9800109863281]],
+    ['family-badge',[1201,325.4800109863281,1220,335.4800109863281]]
+  ];
+  const plate=f.actor.node.children[1];
+  f.actor.body.box=box(...actorRects[0][1]);plate.box=box(...actorRects[1][1]);
+  for(const [classes,r]of actorRects.slice(2)){
+    const node=roomPart(f,'span',classes,box(...r),plate);
+    if(classes==='actor-keepsake')node.style.opacity='0';
+  }
+  const controls=[
+    ['workshop-blueprint',[346.796875,110.390625,446.796875,182.390625],[370.796875,184.390625,422.796875,203.390625]],
+    ['workshop-circuit',[1025.1875,96,1125.1875,168],[1039.1875,170,1111.1875,189]],
+    ['workshop-bell',[846,103.1875,946,175.1875],[870,177.1875,922,196.1875]]
+  ];
+  const expanded=(r,p)=>box(r[0]-p.left,r[1]-p.top,r[2]+p.right,r[3]+p.bottom);
+  const svgPad={left:24,right:24,top:24,bottom:24},captionPad={left:3,right:3,top:3,bottom:3};
+  const blocked=[...Scene.CLOCK_RESERVED,...actorRects.map(([,r])=>box(...r))];
+  for(const [id,art,label]of controls){
+    const parent=roomPart(f,'button','venue-control',box(art[0],art[1],art[2],label[3]));
+    parent.dataset.interaction=id;
+    roomPart(f,'svg','',box(...art),parent);
+    const caption=roomPart(f,'span','venue-control-label',box(...label),parent);caption.style.opacity='.88';
+    blocked.push(expanded(art,svgPad),expanded(label,captionPad));
+  }
+  const festivalArt=[196,58.390625,316,168.390625],festivalCaption=[225,169.390625,287,188.390625];
+  const festival=roomPart(f,'div','festival-stage',box(0,0,1280,720));
+  roomPart(f,'svg','festival-art',box(...festivalArt),festival);
+  roomPart(f,'span','festival-caption',box(...festivalCaption),festival);
+  blocked.push(expanded(festivalArt,{left:40,right:40,top:48,bottom:32}),expanded(festivalCaption,captionPad));
+  return blocked;
+}
+
+test('the captured full-size bench arrival finds a clear furniture fallback without moving its actual owner',()=>{
+  const f=fixture({zone:'bench'}),blocked=capturedFullBenchComposition(f);
+  const legacy=[[1130,145],[1040,165],[1190,180],[1215,245],[995,235]];
+  assert.equal(blocked.length,16,'the actual clock, all seven body/plate parts and eight control rectangles remain reserved');
+  for(const [x,y]of legacy)assert.ok(blocked.some(r=>Scene.boundsOverlap(box(x-54,y-36,x+54,y+36),r,3)),
+    'each original bench surface really is occluded in this native composition');
+  const clear={left:941,top:214,right:1049,bottom:286};
+  assert.ok(blocked.every(r=>!Scene.boundsOverlap(clear,r,3)),'the added left furniture surface clears every actual source-padded blocker by the original3px');
+  const before=JSON.stringify({session:f.actor.session,serial:f.actor.serial,position:f.actor.position,target:f.actor.target,style:f.actor.node.style,dataset:f.actor.node.dataset});
+  const original={actor:f.actor,node:f.actor.node,body:f.actor.body,plate:f.actor.node.children[1],position:f.actor.position,target:f.actor.target};
+  assert.equal(f.api.arrive(f.event(f.actor,'station')),true,'the actual bench endpoint must retain one safe furniture response');
+  const state=f.api.state(),cue=state.active[0];
+  assert.equal(state.started,1);assert.equal(state.pending,0);assert.equal(cue.ownerId,original.actor.id);assert.equal(cue.serial,4);
+  assert.deepEqual(plain(cue.anchor),{x:995,y:250});assert.deepEqual(plain(cue.bounds),clear);
+  assert.equal(cue.program,'bench-dial');assert.equal(f.actors.get(original.actor.id),original.actor);
+  assert.equal(f.actor.node,original.node);assert.equal(f.actor.body,original.body);assert.equal(f.actor.node.children[1],original.plate);
+  assert.equal(f.actor.position,original.position);assert.equal(f.actor.target,original.target);
+  assert.equal(JSON.stringify({session:f.actor.session,serial:f.actor.serial,position:f.actor.position,target:f.actor.target,style:f.actor.node.style,dataset:f.actor.node.dataset}),before,'safe placement cannot move the actor, alter its observation, or replace its physical owner');
+  f.step(1401);assert.equal(f.api.state().finished,1);assert.equal(f.layer.children.length,0);assert.equal(f.raf.size,0);f.api.destroy();
+});
+
+test('an actually occupied new bench fallback is skipped and never flashes later after its blocker disappears',()=>{
+  const f=fixture({zone:'bench'});capturedFullBenchComposition(f);
+  const blocker=roomPart(f,'span','venue-note-text',box(941,214,1049,286));
+  const original={node:f.actor.node,body:f.actor.body,position:f.actor.position,target:f.actor.target,serial:f.actor.serial};
+  assert.equal(f.api.arrive(f.event(f.actor,'station')),false);
+  assert.equal(f.api.state().reasons.occluded,1);assert.equal(f.api.state().started,0);assert.equal(f.api.state().pending,0);
+  assert.equal(f.layer.children.length,0);assert.equal(f.raf.size,0);
+  blocker.remove();f.step(3000);f.api.update();
+  assert.equal(f.api.state().started,0);assert.equal(f.layer.children.length,0);assert.equal(f.raf.size,0,'blocked evidence cannot create a queued or delayed cue');
+  assert.equal(f.api.arrive(f.event(f.actor,'station')),false,'the consumed same actual arrival cannot replay once space becomes free');
+  assert.equal(f.api.state().reasons['same-station'],1);
+  assert.equal(f.actor.node,original.node);assert.equal(f.actor.body,original.body);assert.equal(f.actor.position,original.position);assert.equal(f.actor.target,original.target);assert.equal(f.actor.serial,original.serial);
+  f.api.destroy();
+});
+
+
+// A peer is between route vertices: actor.position still records the departure
+// point, while its real computed transform is the current physical foot. Local
+// body/plate extents and the .65 reading endpoint come from the native v6 case.
+function movingPeerComposition(f){
+  f.settings.scale=.65;
+  const main={x:6.828125,y:40.9};f.actor.position=main;
+  f.actor.target={...main,zone:'library',workZone:'library',area:'library-front'};
+  f.actor.node.style.transform='matrix(.65,0,0,.65,87.4,294.48)';
+  f.actor.body.box=box(37.35000305175782,219.73000488281252,137.45000305175782,303.580029296875);
+  f.actor.node.children[1].box=box(15.900001525878906,305.53000488281253,158.9000015258789,351.03000488281253);
+  const peer=f.makeActor('codex:moving-peer','board');peer.serial=2;
+  peer.position={x:50,y:78};peer.target={x:32.2,y:40.9,zone:'board',workZone:'board',area:'board-front'};
+  peer.node.style.transform='matrix(.65,0,0,.65,512,504)';
+  peer.body.box=box(461.95,429.25,562.05,513.1);
+  peer.node.children[1].box=box(440.5,515.05,583.5,560.55);
+  return peer;
+}
+function observedActorState(actor){
+  return JSON.stringify({serial:actor.serial,session:actor.session,position:actor.position,target:actor.target,
+    style:actor.node.style,dataset:actor.node.dataset,navigation:actor.navigation,resumeNavigation:actor.resumeNavigation,
+    routeReservation:actor.routeReservation,yielding:actor.yielding});
+}
+
+test('a real moving peer reserves its known endpoint from the computed foot without changing either actual actor',()=>{
+  for(const owner of ['motion','walking','navigation','resumeNavigation','reservation','yielding']){
+    const f=fixture({venue:'observatory'}),peer=movingPeerComposition(f);
+    if(owner==='motion')peer.motion={playState:'running',currentTime:100};
+    if(owner==='walking')peer.walking=true;
+    if(owner==='navigation')peer.navigation={kind:'station',target:{...peer.target}};
+    if(owner==='resumeNavigation')peer.resumeNavigation={kind:'station',target:{...peer.target}};
+    if(owner==='reservation')peer.routeReservation={token:7,serial:peer.serial};
+    if(owner==='yielding')peer.yielding=true;
+    const before=[observedActorState(f.actor),observedActorState(peer)],identity=[f.actor.node,f.actor.body,peer.node,peer.body];
+    const current=[peer.body.box,peer.node.children[1].box],first=box(254,214,362,286);
+    assert.ok(current.every(r=>!Scene.boundsOverlap(first,r,3)),'the currently painted peer is not the blocker');
+    assert.ok(Scene.boundsOverlap(first,box(362.11,219.73,462.21,303.58),3),'the independently translated known body endpoint intersects the original first mount');
+    assert.equal(f.api.arrive(f.event(f.actor,'station')),true,owner);
+    const cue=f.api.state().active[0];assert.deepEqual(plain(cue.anchor),{x:235,y:250},owner+' should use the next genuinely clear furniture surface');
+    // Translating from stale actor.position(50,78) instead of actual(40,70)
+    // would also block235; thus this checks the real transform coordinate frame.
+    assert.deepEqual([observedActorState(f.actor),observedActorState(peer)],before);
+    assert.deepEqual([f.actor.node,f.actor.body,peer.node,peer.body],identity);
+    assert.equal(cue.ownerId,f.actor.id);assert.equal(cue.serial,f.actor.serial);
+    f.step(700);assert.equal(f.api.state().active[0].phase,'playing');
+    f.step(701);assert.equal(f.api.state().finished,1);assert.equal(f.raf.size,0);f.api.destroy();
+  }
+});
+
+test('retargeted and released peer owners leave no endpoint ghost, while invalid projection never erases actual parts',()=>{
+  const cases=[
+    ['no owner',()=>{}],
+    ['expired reservation',p=>{p.routeReservation={token:8,serial:1};}],
+    ['zero reservation token',p=>{p.routeReservation={token:0,serial:2};}],
+    ['invalid current serial',p=>{p.serial=NaN;p.routeReservation={token:8,serial:NaN};}],
+    ['inert navigation',p=>{p.navigation={target:{...p.target}};}],
+    ['empty navigation kind',p=>{p.navigation={kind:' ',target:{...p.target}};}],
+    ['inert resume',p=>{p.resumeNavigation={target:{...p.target}};}],
+    ['truthy nonboolean yielding',p=>{p.yielding='false';}],
+    ['nonfinite endpoint with actual motion',p=>{p.motion={};p.target={x:NaN,y:40.9};}],
+    ['valid navigation overrides stale actor target',p=>{p.navigation={kind:'station',target:{x:60,y:75}};}],
+    ['invalid navigation cannot shadow valid resume',p=>{p.navigation={target:{...p.target}};p.resumeNavigation={kind:'station',target:{x:60,y:75}};}],
+    ['nonfinite navigation cannot shadow valid resume',p=>{p.navigation={kind:'station',target:{x:NaN,y:40.9}};p.resumeNavigation={kind:'station',target:{x:60,y:75}};}]
+  ];
+  for(const [name,configure]of cases){
+    const f=fixture({venue:'observatory'}),peer=movingPeerComposition(f);configure(peer);
+    assert.equal(f.api.arrive(f.event(f.actor,'station')),true,name);
+    assert.deepEqual(plain(f.api.state().active[0].anchor),{x:308,y:250},name+' must not reserve the stale target');
+    f.api.destroy();assert.equal(f.raf.size,0);
+  }
+  const f=fixture({venue:'observatory'}),peer=movingPeerComposition(f);
+  peer.navigation={kind:'station',target:{...peer.target}};
+  assert.equal(f.api.arrive(f.event(f.actor,'station')),true);assert.equal(f.api.state().active[0].anchor.x,235);
+  peer.navigation=null;peer.motion=null;peer.routeReservation=null;peer.resumeNavigation=null;peer.yielding=false;
+  f.api.update();assert.equal(f.api.state().active[0].anchor.x,235,'releasing a peer cannot relocate an already visible response');
+  f.step(2501);assert.equal(f.api.state().active.length,0);
+  // A later real identity at this observed endpoint gets a fresh geometry
+  // read. The first actor has left this harness; no two bodies are overlaid.
+  const retired=f.actor;f.actors.delete(retired.id);retired.node.remove();
+  const next=f.makeActor('codex:later-arrival','library');
+  next.position={...retired.position};next.target={...retired.target};next.node.style.transform=retired.node.style.transform;
+  next.body.box={...retired.body.box};next.node.children[1].box={...retired.node.children[1].box};
+  assert.equal(f.api.arrive(f.event(next,'station')),true);
+  assert.deepEqual(plain(f.api.state().active[0].anchor),{x:308,y:250},'the released peer has left no stored endpoint obstacle');
+  assert.equal(f.api.state().started,2);f.api.destroy();assert.equal(f.raf.size,0);
+  const g=fixture({venue:'observatory'}),actual=movingPeerComposition(g);
+  actual.motion={};actual.target={x:NaN,y:Infinity};
+  actual.node.style.transform='matrix(.65,0,0,.65,412.16,294.48)';
+  actual.body.box=box(362.11,219.73,462.21,303.58);
+  actual.node.children[1].box=box(340.66,305.53,483.66,351.03);
+  assert.equal(g.api.arrive(g.event(g.actor,'station')),true);
+  assert.deepEqual(plain(g.api.state().active[0].anchor),{x:235,y:250},'invalid endpoint cannot remove the real current body blocker');
+  g.api.destroy();
+});
+
+test('full-size moving child and actual room controls leave the added library surface clear by the original margin',()=>{
+  const f=fixture({zone:'bench'}),nativeBlocked=capturedFullBenchComposition(f);
+  // Reuse the captured full-mode seven local painted parts and real eight
+  // padded controls, translated only from the bench foot to the reading foot.
+  for(const part of f.actor.node.querySelectorAll('.character-body,.nameplate,.actor-title,.actor-relation,.actor-subline,.family-badge,.actor-keepsake')){
+    const r=part.box;part.box=box(r.left-1016,r.top,r.right-1016,r.bottom);
+  }
+  f.actor.session.activity='reading';f.actor.position={x:10,y:40.9};
+  f.actor.target={...f.actor.position,zone:'library',workZone:'library',area:'library-front'};
+  f.actor.node.style.transform='matrix(1,0,0,1,128,294.48)';
+  const peer=f.makeActor('codex:full-size-child','board');peer.session.parentId=f.actor.id;
+  peer.position={x:50,y:78};peer.target={x:32.2,y:46.1,zone:'board',workZone:'board',area:'board-left'};
+  peer.node.style.transform='matrix(1,0,0,1,640,561.6)';peer.motion={playState:'running',currentTime:50};
+  peer.navigation={kind:'station',target:{...peer.target}};
+  peer.body.box=box(563,446.6,717,575.6);peer.node.children[1].box=box(530,578.6,750,648.6);
+  const projected=[box(335.16,216.92,489.16,345.92),box(302.16,348.92,522.16,418.92)];
+  const all=[...nativeBlocked.filter((_,i)=>i===0||i>=8),...f.actor.node.querySelectorAll('.character-body,.nameplate,.actor-title,.actor-relation,.actor-subline,.family-badge,.actor-keepsake').map(p=>p.box),peer.body.box,peer.node.children[1].box,...projected];
+  for(const [x,y]of [[308,250],[235,250],[185,250],[235,145],[285,150],[185,145]])
+    assert.ok(all.some(r=>Scene.boundsOverlap(box(x-54,y-36,x+54,y+36),r,3)),'all original library mounts are actually reserved');
+  const clear=box(216,214,324,286);assert.ok(all.every(r=>!Scene.boundsOverlap(clear,r,3)),'new270 surface clears actual body, actual controls and known child endpoint');
+  const before=[observedActorState(f.actor),observedActorState(peer)];
+  assert.equal(f.api.arrive(f.event(f.actor,'station')),true);
+  assert.deepEqual(plain(f.api.state().active[0].anchor),{x:270,y:250});
+  assert.deepEqual(plain(f.api.state().active[0].bounds),{left:216,right:324,top:214,bottom:286});
+  assert.deepEqual([observedActorState(f.actor),observedActorState(peer)],before);
+  f.step(700);assert.equal(f.api.state().active[0].phase,'playing');f.step(701);assert.equal(f.api.state().finished,1);assert.equal(f.raf.size,0);f.api.destroy();
+});

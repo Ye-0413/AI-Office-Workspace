@@ -38,6 +38,7 @@
     'identity.restore': ['恢复自动名称', 'Restore automatic name'],
     'identity.parent': ['协助 {name}', 'Helping {name}'],
     'family.clonesSummary': ['分身 {active} 活跃 · 累计 {total}', '{active} active clones · {total} total'],
+    'family.clonesSummaryCompact': ['活跃 {active} · 历史 {total}', 'Active {active} · Total {total}'],
     'room.overview': ['全部项目 · {count} 个主 Agent', 'All projects · {count} main agents'],
     'room.showAll': ['另有 {count} 个主 Agent · 查看全部', '{count} more main agents · Show all'],
     'family.clonesHint': ['累计保留本次观察期间出现过的独立分身；活跃只统计当前有工作依据的分身。', 'Total retains distinct clones observed in this app session; active requires current work evidence.'],

@@ -8,6 +8,128 @@ app.setPath('userData',path.join(scratch,'profile'));app.disableHardwareAccelera
 let win;const errors=[],checks=[],wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const run=source=>win.webContents.executeJavaScript(source,true);
 const guard=setTimeout(()=>{console.error('Native gait fixture timed out');app.exit(1);},45000);
+// The original host-250ms predicate is retained as a raw phase observation.
+// Completion now has an explicit 500ms scheduling bound, followed by 31 exact
+// RAF samples within one stop-to-tail 1000ms bound; these are new tolerances.
+async function auditClosedStop() {
+  const layer = body.querySelector('.avatar-performance');
+  const exact = () => actor.dataset.locomotion === undefined
+    && Number(getComputedStyle(body.querySelector('.avatar-performance')).opacity) === 0
+    && Number(getComputedStyle(image).opacity) === 1;
+  // This must be the first style/animation observation after the host's 250ms
+  // wait. No preparatory RAF or clock read may change that initial sample.
+  const firstPredicate = exact();
+  const started = window.closedStopAt;
+  const first = { elapsedMs: performance.now() - started, exact: firstPredicate,
+    rig: Number(getComputedStyle(layer).opacity), bitmap: Number(getComputedStyle(image).opacity),
+    locomotion: actor.dataset.locomotion ?? null };
+  const completionDeadline = started + 500, tailDeadline = started + 1000;
+  const baseline = window.closedBaseline;
+  const originalRig = baseline.rig, originalProps = baseline.props, originalCSS = baseline.css;
+  let ownerRows = [], last = first;
+  function requireState(condition, label) {
+    if (!condition) throw Error('closed-stop ' + label + ': ' + JSON.stringify({ first, owners: ownerRows, last }));
+  }
+  requireState(first.locomotion === null, 'the original 250ms sample must already have no locomotion');
+  async function bounded(promise, deadline, label) {
+    const remaining = deadline - performance.now();
+    requireState(remaining > 0, label + ' exceeded its original deadline');
+    let timer;
+    try {
+      return await Promise.race([promise, new Promise((_, reject) => {
+        timer = setTimeout(() => reject(Error('closed-stop ' + label + ' deadline: '
+          + JSON.stringify({ first, owners: ownerRows, last }))), remaining);
+      })]);
+    } finally { clearTimeout(timer); }
+  }
+  function opacityOwners() {
+    return body.getAnimations({ subtree: true }).filter(animation => {
+      const effect = animation.effect;
+      return (effect?.target === layer || effect?.target === image)
+        && effect.getKeyframes().some(frame => frame.opacity !== undefined);
+    });
+  }
+  function easedProgress(unit) {
+    // Independent inversion of the production OUT cubic; no seek/finish/write.
+    let lo = 0, hi = 1;
+    for (let i = 0; i < 40; i++) {
+      const t = (lo + hi) / 2, v = 1 - t;
+      const x = 3 * v * v * t * .23 + 3 * v * t * t * .32 + t * t * t;
+      if (x < unit) lo = t; else hi = t;
+    }
+    return 1 - Math.pow(1 - (lo + hi) / 2, 3);
+  }
+  requireState(Number.isFinite(started), 'requires the original stop timestamp');
+  requireState(baseline.body === body && baseline.layer === layer && baseline.image === image
+    && originalRig === rig && body.querySelector('.ap-rig') === originalRig && originalCSS.length > 0,
+    'requires the actual pre-stop body, rig, bitmap and CSS clocks');
+  requireState(originalCSS.every(({ animation, time }) => animation.playState === 'paused' && Number.isFinite(time)),
+    'original work clocks must already be paused');
+  if (!firstPredicate) {
+    const owners = opacityOwners();
+    requireState(owners.length === 2 && owners.some(a => a.effect.target === layer)
+      && owners.some(a => a.effect.target === image), 'nonterminal alpha needs exactly the original layer/bitmap owner pair');
+    ownerRows = owners.map(animation => {
+      const timing = animation.effect.getTiming(), computed = animation.effect.getComputedTiming();
+      const frames = animation.effect.getKeyframes(), target = animation.effect.target;
+      requireState(typeof animation.animationName !== 'string' && timing.duration === 220 && timing.iterations === 1
+        && timing.delay === 0 && timing.endDelay === 0 && timing.direction === 'normal'
+        && ['cubic-bezier(.23,1,.32,1)', 'cubic-bezier(0.23,1,0.32,1)'].includes(timing.easing.replace(/\s/g, '')),
+        'owner must be the finite original 220ms OUT presence fade');
+      requireState(frames.length === 2 && frames[0].computedOffset === 0 && frames[1].computedOffset === 1
+        && frames.every(frame => frame.easing === 'linear' && Object.keys(frame).every(key =>
+          ['offset','computedOffset','easing','composite','opacity'].includes(key))), 'owner must animate only the two endpoint opacity keys');
+      const from = Number(frames[0].opacity), to = Number(frames[1].opacity);
+      requireState(target === layer ? from > .99 && from <= 1 && to === 0 : from >= 0 && from < .01 && to === 1,
+        'presence endpoints must retire the visible rig and restore its bitmap');
+      requireState(Number.isFinite(animation.currentTime) && animation.currentTime >= 0 && animation.currentTime < 220
+        && Number.isFinite(animation.startTime) && animation.playState === 'running', 'unfinished owner must have a live finite clock');
+      const progress = easedProgress(animation.currentTime / 220), alpha = Number(getComputedStyle(target).opacity);
+      requireState(Number.isFinite(computed.progress) && Math.abs(computed.progress - progress) < .000002
+        && Math.abs(alpha - (from + (to - from) * progress)) < .000002,
+        'painted alpha must match the independently eased real owner phase');
+      return { target: target === layer ? 'rig' : 'bitmap', currentTime: animation.currentTime,
+        startTime: animation.startTime, progress: computed.progress, from, to, alpha };
+    });
+    requireState(Math.abs(ownerRows[0].currentTime - ownerRows[1].currentTime) < .001
+      && Math.abs(ownerRows[0].startTime - ownerRows[1].startTime) < .001
+      && Math.abs(ownerRows[0].from + ownerRows[1].from - 1) < .000002
+      && Math.abs(first.rig + first.bitmap - 1) < .000002, 'the two real presence clocks and complementary alphas must agree');
+    const finished = owners.map(animation => animation.finished);
+    await bounded(Promise.all(finished), completionDeadline, 'natural original-owner completion');
+    requireState(owners.every((animation, index) => animation.finished === finished[index]
+      && animation.playState === 'finished' && animation.currentTime === 220), 'cancellation/replacement must not impersonate original-owner completion');
+  }
+  const completeAt = performance.now() - started;
+  requireState(completeAt <= 500 && exact(), 'natural completion must reach exact rig=0/bitmap=1 without locomotion by 500ms');
+  requireState(opacityOwners().length === 0, 'no replacement presence owner may remain');
+  const tail = await bounded(new Promise((resolve, reject) => {
+    const rows = [];
+    function tick() {
+      try {
+        last = { elapsedMs: performance.now() - started, rig: Number(getComputedStyle(layer).opacity),
+          bitmap: Number(getComputedStyle(image).opacity), locomotion: actor.dataset.locomotion ?? null };
+        requireState(last.elapsedMs <= 1000 && exact(), 'every real tail frame must remain at the exact endpoint');
+        requireState(actor.querySelector('.character-body') === body && body.querySelector('.avatar-performance') === layer
+          && body.querySelector('.ap-rig') === originalRig && body.querySelector('img') === image,
+          'body, rig and bitmap identity must survive closure');
+        requireState(originalProps.every(({ node, children }) => node.isConnected && node.childNodes.length === children.length
+          && children.every((child, i) => node.childNodes[i] === child)), 'current prop nodes must remain unchanged');
+        const animations = body.getAnimations({ subtree: true });
+        requireState(originalCSS.every(({ animation, time }) => animations.includes(animation)
+          && animation.playState === 'paused' && animation.currentTime === time), 'same paused CSS objects must not advance');
+        requireState(opacityOwners().length === 0, 'no late presence replacement is allowed');
+        rows.push(last);
+        if (rows.length === 31) resolve(rows); else requestAnimationFrame(tick);
+      } catch (error) { reject(error); }
+    }
+    requestAnimationFrame(tick);
+  }), tailDeadline, 'exact 31-RAF endpoint tail');
+  return { name: 'closed-stop original phase, natural presence completion and exact stable tail',
+    previousHostProbeMs: 250, naturalCompletionLimitMs: 500, completionAndTailLimitMs: 1000,
+    first, owners: ownerRows, completionElapsedMs: completeAt, tailFrames: tail.length,
+    lastElapsedMs: tail.at(-1).elapsedMs, cssClocks: originalCSS.length, sameBodyRigBitmapProps: true };
+}
 app.whenReady().then(async()=>{
   const renderer=pathToFileURL(path.resolve(__dirname,'../renderer')).href+'/';
   fs.writeFileSync(path.join(scratch,'fixture.html'),`<!doctype html><html><head><base href="${renderer}"><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="avatar-performance.css"><link rel="stylesheet" href="avatar-fallback.css"><link rel="stylesheet" href="family-appearance.css"><style>body{background:#665745}.actor{transform:translate(520px,460px) scale(2);z-index:10}.fixture-floor{position:absolute;left:100px;right:100px;top:580px;border-top:1px solid #bba274}.actor-button{pointer-events:none}</style></head><body><div class="fixture-floor"></div><div class="actor" id="walker"><button class="actor-button"><span class="character-body"><img data-asset="clawd-static-base.svg" src="../assets/avatars/clawd-static-base.svg"></span><span class="nameplate"><strong>踏云行者</strong><small>主 Agent · 活跃 0 · 累计 0</small></span></button><span class="actor-prop" data-carry="false">≡</span></div><script src="../lib/avatar-performance-model.js"></script><script src="../lib/walk-timing.js"></script><script src="avatar-performance.js"></script><script src="avatar-fallback.js"></script><script src="../lib/family-model.js"></script><script src="family-appearance.js"></script><script>window.actor=document.getElementById('walker');window.body=actor.querySelector('.character-body');window.image=body.querySelector('img');window.session={id:'codex:gait',provider:'codex',status:'active',activity:'coding',activeTools:1};window.truth=JSON.stringify(session);window.clocks=OfficeAvatarPerformanceModel.createClockRegistry({limit:4});window.controller=OfficeAvatarPerformance.create({actorNode:actor,body,session,clockRegistry:clocks});window.fallback=OfficeAvatarFallback.create({actorNode:actor,body,image});window.palette=OfficeFamily.createPaletteRegistry();palette.update([session.id]);window.family=OfficeFamilyAppearance.create({actorNode:actor,body,image});family.update({rootId:session.id,appearance:palette.forRoot(session.id)});controller.update(session,{now:0});window.sample=()=>({rig:Number(getComputedStyle(body.querySelector('.avatar-performance')).opacity),bitmap:Number(getComputedStyle(image).opacity),joints:[...body.querySelectorAll('.ap-upper,.ap-eyes,.ap-arm,.ap-foot')].map(n=>{const m=new DOMMatrixReadOnly(getComputedStyle(n).transform);return[m.a,m.b,m.c,m.d,m.e,m.f]}),feet:[...body.querySelectorAll('.ap-foot')].map(n=>{const m=new DOMMatrixReadOnly(getComputedStyle(n).transform);return[m.a,m.b,m.c,m.d,m.e,m.f]})});</script></body></html>`);
@@ -130,9 +252,20 @@ app.whenReady().then(async()=>{
   await run(`actor.dataset.walking='false';controller.update(session,{now:390});actor.querySelector('.actor-prop').dataset.carry='false';void 0`);await wait(230);
   checks.push('carrying keeps a stable wrist in real contact with its paper and leaves the painted hand visible');
   await run(`window.closedSession={...session,status:'closed',closed:true,activity:'idle',activeTools:0};actor.dataset.walking='true';controller.update(closedSession,{now:400,walking:true,departing:true});void 0`);await wait(250);
-  assert.equal(await run(`controller.plan.active===false&&controller.plan.reason==='closed'&&actor.dataset.locomotion==='true'&&Number(getComputedStyle(body.querySelector('.avatar-performance')).opacity)>.99`),true,'confirmed closure may still physically walk without fake work');
-  await run(`actor.dataset.walking='false';controller.update(closedSession,{now:500,departing:true});void 0`);await wait(250);
-  assert.equal(await run(`actor.dataset.locomotion===undefined&&Number(getComputedStyle(body.querySelector('.avatar-performance')).opacity)===0&&Number(getComputedStyle(image).opacity)===1`),true);
+  assert.equal(await run(`(()=>{
+    const passed=controller.plan.active===false&&controller.plan.reason==='closed'&&actor.dataset.locomotion==='true'&&Number(getComputedStyle(body.querySelector('.avatar-performance')).opacity)>.99;
+    // Capture only after the original walking predicate, before stop starts.
+    // No RAF/style/clock observation is inserted into its 250ms wait window.
+    window.closedBaseline={body:actor.querySelector('.character-body'),layer:body.querySelector('.avatar-performance'),
+      rig:body.querySelector('.ap-rig'),image:body.querySelector('img'),
+      props:[...body.querySelectorAll('.ap-props-back,.ap-props-front,.ap-props-transit')]
+        .map(node=>({node,children:[...node.childNodes]})),
+      css:body.getAnimations({subtree:true}).filter(a=>typeof a.animationName==='string')
+        .map(animation=>({animation,time:animation.currentTime}))};
+    return passed;
+  })()`),true,'confirmed closure may still physically walk without fake work');
+  await run(`window.closedStopAt=performance.now();actor.dataset.walking='false';controller.update(closedSession,{now:500,departing:true});void 0`);await wait(250);
+  checks.push(await run('(' + auditClosedStop.toString() + ')()'));
   checks.push('a closed helper walks truthfully, then freezes and hands off at its actual docking pose');
   for(const option of ['reducedMotion','lowPower','hidden']){
     await run(`actor.dataset.walking='true';controller.update(session,{now:600,walking:true});void 0`);await wait(50);

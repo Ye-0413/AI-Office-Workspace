@@ -1,6 +1,8 @@
 # AI Office Workspace · 小小工作室
 
-一个把真实 AI 活动变成房间日常的 macOS 桌面应用，为 5 英寸、1280 × 720 副屏设计。当前版本 **0.18.0**。
+一个把真实 AI 活动变成房间日常的 macOS 桌面应用，为 5 英寸、1280 × 720 副屏设计。当前版本 **0.19.0**。
+
+密集场景使用更大的单行昵称，主 Agent 名字下常驻活跃／历史分身数；名牌、家族角标与纪念物仍在原固定范围内。 家具反馈同时避开移动角色的已知终点，减少刚出现就被返回的伙伴打断。
 
 [![Office quality](https://github.com/Ye-0413/AI-Office-Workspace/actions/workflows/office-quality.yml/badge.svg)](https://github.com/Ye-0413/AI-Office-Workspace/actions/workflows/office-quality.yml)
 

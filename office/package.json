@@ -1,6 +1,6 @@
 {
   "name": "ai-mini-office",
-  "version": "0.18.0",
+  "version": "0.19.0",
   "description": "A tiny living office for observing local AI agent sessions.",
   "main": "main.cjs",
   "type": "commonjs",

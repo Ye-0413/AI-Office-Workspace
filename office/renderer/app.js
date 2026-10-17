@@ -17,6 +17,7 @@
   const world = $('world');
   const actorsLayer = $('actors');
   const actors = new Map();
+  const NAMEPLATE_METRICS_VERSION = 2;
   const archivedTurns = new Map();
   const settingsDefaults = { rain: false, night: false, sceneTime: 'auto', sceneVenue: 'workshop', sceneTheme: 'auto', sceneWeather: 'auto', agentScale: 1, reducedMotion: false, lowPower: false, idleVisitor: true, sound: false, selectedProject: '', language: 'zh' };
   let settings = { ...settingsDefaults };
@@ -119,6 +120,32 @@
     if (className) node.className = className;
     if (content != null) text(node, content);
     return node;
+  }
+  function nameplateMode(count) { return count >= 12 ? 'compact' : 'full'; }
+  function createActorPlate(session) {
+    // Both the live body and its measurement probe use this exact structure.
+    const plate = element('span', 'nameplate');
+    const title = element('span', 'actor-title');
+    const relation = element('span', 'actor-relation');
+    const subline = element('span', 'actor-subline');
+    const provider = element('span', 'actor-provider');
+    const state = element('span', 'actor-state');
+    subline.append(provider, state);
+    const keepsake = element('span', 'actor-keepsake', keepsakeIcon(session));
+    keepsake.setAttribute('aria-hidden', 'true');
+    plate.append(title, relation, subline, keepsake);
+    return { plate, title, relation, subline, provider, state, keepsake };
+  }
+  function nameplateRelation(session, parent, mode = 'full') {
+    if (parent) return I18n.t(language, 'identity.parent', { name: displayName(parent) });
+    if (session.parentId) return tr('子任务 · 父任务未在场');
+    return I18n.t(language, mode === 'compact' ? 'family.clonesSummaryCompact' : 'family.clonesSummary', cloneLedger.stats(session.id));
+  }
+  function nameplateFamilyBadgeText(session) {
+    const family = familyGraph.info.get(session.id);
+    const rootId = cloneLedger.rootFor(session.id) || (family ? family.rootId : session.id);
+    const code = String(paletteRegistry.forRoot(rootId).badge || '').replace(/[^0-9]/g, '').slice(0, 8);
+    return (session.parentId ? '↳' : '') + code;
   }
   function showError(error) {
     const message = error && error.message ? error.message : String(error || '操作未完成');
@@ -469,28 +496,32 @@
     const liveIds = new Set(sessions.map(session => session.id));
     for (const id of actorFootprints.keys()) if (!liveIds.has(id) && !actors.has(id)) actorFootprints.delete(id);
     let grew = false;
+    const mode = office.dataset.nameplateMode || 'full';
     for (const session of sessions) {
       const parent = familyGraph.byId.get(session.parentId) || actors.get(session.parentId)?.session;
-      const relation = parent ? I18n.t(language, 'identity.parent', { name: displayName(parent) })
-        : session.parentId ? tr('子任务 · 父任务未在场') : cloneSummary(session);
+      const relation = nameplateRelation(session, parent, mode);
       const labels = [...new Set([tr(Scene.activitySpec(session).label), tr(Director.plan(session, { now: Date.now(), language }).label),
         tr('会话已结束'), tr('这一轮已歇下'), tr(session.parentId ? '结束分身' : '等分身归位'),
         actors.get(session.id)?.state.textContent].filter(Boolean))];
       const name = displayName(session), provider = tr(session.provider === 'claude-code' ? 'Claude' : Scene.providerName(session.provider));
-      const key = JSON.stringify([Boolean(session.parentId), language, name, relation, provider, labels]);
+      const badgeText = nameplateFamilyBadgeText(session);
+      const key = JSON.stringify([NAMEPLATE_METRICS_VERSION, mode, Boolean(session.parentId), language, name, relation, provider, badgeText, labels]);
       let footprint = footprintCache.get(key);
       if (!footprint) {
         // Measure the same CSS and text as the real plate before choosing a
         // page. Artwork stays inside the fixed body canvas; no sprite sampling.
         const node = element('div', 'actor');
         node.dataset.helper = String(Boolean(session.parentId)); node.dataset.hasFamily = 'true'; node.dataset.selected = 'true';
+        node.dataset.error = String(session.activity === 'error'); node.dataset.attention = String(Scene.needsAttention(session));
+        node.dataset.stale = String(Boolean(Scene.activitySpec(session).stale));
         node.style.cssText = 'visibility:hidden;pointer-events:none;transform:translate3d(0,0,0)';
-        const button = element('button', 'actor-button'), body = element('span', 'character-body'), plate = element('span', 'nameplate');
-        const subline = element('span', 'actor-subline'), state = element('span', 'actor-state');
-        const providerNode = element('span', 'actor-provider', provider); providerNode.dataset.provider = String(session.provider).toLowerCase();
-        subline.append(providerNode, state);
-        plate.append(element('span','actor-title',name), element('span','actor-relation',relation), subline,
-          element('span','actor-keepsake',keepsakeIcon(session)), element('span','family-badge','88'));
+        const button = element('button', 'actor-button'), body = element('span', 'character-body');
+        const { plate, title, relation: relationNode, subline, provider: providerNode, state } = createActorPlate(session);
+        title.textContent = name; relationNode.textContent = relation;
+        providerNode.textContent = provider; providerNode.dataset.provider = String(session.provider).toLowerCase();
+        const badge = element('span', 'family-badge', badgeText);
+        badge.dataset.helper = String(Boolean(session.parentId)); badge.setAttribute('aria-hidden', 'true');
+        plate.append(badge);
         button.append(body, plate); node.append(button); actorsLayer.append(node);
         const origin = node.getBoundingClientRect();
         footprint = { left: 0, right: 0, top: 0, bottom: 0 };
@@ -498,6 +529,9 @@
           state.textContent = label;
           for (const part of [body, plate, ...plate.children, ...subline.children]) {
             const rect = part.getBoundingClientRect();
+            // display:none descendants have a viewport-zero rect, not a
+            // coordinate relative to this hidden-but-measurable world probe.
+            if (!(rect.width > 0 || rect.height > 0)) continue;
             footprint.left = Math.max(footprint.left, (origin.left - rect.left) / frameScale);
             footprint.right = Math.max(footprint.right, (rect.right - origin.left) / frameScale);
             footprint.top = Math.max(footprint.top, (origin.top - rect.top) / frameScale);
@@ -1299,16 +1333,7 @@
     image.alt = '';
     image.draggable = false;
     body.append(image);
-    const plate = element('span', 'nameplate');
-    const title = element('span', 'actor-title');
-    const relation = element('span', 'actor-relation');
-    const subline = element('span', 'actor-subline');
-    const provider = element('span', 'actor-provider');
-    const state = element('span', 'actor-state');
-    subline.append(provider, state);
-    const keepsake = element('span', 'actor-keepsake', keepsakeIcon(session));
-    keepsake.setAttribute('aria-hidden', 'true');
-    plate.append(title, relation, subline, keepsake);
+    const { plate, title, relation, provider, state } = createActorPlate(session);
     const mark = element('span', 'actor-mark', '!');
     mark.setAttribute('aria-hidden', 'true');
     const bubble = element('span', 'actor-bubble');
@@ -1377,6 +1402,7 @@
     actor.node.dataset.selected = String(session.id === selectedSession);
     actor.provider.dataset.provider = String(session.provider).toLowerCase();
     actor.title.textContent = displayName(session);
+    actor.title.title = actor.title.textContent;
     const family = familyGraph.info.get(session.id);
     const parent = familyGraph.byId.get(session.parentId) || actors.get(session.parentId)?.session;
     const rootId = cloneLedger.rootFor(session.id) || (family ? family.rootId : session.id);
@@ -1388,8 +1414,9 @@
     actor.node.dataset.hasFamily = 'true';
     actor.node.dataset.activeClones = String(counts.active);
     actor.node.dataset.totalClones = String(counts.total);
-    actor.relation.textContent = parent ? I18n.t(language,'identity.parent',{name:displayName(parent)}) : session.parentId ? tr('子任务 · 父任务未在场') : cloneSummary(session);
-    actor.relation.title = session.parentId ? actor.relation.textContent : I18n.t(language, 'family.clonesHint');
+    actor.relation.textContent = nameplateRelation(session, parent, office.dataset.nameplateMode || 'full');
+    const fullRelation = nameplateRelation(session, parent);
+    actor.relation.title = fullRelation + (session.parentId ? '' : ' · ' + I18n.t(language, 'family.clonesHint'));
     text(actor.provider, session.provider === 'claude-code' ? 'Claude' : Scene.providerName(session.provider));
     const lifecycle = lifecycleCaption(actor);
     if (lifecycle) text(actor.state, lifecycle);
@@ -1397,7 +1424,7 @@
     else if (!actor.motion && !actor.yielding && !trafficWaiters.has(actor.id) && !actor.completing && !actor.departing && !cloneBusy(actor)) text(actor.state, spec.label);
     if (actor.yielding) transitCaption(actor, true);
     if (trafficWaiters.has(actor.id)) transitCaption(actor);
-    actor.button.setAttribute('aria-label', displayName(session) + ' · ' + Scene.providerName(session.provider) + ' · ' + String(session.title || '未命名任务') + '，' + tr(spec.label) + '。' + tr('单击查看详情，双击打招呼。'));
+    actor.button.setAttribute('aria-label', displayName(session) + ' · ' + Scene.providerName(session.provider) + ' · ' + String(session.title || '未命名任务') + ' · ' + fullRelation + '，' + tr(spec.label) + '。' + tr('单击查看详情，双击打招呼。'));
     actor.button.setAttribute('aria-pressed', String(session.id === selectedSession));
   }
   async function react(actor) {
@@ -1510,6 +1537,9 @@
     for (const actor of [...actors.values()]) if (!visibleIds.has(actor.id)) {
       const next = sessionMap.get(actor.id);
       actor.session = next || actor.session; actor.spec = Scene.activitySpec(actor.session);
+      // A retained real ancestor still shows current ledger facts and language.
+      // Refresh only its label; its physical holding/exit owner is unchanged.
+      updateActorLabel(actor);
       const newDescendant = !actor.helper && actor.departing && currentPage.visible.some(session => cloneLedger.parentChain(session.id).includes(actor.id));
       if (newDescendant) {
         // A late real descendant extends the visual ancestor anchor; it does
@@ -1741,6 +1771,10 @@
     const bodyIds = new Set(presentBodies.map(session => session.id));
     const retiringBodies = [...actors.values()].filter(actor => !bodyIds.has(actor.id) && !restedClones.has(actor.id)).map(actor => snapshot.sessions.find(session => session.id === actor.id) || actor.session);
     const layoutBodies = presentBodies.concat(retiringBodies);
+    // Presentation is decided from observed cast, including actual retirees,
+    // before either the real plate or its probe is measured. Never key this
+    // mode to a solver's output scale: that would feed font changes back into fit.
+    office.dataset.nameplateMode = nameplateMode(layoutBodies.length);
     measureActorFootprints(layoutBodies);
     if (transferOwner && !transferValid(transferOwner, layoutBodies)) revokeTransfer('snapshot-or-geometry', null, false);
     if (transferOwner) currentPage = { ...currentPage, visible: presentBodies };
