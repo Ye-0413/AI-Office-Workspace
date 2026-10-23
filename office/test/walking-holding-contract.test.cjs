@@ -11,7 +11,7 @@ function production(name) {
 }
 function harness() {
   const actors = new Map(), snapshot = { sessions: [] };
-  const context = { actors, snapshot, attendance: { present: [] }, settings: {}, actorFootprints: new Map(), CLOCK_RESERVED: [], seats: new Map(), uniformScale: .4, currentPage: {},
+  const context = { actors, snapshot, deferredPhysicalScale: null, attendance: { present: [] }, settings: {}, actorFootprints: new Map(), CLOCK_RESERVED: [], seats: new Map(), uniformScale: .4, currentPage: {},
     pinnedDockIds: () => new Set(), closingDockPairs: () => new Map(), openingDockPairs: () => new Map(),
     currentPosition: a => a.position, canYieldAtStation: () => false, endpointParent: () => null,
     Scene: require('../lib/scene-model.js'), Clones: { isActive: s => s.status === 'active' && s.activity !== 'idle' } };

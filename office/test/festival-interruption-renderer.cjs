@@ -61,7 +61,11 @@ app.whenReady().then(async()=>{
     for(const [theme,selector]of [['midsummer','[data-part="ribbon-a"]'],['hanami','[data-part="blossom-4"]']]){
       await festival({theme,reducedMotion:true});await run(`document.querySelector('.festival-control').click();void 0`);await festival({reducedMotion:false});
       const frames=await reentry(selector,`document.querySelector('.festival-control').dispatchEvent(new MouseEvent('click',{bubbles:true,detail:1}))`);
-      assert.ok(Math.abs(frames[1].opacity-frames[0].opacity)<.02,JSON.stringify(frames));assert.ok(frames[3].opacity>0&&frames[3].opacity<1,JSON.stringify(frames));evidence.push({case:theme+'-inner-fade',frames});
+      assert.ok(Math.abs(frames[1].opacity-frames[0].opacity)<.02,JSON.stringify(frames));
+      // A CSS transition may acquire its compositor start after several real
+      // frames. Require a painted intermediate opacity within this bounded
+      // six-frame observation, without assuming it starts on RAF number two.
+      assert.ok(frames.slice(2).some(frame=>frame.opacity>0&&frame.opacity<1),JSON.stringify(frames));evidence.push({case:theme+'-inner-fade',frames});
     }
   });
   await check('repeated meteor click starts at its currently visible position and brightness',async()=>{

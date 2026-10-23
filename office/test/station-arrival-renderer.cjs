@@ -15,7 +15,11 @@ const run=code=>win.webContents.executeJavaScript(code,true);
 function task(id,activity,parentId){return{id:'codex:station-'+id,provider:'codex',sessionId:'station-'+id,parentId,status:'active',activity,turnId:'observed-turn-one',activeTools:1,lastEventAt:Date.now(),events:[],projectPath:'/fixture/station-arrival'};}
 const currentSnapshot=()=>({...snapshot,windowVisibility:windowVisibility?.snapshot()||{available:false,hidden:null}});
 function send(sessions){snapshot={...snapshot,now:Date.now(),sessions};win.webContents.send('office:snapshot',currentSnapshot());}
-async function until(code,label,ms=28000){const end=Date.now()+ms;while(Date.now()<end){if(await run(code))return;await wait(20);}throw Error(label);}
+async function stationDiagnostic(){
+ try{return await run(`({stationState:window.fixtureStationArrivalState?.()||null,actors:[...document.querySelectorAll('.actor')].map(node=>({id:node.dataset.sessionId,dataset:{...node.dataset}})),events:(window.stationEvents||[]).slice(-8),traceCount:window.stationTraces?.length||0})`);}
+ catch(error){return{unavailable:String(error.message||error)};}
+}
+async function until(code,label,ms=28000){const end=Date.now()+ms;while(Date.now()<end){if(errors.length)throw Error(label+': renderer errors: '+JSON.stringify({errors,diagnostic:await stationDiagnostic()}));if(await run(code))return;await wait(20);}throw Error(label+': '+JSON.stringify(await stationDiagnostic()));}
 const actor=id=>`document.querySelector('.actor[data-session-id="${id}"]')`;
 const settled=id=>`(()=>{const n=${actor(id)};return n&&getComputedStyle(n).visibility!=='hidden'&&n.dataset.walking!=='true'&&!['moving','queued','yielding','waiting-space'].includes(n.dataset.traffic)})()`;
 async function control(id,value){await run(`(()=>{const n=document.getElementById(${JSON.stringify(id)});if(!n)throw Error('Missing actual control '+${JSON.stringify(id)});${typeof value==='boolean'?'n.checked='+String(value):'n.value='+JSON.stringify(String(value))};n.dispatchEvent(new Event('change',{bubbles:true}));})()`);}
@@ -143,11 +147,27 @@ app.whenReady().then(async()=>{
  });
  win.webContents.on('console-message',detail=>{if(detail.level==='error')errors.push(detail.message);});
  win.webContents.on('render-process-gone',(_,detail)=>errors.push('renderer gone: '+detail.reason));
+ await win.loadURL('about:blank');
+ win.webContents.debugger.attach('1.3');await win.webContents.debugger.sendCommand('Page.enable');
+ await win.webContents.debugger.sendCommand('Page.addScriptToEvaluateOnNewDocument',{source:`(()=>{
+  let api;
+  Object.defineProperty(window,'OfficeStationArrival',{
+   configurable:true,get:()=>api,
+   set:value=>{api=Object.freeze({...value,create(...args){
+    const controller=Reflect.apply(value.create,value,args);
+    // Read the same production controller; do not wrap its methods, replace
+    // its arguments, or change any arrival/update result or timing.
+    window.fixtureStationArrivalState=()=>controller.state();
+    return controller;
+   }});}
+  });
+ })();`});
  await win.loadFile(path.join(__dirname,'../renderer/index.html'));
  // The real main process also includes native evidence in its existing 2s
  // snapshot heartbeat, backing up an omitted platform show/hide notification.
  heartbeat=setInterval(()=>{if(win&&!win.isDestroyed())win.webContents.send('office:snapshot',currentSnapshot());},2000);
- win.webContents.debugger.attach('1.3');await win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]});
+ await win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]});
+ assert.equal(await run('typeof window.fixtureStationArrivalState'), 'function','read-only production station controller diagnostics are attached');
  await run('('+installStationAudit.toString()+')()');await run('('+installAudit.toString()+')()');
  let main=task('main','reading');const programs=[];
  await run(`crowdAudit.begin('real main arrival and all three venue work endpoints',${JSON.stringify([main.id])},[])`);
@@ -253,6 +273,7 @@ app.whenReady().then(async()=>{
  assert.deepEqual(errors,[]);console.log(JSON.stringify({ok:true,scope:'production-actual-station-arrival',checks,errors}));
 }).catch(async error=>{
  console.error(error);process.exitCode=1;
+ try{const geometry=await run(`(()=>{const world=document.getElementById('world').getBoundingClientRect(),factor=world.width/1280;return [...document.querySelectorAll('.actor')].map(node=>{const m=new DOMMatrixReadOnly(getComputedStyle(node).transform),scale=Math.hypot(m.m11,m.m12),foot={x:world.left+m.m41*factor,y:world.top+m.m42*factor},parts=['.character-body','.nameplate'].map(selector=>node.querySelector(selector).getBoundingClientRect());return{id:node.dataset.sessionId,x:m.m41/12.8,y:m.m42/7.2,scale,dataset:{...node.dataset},footprint:{left:Math.ceil((foot.x-Math.min(...parts.map(r=>r.left)))/factor/scale)+6,right:Math.ceil((Math.max(...parts.map(r=>r.right))-foot.x)/factor/scale)+6,top:Math.ceil((foot.y-Math.min(...parts.map(r=>r.top)))/factor/scale)+6,bottom:Math.ceil((Math.max(...parts.map(r=>r.bottom))-foot.y)/factor/scale)+6}};});})()`);console.error(JSON.stringify({settings,sessions:snapshot.sessions,geometry}));}catch(captureError){console.error('geometry unavailable: '+captureError.message);}
  const directory=process.env.MINI_OFFICE_PREVIEW_DIR||path.resolve(__dirname,'../../work/station-arrival-failure');fs.mkdirSync(directory,{recursive:true});
- try{fs.writeFileSync(path.join(directory,'failure.json'),JSON.stringify({error:String(error.stack||error),checks,errors,nativeLatency,nativeLatencies,nativeWindow:win&&!win.isDestroyed()?{minimized:win.isMinimized(),visible:win.isVisible()}:null,rendererVisibility:await run(`({documentHidden:document.hidden,effectiveHidden:document.getElementById('office').dataset.hidden,props:document.querySelectorAll('.station-arrival').length})`),traces:await run('window.stationTraces||[]'),events:await run('window.stationEvents||[]')},null,2));fs.writeFileSync(path.join(directory,'failure.png'),(await win.webContents.capturePage()).toPNG());}catch(captureError){console.error('bounded failure capture unavailable: '+captureError.message);}
+ try{fs.writeFileSync(path.join(directory,'failure.json'),JSON.stringify({error:String(error.stack||error),checks,errors,nativeLatency,nativeLatencies,nativeWindow:win&&!win.isDestroyed()?{minimized:win.isMinimized(),visible:win.isVisible()}:null,stationDiagnostic:await stationDiagnostic(),rendererVisibility:await run(`({documentHidden:document.hidden,effectiveHidden:document.getElementById('office').dataset.hidden,props:document.querySelectorAll('.station-arrival').length})`),traces:await run('window.stationTraces||[]'),events:await run('window.stationEvents||[]')},null,2));fs.writeFileSync(path.join(directory,'failure.png'),(await win.webContents.capturePage()).toPNG());}catch(captureError){console.error('bounded failure capture unavailable: '+captureError.message);}
 }).finally(()=>{clearTimeout(guard);clearInterval(heartbeat);windowVisibility?.dispose();win?.destroy();fs.rmSync(profile,{recursive:true,force:true});app.exit(process.exitCode||0);});

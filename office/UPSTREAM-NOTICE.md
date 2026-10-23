@@ -2,6 +2,42 @@
 
 This project includes third-party materials.
 
+## CC Switch session usage monitoring
+
+The local token importer and parsers in `lib/session-usage-*.cjs` adapt
+monitoring mechanisms from CC Switch by Jason Young:
+
+- Source: https://github.com/farion1231/cc-switch
+- Inspected revision: `03707c400dc4bdd16c687e712d818c4629175351`
+- Reference modules: `src-tauri/src/services/session_usage.rs`,
+  `session_usage_codex.rs`, and `src/hooks/useUsageAutoRefresh.ts`.
+- Adaptations include byte checkpoints, boundary fingerprints, atomic ledger
+  updates, native request deduplication, cumulative token accounting and
+  foreground-aware refresh. The live Codex observer also checks its byte
+  boundary for in-place log rewrites.
+
++MIT License
+
+Copyright (c) 2025 Jason Young
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
 ## Fluent Emoji palette and paintbrush
 
 The palette and paintbrush embedded in `assets/svg/clawd-designing.svg` are

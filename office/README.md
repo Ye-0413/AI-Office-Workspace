@@ -2,7 +2,9 @@
 
 A local macOS playground for watching independent AI sessions inhabit a tiny office. Designed for a five-inch 1280×720 secondary display.
 
-Version 0.22 keeps fitted body sizes steady until an explicit size/refit request or a genuinely empty room. Chinese nicknames are 155 complete mythological names from the Shan Hai Jing; English nicknames are short single words. Three new pair choreographies bring the social library to twelve. Active session families survive history-capacity pressure, and passive metadata cannot break an existing in-process usage interval.
+Version 0.22 keeps the selected Agent size fixed as the room gets busier. Clone artwork is 80% of its main Agent's size; identities that cannot safely enter wait in the roster. Local session accounting now covers seven AI tools, with Daily Token and Weekly usage on the homepage. Supported OpenCode and MiMo questions can receive an explicit manual answer through their native question API. Chinese nicknames remain 155 complete mythological names from the Shan Hai Jing, and the social library retains twelve pair choreographies. Active session families survive history-capacity pressure, and passive metadata cannot break an existing in-process usage interval.
+
+Monitoring and size behavior last checked against source: **2026-10-23**. Implementation details and coverage boundaries: [local monitoring guide](docs/monitoring.md).
 
 ## 当前动画展示
 
@@ -32,29 +34,43 @@ Version 0.22 keeps fitted body sizes steady until an explicit size/refit request
 
 每个当前主 Agent 家族有独立的身体颜色，分身使用同色系；名牌保留组号和真实父子关系，超过八个同时出现的家族时可用组号继续辨识。中文昵称直接使用《山海经》中的 155 个二至四字神话名字，包含诸犍、英招、九凤、烛九阴等；英文为四至五个字母的独立单词。昵称只影响工作室显示，不改原始会话。
 
-家族染色后，手心使用同色系的较深色，手部保留清晰细边，眼睛和工作道具维持自身颜色。所有项目、主 Agent 与分身同时站在同一个视觉平面，身体、名牌使用相同尺寸，不按家族深度缩小、不分页隐藏。旧版保存的项目筛选不会隐藏其它项目的当前角色。
+家族染色后，手心使用同色系的较深色，手部保留清晰细边，眼睛和工作道具维持自身颜色。已入场角色站在同一个视觉平面；主 Agent 保持完整身体尺寸，直接和嵌套分身的可见身体统一为主身的 80%，不会再随家族深度逐级缩小。主身可见身体沿用围绕脚点的 1.5 倍呈现，分身为 1.2 倍；静止图片、关节动画、备用身体与随身工作道具使用一致比例。名牌沿用完整的 220×63px 包络和 24px 名称，不因人数切换紧凑样式；分身的保守占位包络仍按主身预留，避免放大可通过空间。旧版保存的项目筛选不会隐藏其它项目的当前会话身份。
 
-「房间偏好 → Agent 大小」为 65%–135% 的偏好值。人数较多时全体等比例适配，并在页脚显示实际比例；适配后保持大小，人数减少、状态刷新或走位结束不会再自动放大。手动移动大小滑块或点击「重新适配」才重新尝试更大尺寸；真正空房后开始新的适配周期。所有角色与名牌的完整包络必须同时放得下。脚底而非角色画布下缘锚定地面，持续约 1.7 秒的真实功能变化会安排身体走向相应家具区域，短暂工具切换先合并。缩放和换路均从当前实际位置续接；原地等候、协作让路与最多四条并行路线共用完整包络校验。普通心跳和场景切换保留原身体、图片、关节动画与已累计的播放时间。 极密的百人同屏会明显缩小角色，当前几何容纳能力不代表五英寸屏幕的百人名牌可读性；更宽敞的布局仍在打磨。
+「房间偏好 → Agent 大小」为 65%–135% 的手动偏好值。人数增加、减少、空房、普通状态刷新和窗口尺寸变化都不会改写它；「重新适配」按当前偏好重试空间分配，不会自动采用更小比例。布局优先保留已入场身体，再以同一固定尺寸验证新角色的身体、名牌与真实行路包络。空间不足的身份留在名单中，名单、人数提示与详情位置明确显示「等待空位」；它们不会被伪装成已站到家具旁，也不会因人数增加而把全员缩小。较大手动尺寸会使用经过包络校验的门厅接近点，65% 与 135% 均保留实际入场路径。可同时入场的人数仍取决于当前尺寸、功能区与安全通道，不再承诺百人身体同时挤进房间。
+
+脚底而非角色画布下缘锚定地面，持续约 1.7 秒的真实功能变化会安排身体走向相应家具区域，短暂工具切换先合并。手动尺寸变化与换路从当前实际位置续接；原地等候、协作让路与最多四条并行路线共用完整包络校验。普通心跳和场景切换保留原身体、图片、关节动画与已累计的播放时间。
 
 只有主 Agent 的身体从门口走入；新分身在已观察到的实际父级位置凝聚，再真实走向工作区，归位也回到实际父级。分身烟雾与光环持续 900 毫秒，凝聚阶段后才起步，走回父级后才吸收。已入场身体不会因为交通阻塞而隐身；待入场数量会明确显示。已完成分身保留底层开放会话，后续收到明确活跃但尚未分类的活动也会重新显现，不会被“工作种类未知”误藏。
 
-主 Agent 重新活跃会撤销旧的等分身离场请求；分身归位期间的新工作会保留原关节、道具和动画进度。切换语言造成的名牌增长和调整尺寸只取消过时路线，不截断仍在进行的回收。外部角色图片加载失败时，原创备用身体在相同关节与坐标下继续显示；后续真实状态刷新会有限重试，图片恢复通过短透明度过渡衔接。备用身体不依赖失效图片，也不改变观察到的任务状态。
+主 Agent 重新活跃会撤销旧的等分身离场请求；分身归位期间的新工作会保留原关节、道具和动画进度。切换语言造成的名牌增长只取消过时路线，不截断仍在进行的回收。分身凝聚、返回或吸收期间调整尺寸，会先保存设置并显示等待提示，保持原安全尺寸，等该过程完成后再按新尺寸验证入场；仅因尺寸调整重新入场不会重复触发工作区反馈。外部角色图片加载失败时，原创备用身体在相同关节与坐标下继续显示；后续真实状态刷新会有限重试，图片恢复通过短透明度过渡衔接。备用身体不依赖失效图片，也不改变观察到的任务状态。
 
 多人确认退场时，布局先验证当前身体的实际离场路线；已有共同尺寸能安全完成时，会保持该尺寸，等身体真正走到门口后释放位置，保留适配后的稳定尺寸。新工作、新分身、语言和尺寸变化都会保留原身体并重验剩余路线。分身出现、归返、吸收、等分身和主 Agent 离场文案随界面语言同步更新。
 
-已经停稳等分身的父 Agent 会保留实际脚点；其他伙伴换功能区时，布局不会安排它执行实际不存在的换座。只有本轮确实观察到该身份恢复活动且回到当前在场名单，才解除此约束。首次拦截正在退场的父身仍会让它从实际位置走回安全停靠点，最后一个分身归位后也仍能按真实路线走出门。已验证的一组十二位主身加一位规划分身可以在出发和归位阶段保持全员 40% 尺寸；其它功能组合仍可能需要缩小，这不代表任意十三人组合均达到相同可读性。
+已经停稳等分身的父 Agent 会保留实际脚点；其他伙伴换功能区时，布局不会安排它执行实际不存在的换座。只有本轮确实观察到该身份恢复活动且回到当前在场名单，才解除此约束。首次拦截正在退场的父身仍会让它从实际位置走回安全停靠点，最后一个分身归位后也仍能按真实路线走出门。旧版十三人全体缩至 40% 的适配结果不再作为当前入场策略；当前以用户选定尺寸验证实际身体，容纳不下的身份等候空位。
 
-在已经验证的十三人布局中，两位伙伴互换功能区时，会先认领固定实际工位并保留其余合法旧席，再验证有限的临时让路方案。角色先真实走到空闲位置，另一位走到新工位，前者再走到最终工位；每段都重新申请原行路预约，并等待真实让路者归位。只有实际到达最终功能区才产生工位反馈。新活动、尺寸、语言、分身或可见性变化会撤销旧方案，从实际脚点重新协调。
+已入场伙伴互换功能区时，会先认领固定实际工位并保留其余合法旧席，再验证有限的临时让路方案。角色先真实走到空闲位置，另一位走到新工位，前者再走到最终工位；每段都重新申请原行路预约，并等待真实让路者归位。只有实际到达最终功能区才产生工位反馈。新活动、尺寸、语言、分身或可见性变化会撤销旧方案，从实际脚点重新协调。
 
 背墙显示醒目的香港时间和「今日活跃 Agent」，按香港自然日对实际观察到有活动的主 Agent、分身分别去重；同一身份执行多轮只计一次。统计保存在本机，重启后保留，香港午夜开始新一天。它统计应用观察到的活动，不会回扫整天历史，也不代表所有打开的聊天窗口；纯元信息、装饰访客与未被接受的事件不计入。磁盘只保存日期与哈希身份，不保存任务内容，最多保留十四天。
 
+## Token、会话监测与手动问答
+
+首页统计同时显示 **Daily Token／今日 Token** 和 **Weekly usage／本周用量**。今日按香港自然日，本周按香港周一至周日统计全部本机项目；数值使用 M、B、T，分别代表百万、十亿和万亿。小于一百万时保留有意义的 M 小数；键盘聚焦统计区可查看准确计数、日期范围、来源工具与导入状态。历史首次导入会分批进行，尚未读完或发生读取错误时会明确提示不完整，不把缺失记录当成零用量。
+
+Token 覆盖 **Codex、Claude Code、Gemini CLI、Pi、OMP、Kimi Code 与 OpenCode** 的已适配本机会话格式。它复用 CC Switch 的检查点、文件指纹、原生请求去重和累计用量核对思路，保存在独立的 `usage-history/tokens.sqlite3`。历史 Token 可以在应用关闭后补导入，历史活动时长不会因此补算，旧身份也不会重新进入房间。使用记录中的 Token 概览支持相同的日期、工具与主／分身筛选；现有 CSV 导出仍只导出已观测活动。显示的是日志报告的 Token，不推算费用、余额或订阅额度。
+
+实时会话继续使用既有 hooks／插件与 Codex 只读日志。新增 Gemini CLI、Pi、OMP 的只读会话日志补充，只发布观察器启动后且仍新鲜的真实用户、工具和明确结束边界；近期 hooks 保留优先权。Kimi 和 OpenCode 的新增本地读取用于用量统计，其实时活动继续由已有 hooks／插件提供。每个工具的身份、父子关系、调用 ID、等待与结束证据分别处理；一个工具的导入错误不会把其它健康观察器标成故障。
+
+右上角的 **Agent 问题** 入口复用 Clawd on Desk 的请求级手动问答机制。目前可在工作室回答 **OpenCode 1.x（1.18.31 起）** 与 **MiMo Code 0.1.x（0.1.15 起）** 的受支持原生问题，包括单选、多选与自填答案。只有用户明确提交才会通过原生问答 API 发送一次答案；发送前重新核对会话、请求、工具调用和完整问题结构，交付不明确时保持锁定，不自动重发。问题内容与草稿只在内存中保留。Codex、OpenCode 2.x 和其它未适配工具仍回到原工具回答；此入口不审批工具、不发送普通聊天消息，也不自动作答。
+
+已安装的 OpenCode／MiMo 插件可在「连接 AI 工具」中明确重新连接，或执行「一键初始化」更新受管文件，再按宿主要求重新加载插件／开始新会话。应用启动只建立本机运行通道，不会自动改写宿主配置。支持的格式和问答版本已有隔离回归检查，不代表七种工具的所有宿主版本均已完成真实客户端验收。完整来源、存储、会计边界和问答限制见 [监测实现说明](docs/monitoring.md)。
+
 ## 公开源码版准备
 
-公开仓库不含受限角色素材和原图标。先运行 `npm ci`，再执行 `node scripts/prepare-local-artwork.cjs --from /absolute/path/to/original-project`，核验并导入你有权使用的本地素材。随后运行测试、启动或构建。
+公开仓库不含受限角色素材和原图标。先运行 `npm ci`，再执行 `node scripts/prepare-local-artwork.cjs --from /absolute/path/to/original-project`，核验并导入你有权使用的本地素材。随后运行测试、启动或构建。构建使用本项目原创的 `assets/studio-icon.png`；其生成提示词见 `docs/studio-icon-prompt.txt`，上游图标不参与构建。
 
 ## 本地体验
 
-打开构建产物中的 **AI Mini Office.app**；使用 DMG 时先将应用拖进「应用程序」，再打开并连接 AI 工具。应用只有「实时观察」，只读观察最近的本地 Codex 会话；每个独立 session 是一个角色，子 Agent 来自真实父子关系。空房间不会自动生成模拟任务。
+打开构建产物中的 **AI Mini Office.app**；使用 DMG 时先将应用拖进「应用程序」，再打开并连接 AI 工具。房间使用「实时观察」：本地只读会话日志与已连接的 hooks／插件提供真实活动，每个独立 session 保持自己的身份，子 Agent 来自真实父子关系。可安全入场的角色进入房间，其余身份明确等候空位。空房间不会自动生成模拟任务。
 
 没有伙伴在场时，初始界面只展示完整的空工作室和右上角控制区。连接与偏好从右上角打开为木框纸色面板；语言切换也在同一区域。历史闲置任务不会触发中央欢迎卡片。真实伙伴全部离场、空闲 8 秒后，会有一位明确标记的装饰访客来串门：在 10 个角落随机停留，翻书、喝咖啡、看看植物，偶尔变个小魔术。500 条独立撰写的中英双语气泡按区域轮换，真实工作出现即让路；逛约两分半后离开，过一会儿再来。可在右上角偏好中关闭「闲时串门」。访客不会加入任务数、伙伴列表或真实事件记录。
 
@@ -62,7 +78,7 @@ Version 0.22 keeps fitted body sizes steady until an explicit size/refit request
 
 Codex 的线程 UUID 与每轮 ID 分开识别，子 Agent 日志中复制的父会话历史不会覆盖角色身份。Thinking 期间保持同一个循环动画；短暂工具调用的过期路线会取消，目的地稳定后再起身行走。Codex 脚本中包装的修改、命令、测试也会识别；在刷新间隔内已结束的真实工具动作，会在原地短暂呈现「刚刚在改代码」等有依据的动作，不触发来回奔走。主任务与各级子任务使用同色铭牌、持续可见的箭头连线和父角色名称；伙伴列表按树形排列，点击详情中的父角色可直接定位。
 
-继续几周前创建的 Codex 对话时，活动仍写入原始日期目录。观察器会分批扫描历史目录，重新打开工作室也能发现最近恢复的旧会话；不会把创建日期当成活跃日期。所有项目的当前主 Agent 与分身同时显示，同一个 Codex 下的多个 session 保持独立身份；伙伴列表和详情保留原始项目、ID 与父子关系。
+继续几周前创建的 Codex 对话时，活动仍写入原始日期目录。观察器会分批扫描历史目录，重新打开工作室也能发现最近恢复的旧会话；不会把创建日期当成活跃日期。所有项目的当前主 Agent 与分身都保留在观察与伙伴列表中，同一个 Codex 下的多个 session 保持独立身份；身体是否入场取决于固定尺寸下的安全空位，伙伴列表和详情保留原始项目、ID 与父子关系。
 
 在房间设置中选择 1280×720 副屏，再通过原生窗口绿色按钮进入全屏。角色步行到阅读、规划、写代码、测试等对应区域，在到达后呈现实际活动；同一活动有不同动作段落。身体沿原先核验的安全折线渐进起步、到站减速，真实转角先减至静止再转向；同向直线上的中间点不会无故停车。四足轮流抬落，双手配合摆动或持物，原工作动作与累计时钟暂停，到站平滑续接。步态由同一个身体动画的实际时钟与累计路程驱动，每 192 个世界像素完成一轮；缩小角色不会让腿突然加速。走停保留同一组关节和工作动画，从当前姿势接续。这里采用距离同步步态，尚不保证足底无滑动或任意拥挤程度下昵称可读。动作导演结合实际并行工具数量、子 Agent 和工具结果产生反应，优先呈现工具结果与生命周期变化；没有结果时不会假装成功。
 
@@ -88,6 +104,8 @@ Codex 的线程 UUID 与每轮 ID 分开识别，子 Agent 日志中复制的父
 
 ## Run and build
 
+Run these commands from `office/` (`cd office` from the repository root).
+
 ```sh
 npm ci
 npm test
@@ -104,19 +122,19 @@ The `.app` is generated in `../dist-mini-office/mac-arm64/`. The application con
 
 ## Observe real work
 
-The default mode is **实时观察**. A read-only, bounded Codex rollout observer discovers recent local activity. Each session and reliably identified child agent has its own identity. There is no demonstration store, synthetic task timer, mode switch or demo IPC in the application. Synthetic events exist only in isolated regression fixtures.
+The default mode is **实时观察**. Existing hooks/plugins and the bounded Codex rollout observer supply real activity; native Gemini CLI, Pi and OMP session logs provide additional fresh read-only observations. Each session and reliably identified child agent has its own identity. Historical token imports never create a room actor or credit offline work time. There is no demonstration store, synthetic task timer, mode switch or demo IPC in the application. Synthetic events exist only in isolated regression fixtures.
 
 Each of the eleven activity families has eight authored choreographies, for 88 total. Props and joint motion distinguish reading, search, planning, coding, design, testing, builds, execution, tool waits, user waits and error inspection. A bounded per-identity clock keeps each activity's accumulated visible work across page and room navigation. Offscreen and quiet intervals do not advance the cycle; metadata does not replay it.
 
-The connection panel installs optional passive observation hooks only when explicitly selected. It preserves existing hooks and native approval behavior. Codex hook trust must still be reviewed in Codex; this app does not write trust hashes or approve tools. Unknown Cursor host versions use a conservative observation subset. Claude Code must be available and run a real session before its end-to-end connection can be considered verified.
+The connection panel installs or updates owned integrations only when explicitly selected. It preserves existing hooks and native approval behavior. Supported OpenCode/MiMo plugins also carry the request-scoped manual question channel; update an existing installation with an explicit reconnect or one-click Initialize, then follow the host's normal plugin reload/new-session path. Codex hook trust must still be reviewed in Codex; this app does not write trust hashes or approve tools. Unknown Cursor host versions use a conservative observation subset. A host must be available and run a real session before its end-to-end connection can be considered verified.
 
 Tool starts, correlated results, user input, child agents, turn endings and session closures remain distinct. A quiet or stale source is not a completed task. Unrecognized events are retained as diagnostic uncertainty rather than invented animation claims. A successful command does not prove an entire compound test workflow succeeded.
 
 An unanswered question keeps its attention state while parallel tools continue. If a waiting event has no reliable call identifier, an unrelated result cannot prove it was answered: the last observed wait remains until an explicit new turn, interruption, session closure or matching elicitation response. A stale source is labeled as a lost signal.
 
-Open the room preferences to move the window to a secondary display. Use the native green window control or the Display menu to enter full screen. You can preview Hong Kong daylight, change rain, use reduced motion or low-power behavior, and scale agents with their nameplates from 65% to 135%. Family body colours and numbered badges preserve real root/helper relationships. Layout reserves complete character and nameplate envelopes; movement queues and temporary yielding avoid occupied bodies. Brief clone split/merge overlap is intentional.
+Open the room preferences to move the window to a secondary display. Use the native green window control or the Display menu to enter full screen. You can preview Hong Kong daylight, change rain, use reduced motion or low-power behavior, and manually scale agents with their nameplates from 65% to 135%. Crowd size, empty rooms and ordinary refreshes never lower that preference. Clone artwork is 80% of main artwork, with the same conservative reserved envelope and full-size labels. Layout retains safely admitted bodies and marks overflow identities as Waiting for space in the roster, summary and inspector. Movement queues and temporary yielding avoid occupied bodies; brief clone split/merge overlap is intentional.
 
-The larger Hong Kong clock sits beside a daily activity ledger. It counts distinct observed active identities per Hong Kong calendar day, with separate main-agent and clone counts. Repeated turns count once and app restarts retain the day. It does not rescan the entire day or enumerate every open chat window. Private local persistence stores dates and hashed identities, retains at most fourteen days, and excludes decorative visitors, plain metadata and rejected events.
+The larger Hong Kong clock sits beside a daily activity ledger and Daily Token / Weekly usage. Activity counts distinct observed active identities per Hong Kong calendar day, with separate main-agent and clone counts. Repeated turns count once and app restarts retain the day. Its private date/identity summaries retain at most fourteen days and exclude decorative visitors, plain metadata and rejected events. Token totals instead cover supported local session history across all projects, use Hong Kong calendar days and Monday–Sunday weeks, and display M/B/T units with exact counts in the keyboard-accessible source description. Initial imports and errors are explicitly marked incomplete.
 
 ## Local data and credits
 
@@ -134,4 +152,4 @@ Protocol sources, fixtures and verification boundaries are recorded in `docs/pro
 
 [公开机关动画与完整清单](../docs/scenes/README.md)。自动模式使用香港日期：四季按月份，已核实节日优先，手动灵感主题不臆测地区花期或变化中的宗教节日日期。清明精确日期由香港天文台 2026–2035 表提供，范围外保留手动预览。雨雪为装饰，不是实况天气；减少动作、隐藏窗口与节能设置会停止装饰循环。切换主题不改真实 Agent 的位置、身份与动作时钟。背景在解码完成后从当前透明度衔接；快速连选时，已退场画面保持自己的短暂淡出时间，较晚解码的旧选择不会覆盖新选择。
 
-Dense casts use a single-line larger nickname within the same physical 220×70 nameplate. Current active and cumulative observed helper counts remain below every main; full names, parent relations and counts remain accessible in the inspector and labels. Family tokens and keepsakes reserve space inside the same label rather than covering the name.
+Admitted bodies retain the full 220×63 nameplate with a 24px nickname; crowd count no longer switches labels to a smaller mode. The plate's lower edge remains at its previous physical position. Current active and cumulative observed helper counts remain below every main; full names, parent relations and counts remain accessible in the inspector and labels. Family tokens and keepsakes reserve space inside the same label rather than covering the name. Overflow remains visible as an identity in the roster instead of being represented by a tiny floor body.

@@ -42,6 +42,24 @@ function historicalFile(f, daysAgo, name, rows, modifiedAt = f.now()) {
   fs.utimesSync(file, modifiedAt / 1000, modifiedAt / 1000);
   return file;
 }
+test('same-inode rewrites at the same or greater size restore the newer turn without replaying history', t => {
+  const f = fixture(t);
+  const padded = rows => rows.join('\n') + '\n' + ' '.repeat(Math.max(0, 4096 - rows.join('\n').length - 2)) + '\n';
+  const p = f.file('rewritten', [f.meta('rewrite'), f.start('turn-old'), f.call()]);
+  fs.writeFileSync(p, padded([f.meta('rewrite'), f.start('turn-old'), f.call()]));
+  const m = f.monitor(); m.start(); assert.ok(f.events.some(e => e.turnId === 'turn-old'));
+  const old = fs.statSync(p); f.tick(1000);
+  fs.writeFileSync(p, padded([f.meta('rewrite'), f.start('turn-new'), f.end('turn-new')]));
+  fs.utimesSync(p, old.atime, old.mtime);
+  const before = f.events.length; m.poll();
+  const repair = f.events.slice(before);
+  assert.equal(repair.length, 1); assert.equal(repair[0].event, 'metadata'); assert.equal(repair[0].turnId, 'turn-new');
+  assert.equal(repair[0].evidence.snapshot, 'ended-turn');
+  f.tick(1000);
+  fs.writeFileSync(p, padded([f.meta('rewrite'), f.start('turn-third'), f.call('third')]) + '\n');
+  m.poll(); assert.ok(f.events.some(e => e.turnId === 'turn-third' && e.event === 'tool-start'));
+  const count = f.events.length; m.poll(); assert.equal(f.events.length, count);
+});
 test('startup restores sustained work and fresh unresolved native input, but never completed history', t => {
   const f = fixture(t);
   f.file('active', [f.meta('active'), f.start(), f.call()]);

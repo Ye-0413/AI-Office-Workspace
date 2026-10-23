@@ -1,6 +1,7 @@
 'use strict';
 // Explicit connection actions only. Inspection is read-only; plugins report
-// activity and never register approval/permission/question decision handlers.
+// activity. Supported native questions accept only explicit manual replies;
+// approval/permission handlers remain owned by the host.
 const fs = require('node:fs');
 const path = require('node:path');
 const { createHash, randomUUID } = require('node:crypto');
@@ -31,6 +32,34 @@ function read(file, missing = false) {
   const fd = fs.openSync(file, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0));
   try { const opened = fs.fstatSync(fd); if (opened.ino !== entry.ino || opened.dev !== entry.dev || opened.size > 2 * 1024 * 1024) throw new Error('Plugin/config identity changed'); return fs.readFileSync(fd); }
   finally { fs.closeSync(fd); }
+}
+function readSource(appRoot, relative) {
+  absolute(appRoot);
+  if (typeof relative !== 'string' || path.isAbsolute(relative) || relative.split(/[\\/]/).some(part => !part || part === '.' || part === '..')) throw new Error('Plugin source must remain inside its application root');
+  const file = path.join(appRoot, relative);
+  if (path.extname(appRoot) !== '.asar') return read(file);
+  // ASAR lstat describes a virtual entry; openSync can expose an extracted
+  // native file with a different inode. Verify the native archive instead,
+  // while keeping the strict descriptor checks for every user-owned path.
+  const native = require('original-fs');
+  directory(path.dirname(appRoot));
+  const archive = native.lstatSync(appRoot);
+  if (!archive.isFile() || archive.isSymbolicLink() || archive.nlink !== 1) throw new Error('Packaged plugin archive cannot be safely confirmed');
+  const fd = native.openSync(appRoot, native.constants.O_RDONLY | (native.constants.O_NOFOLLOW || 0));
+  const unchanged = entry => entry.isFile() && !entry.isSymbolicLink() && entry.nlink === 1
+    && ['dev', 'ino', 'size', 'mtimeMs', 'ctimeMs'].every(key => entry[key] === archive[key]);
+  const check = () => {
+    if (!unchanged(native.fstatSync(fd)) || !unchanged(native.lstatSync(appRoot))) throw new Error('Packaged plugin archive identity changed');
+  };
+  try {
+    check(); directory(path.dirname(file));
+    const entry = stat(file);
+    if (!entry || !entry.isFile() || entry.isSymbolicLink() || entry.nlink !== 1 || !Number.isSafeInteger(entry.size) || entry.size < 0 || entry.size > 2 * 1024 * 1024) throw new Error('Packaged plugin source cannot be safely confirmed');
+    const bytes = fs.readFileSync(file);
+    check();
+    if (!Buffer.isBuffer(bytes) || bytes.length !== entry.size || bytes.length > 2 * 1024 * 1024) throw new Error('Packaged plugin source size changed');
+    return bytes;
+  } finally { native.closeSync(fd); }
 }
 function owned(target) {
   directory(target); if (!stat(target)) return null;
@@ -152,8 +181,11 @@ function inspectPlugin(options) {
 }
 function values(options, target) {
   for (const key of ['appRoot', 'dataDir', 'electronPath']) absolute(options[key]);
-  const source = path.join(options.appRoot, 'hooks', 'passive-plugins');
-  const result = { [target.entry]: read(path.join(source, target.source)), 'runtime.cjs': read(path.join(source, 'runtime.cjs')), 'observer-config.json': Buffer.from(JSON.stringify({ owner: OWNER, provider: options.provider, dataDir: options.dataDir, electronPath: options.electronPath, observer: path.join(options.appRoot, 'hooks', 'observe.cjs') })) };
+  const result = { [target.entry]: readSource(options.appRoot, path.join('hooks', 'passive-plugins', target.source)), 'runtime.cjs': readSource(options.appRoot, path.join('hooks', 'passive-plugins', 'runtime.cjs')), 'observer-config.json': Buffer.from(JSON.stringify({ owner: OWNER, provider: options.provider, dataDir: options.dataDir, electronPath: options.electronPath, observer: path.join(options.appRoot, 'hooks', 'observe.cjs') })) };
+  if(['opencode','mimocode'].includes(options.provider)&&target.source!=='opencode-v2.mjs'){
+    result['questions.cjs']=readSource(options.appRoot,path.join('hooks','passive-plugins','questions.cjs'));
+    result['question-wire.cjs']=readSource(options.appRoot,path.join('lib','agent-question-wire.cjs'));
+  }
   const pkg = { name: options.provider === 'deepseek-harness' ? DSH_PACKAGE : ID, version: '1.0.0', private: true, type: 'module', main: `./${target.entry}`, exports: { '.': `./${target.entry}` } };
   if (options.provider === 'openclaw') {
     pkg.openclaw = { extensions: ['./index.mjs'] };

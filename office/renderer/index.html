@@ -6,6 +6,9 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">
   <title>小小工作室 · AI Mini Office</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="token-usage.css">
+  <link rel="stylesheet" href="home-token-usage.css">
+  <link rel="stylesheet" href="manual-questions.css">
   <link rel="stylesheet" href="avatar-performance.css">
   <link rel="stylesheet" href="avatar-fallback.css">
   <link rel="stylesheet" href="clone-motion.css">
@@ -39,6 +42,8 @@
   <script defer src="day-scenery.js"></script>
   <script defer src="idle-visitor.js"></script>
   <script defer src="usage-history.js"></script>
+  <script defer src="home-token-usage.js"></script>
+  <script defer src="manual-questions.js"></script>
   <script defer src="setup-assistant.js"></script>
   <script defer src="../lib/venue-model.js"></script>
   <script defer src="../lib/social-interactions.js"></script>
@@ -70,7 +75,7 @@
         <div class="room-prop prop-desk" data-zone-prop="desk" aria-hidden="true"><span>&lt;/&gt;</span></div>
         <div class="room-prop prop-sofa" data-zone-prop="sofa" aria-hidden="true"><i></i><i></i><i></i></div>
         <button id="day-clock" class="day-clock" type="button"><span class="clock-label"><span>香港时间</span><span class="clock-status"><span id="day-phase"></span><span class="day-clock-icon" aria-hidden="true">☀</span></span></span><time id="hk-clock">00:00</time><time id="hk-date"></time><span class="clock-feet" aria-hidden="true"></span></button>
-        <div id="activity-stats" class="activity-stats" title="按香港日期统计实际观察到的 Agent，同一会话多轮只计一次；主 Agent 与分身分别去重，重启后保留。"><span class="stats-label">今日活跃 Agent</span><strong id="today-total">—</strong><span class="stats-detail"><span id="today-roots">—</span><span id="today-helpers">—</span></span></div>
+        <div id="activity-stats" class="activity-stats" title="按香港日期统计实际观察到的 Agent，同一会话多轮只计一次；主 Agent 与分身分别去重，重启后保留。"><div class="activity-agent-stats"><span class="stats-label">今日活跃 Agent</span><strong id="today-total">—</strong><span class="stats-detail"><span id="today-roots">—</span><span id="today-helpers">—</span></span></div><dl id="home-token-usage" class="home-token-usage" tabindex="0" aria-label="Token 用量" aria-describedby="home-token-state"><div><dt id="home-token-daily-label">今日 Token</dt><dd id="home-token-daily">—</dd></div><div><dt id="home-token-weekly-label">本周用量</dt><dd id="home-token-weekly">—</dd></div></dl><span id="home-token-state" class="sr-only">来源：受支持工具的本机会话日志；按香港自然日及周一至周日统计全部项目，不推算费用或额度。</span></div>
         <div class="wall-clock" aria-hidden="true"><i class="wall-hour"></i><i class="wall-minute"></i><i class="wall-pin"></i></div>
         <div id="archive-stack" class="archive-stack" aria-hidden="true"><i></i><i></i><i></i></div>
         <div class="floor-sign sign-library" data-zone-label="library">资料书架</div>
@@ -131,7 +136,7 @@
 
     <dialog id="usage-history-dialog" class="office-dialog usage-history-dialog" aria-labelledby="usage-history-title" aria-describedby="usage-history-scope">
       <div class="dialog-header"><div><span class="dialog-eyebrow" data-usage-copy="eyebrow">留在本机的工作足迹</span><h2 id="usage-history-title" data-usage-copy="title">使用记录</h2></div><button id="usage-history-close" type="button" class="dialog-close" aria-label="关闭使用记录">×</button></div>
-      <p id="usage-history-scope" class="dialog-intro" data-usage-copy="scope">这里只统计本机已观测的 Agent 活动，不代表 token 或费用；应用关闭期间不计时，历史记录不会重新进入房间。</p>
+      <p id="usage-history-scope" class="dialog-intro" data-usage-copy="scope">Token 来自本机会话日志，可独立导入历史；活动时长仅统计应用运行期间的观察。历史记录不会重新进入房间。</p>
       <div class="usage-filters">
         <label><span data-usage-copy="range">时间范围</span><select id="usage-range"><option value="7" data-usage-copy="days7">近 7 天</option><option value="30" data-usage-copy="days30">近 30 天</option><option value="all" data-usage-copy="allTime">全部时间</option><option value="custom" data-usage-copy="custom">自选日期</option></select></label>
         <label><span data-usage-copy="provider">AI 工具</span><select id="usage-provider"><option value="" data-usage-copy="allProviders">全部工具</option></select></label>
@@ -139,6 +144,15 @@
       </div>
       <div id="usage-dates" class="usage-dates"><label><span data-usage-copy="from">开始日期（香港）</span><input id="usage-from" type="date"></label><label><span data-usage-copy="to">结束日期（香港）</span><input id="usage-to" type="date"></label><button id="usage-refresh" type="button" class="button button-paper" data-usage-copy="refresh">刷新</button></div>
       <div id="usage-feedback" class="usage-feedback" role="status" aria-live="polite"></div>
+      <section id="usage-token-section" class="usage-token-section" aria-labelledby="usage-token-title" aria-busy="false">
+        <div class="usage-section-heading"><h3 id="usage-token-title" data-usage-copy="tokenTitle">会话 Token</h3><span id="usage-token-requests"></span></div>
+        <p class="usage-token-note" data-usage-copy="tokenScope">读取下方来源所列工具的本机会话日志；仅展示日志报告的 token，不推算费用或额度。覆盖范围随可用日志而定。</p>
+        <div id="usage-token-feedback" class="usage-feedback" role="status" aria-live="polite"></div>
+        <dl id="usage-token-overview" class="usage-overview usage-token-overview" aria-label="会话 Token 概览"></dl>
+        <details id="usage-token-models-details" class="usage-token-models-details"><summary data-usage-copy="tokenModels">按模型查看</summary><div class="usage-token-table-scroll" tabindex="0" role="region" aria-labelledby="usage-token-models-caption"><table class="usage-token-table"><caption id="usage-token-models-caption" data-usage-copy="tokenModelsCaption">所选范围内的模型 Token 记录</caption><thead><tr><th scope="col" data-usage-copy="tokenModel">模型 / 工具</th><th scope="col" data-usage-copy="tokenRequests">请求记录</th><th scope="col" data-usage-copy="tokenInput">未缓存输入</th><th scope="col" data-usage-copy="tokenOutput">输出</th><th scope="col" data-usage-copy="tokenCacheRead">缓存读取</th><th scope="col" data-usage-copy="tokenCacheWrite">缓存写入</th><th scope="col" data-usage-copy="tokenTotal">Token 总计</th></tr></thead><tbody id="usage-token-models"></tbody></table></div></details>
+        <p id="usage-token-source" class="usage-token-note"></p>
+      </section>
+      <div class="usage-section-heading"><h3 data-usage-copy="activityTitle">已观测活动</h3></div>
       <dl id="usage-overview" class="usage-overview" aria-label="使用概览"></dl>
       <div class="usage-section-heading"><h3 data-usage-copy="history">Agent 历史</h3><span id="usage-count"></span></div>
       <div id="usage-history-list" class="usage-history-list" aria-busy="false"></div>
@@ -152,7 +166,7 @@
       <div class="dialog-header"><div><span class="dialog-eyebrow">把小房间放到喜欢的地方</span><h2 id="settings-title">房间偏好</h2></div><button type="button" class="dialog-close" data-close-dialog aria-label="关闭房间偏好">×</button></div>
       <div class="setting-row scene-time-setting"><div><label for="setting-sceneTime">香港的一天</label><span>依照香港时间变换天色，也可以预览喜欢的时段。</span></div><select id="setting-sceneTime"><option value="auto">跟随香港时间</option><option value="dawn">晨曦</option><option value="morning">上午</option><option value="afternoon">午后</option><option value="sunset">日落</option><option value="night">夜晚</option></select></div>
       <button id="day-reset" class="day-reset" type="button" hidden>回到此刻</button>
-      <div class="setting-row agent-size-setting"><div><label for="setting-agentScale">Agent 大小</label><span>保持适配后的大小；手动调整或重新适配时再改变。</span></div><div class="agent-size-control"><output id="agent-scale-value" for="setting-agentScale">100%</output><input id="setting-agentScale" type="range" min="65" max="135" step="5" value="100"><button id="agent-size-refit" type="button" class="button button-paper">重新适配</button></div></div>
+      <div class="setting-row agent-size-setting"><div><label for="setting-agentScale">Agent 大小</label><span>大小只随手动调整改变；主 Agent 比分身大，空间不足时在名单中等候。</span></div><div class="agent-size-control"><output id="agent-scale-value" for="setting-agentScale">100%</output><input id="setting-agentScale" type="range" min="65" max="135" step="5" value="100"><button id="agent-size-refit" type="button" class="button button-paper">重新适配</button></div></div>
       <div class="setting-row"><div><label for="setting-rain">窗外细雨</label><span>只改变环境，不代表任务状态。</span></div><input id="setting-rain" type="checkbox"></div>
       <div class="setting-row"><div><label for="setting-idleVisitor">闲时串门</label><span>安静时有访客来逛逛；真实任务入驻就让路。</span></div><input id="setting-idleVisitor" type="checkbox"></div>
       <div class="setting-row"><div><label for="setting-reducedMotion">减少动作</label><span>保留位置与状态，暂停角色循环及装饰动作。</span></div><input id="setting-reducedMotion" type="checkbox"></div>

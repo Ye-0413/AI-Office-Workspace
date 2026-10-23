@@ -4,19 +4,20 @@
   const api = factory(typeof module === 'object' && module.exports ? require('./scene-model.js') : root.OfficeScene, typeof module === 'object' && module.exports ? require('./scene-traffic.js') : root.OfficeSceneTraffic);
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.OfficeWalkingLayout = api;
-})(typeof globalThis === 'object' ? globalThis : this, function (Scene, Traffic) {
+})(typeof globalThis === 'object' ? globalThis : this, function createLayout(Scene, Traffic, entrance) {
   'use strict';
   const W = Scene.WORLD.width, H = Scene.WORLD.height, EPS = 1e-7;
   const proofCache = new WeakMap();
   const proofBySeat = new WeakMap();
-  const ENTRY_POINT = Object.freeze({ x: 87, y: 78 });
+  const ENTRY_POINT = Object.freeze(entrance ? {x:entrance.x,y:entrance.y} : { x: 87, y: 78 });
+  const entranceLayouts = new Map();
   const HOLDING = Symbol('empty walking holding pocket');
-  const HOLDING_CANDIDATES = Object.freeze([{x:50,y:78},{x:30.5,y:44.5},{x:74,y:60},{x:12,y:78},{x:88,y:44.5},{x:93,y:84}].map(Object.freeze));
+  const HOLDING_CANDIDATES = Object.freeze([...(entrance?[{x:30.5,y:73},{x:50,y:73},{x:15,y:44.5}]:[]),{x:50,y:78},{x:30.5,y:44.5},{x:74,y:60},{x:12,y:78},{x:88,y:44.5},{x:93,y:84}].map(Object.freeze));
   // One measured thirteen-body distribution, not a higher global search
   // threshold. These zone/ordinal coordinates are only a cheap hint: final
   // access, actual transition and named clone endpoints must still prove.
   const THIRTEEN_PROFILE = Object.freeze({scale:.4,holding:{x:30.5,y:82},points:{library:[[8,44],[19,44]],board:[[43,44],[56,44],[69.05,53]],desk:[[40,84],[48.3,84]],bench:[[82,44],[93,44]],sofa:[[8,84],[19,84]],lobby:[[56.6,84],[64.9,84]]}});
-  const CORRIDORS = Object.freeze([[{x:31.5,y:44.5},{x:31.5,y:82}],[{x:73.5,y:44.5},{x:73.5,y:82}],[{x:31.5,y:78},{x:82,y:78}],[{x:31.5,y:44.5},{x:73.5,y:44.5}]].map(path=>Object.freeze(path.map(Object.freeze))));
+  const CORRIDORS = Object.freeze([[{x:31.5,y:44.5},{x:31.5,y:82}],[{x:73.5,y:44.5},{x:73.5,y:82}],[{x:31.5,y:78},{x:Math.min(82,ENTRY_POINT.x),y:ENTRY_POINT.y}],[{x:31.5,y:44.5},{x:73.5,y:44.5}]].map(path=>Object.freeze(path.map(Object.freeze))));
   const OBSTACLES = Object.freeze(Scene.OBSTACLES.map(rect => Object.freeze({ ...rect })));
   const gapForScale = scale => 2 + 10 * Math.max(0, Number(scale) || 0);
   function rememberProof(seats,record){proofCache.set(seats,record);for(const seat of seats.values())proofBySeat.set(seat,record);}
@@ -139,7 +140,13 @@
         for(const [id,other]of ctx.actors)if(id!==move.id&&!other.staged){
           // Real clone endpoint overlap is permitted only on its first/last
           // leg. The coordinator still owns the exact named exemption.
-          const r=Scene.actorBounds(other.position,other),exempt=ctx.overlaps?.get(move.id)?.has(id)&&((i===1&&Scene.boundsOverlap(Scene.actorBounds(from,actor),r,0))||(i===move.path.length-1&&Scene.boundsOverlap(Scene.actorBounds(to,actor),r,0)));
+          // An ordinary transition exempts only its exact original source:
+          // a finite split can still be inside the required clearance after
+          // its canvases separate. It never gains a destination exemption.
+          const r=Scene.actorBounds(other.position,other),source=ctx.sourceOverlapOrigins?.get(move.id);
+          const sourceExempt=i===1&&(ctx.sourceOverlapOrigins?source&&Math.abs(source.x-from.x)<.001&&Math.abs(source.y-from.y)<.001&&Scene.boundsOverlap(Scene.actorBounds(from,actor),r,gap):Scene.boundsOverlap(Scene.actorBounds(from,actor),r,0));
+          const targetExempt=!ctx.sourceOverlapOrigins&&i===move.path.length-1&&Scene.boundsOverlap(Scene.actorBounds(to,actor),r,0);
+          const exempt=ctx.overlaps?.get(move.id)?.has(id)&&(sourceExempt||targetExempt);
           if(!exempt&&Scene.segmentHitsRect(a,b,{x1:r.left-f.right*scale-gap,x2:r.right+f.left*scale+gap,y1:r.top-f.bottom*scale-gap,y2:r.bottom+f.top*scale+gap},0))return null;
         }
         if(OBSTACLES.some(r=>Scene.segmentHitsRect(from,to,r,.8)))return null;
@@ -178,7 +185,7 @@
     const overlaps=new Map([...seats.keys()].map(id=>[id,new Set([...seats.keys()].filter(other=>{
       if(other===id||!allowedOverlaps?.has(JSON.stringify([id,other].sort())))return false;
       const own=actors.get(id),peer=actors.get(other);
-      return !own.staged&&!peer.staged&&Scene.boundsOverlap(Scene.actorBounds(own.position,own),Scene.actorBounds(peer.position,peer),0)
+      return !own.staged&&!peer.staged&&Scene.boundsOverlap(Scene.actorBounds(own.position,own),Scene.actorBounds(peer.position,peer),gapForScale(scale))
         &&!Scene.boundsOverlap(Scene.actorBounds(seats.get(id),own),Scene.actorBounds(peer.position,peer),gapForScale(scale));
     }))]));
     const traffic=Traffic.createCoordinator({bounds:Scene.actorBounds,legalPoint:(p,a)=>legalPoint(p,{...a,reservedRects}),route:(a,b,s)=>route(a,b,{...s,reservedRects}),gap:gapForScale,obstacles:OBSTACLES,reservedRects,holdingPoints:[...holdingPoints,...HOLDING_CANDIDATES]});
@@ -190,7 +197,7 @@
       }
       if(!traffic.request(id,target,{overlapIds:[...overlaps.get(id)]}))return null;
     }
-    const moves=drainProof({actors,traffic,sync,overlaps},scale,reservedRects,seats.size*8+16);
+    const moves=drainProof({actors,traffic,sync,overlaps,sourceOverlapOrigins:initialPositions},scale,reservedRects,seats.size*8+16);
     if(!moves||[...seats].some(([id,p])=>Math.abs(p.x-actors.get(id).position.x)>.001||Math.abs(p.y-actors.get(id).position.y)>.001))return null;
     // Missing bodies are geometric portal probes only. Real helpers still
     // leave their real parent under the renderer's own endpoint reservation.
@@ -265,9 +272,10 @@
     }
     return null;
   }
-  function fitActualReturn(docks,seats,footprints,maximum,reservedRects,holdingPoints,immovableIds,current){
+  function fitActualReturn(docks,seats,footprints,maximum,reservedRects,holdingPoints,immovableIds,current,allowShrink=true){
     const prove=scale=>actualReturnProof(docks,seats,footprints,scale,reservedRects,holdingPoints,immovableIds,current);
     let scale=maximum,upper=maximum,proof=prove(scale),trials=1;
+    if(!proof&&!allowShrink)return null;
     for(let pass=0;!proof&&pass<12;pass++){upper=scale;scale*=.82;proof=prove(scale);trials++;}
     if(!proof)return null;
     if(scale<maximum)for(let pass=0;pass<5;pass++){
@@ -326,22 +334,24 @@
     if(!moves||removedIds.length!==exitIds.size||[...actors].some(([id,a])=>Math.abs(a.position.x-initialPositions.get(id).x)>.001||Math.abs(a.position.y-initialPositions.get(id).y)>.001))return null;
     return{scale,moves,steps,initialPositions,unadmittedIds,removedIds,retainedPositions:new Map([...actors].map(([id,a])=>[id,{...a.position}]))};
   }
-  function fitFiniteExit(exitIds,seats,footprints,maximum,reservedRects,holdingPoints,immovableIds,current,budget){
+  function fitFiniteExit(exitIds,seats,footprints,maximum,reservedRects,holdingPoints,immovableIds,current,budget,allowShrink=true){
     const prove=scale=>{if(budget.trials>=12)return null;budget.trials++;return finiteExitProof(exitIds,seats,footprints,scale,reservedRects,holdingPoints,immovableIds,current);};
     let scale=maximum,upper=maximum,proof=prove(scale);
+    if(!proof&&!allowShrink)return null;
     for(let pass=0;!proof&&pass<7&&budget.trials<12;pass++){upper=scale;scale*=.82;proof=prove(scale);}
     if(!proof)return null;
     if(scale<maximum)for(let pass=0;pass<4&&budget.trials<12;pass++){const mid=(scale+upper)/2,candidate=prove(mid);if(candidate){scale=mid;proof=candidate;}else upper=mid;}
     return{...proof,trials:budget.trials};
   }
   function layoutWalking(present,options={}) {
+    const fixedScale=options.fixedScale===true;
     const unique=new Map();for(const session of Array.isArray(present)?present:[])if(session&&typeof session.id==='string'&&session.id)unique.set(session.id,session);
     const visible=[...unique.values()].sort((a,b)=>a.id.localeCompare(b.id)),requestedScale=Scene.actorScale({x:0,y:0},{uniformScale:Math.max(.65,Math.min(1.35,Number(options.requestedScale)||1))});
     const sizeCeiling=Number.isFinite(options.maximumScale)&&options.maximumScale>0?Math.min(requestedScale,options.maximumScale):requestedScale;
     const previous=options.previousSeats instanceof Map?options.previousSeats:new Map(),current=options.currentPositions instanceof Map?options.currentPositions:new Map(),viewport=options.viewport||Scene.ACTOR_VIEWPORT;
     const reservedRects=(options.reservedRects||Scene.CLOCK_RESERVED).filter(r=>r&&['left','right','top','bottom'].every(k=>Number.isFinite(r[k]))),footprints=new Map(visible.map(s=>[s.id,(validFootprint(options.footprints?.get(s.id))?options.footprints.get(s.id):s.parentId?Scene.ACTOR_FOOTPRINT.helper:Scene.ACTOR_FOOTPRINT.root)]));
     const envelope=Object.fromEntries(['left','right','top','bottom'].map(k=>[k,footprints.size?Math.max(...[...footprints.values()].map(f=>f[k])):Scene.ACTOR_FOOTPRINT.root[k]]));
-    const workZones=new Map(visible.map(s=>{const spec=Scene.activitySpec(s),old=previous.get(s.id),oldZone=old?.workZone||old?.zone;return[s.id,old&&ZONE_AREAS[oldZone]&&(spec.stale||(Scene.isClosed(s)&&validPoint(old)&&zoneArea(old,oldZone)))?oldZone:spec.zone];}));
+    const workZones=new Map(visible.map(s=>{const spec=Scene.activitySpec(s),old=previous.get(s.id),oldZone=old?.workZone||old?.zone;return[s.id,old&&ZONE_AREAS[oldZone]&&(options.retainStations||spec.stale||(Scene.isClosed(s)&&validPoint(old)&&zoneArea(old,oldZone)))?oldZone:spec.zone];}));
     const thirteenProfile=visible.length===13&&Object.entries(THIRTEEN_PROFILE.points).every(([zone,points])=>[...workZones.values()].filter(value=>value===zone).length===points.length);
     const actualPositions=options.transitionPositions instanceof Map?options.transitionPositions:current;
     const fixedStale=new Map(visible.filter(s=>Scene.activitySpec(s).stale&&validPoint(actualPositions.get(s.id)||previous.get(s.id))).map(s=>{const p=actualPositions.get(s.id)||previous.get(s.id);return[s.id,{x:p.x,y:p.y}];}));
@@ -365,7 +375,8 @@
     const transferScope={requestedScale,sizeCeiling,viewport:{...viewport},reservedRects:reservedRects.map(r=>({...r})),allowTransfers:options.allowTransfers!==false,transferEligibleIds:transferEligibleIds?[...transferEligibleIds].sort():null,participantsAutoYield:false,openingBusyIds:[...transferBusyIds].sort(),allowedOverlaps:[...(options.allowedOverlaps||[])].sort(),immovableIds:[...immovableIds].sort(),fixedHoldingIds:[...fixedHolding.keys()].sort(),openingDockPairs:[...openingDockPairs].map(p=>[...p]),closingDockPairs:[...closingDockPairs].map(p=>[...p]),finiteExitIds:[...finiteExitIds],cast:visible.map(s=>({id:s.id,parentId:s.parentId||null,workZone:workZones.get(s.id),activity:s.activity||null,status:s.status||null,turnId:s.turnId||null,provider:s.provider||null,attention:Boolean(s.attention),disconnected:Boolean(s.disconnected),closed:Boolean(s.closed),footprint:{...footprints.get(s.id)},canYield:!immovableIds.has(s.id),fixedPosition:fixedPositions.has(s.id)?{...fixedPositions.get(s.id)}:null}))};
     const transferSourceKey=scale=>JSON.stringify([transferScope,visible.filter(s=>validPoint(actualPositions.get(s.id))).map(s=>({id:s.id,x:actualPositions.get(s.id).x,y:actualPositions.get(s.id).y})),scale]);
     const transferSettingsKey=JSON.stringify([options.allowTransfers!==false,options.allowTransfers!==false?[...transferBusyIds].sort():null,transferEligibleIds?[...transferEligibleIds].sort():null,options.slotHints instanceof Map?[...slotHints].map(([id,p])=>[id,p.x,p.y,p.workZone||p.zone]).sort((a,b)=>a[0].localeCompare(b[0])):null,transferScope.cast.map(s=>[s.id,s.activity,s.status,s.turnId,s.attention,s.disconnected,s.closed])]);
-    const signature=JSON.stringify([transferSettingsKey,requestedScale,sizeCeiling,viewport,reservedRects,options.cooperative!==false,options.holdingOccupiedForProof!==false,[...immovableIds].sort(),[...closingDockPairs].sort(([a],[b])=>a.localeCompare(b)),[...openingDockPairs].sort(([a],[b])=>a.localeCompare(b)),openingDockPairs.size?openingBusyIds:null,[...finiteExitIds],finiteExitIds.size?[...(options.allowedOverlaps||[])].sort():null,closingDockPairs.size||openingDockPairs.size||finiteExitIds.size?visible.filter(s=>validPoint(current.get(s.id))).map(s=>[s.id,current.get(s.id).x,current.get(s.id).y]):null,[...fixedStale],[...fixedHolding],visible.map(s=>[s.id,s.parentId||'',workZones.get(s.id),footprints.get(s.id)])]);
+    const signature=JSON.stringify([fixedScale,transferSettingsKey,requestedScale,sizeCeiling,viewport,reservedRects,options.cooperative!==false,options.holdingOccupiedForProof!==false,[...immovableIds].sort(),[...closingDockPairs].sort(([a],[b])=>a.localeCompare(b)),[...openingDockPairs].sort(([a],[b])=>a.localeCompare(b)),openingDockPairs.size?openingBusyIds:null,[...finiteExitIds],finiteExitIds.size?[...(options.allowedOverlaps||[])].sort():null,closingDockPairs.size||openingDockPairs.size||finiteExitIds.size?visible.filter(s=>validPoint(current.get(s.id))).map(s=>[s.id,current.get(s.id).x,current.get(s.id).y]):null,[...fixedStale],[...fixedHolding],visible.map(s=>[s.id,s.parentId||'',workZones.get(s.id),footprints.get(s.id)])]);
+    const residentGeometry=JSON.stringify([requestedScale,viewport,reservedRects,visible.map(s=>[s.id,s.parentId||null,footprints.get(s.id)])]);
     const targetSignature=seats=>JSON.stringify([...seats].map(([id,p])=>[id,p.x,p.y,p.workZone||p.zone,p.area,p.holdingPoint,p.targetUniformScale]).sort((a,b)=>a[0].localeCompare(b[0])));
     const ratio=(clearance,extent)=>extent>0?clearance/extent:clearance>=0?Infinity:-Infinity;
     let maximum=sizeCeiling;
@@ -373,10 +384,12 @@
     for(const a of anchors){const p=pixel(a.point),f=a.footprint;maximum=Math.min(maximum,ratio(p.x-viewport.left,f.left),ratio(viewport.right-p.x,f.right),ratio(p.y-viewport.top,f.top),ratio(viewport.bottom-p.y,f.bottom));for(const r of reservedRects)maximum=Math.min(maximum,Math.max(ratio(r.left-4-p.x,f.right),ratio(p.x-r.right-4,f.left),ratio(r.top-4-p.y,f.bottom),ratio(p.y-r.bottom-4,f.top)));}
     const physical=anchors.slice(1);for(let i=0;i<physical.length;i++)for(let j=i+1;j<physical.length;j++){const a=physical[i],b=physical[j],key=JSON.stringify([a.id,b.id].sort());if(options.allowedOverlaps?.has(key))continue;const dx=(b.point.x-a.point.x)*W/100,dy=(b.point.y-a.point.y)*H/100;maximum=Math.min(maximum,Math.max((Math.abs(dx)-2)/((dx>=0?a.footprint.right+b.footprint.left:a.footprint.left+b.footprint.right)+10),(Math.abs(dy)-2)/((dy>=0?a.footprint.bottom+b.footprint.top:a.footprint.top+b.footprint.bottom)+10)));}
     if(!(maximum>0))throw new RangeError('Current real body positions have no positive-size non-overlapping walking fit');
+    if(fixedScale&&maximum<requestedScale-EPS)throw new RangeError('The chosen body size needs a free floor position');
+    if(fixedScale)maximum=requestedScale;
     const cached=proofCache.get(previous)||proofBySeat.get(previous.values().next().value);
     function finishExit(page,cacheHit=false){
       if(options.targetOnly||!finiteExitIds.size||cacheHit)return page;
-      const proof=fitFiniteExit(finiteExitIds,page.seats,footprints,page.uniformScale,reservedRects,page.holdingPoints||[],immovableIds,current,finiteBudget),scale=proof?.scale||page.uniformScale;
+      const proof=fitFiniteExit(finiteExitIds,page.seats,footprints,page.uniformScale,reservedRects,page.holdingPoints||[],immovableIds,current,finiteBudget,!fixedScale),scale=proof?.scale||page.uniformScale;
       const result={...atScale(page,scale),exitOwnerIds:[...finiteExitIds],transferCertificate:null,exitProof:proof,finiteExitDeferred:!proof,exitProofAttempts:finiteBudget.trials};
       // Growth is deferred until the real exit owners have actually released
       // their bodies. A cached settled target cannot enlarge this finite fit.
@@ -401,7 +414,7 @@
       // the unchanged scale, retaining concurrent safe splits. Only a failed
       // proof waits for its endpoint instead of treating a transient foot as
       // a permanent obstacle and needlessly shrinking the whole room.
-      const openingProof=fitActualOpening(dock,page.seats,footprints,page.uniformScale,reservedRects,page.holdingPoints||[],immovableIds,current,!busy.length);
+      const openingProof=fitActualOpening(dock,page.seats,footprints,page.uniformScale,reservedRects,page.holdingPoints||[],immovableIds,current,!fixedScale&&!busy.length);
       const result={...atScale(page,openingProof?.scale||page.uniformScale),openingProof,transferCertificate:null,openingDeferred:!openingProof,openingOwnerId:dock.childId,openingBusyDeferred:!openingProof&&busy.length>0,openingBusyIds:busy};
       if(!openingProof)result.fitReason='waiting-for-split-route';
       if(result.returnProof&&result.returnProof.scale!==result.uniformScale){
@@ -421,7 +434,7 @@
     const priorProofMode=['deferred-clone-return','deferred-main-exit'].includes(cached?.page.proofMode)?cached.page.priorProofMode:cached?.page.proofMode;
     if(!returningDocks.length&&finiteExitIds.size&&cached&&cached.targets===targetSignature(previous)&&['cooperative','stationary'].includes(priorProofMode)&&visible.length<=previous.size&&visible.every(s=>previous.has(s.id)&&validPoint(current.get(s.id))&&cached.page.visible.find(old=>old.id===s.id)?.parentId===s.parentId)){
       const cap=Math.min(maximum,cached.page.uniformScale),oldSeats=new Map(visible.map(s=>[s.id,previous.get(s.id)]));
-      const exitProof=fitFiniteExit(finiteExitIds,oldSeats,footprints,cap,reservedRects,cached.page.holdingPoints||[],immovableIds,current,finiteBudget),scale=exitProof?.scale||cap,gap=gapForScale(scale);
+      const exitProof=fitFiniteExit(finiteExitIds,oldSeats,footprints,cap,reservedRects,cached.page.holdingPoints||[],immovableIds,current,finiteBudget,!fixedScale),scale=exitProof?.scale||cap,gap=gapForScale(scale);
       const retained=new Map(visible.map(s=>{const old=previous.get(s.id),p=fixedPositions.get(s.id)||old;return[s.id,{...old,x:p.x,y:p.y,uniformScale:scale,targetUniformScale:scale,requestedScale,...(workZones.get(s.id)!==(old.workZone||old.zone)?{pendingWorkZone:workZones.get(s.id)}:{})}];}));
       const legal=[...retained].every(([id,p])=>legalPoint(p,{uniformScale:scale,footprint:footprints.get(id),reservedRects,viewport})&&![...retained].some(([other,q])=>other!==id&&Scene.actorsOverlap(p,{uniformScale:scale,footprint:footprints.get(id)},q,{uniformScale:scale,footprint:footprints.get(other)},gap)));
       if(exitProof&&legal){
@@ -433,7 +446,7 @@
     if(returningDocks.length&&cached&&cached.targets===targetSignature(previous)&&['cooperative','stationary'].includes(priorProofMode)&&visible.length<=previous.size&&visible.every(s=>previous.has(s.id)&&cached.page.visible.find(old=>old.id===s.id)?.parentId===s.parentId)){
       const cap=Math.min(maximum,cached.page.uniformScale);
       const retainedIds=new Map(visible.map(s=>[s.id,previous.get(s.id)]));
-      const returnProof=fitActualReturn(returningDocks,retainedIds,footprints,cap,reservedRects,cached.page.holdingPoints||[],immovableIds,current);
+      const returnProof=fitActualReturn(returningDocks,retainedIds,footprints,cap,reservedRects,cached.page.holdingPoints||[],immovableIds,current,!fixedScale);
       const scale=returnProof?.scale||cap,gap=gapForScale(scale);
       const retained=new Map(visible.map(s=>{const old=previous.get(s.id),p=fixedPositions.get(s.id)||old;return[s.id,{...old,x:p.x,y:p.y,uniformScale:scale,targetUniformScale:scale,requestedScale,...(workZones.get(s.id)!==(old.workZone||old.zone)?{pendingWorkZone:workZones.get(s.id)}:{})}];}));
       const legal=[...retained].every(([id,p])=>legalPoint(p,{uniformScale:scale,footprint:footprints.get(id),reservedRects,viewport})&&![...retained].some(([other,q])=>other!==id&&Scene.actorsOverlap(p,{uniformScale:scale,footprint:footprints.get(id)},q,{uniformScale:scale,footprint:footprints.get(other)},gap)));
@@ -450,7 +463,7 @@
     // Prove a more spacious destination first, walk there at the current safe
     // size, and only grow once the actual feet support the already-proven fit.
     const geometryChanged=previous.size!==visible.length||visible.some(s=>{const old=previous.get(s.id);return !old||(old.workZone||old.zone)!==workZones.get(s.id)||old.requestedScale!==requestedScale||(old.targetUniformScale||old.uniformScale)>old.uniformScale+EPS;})||cached&&cached.signature!==signature;
-    if(!options.targetOnly&&visible.length&&(visible.length<=12||thirteenProfile)&&previous.size&&geometryChanged){
+    if(!fixedScale&&!options.targetOnly&&visible.length&&(visible.length<=12||thirteenProfile)&&previous.size&&geometryChanged){
       const retained=new Map(visible.filter(s=>(Scene.activitySpec(s).stale||Scene.isClosed(s)||fixedHolding.has(s.id))&&previous.has(s.id)).map(s=>[s.id,{...previous.get(s.id),...(!Scene.isClosed(s)?current.get(s.id)||{}:{}),...(fixedHolding.get(s.id)||{}),workZone:workZones.get(s.id)}]));
       const previousScale=Math.min(...visible.map(s=>previous.get(s.id)?.uniformScale||maximum));
       const goal=layoutWalking(visible,{...options,_transferBudget:transferBudget,slotHints,targetOnly:true,previousSeats:retained,currentPositions:new Map([...current].filter(([id])=>retained.has(id))),transitionPositions:current,transitionMaximum:maximum,transitionPreviousScale:previousScale});
@@ -480,23 +493,23 @@
       const transfer=twoSlotTransferProof(candidate,footprints,physicalScale,envelope,reservedRects,immovableIds,transitionPositions,fixedPositions,transferScope,transferBudget,transferEligibleIds);
       return transfer?{...candidate,transition:transfer.transition,transferCertificate:transfer.certificate,coordinated:transfer.finalAccess,paths:transfer.finalAccess.paths,holdingPath:transfer.finalAccess.holdingPath}:null;
     }
-    function place(scale,variant=0,cooperative=false) {
+    function place(scale,variant=0,cooperative=false,reallocate=false) {
       const gap=gapForScale(scale),seats=new Map(),occupied=[],entry=Scene.actorBounds(ENTRY_POINT,{uniformScale:scale,footprint:envelope});
       // The complete future newcomer canvas remains free along the actual door
       // throat, not merely its foot point.
-      const throat=Scene.actorBounds({x:82,y:78},{uniformScale:scale,footprint:envelope});
+      const throat=Scene.actorBounds({x:Math.min(82,ENTRY_POINT.x),y:ENTRY_POINT.y},{uniformScale:scale,footprint:envelope});
       const entrance={left:Math.min(entry.left,throat.left),right:Math.max(entry.right,throat.right),top:Math.min(entry.top,throat.top),bottom:Math.max(entry.bottom,throat.bottom)};
       const oldPocket=previous.values().next().value?.holdingPoint;
       const pocketOrder=(validPoint(oldPocket)?[oldPocket]:[]).concat(visible.length>12?[HOLDING_CANDIDATES.at(-1),...HOLDING_CANDIDATES.slice(0,-1)]:HOLDING_CANDIDATES.slice(variant%HOLDING_CANDIDATES.length).concat(HOLDING_CANDIDATES.slice(0,variant%HOLDING_CANDIDATES.length)));
       const pocket=pocketOrder.find(p=>legalPoint(p,{uniformScale:scale,footprint:envelope,reservedRects,viewport})&&!Scene.boundsOverlap(Scene.actorBounds(p,{uniformScale:scale,footprint:envelope}),entrance,gap+1)&&!visible.some(s=>{const old=fixedPositions.get(s.id)||previous.get(s.id);return validPoint(old)&&(fixedPositions.has(s.id)||zoneArea(old,workZones.get(s.id)))&&Scene.boundsOverlap(Scene.actorBounds(old,{uniformScale:scale,footprint:footprints.get(s.id)}),Scene.actorBounds(p,{uniformScale:scale,footprint:envelope}),gap+1);}));
       if(!pocket)return null;
-      occupied.push(Scene.actorBounds(pocket,{uniformScale:scale,footprint:envelope}));
+      if(!fixedScale||visible.length!==1)occupied.push(Scene.actorBounds(pocket,{uniformScale:scale,footprint:envelope}));
       if(visible.length>12)for(const [from,to]of CORRIDORS){const a=Scene.actorBounds(from,{uniformScale:scale,footprint:envelope}),b=Scene.actorBounds(to,{uniformScale:scale,footprint:envelope});occupied.push({left:Math.min(a.left,b.left),right:Math.max(a.right,b.right),top:Math.min(a.top,b.top),bottom:Math.max(a.bottom,b.bottom)});}
       const prove=()=>{const proofSeats=new Map(seats),extra=new Map();if(options.holdingOccupiedForProof===false)extra.set(HOLDING,pocket);else proofSeats.set(HOLDING,pocket);const proofFootprints=new Map(footprints);proofFootprints.set(HOLDING,envelope);return reachability(proofSeats,proofFootprints,scale,envelope,reservedRects,viewport,extra);};
-      const safe=(p,s)=>{if((fixedPositions.has(s.id)&&!samePoint(p,fixedPositions.get(s.id)))||!seatArea(p,workZones.get(s.id),s.id)||!legalPoint(p,{uniformScale:scale,footprint:footprints.get(s.id),reservedRects,viewport}))return false;const b=Scene.actorBounds(p,{uniformScale:scale,footprint:footprints.get(s.id)});return(fixedPositions.has(s.id)||!Scene.boundsOverlap(b,entrance,gap+1))&&!occupied.some(r=>Scene.boundsOverlap(b,r,gap+1));};
+      const safe=(p,s)=>{if((fixedPositions.has(s.id)&&!samePoint(p,fixedPositions.get(s.id)))||!seatArea(p,workZones.get(s.id),s.id)||!legalPoint(p,{uniformScale:scale,footprint:footprints.get(s.id),reservedRects,viewport}))return false;const b=Scene.actorBounds(p,{uniformScale:scale,footprint:footprints.get(s.id)});return(fixedPositions.has(s.id)||fixedScale&&visible.length===1||!Scene.boundsOverlap(b,entrance,gap+1))&&!occupied.some(r=>Scene.boundsOverlap(b,r,gap+1));};
       const remember=(s,p)=>{const a=seatArea(p,workZones.get(s.id),s.id);seats.set(s.id,{x:p.x,y:p.y,zone:workZones.get(s.id),area:a.id,areaLabelZh:a.labelZh,areaLabelEn:a.labelEn,...(fixedStale.has(s.id)?{fixedStale:true}:{}),...(fixedHolding.has(s.id)?{fixedHolding:true}:{})});occupied.push(Scene.actorBounds(p,{uniformScale:scale,footprint:footprints.get(s.id)}));};
       for(const s of visible)if(fixedPositions.has(s.id)){const p=fixedPositions.get(s.id);if(!safe(p,s))return null;remember(s,p);}
-      for(const s of visible)if(!seats.has(s.id)){const p=previous.get(s.id);if(validPoint(p)&&safe(p,s))remember(s,p);}
+      if(!reallocate)for(const s of visible)if(!seats.has(s.id)){const p=previous.get(s.id);if(validPoint(p)&&safe(p,s)&&(options.retainStations||(p.workZone||p.zone)===workZones.get(s.id)))remember(s,p);}
       const pending=visible.filter(s=>!seats.has(s.id));
       pending.sort((a,b)=>(ZONE_AREAS[workZones.get(a.id)].reduce((sum,r)=>sum+(r.x2-r.x1)*(r.y2-r.y1),0)-ZONE_AREAS[workZones.get(b.id)].reduce((sum,r)=>sum+(r.x2-r.x1)*(r.y2-r.y1),0))||a.id.localeCompare(b.id));
       const lists=new Map();
@@ -516,8 +529,16 @@
           if(visible.length<=12)for(const y of [y2,(y1+y2)/2])for(const x of [x1,x2,(x1+x2)/2])addLocal({x,y});groups.push(local);
         }
         if(cooperative){for(let i=0;i<Math.max(...groups.map(g=>g.length));i++)for(const group of groups)if(group[i])add(group[i]);}else for(const group of groups)for(const p of group)add(p);lists.set(zone,result);
-      }let target=null;for(const p of lists.get(zone)){if(!safe(p,s))continue;if(!cooperative&&visible.length<=12){seats.set(s.id,p);const reachable=prove();seats.delete(s.id);if(!reachable)continue;}target=p;break;}if(!target)return null;remember(s,target);}
+      }let target=null;for(const p of lists.get(zone)){if(!safe(p,s))continue;if(!cooperative&&visible.length<=12&&!(fixedScale&&visible.length===1)){seats.set(s.id,p);const reachable=prove();seats.delete(s.id);if(!reachable)continue;}target=p;break;}if(!target)return null;remember(s,target);}
       const deferred=deferEntrance({seats,pocket},scale);if(deferred)return deferred;
+      if(fixedScale&&visible.length===1){
+        // One full-size body needs its own reversible entrance/exit route,
+        // not space for a second hypothetical holding body. Further real
+        // admissions still require the ordinary complete multi-body proof.
+        const id=visible[0].id,target=seats.get(id),path=route(ENTRY_POINT,target,{uniformScale:scale,footprint:footprints.get(id),reservedRects});
+        if(path.length<2||!samePoint(path.at(-1),target))return null;
+        return proveTransition({seats,paths:new Map([[id,path]]),pocket,holdingPath:[],singleBody:true},scale);
+      }
       if(cooperative){if(proofTrials>=PROOF_BUDGET)return null;proofTrials++;const proof=cooperativeProof(seats,footprints,scale,envelope,reservedRects,pocket,immovableIds);return proof?proveTransition({seats,paths:proof.paths,pocket,holdingPath:proof.holdingPath,coordinated:proof},scale):null;}
       const paths=prove();
       if(!paths)return null;const holdingPath=paths.get(HOLDING);paths.delete(HOLDING);
@@ -542,7 +563,7 @@
       if(proofTrials>=PROOF_BUDGET)return null;
       const scale=Math.min(maximum,profile.scale),gap=gapForScale(scale),seats=new Map(),pocket=profile.holding;
       const holdingBounds=Scene.actorBounds(pocket,{uniformScale:scale,footprint:envelope});
-      const doorBounds=Scene.actorBounds(ENTRY_POINT,{uniformScale:scale,footprint:envelope}),throatBounds=Scene.actorBounds({x:82,y:78},{uniformScale:scale,footprint:envelope});
+      const doorBounds=Scene.actorBounds(ENTRY_POINT,{uniformScale:scale,footprint:envelope}),throatBounds=Scene.actorBounds({x:Math.min(82,ENTRY_POINT.x),y:ENTRY_POINT.y},{uniformScale:scale,footprint:envelope});
       const entrance={left:Math.min(doorBounds.left,throatBounds.left),right:Math.max(doorBounds.right,throatBounds.right),top:Math.min(doorBounds.top,throatBounds.top),bottom:Math.max(doorBounds.bottom,throatBounds.bottom)};
       if(!legalPoint(pocket,{uniformScale:scale,footprint:envelope,reservedRects,viewport})||Scene.boundsOverlap(holdingBounds,entrance,gap+1))return null;
       const claimed=new Map(),assigned=new Map();
@@ -581,30 +602,116 @@
     let chosen=null,scale=maximum,upper=maximum;
     if(options.cooperative!==false&&Traffic?.createCoordinator&&visible.length&&(visible.length<=12||thirteenProfile)){
       if(visible.length<=4){
-        for(let pass=0;pass<4&&!chosen&&proofTrials<PROOF_BUDGET;pass++){
+        for(let pass=0;pass<(fixedScale?1:4)&&!chosen&&proofTrials<PROOF_BUDGET;pass++){
           for(let variant=0;variant<4&&!chosen&&proofTrials<PROOF_BUDGET;variant++)chosen=place(scale,variant,true);
-          if(!chosen){upper=scale;scale*=.82;}
+          if(!chosen&&!fixedScale){upper=scale;scale*=.82;}
         }
         if(chosen&&scale<maximum){let low=scale,high=upper;for(let pass=0;pass<4&&proofTrials<PROOF_BUDGET;pass++){const mid=(low+high)/2,candidate=place(mid,0,true);if(candidate){low=mid;chosen=candidate;}else high=mid;}scale=low;}
-      }else for(const profile of thirteenProfile?[THIRTEEN_PROFILE]:profiles){const candidate=seeded(profile);if(candidate){chosen=candidate;scale=candidate.scale;break;}}
+      }else if(!fixedScale)for(const profile of thirteenProfile?[THIRTEEN_PROFILE]:profiles){const candidate=seeded(profile);if(candidate){chosen=candidate;scale=candidate.scale;break;}}
     }
     // The stricter all-other-bodies-stationary proof remains a bounded fallback
     // for unmatched work-zone distributions or an unavailable traffic module.
     if(!chosen){scale=maximum;upper=maximum;}
 
     if(!visible.length)chosen={seats:new Map(),paths:new Map(),pocket:HOLDING_CANDIDATES[0],holdingPath:route(ENTRY_POINT,HOLDING_CANDIDATES[0],{uniformScale:scale,footprint:envelope,reservedRects})};
-    for(let pass=0;!chosen&&pass<48;pass++){
+    for(let pass=0;!chosen&&pass<(fixedScale?1:48);pass++){
       for(let variant=0;variant<(visible.length<=12?4:1)&&!chosen;variant++)chosen=place(scale,variant);
-      if(!chosen){upper=scale;scale*=.82;}
+      if(!chosen&&!fixedScale){upper=scale;scale*=.82;}
+    }
+    if(!chosen&&fixedScale&&!options.retainStations&&previous.size&&visible.length>1&&visible.length<=12&&!openingBusyIds.length&&[...immovableIds].every(id=>fixedPositions.has(id))){
+      // An unchanged resident's old seat is a preference, not a permanent
+      // obstacle. Before deferring new work, retry bounded fresh assignments
+      // for ordinary stations once finite owners release their routes.
+      // Physical stale/held anchors remain fixed, and
+      // every reassignment still needs complete access and actual transitions.
+      if(options.cooperative!==false&&Traffic?.createCoordinator)for(let variant=0;variant<4&&!chosen&&proofTrials<PROOF_BUDGET;variant++)chosen=place(scale,variant,true,true);
+      for(let variant=0;variant<4&&!chosen;variant++)chosen=place(scale,variant,false,true);
+    }
+    if(!chosen&&fixedScale&&options.retainStations&&cached?.residentGeometry===residentGeometry&&cached.targets===targetSignature(previous)&&['cooperative','stationary'].includes(cached.page.proofMode)&&Math.abs(cached.page.uniformScale-requestedScale)<EPS&&!returningDocks.length&&!openingDocks.length&&!finiteExitIds.size&&visible.every(s=>validPoint(transitionPositions.get(s.id)))){
+      // A finite split or return can temporarily forbid a resident from
+      // yielding. That can block both a new station and a hypothetical future
+      // exit without invalidating the already admitted resident targets. Keep
+      // only that exact proved geometry, and prove the actual current-to-old
+      // transition again under today's locks and named endpoint overlaps.
+      const gap=gapForScale(requestedScale),retained=new Map(visible.map(s=>{
+        const {pendingWorkZone:_,...old}=previous.get(s.id),desired=Scene.activitySpec(s).zone;
+        return[s.id,{...old,...(desired!==(old.workZone||old.zone)?{pendingWorkZone:desired}:{})}];
+      }));
+      const legal=(points,allowSourceOverlaps=false)=>[...points].every(([id,p])=>legalPoint(p,{uniformScale:requestedScale,footprint:footprints.get(id),reservedRects,viewport})&&![...points].some(([other,q])=>other!==id&&!(allowSourceOverlaps&&options.allowedOverlaps?.has(JSON.stringify([id,other].sort())))&&Scene.actorsOverlap(p,{uniformScale:requestedScale,footprint:footprints.get(id)},q,{uniformScale:requestedScale,footprint:footprints.get(other)},gap)));
+      const actual=new Map(visible.map(s=>[s.id,transitionPositions.get(s.id)]));
+      // The source map is restricted to admitted bodies; unrelated runtime
+      // records cannot create an overlap exemption or alter this certificate.
+      const transition=legal(retained)&&legal(actual,true)?transitionProof(retained,footprints,requestedScale,reservedRects,cached.page.holdingPoints||[],immovableIds,transitionPositions,options.allowedOverlaps,fixedPositions):null;
+      if(transition){
+        Object.defineProperties(retained,{fits:{value:true},unplacedIds:{value:[]}});
+        const page={...cached.page,visible,seats:retained,roots:visible.filter(s=>cached.page.rootIdsBySession.get(s.id)===s.id),pathsById:new Map(),holdingPaths:[],coordinatedProof:null,transitionProof:transition,transferCertificate:null,openingProof:null,returnProof:null,exitProof:null,proofMode:'deferred-resident-stations',priorProofMode:cached.page.proofMode,fitReason:'waiting-for-station-route',transitionDeferred:true,blockedByIds:[...immovableIds].sort(),cachedProof:false,venue:['workshop','teahouse','observatory'].includes(options.venue)?options.venue:'workshop'};
+        // Retain the historical complete proof, not this deferred result as a
+        // cache hit. Every locked heartbeat revalidates actual geometry; a
+        // released owner retries normal station allocation.
+        rememberProof(retained,{...cached,targets:targetSignature(retained)});return page;
+      }
     }
     if(!chosen)throw new RangeError('No reachable positive-size furniture-side parking fits the full observed cast');
     if(scale<maximum&&visible.length&&!chosen.coordinated&&!chosen.deferredEntrance){let low=scale,high=upper;for(let pass=0;pass<6;pass++){const mid=(low+high)/2,candidate=place(mid);if(candidate){low=mid;chosen=candidate;}else high=mid;}scale=low;}
     const rootIdsBySession=new Map();for(const s of visible){const chain=[],seen=new Set();let p=s;while(p?.parentId&&unique.has(p.parentId)&&!seen.has(p.id)){seen.add(p.id);chain.push(p.id);p=unique.get(p.parentId);}const id=p&&seen.has(p.id)?[...chain,p.id].sort()[0]:p?.id||s.id;rootIdsBySession.set(s.id,id);}
     const seats=new Map(visible.map(s=>[s.id,{...chosen.seats.get(s.id),workZone:workZones.get(s.id),helper:Boolean(s.parentId),depth:1,uniformScale:scale,targetUniformScale:scale,requestedScale,holdingPoint:chosen.pocket,layoutMode:'walking'}]));
     Object.defineProperties(seats,{fits:{value:true},unplacedIds:{value:[]}});
-    const page={visible,seats,roots:visible.filter(s=>rootIdsBySession.get(s.id)===s.id),rootIdsBySession,requestedScale,uniformScale:scale,layoutMode:'walking',gap:gapForScale(scale),stageRect:null,page:0,pages:1,capacity:visible.length,helperCapacity:visible.filter(s=>s.parentId).length,hidden:0,helperOverflow:0,layoutFits:true,pathsById:chosen.paths,envelope,holdingPoints:[chosen.pocket,...(chosen.yieldPoints||[])],holdingPaths:[chosen.holdingPath],corridors:CORRIDORS,readability:{canvasPixels:154*scale,paintedHeadPixels:55*scale,paintedSpanPixels:75*scale,nameplatePixels:220*scale,recommendedMinimumScale:.35,needsMoreSpace:scale<.35,expansionFactor:Math.max(1,.35/scale)},venue:['workshop','teahouse','observatory'].includes(options.venue)?options.venue:'workshop',fitReason:scale<requestedScale-EPS?(scale<.18?'dense-furniture-side-fit':'reachable-furniture-side-fit'):'requested-size',cachedProof:false,proofMode:chosen.coordinated?'cooperative':'stationary',proofTrials,coordinatedProof:chosen.coordinated||null,transitionProof:chosen.transition||null,transferCertificate:chosen.transferCertificate||null,transferProofAttempts:transferBudget.plans,transferDrainCalls:transferBudget.drainCalls};
+    const page={visible,seats,roots:visible.filter(s=>rootIdsBySession.get(s.id)===s.id),rootIdsBySession,requestedScale,uniformScale:scale,layoutMode:'walking',gap:gapForScale(scale),stageRect:null,page:0,pages:1,capacity:visible.length,helperCapacity:visible.filter(s=>s.parentId).length,hidden:0,helperOverflow:0,layoutFits:true,pathsById:chosen.paths,envelope,holdingPoints:chosen.singleBody?[]:[chosen.pocket,...(chosen.yieldPoints||[])],holdingPaths:chosen.singleBody?[]:[chosen.holdingPath],corridors:CORRIDORS,readability:{canvasPixels:154*scale,paintedHeadPixels:55*scale,paintedSpanPixels:75*scale,nameplatePixels:220*scale,recommendedMinimumScale:.35,needsMoreSpace:scale<.35,expansionFactor:Math.max(1,.35/scale)},venue:['workshop','teahouse','observatory'].includes(options.venue)?options.venue:'workshop',fitReason:scale<requestedScale-EPS?(scale<.18?'dense-furniture-side-fit':'reachable-furniture-side-fit'):'requested-size',cachedProof:false,proofMode:chosen.coordinated?'cooperative':'stationary',proofTrials,coordinatedProof:chosen.coordinated||null,transitionProof:chosen.transition||null,transferCertificate:chosen.transferCertificate||null,transferProofAttempts:transferBudget.plans,transferDrainCalls:transferBudget.drainCalls};
     if(chosen.deferredEntrance){page.proofMode='deferred-entrance';page.fitReason='waiting-for-entrance';page.blockedByIds=chosen.deferredEntrance;page.transitionDeferred=true;page.holdingPaths=[];}
-    page.targetUniformScale=scale;rememberProof(seats,{signature,targets:targetSignature(seats),page});return finishExit(finishOpening(page));
+    page.targetUniformScale=scale;rememberProof(seats,{signature,targets:targetSignature(seats),page,residentGeometry:fixedScale?residentGeometry:null});return finishExit(finishOpening(page));
   }
-  return Object.freeze({layoutWalking,gapForScale,legalPoint,route,ENTRY_POINT,OBSTACLES,ZONE_AREAS,ZONE_ANCHORS,HOLDING_CANDIDATES,CORRIDORS});
+  // Keep every real resident in the geometry problem. New observations wait
+  // outside when the selected size cannot safely fit them; no fact is dropped
+  // from the caller's source/roster and no smaller proof is adopted.
+  function layoutFixedWalking(present,options={}) {
+    // The legacy portal is sized for a 100% whole envelope. Larger manual
+    // sizes use the room's existing doorway approach, with every proof bound
+    // to that same anchor through an isolated geometry instance.
+    const scale=Math.max(.65,Math.min(1.35,Number(options.requestedScale)||1));
+    const bodies=Array.isArray(present)?present:[];
+    const envelope=Object.fromEntries(['left','right','top','bottom'].map(key=>[key,Math.max(Scene.ACTOR_FOOTPRINT.root[key],...bodies.filter(s=>s&&s.id).map(s=>(validFootprint(options.footprints?.get(s.id))?options.footprints.get(s.id):s.parentId?Scene.ACTOR_FOOTPRINT.helper:Scene.ACTOR_FOOTPRINT.root)[key]))]));
+    const candidates=[{x:87,y:78},{x:76.5,y:73.5},{x:76,y:71},{x:73.5,y:73.5}];
+    const entry=candidates.find(point=>legalPoint(point,{uniformScale:scale,footprint:envelope,reservedRects:options.reservedRects||Scene.CLOCK_RESERVED}));
+    if(entry&&(entry.x!==ENTRY_POINT.x||entry.y!==ENTRY_POINT.y)) {
+      const key=entry.x+':'+entry.y;
+      if(!entranceLayouts.has(key))entranceLayouts.set(key,createLayout(Scene,Traffic,entry));
+      return entranceLayouts.get(key).layoutFixedWalking(present,options);
+    }
+    const unique=new Map((Array.isArray(present)?present:[]).filter(s=>s&&typeof s.id==='string'&&s.id).map(s=>[s.id,s]));
+    const cast=[...unique.values()],previous=options.previousSeats instanceof Map?options.previousSeats:new Map();
+    const residentIds=options.residentIds instanceof Set?options.residentIds:new Set(previous.keys());
+    const residents=cast.filter(s=>residentIds.has(s.id)&&previous.has(s.id));
+    const pending=cast.filter(s=>!residents.includes(s));
+    const strict={...options,fixedScale:true,maximumScale:options.requestedScale};
+    const attempt=sessions=>layoutWalking(sessions,strict);
+    let admitted=residents.slice(),page;
+    try { page=attempt(cast); admitted=cast; }
+    catch(error) {
+      if(!(error instanceof RangeError))throw error;
+      try { page=attempt(admitted); }
+      catch(residentError) {
+        if(!(residentError instanceof RangeError))throw residentError;
+        if(admitted.length) {
+          // A changed activity can request a newly blocked station. Keep the
+          // occupied stations while traffic/lifecycle owners clear it.
+          page=layoutWalking(admitted,{...strict,retainStations:true});
+        } else {
+          // Some user sizes cannot clear this room's doorway. An empty floor
+          // needs no route proof: leave its observed agents in the roster.
+          page={...layoutWalking([],{...options,requestedScale:1,maximumScale:1,previousSeats:new Map(),currentPositions:new Map()}),
+            requestedScale:Number(options.requestedScale)||1,uniformScale:Number(options.requestedScale)||1,targetUniformScale:Number(options.requestedScale)||1,
+            pathsById:new Map(),holdingPaths:[],holdingPoints:[]};
+        }
+      }
+      for(const session of pending) {
+        if(session.parentId&&unique.has(session.parentId)&&!admitted.some(s=>s.id===session.parentId))continue;
+        try { const next=layoutWalking(admitted.concat(session),{...strict,retainStations:true}); page=next;admitted.push(session); }
+        catch(candidateError) { if(!(candidateError instanceof RangeError))throw candidateError; }
+      }
+    }
+    const admittedIds=new Set(admitted.map(s=>s.id)),overflowIds=cast.filter(s=>!admittedIds.has(s.id)).map(s=>s.id);
+    return {...page,visible:admitted,overflowIds,hidden:overflowIds.length,helperOverflow:cast.filter(s=>overflowIds.includes(s.id)&&s.parentId).length,
+      fixedScale:true,entryPoint:{...ENTRY_POINT},fitReason:overflowIds.length?'waiting-for-floor-space':page.fitReason};
+  }
+  return Object.freeze({layoutWalking,layoutFixedWalking,gapForScale,legalPoint,route,ENTRY_POINT,OBSTACLES,ZONE_AREAS,ZONE_ANCHORS,HOLDING_CANDIDATES,CORRIDORS});
 });

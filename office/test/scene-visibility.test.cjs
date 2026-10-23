@@ -30,7 +30,7 @@ function fixture({documentHidden=false,actualQuietClones=false}={}){
     getComputedStyle:node=>({opacity:node.style.opacity,transform:node.style.transform}),clearTimeout(){},queueTraffic(){},needsOpeningRefresh:()=>false,queueLayoutRefresh(){},
 cloneAncestor:()=>null,finishCloneReturn:row=>{calls.push({name:'finishCloneReturn',args:[row]});actors.delete(row.id);},fadeBody:()=>{calls.push({name:'fadeBody',args:[]});}};
   const log=name=>(...args)=>calls.push({name,args});
-  Object.assign(context,{usageHistory:{updateStatus:log('usage')},setupAssistant:{update:log('setup')},render:log('render'),settleQuietCloneEffects:log('quietClones'),setPose:log('pose'),renderHelperLinks:log('links'),visitor:{tick:log('visitor')},venueStage:{update:log('venue')},festivalStage:{update:log('festival')},themeEnvironment:{update:log('theme')},social:{update:log('social')},stationArrival:{update:log('station')},scenery:{update:log('scenery')},ensureMotionTicker:log('ticker')});
+  Object.assign(context,{usageHistory:{updateStatus:log('usage')},homeTokenUsage:{update:log('tokens')},manualQuestions:{update:log('questions')},setupAssistant:{update:log('setup')},render:log('render'),settleQuietCloneEffects:log('quietClones'),setPose:log('pose'),renderHelperLinks:log('links'),visitor:{tick:log('visitor')},venueStage:{update:log('venue')},festivalStage:{update:log('festival')},themeEnvironment:{update:log('theme')},social:{update:log('social')},stationArrival:{update:log('station')},scenery:{update:log('scenery')},ensureMotionTicker:log('ticker')});
   // This legacy fixture has no finite slot-transfer owner.
   Object.assign(context,{transferOwner:null,transferAvailable:()=>false,transferEligible:()=>new Set(),revokeTransfer:()=>{},queueTransferContinuation:()=>{}});
   vm.createContext(context);
@@ -78,6 +78,9 @@ test('host visibility stays separate from observed AI facts and raw metadata sur
   const host={available:true,hidden:true,visible:false,minimized:true,appHidden:false},packet={...f.packet(host),activityStats:{today:17},monitor:{running:true}};
   f.api.receive(packet);
   const state=f.api.state();assert.equal(state.snapshot.windowVisibility,host);assert.equal(state.snapshot.sessions[0],f.session);assert.equal(state.snapshot.activityStats,packet.activityStats);assert.equal(state.snapshot.monitor,packet.monitor);
+  assert.equal(count(f,'tokens'),1);assert.equal(count(f,'questions'),1);
+  assert.equal(f.calls.find(call=>call.name==='tokens').args[0],state.snapshot);
+  assert.equal(f.calls.find(call=>call.name==='questions').args[0],state.snapshot);
   assert.equal(JSON.stringify(f.session),before);assert.equal(f.actors.size,1);assert.equal(f.actors.get(f.actor.id),f.actor);assert.equal(f.actor.node,actorNode);assert.equal(f.actor.performance.clock,clock);assert.equal(f.actor.serial,19);
   assert.equal(f.node.style.opacity,'1');assert.equal(f.node.style.visibility,'visible');assert.equal(f.node.style.transform,'matrix(1,0,0,1,384,496.8)');
 });
@@ -95,6 +98,7 @@ test('a malformed non-session payload cannot change native visibility or create 
   const f=fixture();f.api.receive(f.packet({available:true,hidden:true}));const before=f.api.state().snapshot;
   for(const value of [null,{}, {windowVisibility:{hidden:false}},{sessions:'invalid',windowVisibility:{hidden:false}}])f.api.receive(value);
   assert.equal(f.api.hidden(),true);assert.equal(f.api.state().snapshot,before);assert.equal(f.api.state().snapshotReceived,1);assert.equal(count(f,'station'),1);
+  assert.equal(count(f,'tokens'),1);assert.equal(count(f,'questions'),1,'invalid packets never reach the question controller');
 });
 
 

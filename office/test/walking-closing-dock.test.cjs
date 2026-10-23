@@ -5,7 +5,7 @@ const options=source.slice(source.indexOf('  function nextEntryCandidate('),sour
 function harness(session={id:'child',parentId:'parent',status:'closed',closed:true,activity:'idle'}){
   const parent={id:'parent',helper:false,entryPending:false,position:{x:43,y:44},session:{id:'parent',status:'active',activity:'planning'}},child={id:'child',helper:true,entryPending:false,position:{x:48.3,y:84},navigation:null,session:{id:'child',parentId:'parent',status:'active',activity:'coding'}};
   const actors=new Map([[parent.id,parent],[child.id,child]]);
-  const context={cloneLedger:{parentChain:()=>[]},actors,snapshot:{sessions:[parent.session,session]},settings:{agentScale:1,sceneVenue:'workshop'},currentPage:{requestedScale:1},seats:new Map(),uniformScale:.4,actorFootprints:new Map(),CLOCK_RESERVED:[],
+  const context={cloneLedger:{parentChain:()=>[]},actors,snapshot:{sessions:[parent.session,session]},deferredPhysicalScale:null,settings:{agentScale:1,sceneVenue:'workshop'},currentPage:{requestedScale:1},seats:new Map(),uniformScale:.4,actorFootprints:new Map(),CLOCK_RESERVED:[],
     Scene:require('../lib/scene-model.js'),hasBodyActivity:s=>s.status==='active'&&s.activity!=='idle',
     destroyed:false,fitting:false,quietSprites:()=>false,trafficWaiters:new Map(),traffic:{state:()=>({queued:0,activeMoves:[]})},
     cloneBusy:a=>['splitting','returning','absorbing'].includes(a.clonePhase),

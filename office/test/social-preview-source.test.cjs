@@ -94,8 +94,8 @@ test('invalid elapsed, actual hidden and reduced-motion contexts cannot produce 
 });
 test('Electron direct-entry detection runs main once but Node or Electron imports remain inert',()=>{
   const filename=path.join(repo,'office/scripts/render-social-previews.cjs'),source=fs.readFileSync(filename,'utf8'),footer=source.slice(source.lastIndexOf('\nmodule.exports='));
-  for(const [electron,direct,argv,expected]of [[true,false,filename,1],[false,true,filename,1],[false,false,filename,0],[true,false,path.join(repo,'office/test/other.cjs'),0],[true,false,undefined,0]]){
+  for(const [electron,direct,argv,expected,flags=[],extra=[]]of [[true,false,filename,1],[false,true,filename,1],[false,false,filename,0],[true,false,path.join(repo,'office/test/other.cjs'),0],[true,false,undefined,0],[true,false,filename,1,['--force-device-scale-factor=1','--disable-backgrounding-occluded-windows']],[true,false,path.join(repo,'office/test/other.cjs'),0,['--force-device-scale-factor=1'],[filename]]]){
     const module={exports:{}},require=()=>assert.fail('entry check must not import Electron');require.main=direct?module:{};let calls=0;
-    vm.runInNewContext(footer,{...Exporter,module,require,path,__filename:filename,process:{versions:electron?{electron:'41'}:{},argv:['runtime',argv]},main:()=>{calls++;return Promise.resolve();},console});assert.equal(calls,expected);
+    vm.runInNewContext(footer,{...Exporter,module,require,path,__filename:filename,process:{versions:electron?{electron:'41'}:{},argv:['runtime',...flags,argv,...extra]},main:()=>{calls++;return Promise.resolve();},console});assert.equal(calls,expected);
   }
 });

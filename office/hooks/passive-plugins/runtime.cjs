@@ -32,7 +32,7 @@ function sender(configFile) {
   return raw => { try { if (queue.length < 32) { queue.push(raw); drain(); } } catch {} };
 }
 function createObserver(provider, send) {
-  const parents = new Map(), seen = new Set(), candidates = new Map(), toolNames = new Map();
+  const parents = new Map(), seen = new Set(), candidates = new Map(), toolNames = new Map(), questions = new Map();
   const remember = (map, key, value) => { map.set(key, value); while (map.size > 256) map.delete(map.keys().next().value); };
   function emit(event, session, fields = {}) {
     if (!text(session)) return;
@@ -78,7 +78,24 @@ function createObserver(provider, send) {
       case 'session.execution.interrupted': if (v2) { name = 'Interrupt'; fields.interrupted = true; } break;
       case 'session.execution.failed': case 'session.error': name = 'StopFailure'; break;
       case 'session.idle': name = 'Stop'; break;
-      case 'session.deleted': name = 'SessionEnd'; break;
+      case 'question.asked':
+        if(!v2&&text(p.id)&&text(p.tool?.callID)){
+          remember(questions,p.id,{sessionId:sid,callId:p.tool.callID});
+          fields.tool_name='question';fields.tool_use_id=p.tool.callID;name='PreToolUse';
+        }
+        break;
+      case 'question.replied':case 'question.rejected':{
+        const request=questions.get(p.requestID||p.id);
+        if(!v2&&request&&request.sessionId===sid){
+          fields.tool_name='question';fields.tool_use_id=request.callId;
+          if(event.type==='question.rejected')fields.interrupted=true;
+          name='PostToolUse';questions.delete(p.requestID||p.id);
+        }
+        break;
+      }
+      case 'session.deleted':
+        for(const [id,q]of questions)if(q.sessionId===sid)questions.delete(id);
+        name = 'SessionEnd'; break;
     }
     if (name) emit(name, sid, fields);
   }

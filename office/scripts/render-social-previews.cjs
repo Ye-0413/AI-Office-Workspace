@@ -147,4 +147,4 @@ async function main(){
 }
 
 module.exports=Object.freeze({SETTINGS,SOURCES,groups,samplingTiming,gifTiming,previewRuntime,markup});
-if(require.main===module||process.versions.electron&&process.argv[1]&&path.resolve(process.argv[1])===__filename)main().catch(error=>{console.error(error);process.exitCode=1;});
+if(require.main===module||process.versions.electron&&process.argv.slice(1).filter(arg=>typeof arg==='string'&&!arg.startsWith('-')).slice(0,1).some(arg=>path.resolve(arg)===__filename))main().catch(error=>{console.error(error);process.exitCode=1;});

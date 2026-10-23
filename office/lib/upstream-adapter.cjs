@@ -103,7 +103,7 @@ function adaptUpstream(provider, raw, options = {}, normalizeCommon) {
   if (child) { if (!parent) parent=session; session=child; }
   if (!session || (event.startsWith('Subagent') && !subagent && !child)) return null;
   const nativeTool=text(first(raw.tool_name,raw.toolName,toolCall.name,toolCall.toolName,data.name,ctx.toolName,canonical==='codewhale'?raw.DEEPSEEK_TOOL_NAME:undefined));
-  const classifiedTool=nativeTool && (TOOL_ALIASES[nativeTool] || nativeTool);
+  const classifiedTool=nativeTool && (['opencode','mimocode'].includes(canonical)&&nativeTool==='question'?'AskUserQuestion':TOOL_ALIASES[nativeTool] || nativeTool);
   let toolInput=raw.tool_input ?? raw.toolInput ?? toolCall.args ?? raw.args ?? raw.input ?? data.arguments;
   if (typeof toolInput === 'string' && toolInput.length <= 65536) { try { toolInput=JSON.parse(toolInput); } catch { toolInput=undefined; } }
   const result=explicitResult(raw,nativeEvent,canonical);

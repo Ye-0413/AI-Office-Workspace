@@ -13,7 +13,7 @@
   const ACTOR_GAP = 12;
   const RESERVED_GAP = 4;
   const ACTOR_VIEWPORT = Object.freeze({ left: 12, top: 72, right: 1268, bottom: 662 });
-  const CLOCK_RESERVED = Object.freeze([Object.freeze({ left: 470, top: 65, right: 830, bottom: 175 })]);
+  const CLOCK_RESERVED = Object.freeze([Object.freeze({ left: 360, top: 65, right: 830, bottom: 175 })]);
   // Local CSS pixels around the actor's feet. This includes the clipped body,
   // all three name-tag lines, its family border and the selected keepsake.
   // The button starts at -115: the source feet at y=115 meet the route anchor.

@@ -27,7 +27,7 @@
         lobby: ['工坊门厅', 'Workshop lobby'], front: ['协作台', 'Help desk'], exit: ['工坊入口', 'Workshop doorway']
       },
       interactions: [
-        { type: 'blueprint', x: 31, y: 22, labelZh: '翻开蓝图', labelEn: 'Unroll a blueprint' },
+        { type: 'blueprint', x: 24, y: 22, labelZh: '翻开蓝图', labelEn: 'Unroll a blueprint' },
         { type: 'circuit', x: 84, y: 20, labelZh: '拨动线路开关', labelEn: 'Flip the circuit switch' },
         { type: 'bell', x: 70, y: 21, labelZh: '轻敲铜铃', labelEn: 'Ring the brass bell' }
       ]
@@ -46,7 +46,7 @@
       interactions: [
         { type: 'tea', x: 12, y: 58, labelZh: '温一壶茶', labelEn: 'Warm a pot of tea' },
         { type: 'windchime', x: 7, y: 22, labelZh: '轻拨风铃', labelEn: 'Nudge the wind chime' },
-        { type: 'note', x: 31, y: 22, labelZh: '展开港湾留笺', labelEn: 'Unfold a harbour note' }
+        { type: 'note', x: 24, y: 22, labelZh: '展开港湾留笺', labelEn: 'Unfold a harbour note' }
       ]
     }),
     venue({
@@ -61,7 +61,7 @@
         lobby: ['星台门厅', 'Observatory lobby'], front: ['联络台', 'Help counter'], exit: ['星台入口', 'Observatory doorway']
       },
       interactions: [
-        { type: 'starmap', x: 31, y: 22, labelZh: '转动星图', labelEn: 'Turn the star chart' },
+        { type: 'starmap', x: 24, y: 22, labelZh: '转动星图', labelEn: 'Turn the star chart' },
         { type: 'telescope', x: 84, y: 20, labelZh: '望向远方', labelEn: 'Look through the telescope' },
         { type: 'meteor-note', x: 70, y: 21, labelZh: '展开流星笺', labelEn: 'Unfold a meteor note' }
       ]

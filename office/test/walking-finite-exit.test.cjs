@@ -6,7 +6,7 @@ function fn(name){const start=source.search(new RegExp('  (?:async )?function '+
 const session=(id,patch={})=>({id,provider:'codex',status:'active',activity:'coding',...patch});
 function actor(id,patch={}){return{id,session:session(id),helper:false,entryPending:false,position:{x:30,y:69},serial:7,spec:{stale:false},node:{dataset:{}},...patch};}
 function harness(rows=[],present=[]){const actors=new Map(rows.map(a=>[a.id,a])),snapshot={sessions:rows.map(a=>a.session)},jobs=[];let refreshed=0;
- const context={Scene,actors,snapshot,destroyed:false,document:{hidden:false},nativeWindowHidden:false,currentPage:{visible:present},cloneLedger:{parentChain:id=>{const chain=[],seen=new Set([id]);let s=snapshot.sessions.find(s=>s.id===id)||actors.get(id)?.session;while(s?.parentId&&!seen.has(s.parentId)){const parentId=s.parentId;seen.add(parentId);chain.push(parentId);s=snapshot.sessions.find(s=>s.id===parentId)||actors.get(parentId)?.session;}return chain;}},relatedClones:a=>[...actors.values()].filter(b=>b.helper&&context.cloneLedger.parentChain(b.id).includes(a.id)),pinnedDockIds:()=>new Set(),hasBodyActivity:s=>!Scene.isClosed(s)&&!s.disconnected&&s.status!=='stale'&&['active','waiting'].includes(s.status)&&s.activity!=='idle',queueLayoutRefresh:()=>refreshed++,queueMicrotask:f=>jobs.push(f)};
+ const context={Scene,actors,snapshot,destroyed:false,deferredPhysicalScale:null,document:{hidden:false},nativeWindowHidden:false,currentPage:{visible:present},cloneLedger:{parentChain:id=>{const chain=[],seen=new Set([id]);let s=snapshot.sessions.find(s=>s.id===id)||actors.get(id)?.session;while(s?.parentId&&!seen.has(s.parentId)){const parentId=s.parentId;seen.add(parentId);chain.push(parentId);s=snapshot.sessions.find(s=>s.id===parentId)||actors.get(parentId)?.session;}return chain;}},relatedClones:a=>[...actors.values()].filter(b=>b.helper&&context.cloneLedger.parentChain(b.id).includes(a.id)),pinnedDockIds:()=>new Set(),hasBodyActivity:s=>!Scene.isClosed(s)&&!s.disconnected&&s.status!=='stale'&&['active','waiting'].includes(s.status)&&s.activity!=='idle',queueLayoutRefresh:()=>refreshed++,queueMicrotask:f=>jobs.push(f)};
  // This legacy fixture has no finite slot-transfer owner.
   Object.assign(context,{transferOwner:null,transferAvailable:()=>false,transferEligible:()=>new Set(),revokeTransfer:()=>{},queueTransferContinuation:()=>{}});
   vm.createContext(context);vm.runInContext(fn('sceneHidden')+fn('finiteExitIds'),context);return{context,actors,snapshot,jobs,read:()=>Array.from(context.finiteExitIds(present)),refreshes:()=>refreshed};}
@@ -32,6 +32,16 @@ test('scene input receives the exact immutable-by-copy finite set; ordinary isol
  const h=harness(),c=h.context;Object.assign(c,{settings:{agentScale:1,sceneVenue:'workshop'},currentPage:{requestedScale:1},seats:new Map(),uniformScale:.4,actorFootprints:new Map(),CLOCK_RESERVED:[],closingDockPairs:()=>new Map(),openingDockPairs:()=>new Map(),currentPosition:a=>a.position,canYieldAtStation:()=>true,endpointParent:()=>null});
  vm.runInContext(fn('sceneOptions'),c);const ids=new Set(['main']),result=c.sceneOptions([],ids);assert.deepEqual(Array.from(result.finiteExitIds),['main']);ids.clear();assert.deepEqual(Array.from(result.finiteExitIds),['main']);assert.equal(c.sceneOptions().finiteExitIds.size,0);
 });
+test('a pending size preference retains the current physical scale in both allocator bounds until finite clones finish',()=>{
+ const h=harness(),c=h.context;
+ Object.assign(c,{settings:{agentScale:1.35,sceneVenue:'workshop'},currentPage:{requestedScale:1.35,scaleCeiling:1.35},seats:new Map(),uniformScale:.65,actorFootprints:new Map(),CLOCK_RESERVED:[],closingDockPairs:()=>new Map(),openingDockPairs:()=>new Map(),currentPosition:a=>a.position,canYieldAtStation:()=>true,endpointParent:()=>null});
+ vm.runInContext(fn('sceneOptions'),c);
+ const normal=c.sceneOptions();assert.equal(normal.requestedScale,1.35);assert.equal(normal.maximumScale,1.35);
+ c.deferredPhysicalScale=.65;
+ const pending=c.sceneOptions();assert.equal(pending.requestedScale,.65);assert.equal(pending.maximumScale,.65);assert.equal(c.settings.agentScale,1.35,'holding physical geometry must preserve the saved user preference');
+ c.deferredPhysicalScale=null;
+ const released=c.sceneOptions();assert.equal(released.requestedScale,1.35);assert.equal(released.maximumScale,1.35);
+});
 test('a newly requested exit waits for its named actual proof; same serial completes only at the real door',async()=>{
  const a=actor('main',{session:session('main',{status:'closed'})}),h=harness([a]),c=h.context;let moved=0,removed=0,arrivals=0,cancels=0;
  Object.assign(c,{currentPage:{visible:[],finiteExitDeferred:true,exitOwnerIds:['main'],exitProof:null},uniformScale:.4,ENTRY_POINT:{x:87,y:78},snapshot:{sessions:[a.session]},relatedClones:()=>[],holdForClones:()=>assert.fail('no child'),cancelAction:b=>{cancels++;return ++b.serial;},text:()=>{},move:async(b,p,s)=>{moved++;assert.equal(p,c.ENTRY_POINT);assert.equal(s,b.serial);b.position={...p};return true;},actualArrival:()=>arrivals++,openDoor:()=>{},removeActor:()=>removed++,showError:e=>{throw e;}});
@@ -52,6 +62,64 @@ test('the last real child removal releases an absent held main through one fresh
 test('real endpoint re-proves a waiting finite exit at the same scale without requiring a new snapshot',()=>{
  const a=actor('main'),h=harness([a]),c=h.context,refreshes=[];Object.assign(c,{destroyed:false,currentPage:{exitOwnerIds:['retiring'],uniformScale:.4},office:{dispatchEvent:()=>{}},CustomEvent:class{constructor(type,value){this.type=type;this.detail=value.detail;}},currentPosition:b=>b.position,queueLayoutRefresh:force=>refreshes.push(force)});vm.runInContext(fn('actualArrival'),c);c.actualArrival(a,{zone:'desk'},a.serial,'station');assert.deepEqual(refreshes,[true],'a physical endpoint consumes the previous no-route proof even at unchanged scale');c.currentPage.exitOwnerIds=[];c.actualArrival(a,{zone:'desk'},a.serial,'station');assert.deepEqual(refreshes,[true,false],'ordinary endpoint keeps the existing conditional scale check');
 });
+function arrivalHarness(){
+ const a=actor('resized',{session:session('resized',{turnId:'turn-one'}),target:{zone:'desk'}}),h=harness([a]),c=h.context,events=[],refreshes=[];
+ Object.assign(c,{office:{dispatchEvent:event=>events.push(event)},CustomEvent:class{constructor(type,value){this.type=type;this.detail=value.detail;}},currentPosition:b=>({...b.position}),queueLayoutRefresh:force=>refreshes.push(force)});
+ vm.runInContext(fn('actualArrival'),c);
+ return{...h,actor:a,events,refreshes,arrive:(kind='entry',serial=a.serial)=>c.actualArrival(a,{x:30,y:69,zone:'desk'},serial,kind)};
+}
+test('preference-only entry and later same-work parking keep their suppression marker while releasing pending layout',()=>{
+ for(const kind of ['entry','station']){
+  const h=arrivalHarness(),a=h.actor,before=JSON.stringify(a.session),marker={activity:'coding',status:'active',turnId:'turn-one'};a.presentationReentry=marker;
+  h.actors.set('pending-clone',actor('pending-clone',{helper:true,entryPending:true}));
+  h.arrive(kind);assert.equal(h.events.length,0,'unchanged work must not replay furniture feedback on '+kind);assert.equal(a.presentationReentry,marker,'the first work endpoint retains the already-observed work boundary');
+  assert.deepEqual(h.refreshes,[true],'a suppressed decoration must still release the pending clone layout owner');assert.equal(JSON.stringify(a.session),before);
+  a.position={x:31,y:69};h.arrive('station');
+  assert.equal(h.events.length,0,'a later cosmetic parking move for the same work cannot replay the furniture response');assert.equal(a.presentationReentry,marker);assert.deepEqual(h.refreshes,[true,true]);
+  a.session={...a.session,activity:'testing',turnId:'turn-two'};h.arrive('station');
+  assert.equal(h.events.length,1,'a later real work change keeps its ordinary response');assert.equal(h.events[0].type,'office:actor-arrival');assert.equal(h.events[0].detail.actorId,a.id);assert.equal(h.events[0].detail.kind,'station');assert.equal(a.presentationReentry,null,'genuinely changed work releases the presentation-only suppression');
+  assert.deepEqual(h.refreshes,[true,true,true]);
+ }
+});
+test('work that changes during resize readmission receives its actual first endpoint response',()=>{
+ for(const patch of [{activity:'testing'},{status:'waiting'},{turnId:'turn-two'}]){
+  const h=arrivalHarness(),a=h.actor;a.presentationReentry={activity:'coding',status:'active',turnId:'turn-one'};a.session={...a.session,...patch};
+  h.arrive();assert.equal(h.events.length,1,'changed '+Object.keys(patch)[0]+' is observed work, not a preference-only replay');assert.equal(a.presentationReentry,null);assert.deepEqual(h.refreshes,[false]);
+  assert.deepEqual({...h.events[0].detail.position},a.position);assert.equal(h.events[0].detail.serial,a.serial);
+ }
+});
+test('stale, replaced or still-outside arrival callbacks cannot discard a presentation readmission marker',()=>{
+ const h=arrivalHarness(),a=h.actor,marker={activity:'coding',status:'active',turnId:'turn-one'};a.presentationReentry=marker;
+ h.arrive('entry',a.serial-1);assert.equal(a.presentationReentry,marker);assert.equal(h.events.length,0);assert.equal(h.refreshes.length,0);
+ a.entryPending=true;h.arrive();assert.equal(a.presentationReentry,marker);assert.equal(h.refreshes.length,0);
+ a.entryPending=false;h.actors.set(a.id,actor(a.id));h.arrive();assert.equal(a.presentationReentry,marker);assert.equal(h.events.length,0);assert.equal(h.refreshes.length,0);
+ h.actors.set(a.id,a);h.arrive();assert.equal(a.presentationReentry,marker);assert.equal(h.events.length,0);assert.deepEqual(h.refreshes,[false],'the current actual owner can still complete its suppressed endpoint');
+ a.session={...a.session,turnId:'turn-two'};h.arrive('station');assert.equal(a.presentationReentry,null);assert.equal(h.events.length,1);assert.deepEqual(h.refreshes,[false,false]);
+});
+test('non-work endpoints remain real arrivals while only a genuine work change clears the presentation marker',()=>{
+ const h=arrivalHarness(),a=h.actor,marker={activity:'coding',status:'active',turnId:'turn-one'};a.presentationReentry=marker;
+ h.arrive('return');assert.equal(h.events.length,1);assert.equal(h.events[0].detail.kind,'return');assert.equal(a.presentationReentry,marker);
+ h.arrive('station');assert.equal(h.events.length,1);assert.equal(a.presentationReentry,marker);assert.deepEqual(h.refreshes,[false,false]);
+ a.session={...a.session,status:'waiting'};h.arrive('station');assert.equal(h.events.length,2);assert.equal(a.presentationReentry,null);assert.deepEqual(h.refreshes,[false,false,false]);
+});
+test('readmission clearing preserves original floor and queued semantic markers while pruning ended identities',()=>{
+ const retainedMarker={activity:'reading',status:'active',turnId:'earlier-turn'};
+ const visible=actor('visible',{session:session('visible',{turnId:'current-turn',title:'PRIVATE TASK CONTENT'})});
+ const newPending=actor('new-pending',{entryPending:true});
+ const readmitting=actor('readmitting',{entryPending:true,presentationReentry:retainedMarker,session:session('readmitting',{activity:'testing',turnId:'changed-during-entry'})});
+ const h=harness([visible,newPending,readmitting]),c=h.context,presentationReentries=new Map([['stale-unrelated',{activity:'idle'}]]),removals=[],revokes=[],effects=[];
+ const node={children:[{getAnimations:()=>[{cancel:()=>effects.push('cancel')}]}],replaceChildren(){effects.push('clear');}};
+ Object.assign(c,{presentationReentries,clearingActors:false,layoutRefreshOwner:{old:true},layoutRefreshRequested:true,seats:new Map([['old-seat',{}]]),
+  removeActor:id=>{assert.equal(c.clearingActors,true);removals.push(id);h.actors.delete(id);},revokeTransfer:(...args)=>revokes.push(args),traffic:{clear:()=>effects.push('traffic')},$:()=>node});
+ vm.runInContext(fn('clearActors'),c);c.clearActors({readmission:true});
+ assert.deepEqual([...presentationReentries.keys()],['visible','readmitting']);assert.deepEqual({...presentationReentries.get('visible')},{activity:'coding',status:'active',turnId:'current-turn'});
+ assert.equal(presentationReentries.get('readmitting'),retainedMarker,'a second preference change preserves the original suppression boundary');assert.doesNotMatch(JSON.stringify([...presentationReentries]),/PRIVATE TASK CONTENT|changed-during-entry/);
+ assert.deepEqual(removals,['visible','new-pending','readmitting']);assert.equal(h.actors.size,0);assert.equal(c.seats.size,0);assert.equal(c.clearingActors,false);assert.equal(c.layoutRefreshOwner,null);assert.equal(c.layoutRefreshRequested,false);assert.deepEqual(revokes,[['clear',null,false]]);assert.ok(effects.includes('cancel'));
+ const queuedMarker=presentationReentries.get('visible');presentationReentries.set('missing-id',{activity:'coding'});presentationReentries.set('closed-id',{activity:'coding'});h.snapshot.sessions.push(session('closed-id',{status:'closed',closed:true}));
+ h.actors.set(readmitting.id,readmitting);c.clearActors({readmission:true});
+ assert.equal(h.actors.has('visible'),false,'the previously visible identity is still queued with no current floor body');assert.equal(presentationReentries.get('visible'),queuedMarker,'a second preference change preserves its original pending readmission marker');assert.equal(presentationReentries.get('readmitting'),retainedMarker);assert.equal(presentationReentries.has('missing-id'),false);assert.equal(presentationReentries.has('closed-id'),false,'missing and closed identities cannot retain a presentation lease');
+ h.actors.set(visible.id,visible);c.clearActors();assert.equal(presentationReentries.size,0,'ordinary clearing cannot preserve a presentation-only suppression lease');
+});
 test('a stale exit completion after same-ID recovery cannot emit an arrival, open the door or remove the current owner',async()=>{
  const a=actor('main',{session:session('main',{status:'closed'})}),h=harness([a]),c=h.context;let finish,moved=0,removed=0,arrivals=0,doors=0;
  Object.assign(c,{currentPage:{visible:[],exitOwnerIds:['main'],exitProof:{scale:.4,removedIds:['main']}},uniformScale:.4,ENTRY_POINT:{x:87,y:78},relatedClones:()=>[],cancelAction:b=>++b.serial,text:()=>{},move:()=>{moved++;return new Promise(resolve=>finish=resolve);},actualArrival:()=>arrivals++,openDoor:()=>doors++,removeActor:()=>removed++,showError:e=>{throw e;}});
@@ -68,7 +136,7 @@ test('the full production render sends first-frame absent/closed exit evidence b
  const root=actor('retiring',{session:session('retiring',{status:'closed'})}),retained=actor('retained'),h=harness([root,retained],[retained.session]),c=h.context,dom=new Map();let captured,measured,reconciled=0;
  const node=()=>({dataset:{},style:{},textContent:'',firstElementChild:{},replaceChildren(){},querySelector(){return this;}}),noop=()=>{};
  Object.assign(c,{sizeStability:require('../lib/size-stability.js').create(),$:id=>{if(!dom.has(id))dom.set(id,node());return dom.get(id);},office:node(),language:'zh',settings:{agentScale:1,sceneVenue:'workshop'},attendanceModel:{update:()=>({present:[retained.session],retired:['retiring']})},attendance:{present:[]},restedClones:new Set(),cloneLedger:{...c.cloneLedger,update:noop,rootFor:id=>id},Family:{build:()=>({info:new Map(),byId:new Map()})},familyGraph:{info:new Map()},paletteRegistry:{update:noop},measureActorFootprints:sessions=>{measured=sessions.map(s=>s.id);},selectedProject:'',roomSelectionExplicit:false,rooms:[],element:node,actorFootprints:new Map(),CLOCK_RESERVED:[],seats:new Map(),uniformScale:.4,closingDockPairs:()=>new Map(),openingDockPairs:()=>new Map(),canYieldAtStation:()=>true,endpointParent:()=>null,currentPosition:b=>b.position,
-  WalkingLayout:{layoutWalking:(sessions,options)=>{captured=options;assert.equal(reconciled,0,'proof precedes depart');return{seats:new Map(),pathsById:new Map(),uniformScale:.4,pages:1};}},reconcileActors:()=>reconciled++,renderConnections:noop,renderRoster:noop,renderInspector:noop,updateSignalSummary:noop,text:noop,tr:value=>value,I18n:require('../lib/i18n-model.js'),previousAttention:new Set(),refreshQuietPresentation:noop,venueStage:null,festivalStage:null,themeEnvironment:null,social:null,stationArrival:null});
+  WalkingLayout:{layoutFixedWalking:(sessions,options)=>{captured=options;assert.equal(reconciled,0,'proof precedes depart');return{seats:new Map(),pathsById:new Map(),uniformScale:.4,pages:1};}},reconcileActors:()=>reconciled++,renderConnections:noop,renderRoster:noop,renderInspector:noop,updateSignalSummary:noop,text:noop,tr:value=>value,I18n:require('../lib/i18n-model.js'),previousAttention:new Set(),refreshQuietPresentation:noop,venueStage:null,festivalStage:null,themeEnvironment:null,social:null,stationArrival:null});
  vm.runInContext(fn('nameplateMode')+fn('sceneOptions')+fn('render'),c);c.render();assert.deepEqual(Array.from(captured.finiteExitIds),['retiring']);assert.equal(reconciled,1);assert.deepEqual(Array.from(measured),['retained','retiring'],'a true on-floor exit body needs the current-language full plate measurement too');
  const child=session('late',{parentId:'retiring'});h.snapshot.sessions.push(child);c.attendanceModel.update=()=>({present:[retained.session,child],retired:['retiring']});reconciled=0;c.render();assert.equal(captured.finiteExitIds.size,0);
 });

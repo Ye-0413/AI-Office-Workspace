@@ -7,6 +7,10 @@ const {createSessionStore}=require('./lib/session-store.cjs');
 const {createActivityStats}=require('./lib/activity-stats.cjs');
 const {createUsageLog}=require('./lib/usage-log.cjs');
 const {createUsageApi}=require('./lib/usage-api.cjs');
+const {createSessionUsageStore}=require('./lib/session-usage-store.cjs');
+const {createSessionUsageMonitor}=require('./lib/session-usage-monitor.cjs');
+const {createManualQuestions}=require('./lib/manual-questions.cjs');
+const {createAdditionalSessionMonitor}=require('./lib/additional-session-monitor.cjs');
 const {createSetupManager}=require('./lib/setup-manager.cjs');
 const {createCodexMonitor}=require('./lib/codex-monitor.cjs');
 const {mergeObservationHealth}=require('./lib/observation-health.cjs');
@@ -19,13 +23,15 @@ app.setName('AI Mini Office');
 if(process.env.MINI_OFFICE_DATA_DIR){fs.mkdirSync(process.env.MINI_OFFICE_DATA_DIR,{recursive:true,mode:0o700});app.setPath('userData',path.resolve(process.env.MINI_OFFICE_DATA_DIR));}
 if(!app.requestSingleInstanceLock()){app.quit();}
 else {
-let win=null,windowVisibility=null,settings,liveStore,activityStats,usageLog,usageApi,setupManager,monitor,bridge,pruneTimer=null,refreshTimer=null,ready=false,providerMutation=false;
+let win=null,windowVisibility=null,settings,liveStore,activityStats,usageLog,usageApi,tokenStore,tokenMonitor,additionalMonitor,manualQuestions,setupManager,monitor,bridge,pruneTimer=null,refreshTimer=null,ready=false,providerMutation=false;
 const rendererErrors=[];
 function current(){
   const liveSessions=liveStore.snapshot();
-  const monitorStatus=monitor.status(),connections=bridge.getConnections().map(c=>mergeObservationHealth(c,monitorStatus,liveSessions));
-  return{mode:'live',now:Date.now(),windowVisibility:windowVisibility?.snapshot()||{available:false,hidden:null},sessions:liveSessions,activityStats:activityStats.snapshot(),usageLog:usageLog.status(),setup:setupManager.snapshot(),connections,monitor:{running:monitorStatus.running,error:monitorStatus.error||null},version:app.getVersion(),packaged:app.isPackaged};
+  const monitorStatus=monitor.status(),extraStatus=additionalMonitor.status(),connections=bridge.getConnections().map(c=>mergeObservationHealth(c,c.provider==='codex'?monitorStatus:extraStatus,liveSessions));
+  const tokenStatus=combinedTokenStatus(),tokenUsage={...tokenStore.summary(),importing:tokenStatus.importing,lastScanAt:tokenStatus.lastScanAt,providers:tokenStatus.providers,...(tokenStatus.error?{error:tokenStatus.error}:{})};
+  return{mode:'live',now:Date.now(),windowVisibility:windowVisibility?.snapshot()||{available:false,hidden:null},sessions:liveSessions,activityStats:activityStats.snapshot(),usageLog:usageLog.status(),tokenUsage,questions:manualQuestions.snapshot(),questionStatus:manualQuestions.status(),setup:setupManager.snapshot(),connections,monitor:{running:monitorStatus.running,error:monitorStatus.error||null},version:app.getVersion(),packaged:app.isPackaged};
 }
+function combinedTokenStatus(){const basic=tokenMonitor.status(),extra=additionalMonitor.status(),error=[basic.error,extra.error].filter(Boolean).join('; ');return{...basic,providers:[...new Set([...basic.providers,...extra.providers])],sources:extra.sources,bytesRead:basic.bytesRead+extra.bytesRead,lastScanAt:Math.max(basic.lastScanAt||0,extra.lastScanAt||0)||null,importing:basic.completedScans===0||extra.completedScans===0||basic.pendingFiles>0||extra.pendingFiles>0,...(error?{error}:{})};}
 function broadcast(){if(win&&!win.isDestroyed()&&ready)win.webContents.send('office:snapshot',current());}
 function observe(event){return liveStore.ingest(event);}
 function applySettings(){if(win&&!win.isDestroyed()){win.setAlwaysOnTop(settings.get().alwaysOnTop);win.setTitle(settings.get().language==='en'?'Little Studio':'小小工作室');refreshMenu();}}
@@ -43,12 +49,16 @@ async function writeSmokeReport(){
   fs.writeFileSync(out,JSON.stringify(report,null,2)+'\n',{mode:0o600});
 }
 app.on('second-instance',()=>{if(win){if(win.isMinimized())win.restore();win.show();win.focus();}});
-app.whenReady().then(()=>{
+app.whenReady().then(async()=>{
   settings=createSettings(app.getPath('userData'));
   activityStats=createActivityStats({dataDir:app.getPath('userData')});
   usageLog=createUsageLog({dataDir:app.getPath('userData'),staleMs:180000});
+  tokenStore=createSessionUsageStore({dataDir:app.getPath('userData')});
+  tokenMonitor=createSessionUsageMonitor({store:tokenStore});
+  manualQuestions=createManualQuestions({dataDir:app.getPath('userData'),onChange:broadcast});
   usageApi=createUsageApi({log:usageLog,openFolder:folder=>shell.openPath(folder),chooseExport:defaultPath=>dialog.showSaveDialog(win,{title:settings.get().language==='en'?'Export observed Agent usage':'导出已观测 Agent 使用记录',defaultPath,filters:[{name:'CSV',extensions:['csv']}],properties:['createDirectory','showOverwriteConfirmation']})});
   liveStore=createSessionStore({staleMs:180000});
+  additionalMonitor=createAdditionalSessionMonitor({store:tokenStore,onEvent:observe});
   liveStore.onAccepted(event=>{activityStats.record(event);usageLog.record(event,liveStore.snapshot());});
   monitor=createCodexMonitor({onEvent:observe});
   bridge=createObserverBridge({dataDir:app.getPath('userData'),appRoot:__dirname,electronPath:process.execPath,withNativeLock,onEvent:observe});
@@ -67,6 +77,10 @@ app.whenReady().then(()=>{
   bind('usage-status',()=>usageApi.status());
   bind('usage-export',filters=>usageApi.export(filters));
   bind('usage-open-folder',()=>usageApi.openFolder());
+  bind('token-usage',filters=>({...tokenStore.query(filters),status:combinedTokenStatus()}));
+  bind('token-refresh',async()=>{await Promise.all([tokenMonitor.refresh(),additionalMonitor.refresh()]);return combinedTokenStatus();});
+  bind('answer-question',input=>manualQuestions.submit(input));
+  bind('question-native',id=>manualQuestions.native(id));
   bind('setup-status',()=>setupManager.snapshot());
   bind('setup-initialize',options=>{if(providerMutation)throw new Error('A provider configuration change is already running');return setupManager.run(options);});
   bind('set-settings',patch=>{const next=settings.set(patch);applySettings();return next;});
@@ -76,7 +90,7 @@ app.whenReady().then(()=>{
   bind('displays',()=>screen.getAllDisplays().map(d=>({id:d.id,label:d.label||`${d.size.width}×${d.size.height}`,width:d.size.width,height:d.size.height,primary:d.id===screen.getPrimaryDisplay().id})));
   bind('move-display',id=>{if(!Number.isInteger(id))throw new Error('Invalid display');return moveToDisplay(id);});
   bind('open-source',async id=>{if(typeof id!=='string'||id.length>512)throw new Error('Invalid session');const session=liveStore.snapshot().find(s=>s.id===id);if(!session||!path.isAbsolute(session.projectPath||''))throw new Error('该会话没有可打开的本地项目');const stat=await fs.promises.stat(session.projectPath);if(!stat.isDirectory())throw new Error('项目目录不存在');const error=await shell.openPath(session.projectPath);if(error)throw new Error(error);return{opened:true};});
-  applySettings();bridge.start();monitor.start();
+  applySettings();bridge.start();monitor.start();tokenMonitor.start();additionalMonitor.start();await manualQuestions.start();
   const displayId=settings.get().displayId;if(displayId!==null&&screen.getAllDisplays().some(d=>d.id===displayId))moveToDisplay(displayId);
   win.loadFile(path.join(__dirname,'renderer','index.html')).catch(error=>{rendererErrors.push(error.message);writeSmokeReport();});
   if(process.env.MINI_OFFICE_SMOKE_REPORT&&process.env.MINI_OFFICE_SMOKE_EXIT_MS){const delay=Number(process.env.MINI_OFFICE_SMOKE_EXIT_MS);if(Number.isFinite(delay)&&delay>=3000&&delay<=30000)setTimeout(async()=>{await writeSmokeReport();app.quit();},delay);}
@@ -85,5 +99,5 @@ app.whenReady().then(()=>{
   win.on('closed',()=>{windowVisibility?.dispose();win=null;});
 }).catch(error=>{console.error('[AI Mini Office]',error);app.quit();});
 app.on('window-all-closed',()=>app.quit());
-app.on('before-quit',()=>{ready=false;windowVisibility?.dispose();if(pruneTimer)clearInterval(pruneTimer);if(refreshTimer)clearInterval(refreshTimer);monitor?.stop();bridge?.stop();usageLog?.close();activityStats?.close();});
+app.on('before-quit',()=>{ready=false;windowVisibility?.dispose();if(pruneTimer)clearInterval(pruneTimer);if(refreshTimer)clearInterval(refreshTimer);monitor?.stop();tokenMonitor?.stop();additionalMonitor?.stop();tokenStore?.close();manualQuestions?.stop();bridge?.stop();usageLog?.close();activityStats?.close();});
 }

@@ -25,11 +25,11 @@ async function inspect(name,count,dense=true){
  await capture(name);
  assert.equal(rows.length,count);
  for(const r of rows){
-  assert.equal(r.font,dense?'26px':'16px','actual native nickname size: '+r.id);
+  assert.equal(r.font,dense?'26px':'24px','actual native nickname size: '+r.id);
   assert.equal(r.z,'10');assert.ok(r.unit>0);
   if(count===13)assert.ok(r.scale>=.4-.00001,'known13-body distribution retains the proved .4 scale');
   assert.ok(Math.abs(r.plate.width/r.unit-220)<.2,'same physical 220px plate');
-  assert.ok(Math.abs(r.plate.height/r.unit-70)<.2,'same physical 70px plate');
+  assert.ok(Math.abs(r.plate.height/r.unit-63)<.2,'same physical 63px plate');
   assert.ok(r.aria.includes(r.name),'complete real nickname remains accessible');
   assert.equal(r.fullName,r.name,'ellipsis retains complete nickname tooltip');
   assert.ok(r.aria.includes(r.relationTitle.split(' · Total retains')[0].split(' · 累计保留')[0]),'complete relation remains accessible');
@@ -48,7 +48,7 @@ async function inspect(name,count,dense=true){
  const expected=settings.language==='zh'?`活跃 ${main.active} · 历史 ${main.total}`:`Active ${main.active} · Total ${main.total}`;
  if(dense)assert.equal(main.relation,expected,'actual ledger counts stay under main');
  const child=rows.find(r=>r.id===helper.id);if(child)assert.ok(child.relation.includes(main.name),'child retains actual parent name');
- checks.push({name,visible:rows.length,font:rows[0].font,plateWorld:[220,70],minimumScreenUnit:Math.min(...rows.map(r=>r.unit)),mainCounts:{active:Number(main.active),historical:Number(main.total)},longestRealEnglishName:Math.max(...rows.map(r=>r.name.length))});
+ checks.push({name,visible:rows.length,font:rows[0].font,plateWorld:[220,63],minimumScreenUnit:Math.min(...rows.map(r=>r.unit)),mainCounts:{active:Number(main.active),historical:Number(main.total)},longestRealEnglishName:Math.max(...rows.map(r=>r.name.length))});
  return rows;
 }
 const guard=setTimeout(()=>{console.error('Dense nameplate fixture timed out at '+stage);app.exit(1);},180000);
@@ -94,7 +94,7 @@ app.whenReady().then(async()=>{
  assert.equal(await run(`nameplateRunningClocks.every(o=>o.animation.playState==='running'&&o.animation.currentTime>o.time&&o.animation.effect.target.isConnected&&o.animation.effect.target.getAnimations().includes(o.animation))`),true,'actual running CSS owners advance without replacement across metadata');
  checks.push({name:'nonempty original running work clocks advance on the same Animation objects across four metadata snapshots',clocks:await run('nameplateRunningClocks.length')});
  const leaving=cast.find(s=>s.id==='codex:transfer-011');
- await run(`crowdAudit.begin('real12to11 retirement retains dense plate until actual body leaves',${JSON.stringify(cast.filter(s=>s.id!==helper.id).map(s=>s.id))},[${JSON.stringify(leaving.id)}]);window.nameplateRetirement={frames:0,retiringFrames:0,violations:[],active:true};function auditNameplateDensity(){const a=nameplateRetirement;if(!a.active)return;a.frames++;const ns=[...document.querySelectorAll('.actor[data-session-id]')];if(ns.some(n=>n.dataset.sessionId===${JSON.stringify(leaving.id)}))a.retiringFrames++;for(const n of ns){const expected=ns.length>=12?'26px':'16px';if(getComputedStyle(n.querySelector('.actor-title')).fontSize!==expected)a.violations.push('density disagrees with actual bodies');}requestAnimationFrame(auditNameplateDensity);}requestAnimationFrame(auditNameplateDensity);void 0`);
+ await run(`crowdAudit.begin('real12to11 retirement retains dense plate until actual body leaves',${JSON.stringify(cast.filter(s=>s.id!==helper.id).map(s=>s.id))},[${JSON.stringify(leaving.id)}]);window.nameplateRetirement={frames:0,retiringFrames:0,violations:[],active:true};function auditNameplateDensity(){const a=nameplateRetirement;if(!a.active)return;a.frames++;const ns=[...document.querySelectorAll('.actor[data-session-id]')];if(ns.some(n=>n.dataset.sessionId===${JSON.stringify(leaving.id)}))a.retiringFrames++;for(const n of ns){const expected=ns.length>=12?'26px':'24px';if(getComputedStyle(n.querySelector('.actor-title')).fontSize!==expected)a.violations.push('density disagrees with actual bodies');}requestAnimationFrame(auditNameplateDensity);}requestAnimationFrame(auditNameplateDensity);void 0`);
  send(cast.map(s=>s.id===leaving.id?{...s,status:'closed',closed:true,activity:'idle',activeTools:0,lastEventAt:Date.now()}:s));
  await until(settled(11),'actual main must finish its physical doorway exit');
  await pause(550);
@@ -105,7 +105,7 @@ app.whenReady().then(async()=>{
  await run(`crowdAudit.forget(${JSON.stringify(leaving.id)});crowdAudit.begin('actual11to12 density increase during an original main exit',${JSON.stringify(cast.filter(s=>![helper.id,leaving.id].includes(s.id)).map(s=>s.id))},[${JSON.stringify(second.id)}]);void 0`);
  send(cast.map(s=>s.id===second.id?{...s,status:'closed',closed:true,activity:'idle',activeTools:0,lastEventAt:Date.now()}:s));
  await until(`(()=>{const n=document.querySelector('.actor[data-session-id="${second.id}"]');if(!n)return false;return n.getAnimations().some(a=>{if(a.pending||a.playState!=='running'||a.effect.target!==n)return false;const k=a.effect.getKeyframes();if(k.length<2||!k[0].transform)return false;const progress=a.effect.getComputedTiming().progress,m=new DOMMatrixReadOnly(getComputedStyle(n).transform),first=new DOMMatrixReadOnly(k[0].transform);return progress>.15&&progress<.85&&Math.hypot(m.m41-first.m41,m.m42-first.m42)>=24;});})()`,'second original main must physically walk before dense admission');
- await run(`window.nameplateIncrease={frames:0,compactDuringOldExit:0,violations:[],active:true};function auditNameplateIncrease(){const a=nameplateIncrease;if(!a.active)return;a.frames++;const ns=[...document.querySelectorAll('.actor[data-session-id]')];if(ns.length>=12&&ns.some(n=>n.dataset.sessionId===${JSON.stringify(second.id)}))a.compactDuringOldExit++;for(const n of ns)if(getComputedStyle(n.querySelector('.actor-title')).fontSize!==(ns.length>=12?'26px':'16px'))a.violations.push('new admission density disagrees with actual bodies');requestAnimationFrame(auditNameplateIncrease);}requestAnimationFrame(auditNameplateIncrease);void 0`);
+ await run(`window.nameplateIncrease={frames:0,compactDuringOldExit:0,violations:[],active:true};function auditNameplateIncrease(){const a=nameplateIncrease;if(!a.active)return;a.frames++;const ns=[...document.querySelectorAll('.actor[data-session-id]')];if(ns.length>=12&&ns.some(n=>n.dataset.sessionId===${JSON.stringify(second.id)}))a.compactDuringOldExit++;for(const n of ns)if(getComputedStyle(n.querySelector('.actor-title')).fontSize!==(ns.length>=12?'26px':'24px'))a.violations.push('new admission density disagrees with actual bodies');requestAnimationFrame(auditNameplateIncrease);}requestAnimationFrame(auditNameplateIncrease);void 0`);
  send(cast.concat(newMain));await until(settled(11),'new real main must enter while the second exit drains');await pause(550);
  const increase=await run(`nameplateIncrease.active=false;({density:nameplateIncrease,audit:crowdAudit.finish()})`);
  assert.ok(increase.density.frames>=31&&increase.density.compactDuringOldExit>=31,'dense admission overlaps at least31 actual frames of the existing exit');assert.deepEqual(increase.density.violations,[]);assert.deepEqual(increase.audit.violations,[]);assert.ok(increase.audit.distinctFootPositions[second.id]>=31&&increase.audit.distinctFootPositions[newMain.id]>=31,'old exit and new main each physically walk');checks.push(increase);

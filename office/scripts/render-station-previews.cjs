@@ -173,4 +173,4 @@ module.exports=Object.freeze({SETTINGS,SOURCES,GROUPS,samplingTiming,previewRunt
 // Electron's default-app loader may own require.main instead of this script.
 // Its explicit application argv still identifies a direct launch; imports must
 // remain inert in both plain Node and another Electron entry point.
-if(require.main===module || process.versions.electron && process.argv[1] && path.resolve(process.argv[1])===__filename)main().catch(error=>{console.error(error);process.exitCode=1;});
+if(require.main===module || process.versions.electron && process.argv.slice(1).filter(arg=>typeof arg==='string'&&!arg.startsWith('-')).slice(0,1).some(arg=>path.resolve(arg)===__filename))main().catch(error=>{console.error(error);process.exitCode=1;});

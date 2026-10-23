@@ -8,7 +8,7 @@ const os = require('node:os');
 const Persona = require('../lib/agent-persona.js');
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'office-usage-ui-'));
 app.setPath('userData', path.join(dir, 'profile')); app.disableHardwareAcceleration();
-const errors = [], queries = [], eventQueries = [], actions = [];
+const errors = [], queries = [], eventQueries = [], tokenQueries = [], actions = [];
 const now = Date.now(), wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 const hostileId = '<img src=x onerror="window.usageXss=1">';
 const items = Array.from({ length: 27 }, (_, index) => ({
@@ -22,6 +22,9 @@ const items = Array.from({ length: 27 }, (_, index) => ({
 }));
 let win, settings = { language: 'zh', sceneTime: 'auto', idleVisitor: false, reducedMotion: true };
 let failHistory = false, failEvents = false, empty = false, exportMode = 'canceled', delayed = false, statusAvailable = true;
+let failTokens = false, failTokenRefresh = false, tokenDelay = 0, tokenActive = 0, tokenPeak = 0;
+let tokenProviders = ['codex', 'claude-code'];
+const tokenTotals = { requests: 7, inputTokens: 1200, outputTokens: 350, cacheReadTokens: 900, cacheWriteTokens: 80, reasoningTokens: 150, totalTokens: 2530 };
 function filtered(query) {
   return empty ? [] : items.filter(item => (!query.provider || item.provider === query.provider)
     && (query.role === 'root' ? !item.parentId : query.role === 'helper' ? Boolean(item.parentId) : true));
@@ -32,7 +35,7 @@ function totals(rows) {
 }
 const preload = path.join(dir, 'fixture-preload.cjs');
 fs.writeFileSync(preload, `'use strict';const {contextBridge,ipcRenderer}=require('electron');const api={};
-for(const name of ['getSnapshot','getSettings','setSettings','listDisplays','getUsageHistory','getUsageEvents','getUsageStatus','exportUsageHistory','openUsageFolder'])api[name]=(...args)=>ipcRenderer.invoke('usage-fixture:'+name,...args);
+for(const name of ['getSnapshot','getSettings','setSettings','listDisplays','getUsageHistory','getUsageEvents','getUsageStatus','getTokenUsage','refreshTokenUsage','exportUsageHistory','openUsageFolder'])api[name]=(...args)=>ipcRenderer.invoke('usage-fixture:'+name,...args);
 api.onSnapshot=callback=>{const listener=(_event,value)=>callback(value);ipcRenderer.on('usage-fixture:snapshot',listener);return()=>ipcRenderer.removeListener('usage-fixture:snapshot',listener);};contextBridge.exposeInMainWorld('office',Object.freeze(api));
 window.addEventListener('error',event=>ipcRenderer.send('usage-fixture:error',String(event.message)));
 window.addEventListener('unhandledrejection',event=>ipcRenderer.send('usage-fixture:error',String(event.reason?.message||event.reason)));`);
@@ -42,6 +45,17 @@ app.whenReady().then(async () => {
     getSnapshot: () => ({ mode: 'live', sessions: [], connections: [], activityStats: { total: 0, roots: 0, helpers: 0 } }),
     getSettings: () => settings, setSettings: patch => (settings = { ...settings, ...patch }), listDisplays: () => [],
     getUsageStatus: () => ({ available: statusAvailable, path: '/fixture/logs/usage.sqlite', agents: items.length, events: 918, timeZone: 'Asia/Hong_Kong', ...(statusAvailable ? {} : { error: 'Fixture storage unavailable' }) }),
+    refreshTokenUsage: () => { actions.push({ type: 'token-refresh' }); if (failTokenRefresh) throw new Error('Fixture token scan error'); return { available: true, scanning: false }; },
+    getTokenUsage: async query => {
+      tokenQueries.push(query); tokenActive++; tokenPeak = Math.max(tokenPeak, tokenActive);
+      try {
+        if (tokenDelay) await wait(tokenDelay);
+        if (failTokens) return { ok: false, error: 'Fixture token read error' };
+        return { ok: true, scope: 'session-logs', timeZone: 'Asia/Hong_Kong', totals: tokenTotals,
+          models: [{ provider: 'codex', model: '<img src=x onerror="window.tokenXss=1">', ...tokenTotals }],
+          status: { available: true, running: true, scanning: false, files: 3, requests: 7, bytesRead: 1000, lastScanAt: now, providers: tokenProviders } };
+      } finally { tokenActive--; }
+    },
     getUsageHistory: async query => {
       queries.push(query); if (failHistory) return { ok: false, error: 'Fixture history error' };
       const rows = filtered(query); if (delayed) await wait(query.provider === 'codex' ? 250 : 20);
@@ -65,6 +79,7 @@ app.whenReady().then(async () => {
   win = new BrowserWindow({ width: 1000, height: 720, useContentSize: true, show: false, webPreferences: { preload, sandbox: true, contextIsolation: true, nodeIntegration: false, backgroundThrottling: false } });
   await win.loadFile(path.join(__dirname, '../renderer/index.html')); await wait(250);
   const run = source => win.webContents.executeJavaScript(source, true);
+  await run(`(()=>{window.fixtureVisibility='visible';Object.defineProperty(document,'visibilityState',{configurable:true,get:()=>window.fixtureVisibility});})()`);
   const click = async id => { await run(`document.getElementById(${JSON.stringify(id)}).click()`); await wait(90); };
   const choose = async (id, value) => { await run(`(()=>{const e=document.getElementById(${JSON.stringify(id)});e.value=${JSON.stringify(value)};e.dispatchEvent(new Event('change',{bubbles:true}));})()`); await wait(90); };
   await click('usage-history-button');
@@ -72,6 +87,14 @@ app.whenReady().then(async () => {
   assert.equal(await run(`document.activeElement.id`), 'usage-range');
   assert.equal(await run(`document.querySelectorAll('.usage-agent-row').length`), 12);
   assert.equal(queries.at(-1).limit, 12);
+  assert.deepEqual(tokenQueries.at(-1), { role: 'all', from: queries.at(-1).from, to: queries.at(-1).to });
+  assert.equal(await run(`document.querySelector('[data-token-metric="tokenTotal"] dd').textContent`), '2,530');
+  assert.equal(await run(`document.querySelector('[data-token-metric="tokenInput"] dd').textContent`), '1,200');
+  assert.match(await run(`document.querySelector('[data-token-metric="tokenOutput"] small').textContent`), /150/);
+  assert.match(await run(`document.getElementById('usage-token-source').textContent`), /Codex.*Claude Code.*3/);
+  assert.equal(await run(`document.querySelector('#usage-token-models td').textContent.includes('<img')`), true);
+  assert.equal(await run(`window.tokenXss`), undefined);
+  assert.equal(await run(`document.querySelectorAll('#usage-token-models img').length`), 0);
   const todayParts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Hong_Kong', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now);
   const today = ['year', 'month', 'day'].map(key => todayParts.find(part => part.type === key).value).join('-');
   assert.equal(queries.at(-1).to, today, 'defaults use the Hong Kong calendar');
@@ -89,7 +112,15 @@ app.whenReady().then(async () => {
   await click('usage-prev'); assert.equal(queries.at(-1).offset, 12);
   await choose('usage-provider', 'codex'); await choose('usage-role', 'helper');
   assert.equal(queries.at(-1).provider, 'codex'); assert.equal(queries.at(-1).role, 'helper'); assert.equal(queries.at(-1).offset, 0);
+  assert.deepEqual(tokenQueries.at(-1), { role: 'helper', provider: 'codex', from: queries.at(-1).from, to: queries.at(-1).to }, 'token and activity filters share the same dates, provider, and role');
   assert.equal(await run(`[...document.querySelectorAll('.usage-agent-row')].every(row=>row.textContent.includes('分身'))`), true);
+  await choose('usage-provider', 'cursor');
+  assert.match(await run(`document.getElementById('usage-token-feedback').textContent`), /暂无.*覆盖/);
+  assert.equal(await run(`document.querySelector('[data-token-metric="tokenTotal"] dd').textContent`), '—', 'unsupported tools are not displayed as zero usage');
+  tokenProviders = ['codex', 'claude-code', 'gemini-cli', 'pi', 'omp', 'opencode', 'kimi-cli'];
+  await choose('usage-provider', 'gemini-cli');
+  assert.equal(await run(`document.querySelector('[data-token-metric="tokenTotal"] dd').textContent`), '2,530', 'backend provider coverage enables newly supported local logs');
+  assert.match(await run(`document.getElementById('usage-token-source').textContent`), /Gemini CLI.*Pi.*OMP.*OpenCode.*Kimi Code/);
   await choose('usage-provider', ''); await choose('usage-role', 'all'); await choose('usage-range', 'all');
   assert.equal(Object.hasOwn(queries.at(-1), 'from'), false); assert.equal(Object.hasOwn(queries.at(-1), 'to'), false);
   await choose('usage-range', '30');
@@ -127,10 +158,12 @@ app.whenReady().then(async () => {
   await click('usage-history-close'); await click('language-button'); await click('usage-history-button');
   assert.equal(await run(`document.getElementById('usage-history-title').textContent`), 'Usage history');
   assert.equal(await run(`document.querySelector('.usage-agent-heading strong').textContent`), Persona.forSession(items[0]).aliasEn);
-  assert.match(await run(`document.getElementById('usage-history-scope').textContent`), /not tokens or cost/);
+  assert.match(await run(`document.getElementById('usage-history-scope').textContent`), /independently imported history/);
+  assert.match(await run(`document.querySelector('[data-usage-copy="tokenScope"]').textContent`), /cost and quota are not estimated/);
   assert.match(await run(`document.querySelector('.usage-agent-last').textContent`), /Last observed/);
   empty = true; await click('usage-refresh');
   assert.match(await run(`document.getElementById('usage-history-list').textContent`), /No agents/);
+  assert.equal(await run(`document.querySelector('[data-token-metric="tokenTotal"] dd').textContent`), '2,530', 'historical tokens do not depend on observed live identities');
   assert.equal(await run(`document.getElementById('usage-next').disabled`), true); empty = false;
   failHistory = true; await click('usage-refresh');
   assert.match(await run(`document.getElementById('usage-feedback').textContent`), /Fixture history error/);
@@ -140,6 +173,13 @@ app.whenReady().then(async () => {
   assert.match(await run(`document.getElementById('usage-history-button').getAttribute('aria-label')`), /could not be saved/);
   statusAvailable = true; await click('usage-refresh');
   assert.equal(await run(`document.getElementById('usage-history-button').dataset.error`), 'false');
+  failTokens = true; await click('usage-refresh');
+  assert.equal(await run(`document.querySelector('[data-token-metric="tokenTotal"] dd').textContent`), '2,530', 'a failed refresh retains the same-filter last good token values');
+  assert.match(await run(`document.getElementById('usage-token-feedback').textContent`), /last successful.*Fixture token read error/);
+  failTokens = false; failTokenRefresh = true; await click('usage-refresh');
+  assert.match(await run(`document.getElementById('usage-token-feedback').textContent`), /Fixture token scan error/);
+  failTokenRefresh = false; await click('usage-refresh');
+  assert.equal(await run(`document.getElementById('usage-token-feedback').textContent`), '');
   win.webContents.send('usage-fixture:snapshot',{mode:'live',sessions:[],connections:[],usageLog:{available:false,error:'Live write failure'}}); await wait(90);
   assert.match(await run(`document.getElementById('usage-storage-state').textContent`),/unavailable/,'open panel reflects a live write failure without refresh');
   assert.match(await run(`document.getElementById('usage-feedback').textContent`),/Live write failure/);
@@ -163,9 +203,54 @@ app.whenReady().then(async () => {
     fs.writeFileSync(path.join(process.env.MINI_OFFICE_PREVIEW_DIR, 'usage-history-800x450.png'), (await win.webContents.capturePage()).toPNG());
   }
   await click('usage-history-close');
+  await run(`(()=>{
+    const button=document.getElementById('usage-history-button'),dialog=document.getElementById('usage-history-dialog');
+    button.replaceWith(button.cloneNode(true));dialog.replaceWith(dialog.cloneNode(true));
+    window.fixturePolls=new Map();window.fixtureNextPoll=900000;
+    window.fixtureNativeSetInterval=window.setInterval;window.fixtureNativeClearInterval=window.clearInterval;
+    window.setInterval=(callback,delay,...args)=>{if(delay!==5000)return window.fixtureNativeSetInterval(callback,delay,...args);const id=++window.fixtureNextPoll;window.fixturePolls.set(id,callback);return id;};
+    window.clearInterval=id=>{if(window.fixturePolls.delete(id))return;window.fixtureNativeClearInterval(id);};
+    window.fixtureUsage=OfficeUsageHistory.create({bridge:window.office,getLanguage:()=> 'en'});
+  })()`);
+  await click('usage-history-button');
+  assert.equal(await run(`window.fixturePolls.size`), 1, 'one polling timer starts with the visible open dialog');
+  await click('usage-next');
+  await run(`document.querySelector('.usage-agent-row').click()`); await wait(90); await click('usage-event-next');
+  const selectedId = eventQueries.at(-1).id;
+  exportMode = 'canceled'; await click('usage-export');
+  await run(`[...window.fixturePolls.values()][0]()`); await wait(90);
+  assert.equal(queries.at(-1).offset, 12, 'background activity refresh preserves the current history page');
+  assert.equal(eventQueries.at(-1).id, selectedId); assert.equal(eventQueries.at(-1).offset, 20, 'background refresh preserves the selected event page');
+  assert.match(await run(`document.getElementById('usage-feedback').textContent`), /Export canceled/, 'background refresh does not erase export feedback');
+  failHistory = true; await run(`[...window.fixturePolls.values()][0]()`); await wait(90);
+  assert.equal(await run(`document.querySelectorAll('.usage-agent-row').length`), 12, 'background errors retain the last good observed history');
+  failHistory = false; await run(`[...window.fixturePolls.values()][0]()`); await wait(90);
+  tokenDelay = 70;
+  await run(`document.getElementById('usage-refresh').click()`); await wait(15);
+  assert.equal(await run(`document.getElementById('usage-token-section').getAttribute('aria-busy')`), 'true');
+  assert.equal(await run(`document.querySelector('[data-token-metric="tokenTotal"] dd').textContent`), '2,530', 'same-filter loading retains the last good token values');
+  await run(`(()=>{const p=document.getElementById('usage-provider');p.value='codex';p.dispatchEvent(new Event('change'));p.value='claude-code';p.dispatchEvent(new Event('change'));})()`);
+  await wait(200); tokenDelay = 0;
+  assert.equal(tokenQueries.at(-1).provider, 'claude-code'); assert.equal(tokenPeak, 1, 'token requests never overlap and rapid filter changes coalesce');
+  const beforeHidden = { history: queries.length, tokens: tokenQueries.length };
+  await run(`window.fixtureOldPoll=[...window.fixturePolls.values()][0];window.fixtureVisibility='hidden';document.dispatchEvent(new Event('visibilitychange'));window.fixtureOldPoll();`); await wait(90);
+  assert.equal(await run(`window.fixturePolls.size`), 0, 'polling stops while the document is hidden');
+  assert.equal(queries.length, beforeHidden.history); assert.equal(tokenQueries.length, beforeHidden.tokens);
+  await run(`window.fixtureVisibility='visible';document.dispatchEvent(new Event('visibilitychange'));`); await wait(90);
+  assert.equal(await run(`window.fixturePolls.size`), 1); assert.ok(tokenQueries.length > beforeHidden.tokens, 'visible return refreshes current data');
+  await click('usage-history-close');
+  assert.equal(await run(`window.fixturePolls.size`), 0, 'closing the dialog stops polling');
+  await click('usage-history-button');
+  await run(`window.fixtureUsage.dispose()`);
+  assert.equal(await run(`window.fixturePolls.size`), 0, 'disposing the controller stops polling');
+  await run(`(()=>{document.getElementById('usage-history-dialog').close();const button=document.getElementById('usage-history-button'),dialog=document.getElementById('usage-history-dialog');button.replaceWith(button.cloneNode(true));dialog.replaceWith(dialog.cloneNode(true));const bridge={...window.office};delete bridge.getTokenUsage;delete bridge.refreshTokenUsage;window.fixtureOldClient=OfficeUsageHistory.create({bridge,getLanguage:()=> 'en'});})()`);
+  await click('usage-history-button');
+  assert.match(await run(`document.getElementById('usage-token-feedback').textContent`), /unavailable in this version/);
+  assert.ok(await run(`document.querySelectorAll('.usage-agent-row').length`), 'older bridges retain observed history without token APIs');
+  await run(`(()=>{window.fixtureOldClient.dispose();document.getElementById('usage-history-dialog').close();window.setInterval=window.fixtureNativeSetInterval;window.clearInterval=window.fixtureNativeClearInterval;})()`);
   await run(`(()=>{const old=document.getElementById('usage-history-button');old.replaceWith(old.cloneNode(true));window.fixtureMissingUsage=OfficeUsageHistory.create({bridge:{},getLanguage:()=> 'en'});document.getElementById('usage-history-button').click();})()`); await wait(90);
   assert.match(await run(`document.getElementById('usage-feedback').textContent`), /unavailable/);
   await run(`window.fixtureMissingUsage.dispose()`);
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ ok: true, agents: items.length, checks: ['Hong Kong date filters', 'provider and relationship filters', 'history and event pagination', 'locale-specific stable nicknames', 'no prompts or content', 'text-only XSS-safe rendering', 'history never reappears as live actors', 'full-range CSV and cancel/error states', 'local error recovery', 'out-of-order response guard', 'persistent-log warning and recovery', '800 × 450 bilingual scroll layout', 'missing API fallback'], errors }));
+  console.log(JSON.stringify({ ok: true, agents: items.length, checks: ['Hong Kong date filters', 'shared token/provider/relationship filters', 'independent historical token totals and models', 'unsupported token coverage stays unknown', 'token last-good loading/error recovery', 'coalesced token reads', 'foreground-only polling and disposal', 'background refresh preserves selection/pages/actions', 'history and event pagination', 'locale-specific stable nicknames', 'no prompts or content', 'text-only XSS-safe rendering', 'history never reappears as live actors', 'full-range CSV and cancel/error states', 'local error recovery', 'out-of-order response guard', 'persistent-log warning and recovery', '800 × 450 bilingual scroll layout', 'missing API fallback'], errors }));
 }).catch(error => { console.error(error); process.exitCode = 1; }).finally(() => { win?.destroy(); fs.rmSync(dir, { recursive: true, force: true }); app.exit(process.exitCode || 0); });

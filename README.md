@@ -105,7 +105,7 @@ npm start
 npm run build:mac
 ```
 
-素材准备脚本不会联网；它核对固定版本的 50 个 SVG 和图标的 SHA-256，然后仅写入本项目的本地素材目录。原素材来自 [原项目](https://github.com/rullerzhou-afk/clawd-on-desk)，对应版本 `c52e2df6ff778bf85310166882c516385f2f6eab`。
+素材准备脚本不会联网；它核对固定版本的 50 个 SVG 和图标的 SHA-256，然后仅写入本项目的本地素材目录。原素材来自 [原项目](https://github.com/rullerzhou-afk/clawd-on-desk)，对应版本 `c52e2df6ff778bf85310166882c516385f2f6eab`。应用构建使用本项目原创的工作室图标 `office/assets/studio-icon.png`；设计提示词保存在 `office/docs/studio-icon-prompt.txt`，不使用上游图标。
 
 构建产物位于 `dist-mini-office/`。安装包包含 Electron／Node 运行时，安装后无需开发服务器。
 

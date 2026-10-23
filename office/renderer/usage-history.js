@@ -4,7 +4,7 @@
   const COPY = {
     zh: {
       eyebrow: '留在本机的工作足迹', title: '使用记录', close: '关闭使用记录',
-      scope: '这里只统计本机已观测的 Agent 活动，不代表 token 或费用；应用关闭期间不计时，历史记录不会重新进入房间。',
+      scope: 'Token 来自本机会话日志，可独立导入历史；活动时长仅统计应用运行期间的观察。历史记录不会重新进入房间。',
       range: '时间范围', days7: '近 7 天', days30: '近 30 天', allTime: '全部时间', custom: '自选日期',
       provider: 'AI 工具', allProviders: '全部工具', role: '角色关系', allRoles: '全部角色', roots: '主 Agent', helpers: '分身',
       from: '开始日期（香港）', to: '结束日期（香港）', refresh: '刷新', overview: '使用概览',
@@ -20,11 +20,19 @@
       count: '共 {count} 位', page: '{page} / {pages} 页', rootsDetail: '主 Agent {roots} · 分身 {helpers}', failuresDetail: '失败 {count}',
       rowCounts: '{turns} 轮 · {tools} 次工具', activeShort: '工作', waitingShort: '等待', lastSeen: '末次观察（全历史）', lastState: '末次状态', project: '项目',
       noProject: '未提供项目名', fromParent: '分身 · 来自 ', identity: '会话 ID', parentIdentity: '父会话 ID',
-      historyPages: '历史记录分页', eventPages: '事件时间线分页', unknown: '未提供', seconds: '{value} 秒', minutes: '{value} 分', hours: '{value} 小时'
+      historyPages: '历史记录分页', eventPages: '事件时间线分页', unknown: '未提供', seconds: '{value} 秒', minutes: '{value} 分', hours: '{value} 小时',
+      activityTitle: '已观测活动', tokenTitle: '会话 Token', tokenOverview: '会话 Token 概览',
+      tokenScope: '读取下方来源所列工具的本机会话日志；仅展示日志报告的 token，不推算费用或额度。覆盖范围随可用日志而定。',
+      tokenTotal: 'Token 总计', tokenInput: '未缓存输入', tokenOutput: '输出', tokenCacheRead: '缓存读取', tokenCacheWrite: '缓存写入', tokenReasoning: '其中：推理输出',
+      tokenRequests: '请求记录', tokenRequestCount: '{count} 条请求记录', tokenModels: '按模型查看', tokenModel: '模型 / 工具', tokenModelsCaption: '所选范围内的模型 Token 记录',
+      tokenLoading: '正在读取本机会话 Token…', tokenScanning: '正在增量导入本机会话日志…', tokenError: 'Token 更新失败；保留所选范围内上次成功读取的数据。',
+      tokenUnavailable: '此版本暂不支持本机会话 Token，请使用最新版应用。', tokenUnsupported: '所选工具暂无本机会话 Token 覆盖；不将缺失数据视为零用量。',
+      tokenEmpty: '所选范围内尚无已导入的 Token 记录。', tokenSource: '来源：本机会话日志 · {providers} · 已索引 {files} 个文件',
+      tokenLastScan: '末次扫描：{time}（香港）', tokenNoScan: '尚未完成首次扫描', tokenRefreshing: '正在更新 Token；暂时显示上次成功读取的数据。'
     },
     en: {
       eyebrow: 'Work footprints, kept on this Mac', title: 'Usage history', close: 'Close usage history',
-      scope: 'Only agent activity observed on this Mac is counted, not tokens or cost. Time while the app is closed is excluded; history never re-enters the room.',
+      scope: 'Tokens come from local session logs, including independently imported history. Activity time counts only observations while the app runs. History never re-enters the room.',
       range: 'Date range', days7: 'Last 7 days', days30: 'Last 30 days', allTime: 'All time', custom: 'Custom dates',
       provider: 'AI tool', allProviders: 'All tools', role: 'Relationship', allRoles: 'All agents', roots: 'Main agents', helpers: 'Clones',
       from: 'From (Hong Kong)', to: 'To (Hong Kong)', refresh: 'Refresh', overview: 'Usage overview',
@@ -40,7 +48,15 @@
       count: '{count} agents', page: 'Page {page} / {pages}', rootsDetail: 'Main {roots} · clones {helpers}', failuresDetail: '{count} failures',
       rowCounts: '{turns} turns · {tools} tool calls', activeShort: 'Work', waitingShort: 'Waiting', lastSeen: 'Last observed (all time)', lastState: 'Last state', project: 'Project',
       noProject: 'Project name unavailable', fromParent: 'Clone · from ', identity: 'Session ID', parentIdentity: 'Parent session ID',
-      historyPages: 'Agent history pages', eventPages: 'Event timeline pages', unknown: 'Unavailable', seconds: '{value}s', minutes: '{value}m', hours: '{value}h'
+      historyPages: 'Agent history pages', eventPages: 'Event timeline pages', unknown: 'Unavailable', seconds: '{value}s', minutes: '{value}m', hours: '{value}h',
+      activityTitle: 'Observed activity', tokenTitle: 'Session tokens', tokenOverview: 'Session token overview',
+      tokenScope: 'Reads local session logs from the tools listed below. Counts are reported by those logs; cost and quota are not estimated. Coverage depends on available logs.',
+      tokenTotal: 'Total tokens', tokenInput: 'Uncached input', tokenOutput: 'Output', tokenCacheRead: 'Cache read', tokenCacheWrite: 'Cache write', tokenReasoning: 'Reasoning within output',
+      tokenRequests: 'Request records', tokenRequestCount: '{count} request records', tokenModels: 'View by model', tokenModel: 'Model / tool', tokenModelsCaption: 'Model token records in the selected range',
+      tokenLoading: 'Reading local session tokens…', tokenScanning: 'Importing local session logs incrementally…', tokenError: 'Token update failed; the last successful values for this range are retained.',
+      tokenUnavailable: 'Local session tokens are unavailable in this version. Reopen the latest app.', tokenUnsupported: 'This tool has no local session token coverage yet. Missing data does not mean zero usage.',
+      tokenEmpty: 'No token records have been imported for this range yet.', tokenSource: 'Source: local session logs · {providers} · {files} files indexed',
+      tokenLastScan: 'Last scan: {time} (Hong Kong)', tokenNoScan: 'The first scan has not completed', tokenRefreshing: 'Updating tokens; showing the last successful values for now.'
     }
   };
   const VALUES = {
@@ -59,7 +75,7 @@
     notification: ['状态通知', 'Status notification'], hook: ['Hook 事件', 'Hook event'],
     'codex-session-log': ['Codex 只读日志', 'Codex read-only log'], 'session-log': ['只读会话日志', 'Read-only session log']
   };
-  const PAGE_SIZE = 12, EVENT_PAGE_SIZE = 20;
+  const PAGE_SIZE = 12, EVENT_PAGE_SIZE = 20, REFRESH_MS = 5000;
 
   function create(options) {
     const config = options || {}, bridge = config.bridge;
@@ -68,7 +84,8 @@
     if (!dialog || !button) return Object.freeze({ updateLanguage() {}, updateStatus() {}, dispose() {} });
     let language = 'zh', disposed = false, generation = 0, eventGeneration = 0, actionGeneration = 0;
     let offset = 0, eventOffset = 0, history = null, timeline = null, selected = null, storage = null;
-    let busy = false, eventBusy = false, exportBusy = false, liveStatus = null;
+    let busy = false, eventBusy = false, exportBusy = false, liveStatus = null, historyLoadError = false;
+    let tokens = null, tokenKey = null, tokenError = '', tokenBusy = false, tokenFlight = false, tokenPending = null, tokenRevision = 0, refreshTimer = null;
     const listeners = [];
     const has = method => Boolean(bridge && typeof bridge[method] === 'function');
     const available = has('getUsageHistory') && has('getUsageEvents') && has('getUsageStatus');
@@ -149,6 +166,96 @@
       $(previous).disabled = loading || position === 0;
       $(next).disabled = loading || position + size >= n(total);
     }
+    function tokenProviderName(id) { return providerName(id === 'claude' ? 'claude-code' : id); }
+    function tokenCovered() {
+      const provider = $('usage-provider').value;
+      return !provider || (tokens?.status?.providers || ['codex', 'claude-code']).some(id => (id === 'claude' ? 'claude-code' : id) === provider);
+    }
+    function renderTokens() {
+      const supported = has('getTokenUsage'), covered = tokenCovered();
+      const totals = tokens?.totals || {}, values = supported && covered && tokens;
+      const fragment = document.createDocumentFragment();
+      for (const [key, value, detail] of [
+        ['tokenTotal', totals.totalTokens], ['tokenInput', totals.inputTokens],
+        ['tokenOutput', totals.outputTokens, n(totals.reasoningTokens) > 0 ? tr('tokenReasoning') + ': ' + count(totals.reasoningTokens) : ''],
+        ['tokenCacheRead', totals.cacheReadTokens], ['tokenCacheWrite', totals.cacheWriteTokens], ['tokenRequests', totals.requests]
+      ]) {
+        const card = node('div', 'usage-metric'); card.dataset.tokenMetric = key;
+        card.append(node('dt', '', tr(key)), node('dd', '', values ? count(value) : '—'));
+        if (detail && values) card.append(node('small', '', detail));
+        fragment.append(card);
+      }
+      $('usage-token-overview').replaceChildren(fragment);
+      $('usage-token-requests').textContent = values ? tr('tokenRequestCount', { count: count(totals.requests) }) : '';
+      $('usage-token-section').setAttribute('aria-busy', String(tokenBusy));
+      const status = tokens?.status, error = tokenError || status?.error || (status?.available === false ? tr('storageError') : '');
+      let message = '';
+      if (!supported) message = tr('tokenUnavailable');
+      else if (!covered) message = tr('tokenUnsupported');
+      else if (error) message = tr('tokenError') + ' ' + String(error).slice(0, 300);
+      else if (tokenBusy) message = tr(tokens ? 'tokenRefreshing' : 'tokenLoading');
+      else if (status?.scanning) message = tr('tokenScanning');
+      else if (tokens && !n(totals.requests)) message = tr('tokenEmpty');
+      $('usage-token-feedback').textContent = message;
+      $('usage-token-feedback').dataset.error = String(Boolean(error));
+      const models = Array.isArray(tokens?.models) && covered ? tokens.models : [];
+      const rows = document.createDocumentFragment();
+      for (const model of models) {
+        const row = node('tr'), identity = node('td', '', model.model || tr('unknown'));
+        identity.append(node('small', '', tokenProviderName(model.provider)));
+        row.append(identity);
+        for (const key of ['requests', 'inputTokens', 'outputTokens', 'cacheReadTokens', 'cacheWriteTokens', 'totalTokens']) row.append(node('td', '', count(model[key])));
+        rows.append(row);
+      }
+      $('usage-token-models').replaceChildren(rows);
+      $('usage-token-models-details').hidden = !models.length;
+      $('usage-token-source').textContent = tokens ? tr('tokenSource', {
+        providers: (status?.providers || ['codex', 'claude-code']).map(tokenProviderName).join(' / '), files: count(status?.files)
+      }) + ' · ' + (status?.lastScanAt ? tr('tokenLastScan', { time: timestamp(status.lastScanAt) }) : tr('tokenNoScan')) : '';
+    }
+    function foreground() { return !disposed && dialog.open && document.visibilityState !== 'hidden'; }
+    async function drainTokens() {
+      if (tokenFlight || !tokenPending || !foreground()) return;
+      const request = tokenPending; tokenPending = null; tokenFlight = true; tokenBusy = true; renderTokens();
+      let refreshError = '';
+      try {
+        if (request.scan && has('refreshTokenUsage')) {
+          try { await invoke('refreshTokenUsage'); } catch (error) { refreshError = error.message; }
+        }
+        const result = await invoke('getTokenUsage', request.query);
+        if (disposed || request.revision !== tokenRevision) return;
+        tokens = result; tokenError = refreshError;
+      } catch (error) {
+        if (!disposed && request.revision === tokenRevision) tokenError = error.message;
+      } finally {
+        tokenFlight = false;
+        if (!disposed) { tokenBusy = Boolean(tokenPending); renderTokens(); void drainTokens(); }
+      }
+    }
+    function requestTokens(scan = false) {
+      if (!has('getTokenUsage') || disposed) { renderTokens(); return; }
+      let query;
+      try { query = filters(); }
+      catch (error) { ++tokenRevision; tokenPending = null; tokens = null; tokenBusy = false; tokenError = error.message; renderTokens(); return; }
+      const key = JSON.stringify(query);
+      if (key !== tokenKey) { tokens = null; tokenError = ''; tokenKey = key; }
+      tokenPending = { query, key, revision: ++tokenRevision, scan: scan || Boolean(tokenPending?.scan) };
+      tokenBusy = true; renderTokens(); void drainTokens();
+    }
+    function refreshVisible() {
+      if (!foreground()) return;
+      if (['7', '30'].includes($('usage-range').value) && $('usage-to').value !== hkToday()) setRange();
+      if (!busy && !eventBusy && !exportBusy) void load({ quiet: true });
+      if (!tokenFlight && !tokenPending) requestTokens();
+      else void drainTokens();
+    }
+    function startRefresh() {
+      if (refreshTimer == null && foreground()) refreshTimer = root.setInterval(refreshVisible, REFRESH_MS);
+    }
+    function stopRefresh() {
+      if (refreshTimer != null) root.clearInterval(refreshTimer);
+      refreshTimer = null;
+    }
     function renderOverview() {
       const totals = history?.totals || {}, fragment = document.createDocumentFragment();
       for (const [key, value, detail] of [
@@ -186,7 +293,9 @@
         row.append(identity, usage); row.addEventListener('click', () => { selected = item; eventOffset = 0; timeline = null; renderHistory(); renderTimeline(); loadEvents(); });
         fragment.append(row);
       }
+      const focusedActorId = document.activeElement?.dataset.actorId;
       $('usage-history-list').replaceChildren(fragment);
+      if (focusedActorId) [...$('usage-history-list').children].find(row => row.dataset.actorId === focusedActorId)?.focus({ preventScroll: true });
       $('usage-history-list').setAttribute('aria-busy', String(busy));
       page('usage-page', 'usage-prev', 'usage-next', offset, history?.total || 0, PAGE_SIZE, busy);
       $('usage-export').disabled = !available || !has('exportUsageHistory') || busy || exportBusy || !history || storage?.available === false;
@@ -215,13 +324,14 @@
       if (response?.ok === false) throw new Error(response.error || tr('error'));
       return response;
     }
-    async function load() {
-      const request = ++generation; ++eventGeneration; ++actionGeneration;
+    async function load(options = {}) {
+      const quiet = Boolean(options.quiet), request = ++generation;
+      if (!quiet) { ++eventGeneration; ++actionGeneration; }
       if (!available) { history = null; busy = false; feedback('unavailable', true); renderHistory(); return; }
       let query;
       try { query = filters(); } catch (error) { busy = false; history = null; feedback('invalidDates', true); renderHistory(); return; }
-      busy = true; feedback('loading'); renderHistory();
-      $('usage-timeline-feedback').textContent = '';
+      busy = true;
+      if (!quiet) { feedback('loading'); renderHistory(); $('usage-timeline-feedback').textContent = ''; }
       try {
         const [result, status] = await Promise.all([
           invoke('getUsageHistory', { ...query, offset, limit: PAGE_SIZE }),
@@ -230,34 +340,39 @@
         if (disposed || request !== generation) return;
         history = result; storage = status; updateStatus(status);
         $('usage-storage-state').textContent = tr(status?.available ? 'storage' : 'storageError');
-        feedback(status?.available ? '' : 'storageError', !status?.available, status?.error);
+        if (!quiet || historyLoadError || !status?.available) feedback(status?.available ? '' : 'storageError', !status?.available, status?.error);
+        historyLoadError = false;
       } catch (error) {
         if (disposed || request !== generation) return;
-        history = null; feedback('error', true, error.message);
+        if (!quiet) history = null;
+        historyLoadError = true;
+        feedback('error', true, error.message);
       } finally {
-        if (!disposed && request === generation) { busy = false; renderHistory(); if (selected) loadEvents(); }
+        if (!disposed && request === generation) { busy = false; renderHistory(); if (selected) loadEvents({ quiet }); }
       }
     }
-    async function loadEvents() {
+    async function loadEvents(options = {}) {
       const request = ++eventGeneration;
       if (!selected || disposed) return;
       const actorId = selected.id;
       let query;
       try { const range = filters(); query = { id: actorId, from: range.from, to: range.to, offset: eventOffset, limit: EVENT_PAGE_SIZE }; }
       catch (error) { $('usage-timeline-feedback').textContent = tr('invalidDates'); return; }
-      eventBusy = true; $('usage-timeline-feedback').textContent = ''; renderTimeline();
+      eventBusy = true;
+      if (!options.quiet) { $('usage-timeline-feedback').textContent = ''; renderTimeline(); }
       try {
         const result = await invoke('getUsageEvents', query);
         if (disposed || request !== eventGeneration || selected?.id !== actorId) return;
-        timeline = result;
+        timeline = result; $('usage-timeline-feedback').textContent = '';
       } catch (error) {
         if (disposed || request !== eventGeneration) return;
-        timeline = null; $('usage-timeline-feedback').textContent = tr('error') + ' ' + String(error.message).slice(0, 300);
+        if (!options.quiet) timeline = null;
+        $('usage-timeline-feedback').textContent = tr('error') + ' ' + String(error.message).slice(0, 300);
       } finally { if (!disposed && request === eventGeneration) { eventBusy = false; renderTimeline(); } }
     }
     function changeFilters() {
       offset = 0; eventOffset = 0; selected = null; timeline = null; history = null;
-      renderTimeline(); load();
+      renderTimeline(); load(); requestTokens();
     }
     function updateLanguage() {
       language = config.getLanguage?.() === 'en' ? 'en' : 'zh'; ++generation; ++eventGeneration; ++actionGeneration;
@@ -265,21 +380,26 @@
       updateStatus(liveStatus);
       $('usage-history-close').setAttribute('aria-label', tr('close'));
       $('usage-overview').setAttribute('aria-label', tr('overview'));
+      $('usage-token-overview').setAttribute('aria-label', tr('tokenOverview'));
       dialog.querySelectorAll('.usage-pagination')[0].setAttribute('aria-label', tr('historyPages'));
       dialog.querySelectorAll('.usage-pagination')[1].setAttribute('aria-label', tr('eventPages'));
-      $('usage-open-folder').disabled = !has('openUsageFolder'); $('usage-refresh').disabled = !available;
+      $('usage-open-folder').disabled = !has('openUsageFolder'); $('usage-refresh').disabled = !available && !has('getTokenUsage');
       $('usage-storage-state').textContent = storage ? tr(storage.available ? 'storage' : 'storageError') : '';
       busy = false; eventBusy = false; feedback(available ? '' : 'unavailable', !available);
-      renderHistory(); renderTimeline();
+      renderHistory(); renderTimeline(); renderTokens();
       updateStatus(liveStatus);
-      if (dialog.open) load();
+      if (dialog.open) { load(); requestTokens(); startRefresh(); }
     }
-    on(button, 'click', () => { if (!dialog.open) dialog.showModal(); setRange(); $('usage-range').focus(); load(); });
+    on(button, 'click', () => { if (!dialog.open) dialog.showModal(); setRange(); $('usage-range').focus(); load(); requestTokens(true); startRefresh(); });
     on($('usage-history-close'), 'click', () => dialog.close());
-    on(dialog, 'close', () => { ++generation; ++eventGeneration; ++actionGeneration; busy = false; eventBusy = false; });
+    on(dialog, 'close', () => { ++generation; ++eventGeneration; ++actionGeneration; ++tokenRevision; tokenPending = null; tokenBusy = false; busy = false; eventBusy = false; stopRefresh(); });
+    on(document, 'visibilitychange', () => {
+      if (!foreground()) { stopRefresh(); return; }
+      startRefresh(); refreshVisible();
+    });
     on($('usage-range'), 'change', () => { setRange(); changeFilters(); });
     for (const id of ['usage-provider', 'usage-role', 'usage-from', 'usage-to']) on($(id), 'change', changeFilters);
-    on($('usage-refresh'), 'click', () => { setRange(); changeFilters(); });
+    on($('usage-refresh'), 'click', () => { setRange(); load(); requestTokens(true); });
     on($('usage-prev'), 'click', () => { offset = Math.max(0, offset - PAGE_SIZE); selected = null; renderTimeline(); load(); });
     on($('usage-next'), 'click', () => { offset += PAGE_SIZE; selected = null; renderTimeline(); load(); });
     on($('usage-event-prev'), 'click', () => { eventOffset = Math.max(0, eventOffset - EVENT_PAGE_SIZE); loadEvents(); });
@@ -305,7 +425,7 @@
     const providers = root.OfficeProviders?.getAllProviders?.() || [];
     for (const provider of providers) { const option = node('option', '', provider.name); option.value = provider.id === 'cursor-agent' ? 'cursor' : provider.id; $('usage-provider').append(option); }
     setRange(); updateLanguage();
-    return Object.freeze({ updateLanguage, updateStatus, dispose() { disposed = true; ++generation; ++eventGeneration; ++actionGeneration; for (const remove of listeners) remove(); } });
+    return Object.freeze({ updateLanguage, updateStatus, dispose() { disposed = true; ++generation; ++eventGeneration; ++actionGeneration; ++tokenRevision; tokenPending = null; stopRefresh(); for (const remove of listeners) remove(); } });
   }
   root.OfficeUsageHistory = Object.freeze({ create });
 })(typeof globalThis === 'object' ? globalThis : this);

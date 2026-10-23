@@ -339,7 +339,7 @@ app.whenReady().then(async()=>{
     await until('('+denseSettled.toString()+')(13)','actual viewport fit settlement');
     const rows=await run('('+inspectDense.toString()+')('+quote(cast)+','+quote(parent.id)+','+quote(helper.id)+')');
     for(const r of rows){assert.equal(r.same,true);assert.equal(r.z,'10');assert.equal(r.name,r.expected);assert.ok(r.footDrift<.02,'locale/viewport must retain actual world foot: '+r.id);
-      assert.ok(r.scale>=.4-.00001,'the existing13 profile must not silently lose its actual .4 fit');assert.ok(Math.abs(r.plate[0]-220)<.2&&Math.abs(r.plate[1]-70)<.2);}
+      assert.ok(r.scale>=.4-.00001,'the existing13 profile must not silently lose its actual .4 fit');assert.ok(Math.abs(r.plate[0]-220)<.2&&Math.abs(r.plate[1]-63)<.2);}
     const p=rows.find(r=>r.isParent),h=rows.find(r=>r.isHelper);
     assert.equal(p.relation,'Active 1 · Total 1');assert.ok(h.relation.includes(p.name));
     const footer=await run("document.getElementById('room-summary').textContent");

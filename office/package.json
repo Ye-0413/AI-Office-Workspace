@@ -52,7 +52,7 @@
     ],
     "asar": true,
     "mac": {
-      "icon": "assets/icon.png",
+      "icon": "assets/studio-icon.png",
       "category": "public.app-category.entertainment",
       "identity": "-",
       "hardenedRuntime": false,

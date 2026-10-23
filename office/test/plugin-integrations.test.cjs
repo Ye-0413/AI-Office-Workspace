@@ -18,6 +18,18 @@ function fixture(t, provider, extra = {}) {
   function write(file, value) { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, typeof value === 'string' ? value : JSON.stringify(value)); }
   return { root, options, write, homeDir, dataDir };
 }
+test('native OpenCode questions expose only correlated waiting metadata and resolve on native response',()=>{
+  const events=[],observer=createObserver('opencode',raw=>events.push(normalizeEvent('opencode',raw,{source:'hook'})));
+  const request={id:'que_test',sessionID:'ses_test',tool:{callID:'question-call',messageID:'msg_test'},questions:[{question:'PRIVATE QUESTION'}]};
+  observer.opencode({type:'question.asked',properties:request},'/fixture/project');
+  assert.equal(events.length,1);assert.equal(events[0].event,'waiting-user');assert.equal(events[0].toolCallId,'question-call');
+  assert.doesNotMatch(JSON.stringify(events),/PRIVATE QUESTION/);
+  observer.opencode({type:'question.replied',properties:{requestID:'que_test',sessionID:'ses_wrong',answers:[['PRIVATE ANSWER']]}},'/fixture/project');
+  assert.equal(events.length,1);
+  observer.opencode({type:'question.replied',properties:{requestID:'que_test',sessionID:'ses_test',answers:[['PRIVATE ANSWER']]}},'/fixture/project');
+  assert.equal(events.length,2);assert.equal(events[1].event,'tool-end');assert.equal(events[1].toolCallId,'question-call');
+  assert.doesNotMatch(JSON.stringify(events),/PRIVATE ANSWER/);
+});
 test('JSONC surgical registration keeps comments and unrelated values and rejects duplicate keys', () => {
   const source = '{\n // user comment\n "plugin": ["user-plugin", /* keep */], "theme": "paper",\n}\n';
   const installed = jsonc.updateArray(source, 'plugin', '/owned/plugin', true);

@@ -70,7 +70,7 @@ app.whenReady().then(async()=>{
   await begin('an honestly absent parent waits at its actual dock for a working clone',ids);send(cast);
   await until(`crowdActors.get(${JSON.stringify(parent.id)})?.holdingFamily===true&&${settled(13)}`,'actual lifecycle must establish the held parent');
   await run(`window.transferFixedFoot=(()=>{const a=crowdActors.get(${JSON.stringify(parent.id)}),m=new DOMMatrixReadOnly(getComputedStyle(a.node).transform);return{x:m.m41,y:m.m42};})();void 0`);
-  await pause(550);await finish();
+  await settledTail(13);await finish();
   const before=await run('crowdArrivals.length');
   await run(`window.transferTrace={frames:0,active:false,minimumScale:Infinity,fixedDrift:0,original:true,feet:new Map(${JSON.stringify(participants)}.map(id=>[id,new Set()])),poses:new Map(${JSON.stringify(participants)}.map(id=>[id,new Set()])),steps:new Set(),settledTailFrames:0};
     function transferFrame(){const t=transferTrace;if(!t.active)return;t.frames++;const status=document.getElementById('office').dataset.transferStatus,step=document.getElementById('office').dataset.transferStep;if(status==='running')t.steps.add(Number(step));if(t.tail&&${settled(13)})t.settledTailFrames++;else if(t.tail)t.settledTailFrames=0;for(const[id,old]of transferOriginals){const a=crowdActors.get(id);if(!a||a!==old.actor||a.node!==old.node||a.body!==old.body||a.body.querySelector('.ap-rig')!==old.rig)t.original=false;}

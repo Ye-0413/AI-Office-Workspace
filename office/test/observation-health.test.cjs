@@ -8,6 +8,15 @@ const { mergeObservationHealth, ROLLOUT_HEALTHY, ROLLOUT_ERROR_PREFIX } = requir
 const I18n = require('../lib/i18n-model.js');
 
 const hooks = (watching = false) => ({ provider: 'codex', watching, installed: watching, lastEventAt: 200, detail: 'Hook source detail' });
+test('native session health remains scoped to its provider when an unrelated importer fails',()=>{
+  const source={provider:'pi',activity:true,available:true,error:''};
+  const connection={provider:'pi',watching:false,detail:'',lastEventAt:0};
+  const result=mergeObservationHealth(connection,{running:true,error:'Kimi import failed',sources:[source]},[{provider:'pi',lastEventAt:120}]);
+  assert.equal(result.watching,true);assert.equal(result.monitorError,null);assert.equal(result.lastEventAt,120);
+  assert.equal(I18n.translate('en',result.detail),'Observing local session logs without modifying them');
+  const failed=mergeObservationHealth(connection,{running:true,sources:[{...source,error:'READ_DENIED'}]});
+  assert.equal(failed.watching,false);assert.equal(failed.monitorError,'READ_DENIED');
+});
 
 test('a rollout permission error is visible and cannot make a disconnected source look healthy', t => {
   const denied = Object.assign(new Error('permission denied'), { code: 'EACCES' });

@@ -3,7 +3,7 @@
 .avatar-performance{position:absolute;inset:0;display:block;pointer-events:none;--ap-cycle:12s}
 .avatar-performance[hidden]{display:none}
 .character-body.has-avatar-performance>img{opacity:0}
-.ap-rig{width:154px;height:129px;overflow:visible;display:block;shape-rendering:crispEdges}
+.ap-rig{width:154px;height:129px;overflow:visible;display:block;shape-rendering:crispEdges;transform:scale(var(--avatar-presentation-scale,1));transform-origin:77.5px 115px}
 .ap-rig g{transform-box:view-box}
 .ap-upper{transform-origin:77.5px 105px}
 .ap-arm-left{transform-origin:49px 89px}

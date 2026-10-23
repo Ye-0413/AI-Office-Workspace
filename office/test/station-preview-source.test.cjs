@@ -12,14 +12,17 @@ test('the real exporter entry runs under Electron default-app loading while impo
   const footer=source.slice(source.lastIndexOf('\nmodule.exports='));assert.ok(footer.includes('main().catch'));
   for(const scenario of [
     {name:'Electron default-app direct script',electron:true,direct:false,argv:filename,expected:1},
+    {name:'Electron Chromium flags before direct application',electron:true,direct:false,flags:['--force-device-scale-factor=1','--disable-backgrounding-occluded-windows'],argv:filename,expected:1},
     {name:'Node direct entry',electron:false,direct:true,argv:filename,expected:1},
     {name:'Node imported module',electron:false,direct:false,argv:filename,expected:0},
     {name:'Electron imported module',electron:true,direct:false,argv:path.join(repo,'office/test/other-entry.cjs'),expected:0},
     {name:'Electron missing application argv',electron:true,direct:false,argv:undefined,expected:0},
-    {name:'Electron resolved relative application argv',electron:true,direct:false,argv:path.relative(process.cwd(),filename),expected:1}
+    {name:'Electron resolved relative application argv',electron:true,direct:false,argv:path.relative(process.cwd(),filename),expected:1},
+    {name:'Electron import with this file only as later input',electron:true,direct:false,flags:['--force-device-scale-factor=1'],argv:path.join(repo,'office/test/other-entry.cjs'),extra:[filename],expected:0}
   ]){
     const module={exports:{}},require=()=>assert.fail('entry check must not load Electron');require.main=scenario.direct?module:{};
     let calls=0;const context={...Exporter,module,require,path,__filename:filename,process:{versions:scenario.electron?{electron:'41.10.4'}:{},argv:['runtime',scenario.argv]},main:()=>{calls++;return Promise.resolve();},console};
+    context.process.argv=['runtime',...(scenario.flags||[]),scenario.argv,...(scenario.extra||[])];
     vm.runInNewContext(footer,context,{filename});assert.equal(calls,scenario.expected,scenario.name);
   }
 });

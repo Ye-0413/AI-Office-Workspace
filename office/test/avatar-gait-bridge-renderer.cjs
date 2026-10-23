@@ -25,8 +25,39 @@ app.whenReady().then(async()=>{
   for(let i=0;i<cases.length;i++){
     const c=cases[i];await run(`window.session=${JSON.stringify(c.session)};controller.update(session,{now:${10000+i*10000}});void 0`);await wait(230);
     await run(`for(const a of body.getAnimations({subtree:true}).filter(a=>typeof a.animationName==='string'))a.currentTime=${1000+(i%3)*2000};actor.dataset.walking='true';controller.update(session,{now:${10100+i*10000},walking:true});void 0`);await wait(210);
-    const r=await run(`new Promise(resolve=>{const nodes=[...body.querySelectorAll('.ap-upper,.ap-eyes,.ap-arm,.ap-foot')],points=nodes.map(n=>n.classList.contains('ap-arm-left')?[45,90]:n.classList.contains('ap-arm-right')?[110,90]:n.classList.contains('ap-foot')?[77,115]:[77,87]);const take=()=>nodes.map((n,j)=>{const p=new DOMPoint(...points[j]).matrixTransform(n.getScreenCTM());return{x:p.x/2,y:p.y/2}});const css=body.getAnimations({subtree:true}).filter(a=>typeof a.animationName==='string'),held=new Map(css.map(a=>[a,a.currentTime])),violations=[];const started=performance.now();let frames=0;let last={at:started,points:take(),bridge:true},endJump=null,maxStep=0;actor.dataset.walking='false';controller.update(session,{now:${10200+i*10000}});function tick(now){frames++;const current=take(),bridge=body.getAnimations({subtree:true}).some(a=>a.constructor.name==='Animation'&&nodes.includes(a.effect.target)&&a.effect.getTiming().duration===180),step=Math.max(...current.map((p,j)=>Math.hypot(p.x-last.points[j].x,p.y-last.points[j].y)));maxStep=Math.max(maxStep,step);if(bridge&&css.some(a=>a.playState!=='paused'||Math.abs(a.currentTime-held.get(a))>.2))violations.push('work CSS advanced behind static bridge target');if(last.bridge&&!bridge&&!endJump)endJump={dt:now-last.at,px:step,at:now-started};last={at:now,points:current,bridge};if(now-started<620)requestAnimationFrame(tick);else resolve({frames,endJump,maxStep,violations,clocksRestored:css.every(a=>a.playState==='running'&&body.getAnimations({subtree:true}).includes(a))})}requestAnimationFrame(tick)})`);
-    assert.deepEqual(r.violations,[],c.program);assert.equal(r.clocksRestored,true,c.program);assert.ok(r.endJump,c.program+' must cross an actual finite joint bridge boundary');assert.ok(r.frames>=31,c.program+' needs at least 31 real RAF samples');assert.ok(r.endJump.px<.15,c.program+' must expose the CSS pose at the same phase as its bridge endpoint');results.push({program:c.program,...r});
+    const r=await run(`new Promise(resolve=>{
+      const nodes=[...body.querySelectorAll('.ap-upper,.ap-eyes,.ap-arm,.ap-foot')],points=nodes.map(n=>n.classList.contains('ap-arm-left')?[45,90]:n.classList.contains('ap-arm-right')?[110,90]:n.classList.contains('ap-foot')?[77,115]:[77,87]);
+      const take=()=>nodes.map((n,j)=>{const p=new DOMPoint(...points[j]).matrixTransform(n.getScreenCTM());return{x:p.x/2,y:p.y/2}});
+      const css=body.getAnimations({subtree:true}).filter(a=>typeof a.animationName==='string'),held=new Map(css.map(a=>[a,a.currentTime])),violations=[],boundaries=[];
+      const started=performance.now();let frames=0,last={at:started,points:take(),bridge:true},endJump=null,maxStep=0;
+      actor.dataset.walking='false';controller.update(session,{now:${10200+i*10000}});
+      const jointBridges=body.getAnimations({subtree:true}).filter(a=>a.constructor.name==='Animation'&&nodes.includes(a.effect.target)&&a.effect.getTiming().duration===180);
+      for(const motion of jointBridges){
+        const node=motion.effect.target,index=nodes.indexOf(node),target=motion.effect.getKeyframes().at(-1).transform;
+        motion.finished.then(()=>{
+          // Observe the actual completion before the aggregate bridge owner
+          // resumes work clocks. Adjacent RAF samples can include legitimate
+          // resumed work motion and are only interval diagnostics below.
+          const expected=new DOMPoint(...points[index]).matrixTransform(new DOMMatrixReadOnly(target));
+          const actual=new DOMPoint(...points[index]).matrixTransform(new DOMMatrixReadOnly(getComputedStyle(node).transform));
+          boundaries.push({joint:node.getAttribute('class'),at:performance.now()-started,px:Math.hypot(actual.x-expected.x,actual.y-expected.y),clocksHeld:css.every(a=>a.playState==='paused'),clockDrift:Math.max(0,...css.map(a=>Math.abs(a.currentTime-held.get(a))))});
+        },()=>violations.push('joint bridge cancelled before its completion boundary'));
+      }
+      function tick(now){
+        frames++;
+        const current=take(),bridge=body.getAnimations({subtree:true}).some(a=>a.constructor.name==='Animation'&&nodes.includes(a.effect.target)&&a.effect.getTiming().duration===180),step=Math.max(...current.map((p,j)=>Math.hypot(p.x-last.points[j].x,p.y-last.points[j].y)));
+        maxStep=Math.max(maxStep,step);
+        if(bridge&&css.some(a=>a.playState!=='paused'||Math.abs(a.currentTime-held.get(a))>.2))violations.push('work CSS advanced behind static bridge target');
+        if(last.bridge&&!bridge&&!endJump)endJump={dt:now-last.at,px:step,at:now-started};
+        last={at:now,points:current,bridge};
+        if(now-started<620)requestAnimationFrame(tick);
+        else resolve({frames,endJump,maxStep,violations,boundaries,jointBridgeCount:jointBridges.length,clocksRestored:css.every(a=>a.playState==='running'&&body.getAnimations({subtree:true}).includes(a))});
+      }
+      requestAnimationFrame(tick);
+    })`);
+    assert.deepEqual(r.violations,[],c.program);assert.equal(r.clocksRestored,true,c.program);assert.ok(r.endJump,c.program+' must cross an actual finite joint bridge boundary');assert.ok(r.frames>=31,c.program+' needs at least 31 real RAF samples');
+    assert.ok(r.jointBridgeCount>0&&r.boundaries.length===r.jointBridgeCount,c.program+' must observe every actual joint completion: '+JSON.stringify(r));
+    assert.ok(r.boundaries.every(boundary=>boundary.px<.15&&boundary.clocksHeld&&boundary.clockDrift<=.2),c.program+' must expose the CSS pose at the same phase as its bridge endpoint: '+JSON.stringify(r));results.push({program:c.program,...r});
   }
   await run(`actor.dataset.walking='true';controller.update(session,{now:200000,walking:true});void 0`);await wait(220);
   await run(`actor.dataset.walking='false';controller.update(session,{now:200100});void 0`);await wait(20);

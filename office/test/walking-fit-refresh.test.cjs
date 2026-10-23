@@ -1,12 +1,13 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
+const Scene=require('../lib/scene-model.js');
 const source=fs.readFileSync(path.join(__dirname,'../renderer/app.js'),'utf8');
 const refresh=source.slice(source.indexOf('  function queueLayoutRefresh('),source.indexOf('  function placeOutside('));
 const clear=source.slice(source.indexOf('  function clearActors('),source.indexOf('  function queueAdmission('));
 const admit=source.slice(source.indexOf('  function queueAdmission('),source.indexOf('  function hasBodyActivity('));
 function harness(){
   const jobs=[],events=[],actors=new Map(),node={children:[],replaceChildren:()=>{}};let renders=0,resumes=0;
-  const context={layoutRefreshOwner:null,layoutRefreshRequested:false,clearingActors:false,destroyed:false,fitting:false,uniformScale:.4,currentPage:{uniformScale:.4,targetUniformScale:.8},actors,seats:new Map(),admissionFrame:0,
+  const context={Scene,snapshot:{sessions:[]},layoutRefreshOwner:null,layoutRefreshRequested:false,clearingActors:false,destroyed:false,fitting:false,uniformScale:.4,currentPage:{uniformScale:.4,targetUniformScale:.8},actors,seats:new Map(),presentationReentries:new Map(),admissionFrame:0,
     queueMicrotask:fn=>jobs.push(fn),render:()=>renders++,resumeNavigation:()=>resumes++,currentPosition:a=>a.position,
     office:{dispatchEvent:event=>events.push(event)},CustomEvent:class{constructor(type,options){this.type=type;this.detail=options.detail;}},
     removeActor:id=>{actors.delete(id);context.queueLayoutRefresh(true);},traffic:{clear:()=>{}},$:()=>node,

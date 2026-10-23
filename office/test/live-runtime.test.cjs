@@ -64,6 +64,9 @@ async function startMain(t, { now, dataDir: requestedDataDir } = {}) {
         screen: { getAllDisplays: () => [] }, shell: { openPath: async () => '' },
       };
       if (name === './lib/codex-monitor.cjs') return { createCodexMonitor: observer('monitor') };
+      if (name === './lib/session-usage-monitor.cjs') return { createSessionUsageMonitor: options => requireFromMain(name).createSessionUsageMonitor({ ...options, homeDir: dataDir, codexHome: path.join(dataDir,'codex'), claudeHome: path.join(dataDir,'claude') }) };
+      if (name === './lib/manual-questions.cjs') return {createManualQuestions:()=>({start:async()=>{},stop(){},snapshot:()=>[],status:()=>({available:true}),submit:input=>({id:input.id,state:'awaiting-delivery'}),native:()=>({dismissed:true})})};
+      if (name === './lib/additional-session-monitor.cjs') return {createAdditionalSessionMonitor:()=>({start(){},stop(){},refresh:async()=>{},status:()=>({providers:[],sources:[],bytesRead:0,completedScans:1,pendingFiles:0,lastScanAt:null})})};
       if (name === './lib/observer-bridge.cjs') return { createObserverBridge: observer('bridge') };
       if (name === './lib/window-visibility.cjs') return requireFromMain(name);
       if (name === './lib/session-store.cjs' && now) return { createSessionStore: options => requireFromMain(name).createSessionStore({ ...options, now }) };
@@ -189,7 +192,7 @@ test('the sandbox bridge offers live observation, settings and local actions wit
     window: { addEventListener: (name, listener) => domListeners.set(name, listener) },
   }, { filename: preloadFile });
   assert.ok(Object.isFrozen(exposed));
-  assert.deepEqual(Object.keys(exposed).sort(), ['connectProvider', 'disconnectProvider', 'getSettings', 'getSnapshot', 'listDisplays', 'moveToDisplay', 'onSnapshot', 'openSource', 'setSettings', 'getUsageHistory', 'getUsageEvents', 'getUsageStatus', 'exportUsageHistory', 'openUsageFolder', 'getProviderSetup', 'initializeProviders'].sort());
+  assert.deepEqual(Object.keys(exposed).sort(), ['connectProvider', 'disconnectProvider', 'getSettings', 'getSnapshot', 'listDisplays', 'moveToDisplay', 'onSnapshot', 'openSource', 'setSettings', 'getUsageHistory', 'getUsageEvents', 'getUsageStatus', 'getTokenUsage', 'refreshTokenUsage', 'answerAgentQuestion', 'returnQuestionToNative', 'exportUsageHistory', 'openUsageFolder', 'getProviderSetup', 'initializeProviders'].sort());
   await exposed.getSnapshot();
   assert.deepEqual(calls, [['office:snapshot']]);
   const snapshots = [], unsubscribe = exposed.onSnapshot(value => snapshots.push(value));
@@ -204,6 +207,14 @@ test('the sandbox bridge offers live observation, settings and local actions wit
   assert.deepEqual(calls.at(-1), ['office:usage-history',{role:'helper'}]);
   await exposed.getUsageEvents({id:'codex:real-session'});
   assert.deepEqual(calls.at(-1), ['office:usage-events',{id:'codex:real-session'}]);
+  await exposed.getTokenUsage({provider:'codex'});
+  assert.deepEqual(calls.at(-1), ['office:token-usage',{provider:'codex'}]);
+  await exposed.refreshTokenUsage();
+  assert.deepEqual(calls.at(-1), ['office:token-refresh']);
+  await exposed.answerAgentQuestion({id:'pending',answers:{'0':['A']}});
+  assert.deepEqual(calls.at(-1), ['office:answer-question',{id:'pending',answers:{'0':['A']}}]);
+  await exposed.returnQuestionToNative('pending');
+  assert.deepEqual(calls.at(-1), ['office:question-native','pending']);
 });
 
 test('accepted usage persists across main-process restarts without reviving historical actors', async t => {

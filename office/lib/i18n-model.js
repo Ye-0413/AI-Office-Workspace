@@ -69,7 +69,7 @@
     ['今日活跃 Agent', 'Agents active today'],
     ['按香港日期统计实际观察到的 Agent，同一会话多轮只计一次；主 Agent 与分身分别去重，重启后保留。', 'Unique agents observed active per Hong Kong day. Repeated turns count once; main agents and clones are counted separately and retained after restart.'],
     ['Agent 大小', 'Agent size'],
-    ['保持适配后的大小；手动调整或重新适配时再改变。', 'Keep the fitted size steady. Use the slider or Refit size to change it.'],
+    ['大小只随手动调整改变；主 Agent 比分身大，空间不足时在名单中等候。', 'Only manual changes alter size. Main agents are larger than clones; overflow waits in the roster.'],
     ['重新适配', 'Refit size'],
     ['已按当前偏好重新适配。', 'Refitted using your current size preference.'],
     ['同步调整角色与名牌，房间自动安排间距。', 'Scale characters and nameplates together. Spacing adjusts automatically.'],
@@ -381,6 +381,11 @@
     ['插件路径包含无法确认的目录或符号链接，已保留', 'Plugin path contains an untrusted directory or symlink; preserved'],
     ['插件或配置文件无法安全确认，已保留', 'Plugin/config file cannot be safely confirmed; preserved'],
     ['插件或配置文件的身份已改变', 'Plugin/config identity changed'],
+    ['插件源码必须位于应用根目录内', 'Plugin source must remain inside its application root'],
+    ['打包的插件归档无法安全确认', 'Packaged plugin archive cannot be safely confirmed'],
+    ['打包的插件归档身份已改变', 'Packaged plugin archive identity changed'],
+    ['打包的插件源码无法安全确认', 'Packaged plugin source cannot be safely confirmed'],
+    ['打包的插件源码大小已改变', 'Packaged plugin source size changed'],
     ['现有插件不属于本应用，已保留', 'Existing plugin is not owned by Mini Office; preserved'],
     ['插件所有权记录无效，已保留', 'Invalid plugin ownership manifest; preserved'],
     ['插件被其他程序修改，已保留', 'Plugin was changed outside Mini Office; preserved'],
@@ -458,6 +463,7 @@
     ['KiroCrew 原生配置锁已释放，未改动', 'The native KiroCrew configuration lock was released; no changes made'],
     ['KiroCrew 原生配置锁意外释放，请重新检查配置', 'The native KiroCrew configuration lock was released unexpectedly. Check the configuration again'],
     ['本地 rollout 只读观察中', 'Observing local rollout logs without modifying them'],
+    ['本机会话日志只读观察中', 'Observing local session logs without modifying them'],
     ['不支持的观察配置格式', 'Unsupported observation configuration format'],
     ['配置路径或参数包含不支持的控制字符', 'Configuration path or argument contains unsupported control characters'],
     ['无法创建配置目录', 'Could not create the configuration directory'],
@@ -469,6 +475,17 @@
   const usagePhrases = [
     ['使用记录', 'Usage history'], ['关闭使用记录', 'Close usage history'],
     ['使用概览', 'Usage overview'], ['历史记录分页', 'Agent history pages'], ['事件时间线分页', 'Event timeline pages'],
+    ['Token 用量', 'Token usage'], ['今日 Token', 'Daily Token'], ['本周用量', 'Weekly usage'],
+    ['来源：受支持工具的本机会话日志；按香港自然日及周一至周日统计全部项目，不推算费用或额度。', 'Source: supported local session logs, across all projects. Hong Kong calendar days; weeks run Monday–Sunday. Cost and quota are not estimated.'],
+    ['Token 来自本机会话日志，可独立导入历史；活动时长仅统计应用运行期间的观察。历史记录不会重新进入房间。', 'Tokens come from local session logs, including independently imported history. Activity time counts only observations while the app runs. History never re-enters the room.'],
+    ['会话 Token', 'Session tokens'], ['会话 Token 概览', 'Session token overview'], ['已观测活动', 'Observed activity'],
+    ['读取下方来源所列工具的本机会话日志；仅展示日志报告的 token，不推算费用或额度。覆盖范围随可用日志而定。', 'Reads local session logs from the tools listed below. Counts are reported by those logs; cost and quota are not estimated. Coverage depends on available logs.'],
+    ['按模型查看', 'View by model'], ['所选范围内的模型 Token 记录', 'Model token records in the selected range'], ['模型 / 工具', 'Model / tool'],
+    ['请求记录', 'Request records'], ['未缓存输入', 'Uncached input'], ['输出', 'Output'], ['缓存读取', 'Cache read'], ['缓存写入', 'Cache write'], ['Token 总计', 'Total tokens'],
+    ['M = 百万，B = 十亿，T = 万亿；面板数字为约数。', 'M = million, B = billion, T = trillion; displayed totals are rounded.'],
+    ['本机会话 Token 暂不可用。', 'Local session tokens are unavailable.'],
+    ['正在导入，当前数值尚不完整。', 'Import in progress; current values are incomplete.'],
+    ['导入或读取失败，当前数值可能不完整。', 'Import or read failed; current values may be incomplete.'],
     ['留在本机的工作足迹', 'Work footprints, kept on this Mac'],
     ['这里只统计本机已观测的 Agent 活动，不代表 token 或费用；应用关闭期间不计时，历史记录不会重新进入房间。', 'Only agent activity observed on this Mac is counted, not tokens or cost. Time while the app is closed is excluded; history never re-enters the room.'],
     ['时间范围', 'Date range'], ['近 7 天', 'Last 7 days'], ['近 30 天', 'Last 30 days'], ['全部时间', 'All time'], ['自选日期', 'Custom dates'],
@@ -547,6 +564,8 @@
   ];
   function backendFragment(value,toEnglish) {
     if (!toEnglish && connectionChinese.has(value)) return connectionChinese.get(value);
+    const sessionErrorFrom=toEnglish?'本机会话日志只读观察异常：':'Local session observation error: ';
+    if(value.startsWith(sessionErrorFrom)){const diagnostic=value.slice(sessionErrorFrom.length);if(diagnostic.length<=256&&!/[\u0000-\u001f\u007f]/.test(diagnostic))return(toEnglish?'Local session observation error: ':'本机会话日志只读观察异常：')+diagnostic;}
     const rolloutErrorFrom = toEnglish ? '本地 rollout 只读观察异常：' : 'Local rollout observation error: ';
     const rolloutErrorAt = value.startsWith(rolloutErrorFrom) ? 0 : value.indexOf(' · ' + rolloutErrorFrom);
     if (rolloutErrorAt >= 0) {

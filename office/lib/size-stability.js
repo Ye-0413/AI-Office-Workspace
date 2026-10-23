@@ -1,25 +1,21 @@
-/* One shared body size per occupied-room episode. No session identity/state. */
+/* User-owned body size. Observation count never changes this preference. */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.OfficeSizeStability = factory();
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
+  const CLONE_RATIO = .8;
   const preference = value => Number.isFinite(value) && value > 0 ? Math.max(.65, Math.min(1.35, value)) : 1;
+  const bodyRatio = session => session?.parentId ? CLONE_RATIO : 1;
   function create(options = {}) {
-    let requested = preference(options.requestedScale), ceiling = null, manual = false;
+    let requested = preference(options.requestedScale);
     return Object.freeze({
-      maximum: () => Math.min(requested, ceiling === null ? requested : ceiling),
-      request(value) { requested = preference(value); ceiling = null; manual = true; },
-      observe({ count, uniformScale, targetUniformScale } = {}) {
-        if (count === 0) { ceiling = null; manual = false; return; }
-        if (!(count > 0) || !Number.isFinite(uniformScale) || uniformScale <= 0) return;
-        // The existing allocator may first walk at a smaller safe size. Only
-        // an explicit slider/refit request may wait for that larger endpoint.
-        if (manual && Number.isFinite(targetUniformScale) && targetUniformScale > uniformScale + 1e-6) return;
-        ceiling = Math.min(requested, uniformScale, ceiling === null ? Infinity : ceiling);
-        manual = false;
-      }
+      maximum: () => requested,
+      request(value) { requested = preference(value); },
+      // Kept as a compatible observation boundary; a floor allocator owns
+      // admission and queues overflow instead of rewriting the user's size.
+      observe() {}
     });
   }
-  return Object.freeze({ create });
+  return Object.freeze({ create, bodyRatio, CLONE_RATIO });
 });

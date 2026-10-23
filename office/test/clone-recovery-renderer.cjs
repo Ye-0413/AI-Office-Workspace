@@ -4,7 +4,7 @@ const {app,BrowserWindow,ipcMain}=require('electron');
 const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const profile=fs.mkdtempSync(path.join(os.tmpdir(),'office-clone-recovery-'));
 app.setPath('userData',profile);app.disableHardwareAcceleration();
-let win,settings={language:'zh',agentScale:1,sceneTheme:'spring',sceneWeather:'off',reducedMotion:false,idleVisitor:false};
+let win,settings={language:'zh',agentScale:.65,sceneTheme:'spring',sceneWeather:'off',reducedMotion:false,idleVisitor:false};
 let snapshot={mode:'live',now:Date.now(),connections:[],sessions:[]};
 const errors=[],checks=[],pause=ms=>new Promise(r=>setTimeout(r,ms));
 const task=(id,parentId)=>({id:'codex:recovery-'+id,sessionId:'recovery-'+id,provider:'codex',parentId,status:'active',activity:'coding',activeTools:1,lastEventAt:Date.now(),events:[],projectPath:'/fixture/clone-recovery'});
@@ -42,10 +42,20 @@ app.whenReady().then(async()=>{
   await until(`!${query(child.id)}`,'measured growth must not orphan the physical return owner');assert.equal(await run(`${query(root.id)}===originalRecoveryRoot`),true);checks.push({name:'measured nameplate growth preserves the physical helper return',beforeWidth,afterWidth});
   child=helper('size');send([root,child]);await until(settled(child.id),'size fixture helper must reach its station');
   await run(`window.sizingHelper=${query(child.id)};void 0`);send([root,stopped(child)]);await until(`${query(child.id)}?.dataset.clonePhase==='returning'`,'size fixture must enter returning');
-  await pause(120);await run(`const n=document.getElementById('setting-agentScale');n.value='135';n.dispatchEvent(new Event('change',{bubbles:true}));void 0`);
+  // A maximum-size preference cannot claim the finite owner's old geometry.
+  // It is saved now, while the actual return finishes at its proved size.
+  await pause(120);await run(`(()=>{const n=document.getElementById('setting-agentScale');n.value='135';n.dispatchEvent(new Event('change',{bubbles:true}));})()`);
   await pause(180);assert.equal(await run(`${query(child.id)}===sizingHelper`),true,'size preferences must not prematurely remove the returning body');
-  const frames=await run(`new Promise(resolve=>{let frames=0,previous=null;const start=performance.now(),bad=[];function tick(now){frames++;const n=${query(root.id)},m=new DOMMatrixReadOnly(getComputedStyle(n).transform);if(n!==originalRecoveryRoot||n.querySelector('.ap-rig')!==originalRootRig||Number(getComputedStyle(n).opacity)<.99)bad.push('root identity/visibility');if(previous&&Math.hypot(m.m41-previous.x,m.m42-previous.y)>400*(now-previous.at)/1000+4)bad.push('root foot cut');previous={x:m.m41,y:m.m42,at:now};if(now-start<900)requestAnimationFrame(tick);else resolve({frames,bad:[...new Set(bad)]});}requestAnimationFrame(tick);})`);
-  assert.ok(frames.frames>=31,JSON.stringify(frames));assert.deepEqual(frames.bad,[]);await until(`!${query(child.id)}`,'size preference must preserve eventual absorption');checks.push({name:'size transition preserves return lifetime and main anchors',...frames});
+  assert.equal(settings.agentScale,1.35);
+  assert.equal(await run(`document.getElementById('office').dataset.sizePending`),'true');
+  assert.equal(await run(`document.getElementById('office').dataset.fitScale`),'0.6500');
+  const frames=await run(`new Promise(resolve=>{let frames=0,finiteFrames=0,previous=null;const start=performance.now(),bad=[];function tick(now){frames++;const n=${query(root.id)},child=${query(child.id)},m=n&&new DOMMatrixReadOnly(getComputedStyle(n).transform);if(child){finiteFrames++;if(n!==originalRecoveryRoot||n.querySelector('.ap-rig')!==originalRootRig||Number(getComputedStyle(n).opacity)<.99)bad.push('root identity/visibility');if(previous&&Math.hypot(m.m41-previous.x,m.m42-previous.y)>400*(now-previous.at)/1000+4)bad.push('root foot cut');previous={x:m.m41,y:m.m42,at:now};}if(now-start<900)requestAnimationFrame(tick);else resolve({frames,finiteFrames,bad:[...new Set(bad)]});}requestAnimationFrame(tick);})`);
+  assert.ok(frames.finiteFrames>=31,JSON.stringify(frames));assert.deepEqual(frames.bad,[]);await until(`!${query(child.id)}`,'size preference must preserve eventual absorption');
+  await until(`${settled(root.id)}&&document.getElementById('office').dataset.fitScale==='1.3500'&&document.getElementById('office').dataset.sizePending==='false'`,'maximum requested size gets its fresh admission after the finite return');
+  checks.push({name:'maximum size is saved, deferred through the finite owner, then safely admitted',...frames});
+  await run(`(()=>{const n=document.getElementById('setting-agentScale');n.value='65';n.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+  await until(`${settled(root.id)}&&document.getElementById('office').dataset.fitScale==='0.6500'`,'restore a two-body size for the following independent recovery cases');
+  await run(`window.originalRecoveryRoot=${query(root.id)};window.originalRootRig=originalRecoveryRoot.querySelector('.ap-rig');void 0`);
   child=helper('uncertain');send([root,child]);await until(settled(child.id),'uncertain fixture helper must physically arrive');
   await run(`window.uncertainHelper=${query(child.id)};window.uncertainRig=uncertainHelper.querySelector('.ap-rig');void 0`);
   send([{...child,status:'stale',lastEventAt:Date.now()}]);await until(`${query(root.id)}?.dataset.cloneHold==='true'`,'absent main must retain the uncertain descendant anchor');await pause(1400);

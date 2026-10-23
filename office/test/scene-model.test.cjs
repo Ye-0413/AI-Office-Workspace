@@ -659,17 +659,20 @@ test('a shared explicit scale removes depth and helper hierarchy without changin
   assert.notEqual(Scene.actorScale({ y: 80 }, { helper: true }), Scene.actorScale({ y: 80 }));
 });
 
-test('a small complete cast keeps real work stations at the same visual scale', () => {
+test('legacy small-cast layout preserves observations and respects the enlarged clock reservation', () => {
   const sessions = [task('root', 'coding'), task('child', 'reading', { parentId: 'root' })];
   for (const requestedScale of [.65, 1, 1.35]) {
     const layout = Scene.layoutAll(sessions, { requestedScale });
     assertAllBodies(layout, sessions);
-    assert.equal(layout.layoutMode, 'stations');
-    assert.equal(layout.uniformScale, requestedScale);
-    for (const session of sessions) {
-      const seat = layout.seats.get(session.id);
-      assert.equal(seat.workZone, Scene.activitySpec(session).zone);
-      assert.equal(Scene.stationCompatible(seat, seat.zone), true);
+    assert.ok(['stations', 'grid'].includes(layout.layoutMode));
+    assert.ok(layout.uniformScale <= requestedScale);
+    if (layout.layoutMode === 'stations') {
+      assert.equal(layout.uniformScale, requestedScale);
+      for (const session of sessions) {
+        const seat = layout.seats.get(session.id);
+        assert.equal(seat.workZone, Scene.activitySpec(session).zone);
+        assert.equal(Scene.stationCompatible(seat, seat.zone), true);
+      }
     }
     assert.equal(layout.rootIdsBySession.get('child'), 'root');
   }

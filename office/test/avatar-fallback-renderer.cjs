@@ -33,12 +33,19 @@ function coloredPixels(capture,sample,tolerance=115){
   }
   return count;
 }
+function bodyPoint(sample,x,y){
+  const r=sample.rect,scale=sample.presentationScale;
+  assert.equal(scale,1.5,'pixel sampling must use the actual enlarged presentation scale');
+  return{x:r.x+r.width*(77.5+(x-77.5)*scale)/154,y:r.y+r.height*(115+(y-115)*scale)/129};
+}
 function bodyCoverage(capture,sample){
   const {width,height}=capture.getSize(),pixels=capture.toBitmap(),background=emptyRoom.toBitmap(),target=sample.color.match(/../g).map(x=>parseInt(x,16));
-  // A fixed body-space ROI covers both the moving rig and its static backup.
+  // A fixed artwork-space ROI covers both the moving rig and its static backup.
   // It never changes anchors when their presence alphas cross .5, and its
   // margin also covers the compositor frame following the DOM RAF report.
-  const r=sample.rect,x0=Math.floor(r.x+r.width*48/154),x1=Math.ceil(r.x+r.width*107/154),y0=Math.floor(r.y+r.height*67/129),y1=Math.ceil(r.y+r.height*104/129);
+  // Apply the measured presentation transform around the same physical feet.
+  const topLeft=bodyPoint(sample,48,67),bottomRight=bodyPoint(sample,107,104),coreTopLeft=bodyPoint(sample,65,72),coreBottomRight=bodyPoint(sample,90,100);
+  const x0=Math.floor(topLeft.x),x1=Math.ceil(bottomRight.x),y0=Math.floor(topLeft.y),y1=Math.ceil(bottomRight.y);
   const alphas=[];let contrast=0,coreTinted=0;
   for(let y=Math.max(0,y0);y<Math.min(height,y1);y++)for(let x=Math.max(0,x0);x<Math.min(width,x1);x++){
     const i=(y*width+x)*4,b=[background[i+2],background[i+1],background[i]],c=[pixels[i+2],pixels[i+1],pixels[i]],v=target.map((t,k)=>t-b[k]),d=c.map((t,k)=>t-b[k]);
@@ -49,7 +56,7 @@ function bodyCoverage(capture,sample){
     // Test the actual background-to-family-colour blend, rather than distance
     // from an opaque tint. Two simultaneous alpha bridges legitimately show
     // background through a still clearly identifiable body.
-    if(alpha>=.35&&alpha<=1.2&&residual<25){alphas.push(alpha);if(x>=r.x+r.width*65/154&&x<=r.x+r.width*90/154&&y>=r.y+r.height*72/129&&y<=r.y+r.height*100/129)coreTinted++;}
+    if(alpha>=.35&&alpha<=1.2&&residual<25){alphas.push(alpha);if(x>=coreTopLeft.x&&x<=coreBottomRight.x&&y>=coreTopLeft.y&&y<=coreBottomRight.y)coreTinted++;}
   }
   alphas.sort((a,b)=>a-b);
   return{tinted:alphas.length,coreTinted,contrast,medianAlpha:alphas.length?alphas[Math.floor(alphas.length/2)]:0};
@@ -61,9 +68,9 @@ async function captureFrames(count,{blended=false,label='frames'}={}){
       const body=n.querySelector('.character-body'),layer=body.querySelector('.avatar-performance'),fallback=body.querySelector('.avatar-native-fallback');
       const active=!layer.hidden&&Number(getComputedStyle(layer).opacity)>.5;
       const anchor=active?body.querySelector('.ap-torso'):fallback;
-      const matrix=anchor.getScreenCTM();const rect=body.getBoundingClientRect();const point=matrix?new DOMPoint(77.5,75).matrixTransform(matrix):{x:rect.left+rect.width*77.5/154,y:rect.top+rect.height*75/129};
+      const matrix=anchor.getScreenCTM(),rect=body.getBoundingClientRect(),presentationScale=parseFloat(getComputedStyle(body).getPropertyValue('--avatar-presentation-scale'));const point=matrix?new DOMPoint(77.5,75).matrixTransform(matrix):{x:rect.left+rect.width*77.5/154,y:rect.top+rect.height*(115+(75-115)*presentationScale)/129};
       const alpha=s=>{const q=body.querySelector(s);return q?{opacity:getComputedStyle(q).opacity,display:getComputedStyle(q).display,hidden:q.hidden}:null};
-      return{id:n.dataset.sessionId,x:point.x,y:point.y,rect:{x:rect.x,y:rect.y,width:rect.width,height:rect.height},alpha:{layer:alpha('.avatar-performance'),image:alpha('img'),native:alpha('.avatar-native-fallback'),base:alpha('.avatar-fallback-base'),outgoing:alpha('.avatar-fallback-outgoing'),use:alpha('.ap-torso use:not(.avatar-fallback-joint)'),backup:alpha('.ap-torso .avatar-fallback-joint')},color:n.querySelector('.family-tint-flood').getAttribute('flood-color').slice(1),same:originalBodies.some(old=>old.node===n&&old.rig===body.querySelector('.ap-rig')),opacity:Number(getComputedStyle(n).opacity),rig:body.dataset.rigHealth,bitmap:body.dataset.bitmapHealth,healthAlpha:parseFloat(getComputedStyle(body.querySelector('img')).getPropertyValue('--avatar-art-alpha')),filter:getComputedStyle(body.querySelector('img')).filter};
+      return{id:n.dataset.sessionId,x:point.x,y:point.y,rect:{x:rect.x,y:rect.y,width:rect.width,height:rect.height},presentationScale,alpha:{layer:alpha('.avatar-performance'),image:alpha('img'),native:alpha('.avatar-native-fallback'),base:alpha('.avatar-fallback-base'),outgoing:alpha('.avatar-fallback-outgoing'),use:alpha('.ap-torso use:not(.avatar-fallback-joint)'),backup:alpha('.ap-torso .avatar-fallback-joint')},color:n.querySelector('.family-tint-flood').getAttribute('flood-color').slice(1),same:originalBodies.some(old=>old.node===n&&old.rig===body.querySelector('.ap-rig')),opacity:Number(getComputedStyle(n).opacity),rig:body.dataset.rigHealth,bitmap:body.dataset.bitmapHealth,healthAlpha:parseFloat(getComputedStyle(body.querySelector('img')).getPropertyValue('--avatar-art-alpha')),filter:getComputedStyle(body.querySelector('img')).filter};
     }))))`);
     const capture=await win.webContents.capturePage();
     if(preview&&blended&&frame===0){fs.mkdirSync(preview,{recursive:true});fs.writeFileSync(path.join(preview,label+'-first-frame.png'),capture.toPNG());}
@@ -102,7 +109,8 @@ app.whenReady().then(async()=>{
   const emptyCSS=await win.webContents.insertCSS('.character-body,.character-body *{visibility:hidden!important}');
   await run(`new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))`);
   assert.equal(await run(`[...document.querySelectorAll('.character-body,.character-body *')].every(n=>getComputedStyle(n).visibility==='hidden')`),true,'the reference compositor must contain no body descendants');
-  const referenceSample=await run(`(()=>{const n=[...document.querySelectorAll('.actor[data-session-id]')].find(n=>n.querySelector('.family-tint-flood').getAttribute('flood-color')==='#cf81ce');const r=n.querySelector('.character-body').getBoundingClientRect();return{x:r.x+r.width*77.5/154,y:r.y+r.height*75/129,color:'cf81ce'}})()`);
+  const referenceSample=await run(`(()=>{const n=[...document.querySelectorAll('.actor[data-session-id]')].find(n=>n.querySelector('.family-tint-flood').getAttribute('flood-color')==='#cf81ce'),body=n.querySelector('.character-body'),r=body.getBoundingClientRect();return{rect:{x:r.x,y:r.y,width:r.width,height:r.height},presentationScale:parseFloat(getComputedStyle(body).getPropertyValue('--avatar-presentation-scale')),color:'cf81ce'}})()`);
+  Object.assign(referenceSample,bodyPoint(referenceSample,77.5,75));
   let emptyCapture;
   for(let attempt=0;attempt<12;attempt++){
     emptyCapture=await win.webContents.capturePage();emptyRoom=frozenPixels(emptyCapture);
@@ -118,9 +126,9 @@ app.whenReady().then(async()=>{
   // The broader blend-aware assertion must reject this real wrong-colour
   // body; visible coloured hands or work props alone cannot satisfy it.
   const orangeCSS=await win.webContents.insertCSS('.character-body .ap-torso,.character-body .ap-foot,.character-body .ap-torso use,.character-body .ap-foot use{filter:none!important}');await run(`new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))`);
-  const orangeSamples=await run(`[...document.querySelectorAll('.actor[data-session-id]')].map(n=>{const r=n.querySelector('.character-body').getBoundingClientRect();return{id:n.dataset.sessionId,color:n.querySelector('.family-tint-flood').getAttribute('flood-color').slice(1),rect:{x:r.x,y:r.y,width:r.width,height:r.height}}})`);
+  const orangeSamples=await run(`[...document.querySelectorAll('.actor[data-session-id]')].map(n=>{const body=n.querySelector('.character-body'),r=body.getBoundingClientRect();return{id:n.dataset.sessionId,color:n.querySelector('.family-tint-flood').getAttribute('flood-color').slice(1),rect:{x:r.x,y:r.y,width:r.width,height:r.height},presentationScale:parseFloat(getComputedStyle(body).getPropertyValue('--avatar-presentation-scale'))}})`);
   const purple=orangeSamples.find(n=>n.color==='cf81ce');assert.ok(purple,'retain the contrasting purple-family negative control');
-  const purplePoint={x:purple.rect.x+purple.rect.width*77.5/154,y:purple.rect.y+purple.rect.height*75/129,color:purple.color},orangePoint={...purplePoint,color:'de886d'};
+  const purplePoint={...bodyPoint(purple,77.5,75),color:purple.color},orangePoint={...purplePoint,color:'de886d'};
   let orangeCapture,orangePixels,orangeCount=0,purpleCount=0;
   for(let attempt=0;attempt<12;attempt++){
     orangeCapture=await win.webContents.capturePage();orangePixels=frozenPixels(orangeCapture);

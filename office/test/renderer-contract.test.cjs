@@ -33,7 +33,7 @@ function context(extra = {}) {
     text: (target, value) => { target.textContent = String(value ?? ''); },
     element: (tag, className, content) => ({ ...node(content), tagName: tag, className }),
     document: { createDocumentFragment: () => ({ ...node(), isFragment: true }) },
-    actors: new Map(), selectedSession: 'fixture', attendance: {retired: []},
+    actors: new Map(), selectedSession: 'fixture', attendance: {retired: []}, currentPage: { overflowIds: [] },
     renderConnections: () => {}, refreshSnapshot: async () => {},
     showError: error => errors.push(error.message),
     timeAgo: () => '刚刚收到事件', sourceName: () => '工具 hook 事件', confidenceName: () => '明确事件',

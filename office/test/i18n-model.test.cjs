@@ -88,6 +88,15 @@ test('all current static HTML Chinese text and accessible labels have English co
   }
 });
 
+test('homepage and session token statistics have matching bilingual fixed copy', () => {
+  for (const [zh, en] of [
+    ['Token 用量', 'Token usage'], ['今日 Token', 'Daily Token'], ['本周用量', 'Weekly usage'],
+    ['会话 Token', 'Session tokens'], ['会话 Token 概览', 'Session token overview'], ['已观测活动', 'Observed activity'],
+    ['按模型查看', 'View by model'], ['请求记录', 'Request records'], ['未缓存输入', 'Uncached input'],
+    ['输出', 'Output'], ['缓存读取', 'Cache read'], ['缓存写入', 'Cache write'], ['Token 总计', 'Total tokens']
+  ]) { assert.equal(I18n.translate('en', zh), en); assert.equal(I18n.translate('zh', zh), zh); }
+});
+
 test('scene zones, activity labels, verbs and provider fixed summaries have English copy', () => {
   const states = [...Object.values(Scene.SPECS), Scene.activitySpec({ status: 'stale' }), Scene.activitySpec({ closed: true })];
   const fixed = [...Object.values(Scene.ZONES).map(zone => zone.name), ...states.flatMap(spec => [spec.label, spec.verb]),

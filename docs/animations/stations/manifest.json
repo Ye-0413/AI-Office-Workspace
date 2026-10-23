@@ -15,13 +15,13 @@
     "continuousOwnerLifetimeCertified": false
   },
   "sourceHashes": {
-    "office/lib/scene-model.js": "45a0ac0fcc1c09a799158e483c1eee330316963ed64c61852c45fd8c385b7c8c",
+    "office/lib/scene-model.js": "d7be1eaf83f66aa348c2141dd15e7b297b223b86ed7628d6896cd32b6527942e",
     "office/lib/scene-traffic.js": "be29c677fbf611685e9d10982e8c00cedfd84a6c04f71f7e4ea01e27b575ae08",
-    "office/lib/walking-layout.js": "d2d41ea0169f70857a9a808f4ad2ea3a3ca9da07fbd298e2de0a57ba246713b7",
+    "office/lib/walking-layout.js": "ca25b250751c620d6e20579535879d0eddcee06a45ec85ca998c87ac13659d21",
     "office/lib/social-interactions.js": "37f4a7664472781a1bcb878babb436a8eab8ffb254f7a0e5b79a94da43cbf5c0",
     "office/renderer/station-arrival.js": "39e211aecfb31c4c5c26527b62a0d499bbb3473556741bc19cd0a00ae1552ef1",
     "office/renderer/station-arrival.css": "62701902956ee13310a52e148a588029299a560e2c54d65fa9ad804ffb181c96",
-    "office/scripts/render-station-previews.cjs": "391f4122b99f65f717d8f8606df3238513ef243af99d9c912f14832b04ba1691"
+    "office/scripts/render-station-previews.cjs": "8f334644a0385d0a3d7cb9129d2ba7f832445b593a5ab7424ef1be335d3eadf8"
   },
   "assets": [
     {
@@ -35,8 +35,8 @@
       "durationMs": 1500,
       "productionProgramDurationMs": 1400,
       "distinctPngFrames": 64,
-      "bytes": 839716,
-      "sha256": "1c58ab8874a103dc957292105bf2b295fbf9d21fe27c5dbfdd04ffa46e7cad38",
+      "bytes": 878506,
+      "sha256": "0939a4a83daaaf7663085bf4ccb66cc9f77240c3aa7d21ecd2cd867aeda67f25",
       "programs": [
         {
           "program": "field-book",
@@ -103,8 +103,8 @@
       "durationMs": 1500,
       "productionProgramDurationMs": 1400,
       "distinctPngFrames": 64,
-      "bytes": 812107,
-      "sha256": "48c121ea6e9d224868a2fd7a5ff3c457b9232108a9b3b25df4a5ddfdc7299462",
+      "bytes": 831780,
+      "sha256": "6eb7f6034e481a7b66189507e6f2a19a05e237414585e2972a588e3521afe0a9",
       "programs": [
         {
           "program": "tea-scroll",
@@ -170,16 +170,16 @@
       "fps": 48,
       "durationMs": 1500,
       "productionProgramDurationMs": 1400,
-      "distinctPngFrames": 64,
-      "bytes": 943839,
-      "sha256": "be04e683e9a8be4ab35b997b6c2f68de08c9d073c26c51ac4a695f5caab25d7f",
+      "distinctPngFrames": 61,
+      "bytes": 912424,
+      "sha256": "8accfcda5ddff0f89124506635ac1b72d8b84916864570724309c6e35c7ed2ef",
       "programs": [
         {
           "program": "star-atlas",
           "zone": "library",
           "label": "翻阅星图",
           "sampledFrames": 72,
-          "distinctPngFrames": 64,
+          "distinctPngFrames": 61,
           "finiteDecorativeAnimations": 7,
           "anchor": {
             "x": 308,
@@ -192,7 +192,7 @@
           "zone": "board",
           "label": "连成一段星座",
           "sampledFrames": 72,
-          "distinctPngFrames": 64,
+          "distinctPngFrames": 61,
           "finiteDecorativeAnimations": 5,
           "anchor": {
             "x": 775,
@@ -205,7 +205,7 @@
           "zone": "desk",
           "label": "轻转浑仪",
           "sampledFrames": 72,
-          "distinctPngFrames": 64,
+          "distinctPngFrames": 61,
           "finiteDecorativeAnimations": 2,
           "anchor": {
             "x": 550,
@@ -218,7 +218,7 @@
           "zone": "bench",
           "label": "调节镜片光圈",
           "sampledFrames": 72,
-          "distinctPngFrames": 64,
+          "distinctPngFrames": 61,
           "finiteDecorativeAnimations": 5,
           "anchor": {
             "x": 1130,

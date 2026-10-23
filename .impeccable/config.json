@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "office/renderer/style.css"
+        ],
+        "createdAt": "2026-10-23T06:54:22.251Z",
+        "reason": "Codex review: Existing paper UI uses the canonical family color to link roster entries to their real parent family (app.js:1734-1748); the usage ledger inset appears only for the selected identity with aria-expanded=true and its controlled timeline (usage-history.js:172-195). Preserve these functional identity and expanded-state cues."
+      },
+      {
+        "rule": "border-accent-on-rounded",
+        "value": "*",
+        "files": [
+          "office/renderer/style.css"
+        ],
+        "createdAt": "2026-10-23T06:54:22.695Z",
+        "reason": "Codex review: The nameplate top border carries canonical family identity, including reduced motion (style.css:90-91). app.js:1407-1418 derives the real root palette used by the actor, badge and parent relations; office/README.md documents this family-color system. Retain the incumbent paper-tag design."
+      }
+    ]
+  }
+}

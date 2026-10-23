@@ -1,0 +1,16 @@
+.usage-token-section{margin:0 0 22px;padding-bottom:17px;border-bottom:1px solid #c8b080}
+.usage-token-note{font-size:10px;line-height:1.75;color:#806746;margin:6px 0 12px;overflow-wrap:anywhere}
+.usage-token-overview{margin-bottom:12px}
+.usage-token-overview .usage-metric dd{font-size:20px}
+.usage-token-models-details{font-size:11px;line-height:1.7;color:#695236}
+.usage-token-models-details>summary{cursor:pointer;padding:7px 0;min-height:30px;box-sizing:border-box}
+.usage-token-table-scroll{max-width:100%;overflow-x:auto;scrollbar-width:thin;scrollbar-color:#bea77a transparent}
+.usage-token-table{width:100%;border-collapse:collapse;font-size:9px;line-height:1.6;font-variant-numeric:tabular-nums}
+.usage-token-table caption{text-align:left;color:#876d49;padding:6px 0}
+.usage-token-table th,.usage-token-table td{padding:7px 8px;border-bottom:1px solid #c7af8166;text-align:right;white-space:nowrap}
+.usage-token-table th{font-weight:500;color:#806746}
+.usage-token-table th:first-child,.usage-token-table td:first-child{text-align:left;white-space:normal;overflow-wrap:anywhere;min-width:110px;max-width:170px}
+.usage-token-table td:first-child small{display:block;color:#876d49}
+.usage-token-section [data-error="true"]{color:#984334}
+.usage-token-models-details>summary:focus-visible,.usage-token-table-scroll:focus-visible{outline:2px solid #7f8d60;outline-offset:3px;border-radius:2px}
+@media(max-width:560px){.usage-token-overview .usage-metric dd{font-size:18px}}

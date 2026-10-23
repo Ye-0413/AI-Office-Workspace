@@ -221,11 +221,17 @@ function createCodexMonitor({ homeDir = os.homedir(), codexHome, onEvent, now = 
     // fence in addition to the silent attach snapshot.
     if (!silent && at !== null && at >= startedAt - 1500) publish(t, event);
   }
+  function rememberBoundary(t, buf, start) {
+    const end = t.offset - start;
+    if (end <= 0 || end > buf.length) return;
+    const from = Math.max(0, end - 4096), bytes = buf.subarray(from, end);
+    t.boundary = { at: start + from, length: bytes.length, hash: createHash('sha256').update(bytes).digest('hex') };
+  }
   function processBuffer(t, buf, start, skipFirst, silent) {
     if (start === 0) t.ordinal = 0;
     else if (start !== t.offset || skipFirst) t.ordinal = null;
     const first = skipFirst ? buf.indexOf(10) + 1 : 0;
-    if (skipFirst && first === 0) { t.offset = start + buf.length; t.discarding = true; stats.oversizedLines += 1; return; }
+    if (skipFirst && first === 0) { t.offset = start + buf.length; t.discarding = true; stats.oversizedLines += 1; rememberBoundary(t, buf, start); return; }
     let offset = first;
     for (;;) {
       const end = buf.indexOf(10, offset);
@@ -239,6 +245,7 @@ function createCodexMonitor({ homeDir = os.homedir(), codexHome, onEvent, now = 
       // Commit a bounded skip instead of rereading an unlimited partial line.
       t.offset = start + buf.length; t.discarding = true; stats.oversizedLines += 1;
     }
+    rememberBoundary(t, buf, start);
   }
   function attach(file, stat) {
     const t = { file, identity: `${stat.dev}:${stat.ino}`, offset: 0, hasMetadata: false,
@@ -305,7 +312,7 @@ function createCodexMonitor({ homeDir = os.homedir(), codexHome, onEvent, now = 
               ? entry.isFile() && /^rollout-.*\.jsonl$/.test(entry.name)
               : entry.isDirectory() && (frame.depth === 0 ? /^\d{4}$/ : /^\d{2}$/).test(entry.name))
             .sort((a, b) => b.name.localeCompare(a.name));
-        } catch { frame.entries = []; }
+        } catch (error) { frame.entries = []; if (error.code !== 'ENOENT') stats.error ||= 'Read historical session directory failed'; }
       }
       if (frame.index >= frame.entries.length) { historyWalker.pop(); continue; }
       const entry = frame.entries[frame.index];
@@ -374,7 +381,13 @@ function createCodexMonitor({ homeDir = os.homedir(), codexHome, onEvent, now = 
         if (budget <= 0) break;
         let t = tracked.get(file);
         const identity = `${stat.dev}:${stat.ino}`;
-        if (!t || t.identity !== identity || stat.size < t.offset) {
+        let rewritten = false;
+        if (t?.boundary && t.identity === identity && stat.size >= t.offset) {
+          if (budget < t.boundary.length) continue;
+          const bytes = read(file, t.boundary.at, t.boundary.length);
+          rewritten = bytes.length !== t.boundary.length || createHash('sha256').update(bytes).digest('hex') !== t.boundary.hash;
+        }
+        if (!t || t.identity !== identity || stat.size < t.offset || rewritten) {
           const attachCost = Math.min(stat.size, LIMITS.head) + (stat.size > LIMITS.head ? Math.min(stat.size, LIMITS.tail) : 0);
           if (attachCost > budget) continue;
           t = attach(file, stat); tracked.delete(file); tracked.set(file, t); attached.push(t);
