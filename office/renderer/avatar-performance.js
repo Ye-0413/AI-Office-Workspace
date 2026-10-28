@@ -166,7 +166,7 @@
     let systemMotion = null, inheritedOptions = {};
     const bitmap = body.querySelector('img');
     const originalBitmapOpacity = bitmap?.style?.getPropertyValue?.('opacity') || '';
-    let visual = null, presence = 'inactive', presenceSerial = 0, hiddenWork = false;
+    let visual = null, visualWorkKey = '', presence = 'inactive', presenceSerial = 0, hiddenWork = false;
     const fades = new Set(), paused = new Map();
     let frozen = [];
     const joints = () => typeof svg.querySelectorAll === 'function' ? [...svg.querySelectorAll('.ap-upper,.ap-eyes,.ap-arm,.ap-foot')] : [];
@@ -546,12 +546,17 @@
       }
       lastNow = now === null ? null : Math.max(lastNow === null ? now : lastNow, now);
       const visibleElapsed = clockLease ? clockLease.sample(workBase.kind, { now, visible: base.active && base.animate }) : visibleClocks.get(workBase.kind) || 0;
-      const plan = Model.plan(session, { ...options, visibleElapsed });
+      const workKey = JSON.stringify([identity, session.activity, session.attention === true]);
+      // A pause lease restores the exact visible program once before normal
+      // rotation resumes. The last visible interval may cross its deadline
+      // during the OS minimize animation; hiding must not discard its clocks.
+      const plan = hiddenWork && !options.hidden && base.animate && visualWorkKey === workKey
+        ? visual : Model.plan(session, { ...options, visibleElapsed });
       const changed = !visual || visual.program !== plan.program || visual.kind !== plan.kind;
       const quiet = Boolean(options.reducedMotion || options.lowPower || options.hidden);
       const canFade = Boolean(view?.getComputedStyle && layer.animate && bitmap?.animate && !quiet);
       const hiddenPlan = options.hidden && workBase.active ? Model.plan(session, { ...options, hidden: false, visibleElapsed }) : null;
-      if (hiddenPlan?.animate && visual?.animate && hiddenPlan.key === visual.key && !gait
+      if (hiddenPlan?.animate && visual?.animate && visualWorkKey === workKey && !gait
         && (hiddenWork || presence === 'active' || presence === 'entering')
         && !layer.hidden && layer.dataset.animate === 'true' && view?.getComputedStyle && joints().length) {
         // Hiding alone is a pause lease, not a new lifecycle or CSS program.
@@ -644,7 +649,7 @@
         }
         finishBridgeClocks(clockOwner);
       }
-      visual = plan; last = plan;
+      visual = plan; visualWorkKey = workKey; last = plan;
       return plan;
     }
     function destroy() {
@@ -663,7 +668,7 @@
       delete actorNode.dataset.performance;
       delete actorNode.dataset.performanceProgram;
       layer.remove();
-      visual = null; last = null;
+      visual = null; visualWorkKey = ''; last = null;
     }
     // A single shared media listener cancels finite fades as well as CSS
     // choreography. No wall-time credit is inferred from this local UI event.

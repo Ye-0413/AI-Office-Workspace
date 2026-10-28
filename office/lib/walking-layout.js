@@ -668,7 +668,9 @@
     // A larger manual size can fit the real roots while failing the stronger
     // spare-body/re-entry probe. Keep this bounded and prove actual ingress
     // plus ordered egress; future arrivals must obtain their own new proof.
-    if(!chosen&&fixedScale&&requestedScale>1&&visible.length>1&&visible.length<=6&&visible.every(s=>!s.parentId))for(let variant=0;variant<4&&!chosen;variant++)chosen=place(maximum,variant,true,true,true);
+    // Helpers enter as portal probes here; their real split still needs the
+    // opening-dock proof. Seated residents keep their stations when possible.
+    if(!chosen&&fixedScale&&requestedScale>1&&visible.length>1&&visible.length<=6)for(const reallocate of [false,true])for(let variant=0;variant<4&&!chosen;variant++)chosen=place(maximum,variant,true,reallocate,true);
     if(!chosen)throw new RangeError('No reachable positive-size furniture-side parking fits the full observed cast');
     if(scale<maximum&&visible.length&&!chosen.coordinated&&!chosen.deferredEntrance){let low=scale,high=upper;for(let pass=0;pass<6;pass++){const mid=(low+high)/2,candidate=place(mid);if(candidate){low=mid;chosen=candidate;}else high=mid;}scale=low;}
     const rootIdsBySession=new Map();for(const s of visible){const chain=[],seen=new Set();let p=s;while(p?.parentId&&unique.has(p.parentId)&&!seen.has(p.id)){seen.add(p.id);chain.push(p.id);p=unique.get(p.parentId);}const id=p&&seen.has(p.id)?[...chain,p.id].sort()[0]:p?.id||s.id;rootIdsBySession.set(s.id,id);}
@@ -678,6 +680,33 @@
     if(chosen.deferredEntrance){page.proofMode='deferred-entrance';page.fitReason='waiting-for-entrance';page.blockedByIds=chosen.deferredEntrance;page.transitionDeferred=true;page.holdingPaths=[];}
     page.targetUniformScale=scale;rememberProof(seats,{signature,targets:targetSignature(seats),page,residentGeometry:fixedScale?residentGeometry:null});return finishExit(finishOpening(page));
   }
+  function entranceFor(present,options) {
+    const scale=Math.max(.65,Math.min(1.35,Number(options.requestedScale)||1));
+    const bodies=Array.isArray(present)?present:[];
+    const envelope=Object.fromEntries(['left','right','top','bottom'].map(key=>[key,Math.max(Scene.ACTOR_FOOTPRINT.root[key],...bodies.filter(s=>s&&s.id).map(s=>(validFootprint(options.footprints?.get(s.id))?options.footprints.get(s.id):s.parentId?Scene.ACTOR_FOOTPRINT.helper:Scene.ACTOR_FOOTPRINT.root)[key]))]));
+    return [{x:87,y:78},{x:76.5,y:73.5},{x:76,y:71},{x:73.5,y:73.5}].find(point=>legalPoint(point,{uniformScale:scale,footprint:envelope,reservedRects:options.reservedRects||Scene.CLOCK_RESERVED}));
+  }
+  function layoutForEntrance(entry) {
+    const key=entry.x+':'+entry.y;
+    if(!entranceLayouts.has(key))entranceLayouts.set(key,createLayout(Scene,Traffic,entry));
+    return entranceLayouts.get(key);
+  }
+  // The saved size is a ceiling. First try the entire real cast at that size;
+  // if it does not fit, use the bounded full-cast fitter, never a partial cast.
+  function layoutAllWalking(present,options={}) {
+    const entry=entranceFor(present,options);
+    if(entry&&(entry.x!==ENTRY_POINT.x||entry.y!==ENTRY_POINT.y))return layoutForEntrance(entry).layoutAllWalking(present,options);
+    const unique=new Map((Array.isArray(present)?present:[]).filter(s=>s&&typeof s.id==='string'&&s.id).map(s=>[s.id,s]));
+    const cast=[...unique.values()];
+    let page;
+    try { page=layoutWalking(cast,{...options,fixedScale:true}); }
+    catch(error) {
+      if(!(error instanceof RangeError))throw error;
+      page=layoutWalking(cast,{...options,fixedScale:false});
+    }
+    return{...page,overflowIds:[],hidden:0,helperOverflow:0,fitAll:true,
+      entryPoint:{...ENTRY_POINT},fitReason:page.uniformScale<page.requestedScale-EPS?'fit-all-agents':page.fitReason};
+  }
   // Keep every real resident in the geometry problem. New observations wait
   // outside when the selected size cannot safely fit them; no fact is dropped
   // from the caller's source/roster and no smaller proof is adopted.
@@ -685,15 +714,9 @@
     // The legacy portal is sized for a 100% whole envelope. Larger manual
     // sizes use the room's existing doorway approach, with every proof bound
     // to that same anchor through an isolated geometry instance.
-    const scale=Math.max(.65,Math.min(1.35,Number(options.requestedScale)||1));
-    const bodies=Array.isArray(present)?present:[];
-    const envelope=Object.fromEntries(['left','right','top','bottom'].map(key=>[key,Math.max(Scene.ACTOR_FOOTPRINT.root[key],...bodies.filter(s=>s&&s.id).map(s=>(validFootprint(options.footprints?.get(s.id))?options.footprints.get(s.id):s.parentId?Scene.ACTOR_FOOTPRINT.helper:Scene.ACTOR_FOOTPRINT.root)[key]))]));
-    const candidates=[{x:87,y:78},{x:76.5,y:73.5},{x:76,y:71},{x:73.5,y:73.5}];
-    const entry=candidates.find(point=>legalPoint(point,{uniformScale:scale,footprint:envelope,reservedRects:options.reservedRects||Scene.CLOCK_RESERVED}));
+    const entry=entranceFor(present,options);
     if(entry&&(entry.x!==ENTRY_POINT.x||entry.y!==ENTRY_POINT.y)) {
-      const key=entry.x+':'+entry.y;
-      if(!entranceLayouts.has(key))entranceLayouts.set(key,createLayout(Scene,Traffic,entry));
-      return entranceLayouts.get(key).layoutFixedWalking(present,options);
+      return layoutForEntrance(entry).layoutFixedWalking(present,options);
     }
     const unique=new Map((Array.isArray(present)?present:[]).filter(s=>s&&typeof s.id==='string'&&s.id).map(s=>[s.id,s]));
     const cast=[...unique.values()],previous=options.previousSeats instanceof Map?options.previousSeats:new Map();
@@ -731,5 +754,5 @@
     return {...page,visible:admitted,overflowIds,hidden:overflowIds.length,helperOverflow:cast.filter(s=>overflowIds.includes(s.id)&&s.parentId).length,
       fixedScale:true,entryPoint:{...ENTRY_POINT},fitReason:overflowIds.length?'waiting-for-floor-space':page.fitReason};
   }
-  return Object.freeze({layoutWalking,layoutFixedWalking,gapForScale,legalPoint,route,ENTRY_POINT,OBSTACLES,ZONE_AREAS,ZONE_ANCHORS,HOLDING_CANDIDATES,CORRIDORS});
+  return Object.freeze({layoutWalking,layoutAllWalking,layoutFixedWalking,gapForScale,legalPoint,route,ENTRY_POINT,OBSTACLES,ZONE_AREAS,ZONE_ANCHORS,HOLDING_CANDIDATES,CORRIDORS});
 });

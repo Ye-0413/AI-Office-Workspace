@@ -204,6 +204,24 @@ test('the actual spring control composition cannot hide a reading cue behind its
   }
 });
 
+test('a fitted reading body retains a clear shelf response without weakening occlusion checks',()=>{
+  for(const occupied of [false,true]){
+    const f=fixture({venue:'observatory'}),position={x:19.5859375,y:40.9};
+    f.settings.scale=.65;f.actor.position=position;f.actor.target={...position,zone:'library'};
+    f.actor.node.style.transform=`matrix(.65,0,0,.65,${position.x*12.8},${position.y*7.2})`;
+    f.actor.body.box=box(220,246,280,301);f.actor.node.children[1].box=box(177,312,324,352);
+    roomPart(f,'svg','festival-art',box(196,58,316,168));
+    const control=roomPart(f,'button','venue-control',box(347,110,447,206));
+    roomPart(f,'svg','',box(347,110,447,182),control);
+    roomPart(f,'span','venue-control-label',box(365,184,430,201),control);
+    if(occupied)roomPart(f,'span','venue-readout',box(330,235,420,270));
+    assert.equal(f.api.arrive(f.event()),!occupied);
+    if(occupied)assert.equal(f.api.state().reasons.occluded,1);
+    else assert.deepEqual(plain(f.api.state().active[0].anchor),{x:365,y:250});
+    f.api.destroy();
+  }
+});
+
 test('visible scene labels and readouts block cues, hidden ancestors do not, and transparent stages never block the room',()=>{
   for(const labelClass of ['festival-caption','venue-control-label','venue-readout','venue-note-text']){
     const f=fixture(),label=roomPart(f,'span',labelClass,box(0,0,1280,720));label.textContent='Visible room control';

@@ -28,16 +28,16 @@ function titles(c,title){
  return{inspector:c.nodes.get('inspect-title').textContent,roster:c.copy.children[1].textContent,aria:c.actor.button.attributes['aria-label']};
 }
 
-test('English room counts, quiet signals and fixed-size waiting identities are localized before composition',()=>{
+test('English room counts and quiet signals retain every identity without a capacity waiting label',()=>{
  const c=context();const n=summary(c,{roots:12,helpers:1,quiet:2,scale:1,requested:1,overflow:9});
- assert.equal(n.textContent,'12 independent tasks · 1 temporary helper · 2 signals not updated · 9 waiting for floor space · see roster');
+ assert.equal(n.textContent,'12 independent tasks · 1 temporary helper · 2 signals not updated');
  assert.equal(n.dataset.baseSummary,n.textContent);assert.doesNotMatch(n.textContent,/\p{Script=Han}/u);
  assert.equal(summary(c,{roots:1,quiet:1}).textContent,'1 independent task · 1 signal not updated');
  assert.equal(summary(c,{helpers:2}).textContent,'0 independent tasks · 2 temporary helpers');
 });
 
 test('Chinese, unfitted English and empty room copy keep accurate counts and scale boundaries',()=>{
- const zh=context('zh');assert.equal(summary(zh,{roots:12,helpers:1,quiet:2,scale:1,overflow:9}).textContent,'12 项独立任务 · 1 位临时帮手 · 2 项信号暂未更新 · 9 位等待空位 · 可在名单中查看');
+ const zh=context('zh');assert.equal(summary(zh,{roots:12,helpers:1,quiet:2,scale:1,overflow:9}).textContent,'12 项独立任务 · 1 位临时帮手 · 2 项信号暂未更新');
  assert.equal(summary(zh).textContent,'实时办公室 · 等待任务入驻');
  const en=context();assert.equal(summary(en).textContent,'Live office · Waiting for tasks');
  assert.equal(summary(en,{roots:1,scale:1,requested:1}).textContent,'1 independent task');
@@ -49,11 +49,11 @@ test('actual signal-summary refresh derives one queue suffix from the localized 
  c.actors=new Map([['root',{entryPending:false}],['pending-root',{entryPending:true}],['pending-helper',{entryPending:true}]]);
  for(let i=0;i<3;i++)vm.runInContext('updateSignalSummary()',c);
  const base='12 independent tasks · 1 temporary helper';
- assert.equal(c.nodes.get('room-summary').textContent,base+' · 2 waiting to enter');
+ assert.equal(c.nodes.get('room-summary').textContent,base+' · 2 entering the room');
  assert.equal(c.nodes.get('room-summary').dataset.baseSummary,base);
  c.actors.clear();vm.runInContext('updateSignalSummary()',c);assert.equal(c.nodes.get('room-summary').textContent,base);
  c.language='zh';summary(c,{roots:1,helpers:1,scale:.65});c.actors.set('pending',{entryPending:true});vm.runInContext('updateSignalSummary()',c);
- assert.equal(c.nodes.get('room-summary').textContent,'1 项独立任务 · 1 位临时帮手 · 1 位依次入场');
+ assert.equal(c.nodes.get('room-summary').textContent,'1 项独立任务 · 1 位临时帮手 · 1 位正在入场');
 });
 
 test('all three actual renderer title paths localize only an absent application placeholder',()=>{

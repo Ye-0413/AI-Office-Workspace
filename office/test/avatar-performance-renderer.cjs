@@ -198,6 +198,28 @@ app.whenReady().then(async () => {
   assert.deepEqual(presence.hidden.after,presence.hidden.held,'a hidden standing work interval does not advance its original CSS objects');
   assert.equal(presence.hiddenRestore.sameClocks,true);assert.equal(presence.hiddenRestore.program,presence.firstProgram);assert.ok(presence.hiddenRestore.times.every((time,i)=>Math.abs(time-presence.hidden.held[i])<.2),'same-program restoration begins at the paused actual phase');
   assert.deepEqual(presence.quiet,{count:0,opacity:1});assert.equal(presence.factsUnchanged,true);
+  const boundaryPause = await evaluate(`(async()=>{
+    const actor=document.createElement('div');actor.className='fixture';
+    const body=document.createElement('span');body.className='character-body';
+    const image=document.createElement('img');image.src='../assets/avatars/clawd-static-base.svg';body.append(image);actor.append(body);document.body.append(actor);
+    const session={id:'codex:pause-at-program-boundary',provider:'codex',activity:'reading',status:'active'},facts=JSON.stringify(session);
+    const performance=OfficeAvatarPerformance.create({actorNode:actor,body,session}),first=performance.update(session,{now:0});
+    await new Promise(resolve=>setTimeout(resolve,240));
+    const rig=body.querySelector('.ap-rig'),clocks=rig.getAnimations({subtree:true}).filter(a=>typeof a.animationName==='string'&&a.effect.getTiming().iterations===Infinity);
+    performance.update(session,{now:first.programMs+1,hidden:true});
+    const held=clocks.map(a=>a.currentTime);
+    await new Promise(resolve=>setTimeout(resolve,80));
+    const hidden=clocks.length>0&&clocks.every((a,i)=>rig.getAnimations({subtree:true}).includes(a)&&a.playState==='paused'&&Math.abs(a.currentTime-held[i])<.2);
+    const restored=performance.update(session,{now:100000000});
+    const resumed=clocks.every(a=>rig.getAnimations({subtree:true}).includes(a)&&a.playState==='running');
+    const next=performance.update(session,{now:100000001});
+    performance.destroy();actor.remove();
+    return{hidden,resumed,first:first.program,restored:restored.program,next:next.program,factsUnchanged:JSON.stringify(session)===facts};
+  })()`);
+  assert.equal(boundaryPause.hidden,true,'hiding across a program deadline pauses the same original CSS clocks');
+  assert.equal(boundaryPause.resumed,true);assert.equal(boundaryPause.restored,boundaryPause.first,'the first visible update restores the actual paused pose');
+  assert.notEqual(boundaryPause.next,boundaryPause.first,'ordinary visible updates retain the due program rotation');
+  assert.equal(boundaryPause.factsUnchanged,true);
   const returningPresence = await evaluate(`(async()=>{
     const actor=document.createElement('div');actor.className='fixture';
     const body=document.createElement('span');body.className='character-body';

@@ -5,7 +5,7 @@
   "sourceHashes": {
     "office/lib/avatar-performance-model.js": "d5744f06c34164ca6d6c71794ed5b4456aea83b0a08720e680a31a1f1910e9c3",
     "office/lib/walk-timing.js": "2a0fb10aad03e13bea46faafaae86c4922cf54858abf842704b35a38720b3049",
-    "office/renderer/avatar-performance.js": "d23016e8f28de22bed28de90ffb96331918b8f2e4b1b17d230d50e311ef55639",
+    "office/renderer/avatar-performance.js": "bfea97a02466ddff0f7eefb8c7272a979caf90d47f83be9dcff55da4200f20db",
     "office/renderer/avatar-performance.css": "1b670613c713a856763e5686d0a00df9509efdd7c5d7d6042fd32b50313b256e",
     "office/renderer/clone-motion.js": "6e05a742e6d03b29d1016d5aa925a0d12f894f0826b2f6b26f3921605bd80c6c",
     "office/renderer/clone-motion.css": "d6e8a048276af3359e316262f25bb2c59e8429a50dafad5442840eabea30bb78",
@@ -22,8 +22,8 @@
       "fps": 48,
       "durationMs": 2000,
       "distinctPngFrames": 86,
-      "bytes": 292939,
-      "sha256": "a2c7635b30626b1243b9684778bb78882fd99711b3edb3f4a5f033628cf94026",
+      "bytes": 293574,
+      "sha256": "538f68f4ab8cd53537f06c248e38df8f0bdd9cd5b0f514abf4abc4e1a2b597ac",
       "walkingCertificate": {
         "inPlace": true,
         "roomNavigationCertified": false,

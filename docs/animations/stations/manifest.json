@@ -17,9 +17,9 @@
   "sourceHashes": {
     "office/lib/scene-model.js": "d7be1eaf83f66aa348c2141dd15e7b297b223b86ed7628d6896cd32b6527942e",
     "office/lib/scene-traffic.js": "be29c677fbf611685e9d10982e8c00cedfd84a6c04f71f7e4ea01e27b575ae08",
-    "office/lib/walking-layout.js": "b991ae7c03de920c44819ce44a13948bc8726a7bac510b131a11520e5c45a619",
+    "office/lib/walking-layout.js": "3bae871ea27e30234e0c3e0de0726fcb10849f7cbd588b60ead5fc53641c6f3d",
     "office/lib/social-interactions.js": "37f4a7664472781a1bcb878babb436a8eab8ffb254f7a0e5b79a94da43cbf5c0",
-    "office/renderer/station-arrival.js": "39e211aecfb31c4c5c26527b62a0d499bbb3473556741bc19cd0a00ae1552ef1",
+    "office/renderer/station-arrival.js": "63d323a1c1cfc03bfb534fdcd32339aa79c7e88756e31fd4c7dc5cb3dc2e7147",
     "office/renderer/station-arrival.css": "62701902956ee13310a52e148a588029299a560e2c54d65fa9ad804ffb181c96",
     "office/scripts/render-station-previews.cjs": "8f334644a0385d0a3d7cb9129d2ba7f832445b593a5ab7424ef1be335d3eadf8"
   },

@@ -11,7 +11,7 @@
   const DURATION = 1400, BRIDGE_WAIT = 240, EXIT = 160, STATION_INTERVAL = 2400;
   const ACTIVITIES = Object.freeze({ reading: 'library', searching: 'library', planning: 'board', designing: 'board', coding: 'desk', building: 'bench', testing: 'bench', running: 'bench' });
   const MOUNTS = Object.freeze({
-    library: Object.freeze([[308,250],[235,250],[185,250],[235,145],[285,150],[185,145],[270,250]]),
+    library: Object.freeze([[308,250],[235,250],[185,250],[235,145],[285,150],[185,145],[270,250],[365,250]]),
     board: Object.freeze([[775,205],[492,205],[640,205]]),
     desk: Object.freeze([[550,345],[750,365],[475,355]]),
     bench: Object.freeze([[1130,145],[1040,165],[1190,180],[1215,245],[995,235],[995,250]])

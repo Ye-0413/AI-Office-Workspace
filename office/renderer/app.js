@@ -476,7 +476,7 @@
     $('signal-summary').textContent = signal;
     const summary = $('room-summary');
     if (summary.dataset.baseSummary) summary.textContent = summary.dataset.baseSummary
-      + (count ? ' · ' + (language === 'en' ? count + ' waiting to enter' : count + ' 位依次入场') : '');
+      + (count ? ' · ' + (language === 'en' ? count + ' entering the room' : count + ' 位正在入场') : '');
   }
   function actorGeometry(actor) { return { helper: actor.helper, uniformScale, layoutMode: currentPage.layoutMode, footprint: actorFootprints.get(actor.id) }; }
   function walkingRoute(from, to, actor) {
@@ -577,7 +577,7 @@
     // A blocked route cannot complete a real journey. Keep every admitted
     // body at its actual foot, and ask the allocator for another safe station.
     for (const { actor } of trafficWaiters.values()) {
-      actor.node.dataset.traffic = 'waiting-space';
+      actor.node.dataset.traffic = 'queued';
       actor.node.dataset.trafficHint = language === 'en' ? 'Waiting for a clear route' : '等待通道空位';
     }
     reflowPending = true;
@@ -746,7 +746,7 @@
       && !session.disconnected && session.status !== 'stale' && !session.attention && !(Number(session.activeTools) > 0);
   }
   function completedCloneReturn(reason) { return reason === 'ended' || reason === 'completed'; }
-  function clonePhase(actor, phase) { actor.clonePhase = phase; actor.node.dataset.clonePhase = phase; }
+  function clonePhase(actor, phase) { actor.clonePhase = phase; actor.node.dataset.clonePhase = phase; queueDeferredResize(); }
   function cloneAncestor(actor) {
     const chain = cloneLedger.parentChain(actor.id);
     const rootId = cloneLedger.rootFor(actor.id);
@@ -1551,6 +1551,7 @@
     if (selectedSession === id) { selectedSession = ''; $('inspector').hidden = true; }
     refreshQuietPresentation();
     if (releasedSlot) queueLayoutRefresh(true);
+    if (actor.helper) queueDeferredResize();
   }
   function refreshQuietPresentation() {
     // Keep navigation available when a different room still has observed work.
@@ -1755,8 +1756,7 @@
     $('greet-agent').disabled = !actor || actor.departing || Boolean(spec.stale) || cloneBusy(actor) || actor.holdingFamily;
     text($('inspect-title'), session.title || tr('未命名任务'));
     const makingRoom = actor && (actor.yielding || actor.node?.dataset.traffic === 'queued');
-    text($('inspect-location'), currentPage.overflowIds?.includes(session.id) ? (language === 'en' ? 'Waiting for space' : '等待空位')
-      : attendance.retired.includes(session.id) || restedClones.has(session.id) ? session.parentId ? '分身暂歇' : '门外休息'
+    text($('inspect-location'), attendance.retired.includes(session.id) || restedClones.has(session.id) ? session.parentId ? '分身暂歇' : '门外休息'
       : makingRoom ? (language === 'en' ? 'Temporarily making room · ' : '临时让路 · ') + zoneName((actor.target || spec).zone)
         : actor && actor.motion ? (language === 'en' ? 'Heading to ' : '前往') + zoneName((actor.target || spec).zone) : zoneName(actor?.target?.zone || spec.zone));
     text($('inspect-summary'), session.summary || spec.verb);
@@ -1843,7 +1843,7 @@
       const parent = familyGraph.byId.get(session.parentId);
       if (parent) { const relation = element('span','roster-relation'); relation.textContent = '↳ ' + I18n.t(language,'identity.parent',{name:displayName(parent)}); copy.append(relation); }
       else if (!session.parentId) { const relation = element('span','roster-relation'); relation.textContent = cloneSummary(session); relation.title = I18n.t(language, 'family.clonesHint'); copy.append(relation); }
-      row.append(copy, element('span', 'roster-state', (currentPage.overflowIds?.includes(session.id) ? (language === 'en' ? 'Waiting for space' : '等待空位') : attendance.retired.includes(session.id) || restedClones.has(session.id) ? tr(session.parentId ? '分身暂歇' : '门外休息') : tr(spec.label)) + ' →'));
+      row.append(copy, element('span', 'roster-state', (attendance.retired.includes(session.id) || restedClones.has(session.id) ? tr(session.parentId ? '分身暂歇' : '门外休息') : tr(spec.label)) + ' →'));
       row.addEventListener('click', () => { $('roster-dialog').close(); selectSession(session.id); });
       fragment.append(row);
     }
@@ -1852,8 +1852,24 @@
   function hasFiniteClone() {
     return [...actors.values()].some(actor => actor.helper && ['splitting', 'returning', 'absorbing'].includes(actor.clonePhase));
   }
+  // A clone whose work just ended must walk back before a readmission
+  // rebuilds the room; a rebuilt idle clone would never receive a body.
+  function cloneAwaitingReturn() {
+    const current = new Map(snapshot.sessions.map(session => [session.id, session]));
+    return [...actors.values()].some(actor => actor.helper && !actor.departing && !actor.entryPending
+      && (!current.has(actor.id) || !hasBodyActivity(current.get(actor.id))));
+  }
+  let deferredResizeQueued = false;
+  function queueDeferredResize() {
+    if (deferredResizeQueued || deferredPhysicalScale === null || destroyed || clearingActors) return;
+    deferredResizeQueued = true;
+    queueMicrotask(() => {
+      deferredResizeQueued = false;
+      if (!destroyed && !clearingActors && deferredPhysicalScale !== null && !hasFiniteClone()) render();
+    });
+  }
   function render() {
-    if (deferredPhysicalScale !== null && !hasFiniteClone()) {
+    if (deferredPhysicalScale !== null && !hasFiniteClone() && !cloneAwaitingReturn()) {
       deferredPhysicalScale = null;
       cancelPhysicalRoutes();
       clearActors({ readmission: true });
@@ -1892,12 +1908,12 @@
     if (transferOwner) currentPage = { ...currentPage, visible: presentBodies };
     else {
       const options = sceneOptions(layoutBodies, finiteExitIds(presentBodies));
-      currentPage = WalkingLayout.layoutFixedWalking(layoutBodies, options);
+      currentPage = WalkingLayout.layoutAllWalking(layoutBodies, options);
       currentPage.visible = presentBodies.filter(session => currentPage.seats.has(session.id));
       if (currentPage.transferCertificate && !acceptTransfer(currentPage.transferCertificate, layoutBodies)) {
         // An unequipped/quiet/changed physical cast cannot execute a certificate.
         // Ask for the ordinary proof instead of issuing its two blocked goals.
-        currentPage = WalkingLayout.layoutFixedWalking(layoutBodies, { ...options, allowTransfers: false });
+        currentPage = WalkingLayout.layoutAllWalking(layoutBodies, { ...options, allowTransfers: false });
         currentPage.visible = presentBodies.filter(session => currentPage.seats.has(session.id));
       }
       currentPage.routeGeometry = { paths: currentPage.pathsById, scale: currentPage.uniformScale,
@@ -1928,10 +1944,8 @@
     $('status-dot').dataset.status = localAttention.length ? 'waiting' : roomSessions.length ? 'active' : 'empty';
     let summary = roomSessions.length ? tr(rootCount + ' 项独立任务') + (helpers ? ' · ' + tr(helpers + ' 位临时帮手') : '') : tr('实时办公室 · 等待任务入驻');
     if (quiet) summary += ' · ' + tr(quiet + ' 项信号暂未更新');
-    const overflow = currentPage.overflowIds?.filter(id => bodyIds.has(id)).length || 0;
-    if (overflow) summary += language === 'en' ? ' · ' + overflow + ' waiting for floor space · see roster' : ' · ' + overflow + ' 位等待空位 · 可在名单中查看';
     if (deferredPhysicalScale !== null) summary += language === 'en' ? ' · size change after clone transition' : ' · 等分身过渡完成后调整大小';
-    office.dataset.overflowCount = String(overflow);
+    office.dataset.overflowCount = '0';
     $('room-summary').textContent = summary;
     $('room-summary').dataset.baseSummary = summary;
     const stats = snapshot.activityStats;

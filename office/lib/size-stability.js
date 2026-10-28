@@ -1,4 +1,4 @@
-/* User-owned body size. Observation count never changes this preference. */
+/* User-owned maximum size. Fitting never rewrites the saved preference. */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.OfficeSizeStability = factory();
@@ -12,8 +12,8 @@
     return Object.freeze({
       maximum: () => requested,
       request(value) { requested = preference(value); },
-      // Kept as a compatible observation boundary; a floor allocator owns
-      // admission and queues overflow instead of rewriting the user's size.
+      // The full-cast allocator may draw smaller bodies to fit everyone;
+      // observation never changes the user's chosen maximum.
       observe() {}
     });
   }

@@ -69,6 +69,8 @@
     ['今日活跃 Agent', 'Agents active today'],
     ['按香港日期统计实际观察到的 Agent，同一会话多轮只计一次；主 Agent 与分身分别去重，重启后保留。', 'Unique agents observed active per Hong Kong day. Repeated turns count once; main agents and clones are counted separately and retained after restart.'],
     ['Agent 大小', 'Agent size'],
+    ['Agent 大小上限', 'Maximum Agent size'],
+    ['所有 Agent 都会入场；拥挤时自动缩小，分身保持主 Agent 的 80%。', 'Every agent enters. The room scales them down when crowded; clones stay at 80% of their main agent.'],
     ['大小只随手动调整改变；主 Agent 比分身大，空间不足时在名单中等候。', 'Only manual changes alter size. Main agents are larger than clones; overflow waits in the roster.'],
     ['重新适配', 'Refit size'],
     ['已按当前偏好重新适配。', 'Refitted using your current size preference.'],

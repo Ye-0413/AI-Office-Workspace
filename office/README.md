@@ -2,7 +2,7 @@
 
 A local macOS playground for watching independent AI sessions inhabit a tiny office. Designed for a five-inch 1280×720 secondary display.
 
-Version 0.22 keeps the selected Agent size fixed as the room gets busier. Clone artwork is 80% of its main Agent's size; identities that cannot safely enter wait in the roster. Local session accounting now covers seven AI tools, with Daily Token and Weekly usage on the homepage. Supported OpenCode and MiMo questions can receive an explicit manual answer through their native question API. Chinese nicknames remain 155 complete mythological names from the Shan Hai Jing, and the social library retains twelve pair choreographies. Active session families survive history-capacity pressure, and passive metadata cannot break an existing in-process usage interval.
+Current builds fit every observed active Agent into the room. The selected size is a maximum: crowded rooms scale the whole cast down while clone artwork remains 80% of its main Agent's size. Local session accounting now covers seven AI tools, with Daily Token and Weekly usage on the homepage. Supported OpenCode and MiMo questions can receive an explicit manual answer through their native question API. Chinese nicknames remain 155 complete mythological names from the Shan Hai Jing, and the social library retains twelve pair choreographies. Active session families survive history-capacity pressure, and passive metadata cannot break an existing in-process usage interval.
 
 Monitoring and size behavior last checked against source: **2026-10-23**. Implementation details and coverage boundaries: [local monitoring guide](docs/monitoring.md).
 
@@ -40,7 +40,7 @@ Cursor 桌面版／CLI 在仅观察完成事件的兼容模式下也可显示角
 
 家族染色后，手心使用同色系的较深色，手部保留清晰细边，眼睛和工作道具维持自身颜色。已入场角色站在同一个视觉平面；主 Agent 保持完整身体尺寸，直接和嵌套分身的可见身体统一为主身的 80%，不会再随家族深度逐级缩小。主身可见身体沿用围绕脚点的 1.5 倍呈现，分身为 1.2 倍；静止图片、关节动画、备用身体与随身工作道具使用一致比例。名牌沿用完整的 220×63px 包络和 24px 名称，不因人数切换紧凑样式；分身的保守占位包络仍按主身预留，避免放大可通过空间。旧版保存的项目筛选不会隐藏其它项目的当前会话身份。
 
-「房间偏好 → Agent 大小」为 65%–135% 的手动偏好值。人数增加、减少、空房、普通状态刷新和窗口尺寸变化都不会改写它；「重新适配」按当前偏好重试空间分配，不会自动采用更小比例。布局优先保留已入场身体，再以同一固定尺寸验证新角色的身体、名牌与真实行路包络。空间不足的身份留在名单中，名单、人数提示与详情位置明确显示「等待空位」；它们不会被伪装成已站到家具旁，也不会因人数增加而把全员缩小。较大手动尺寸会使用经过包络校验的门厅接近点，65% 与 135% 均保留实际入场路径。可同时入场的人数仍取决于当前尺寸、功能区与安全通道，不再承诺百人身体同时挤进房间。
+「房间偏好 → Agent 大小上限」为 65%–135% 的手动偏好值，表示显示尺寸上限。所有当前观察到的 Agent 都会入场；先尝试以这个尺寸容纳全员，拥挤时按真实身体、完整名牌和行路包络一起缩小。不会把多余身份留在名单外等候，也不会分页隐藏伙伴。适配不改写已保存的上限；人数减少时会重新验证可用尺寸。主身与分身共享适配比例，分身外观仍为主身的 80%。门口进入、真实父级分身凝聚、归返和离场继续使用经过校验的路径。
 
 脚底而非角色画布下缘锚定地面，持续约 1.7 秒的真实功能变化会安排身体走向相应家具区域，短暂工具切换先合并。手动尺寸变化与换路从当前实际位置续接；原地等候、协作让路与最多四条并行路线共用完整包络校验。普通心跳和场景切换保留原身体、图片、关节动画与已累计的播放时间。
 
@@ -50,7 +50,7 @@ Cursor 桌面版／CLI 在仅观察完成事件的兼容模式下也可显示角
 
 多人确认退场时，布局先验证当前身体的实际离场路线；已有共同尺寸能安全完成时，会保持该尺寸，等身体真正走到门口后释放位置，保留适配后的稳定尺寸。新工作、新分身、语言和尺寸变化都会保留原身体并重验剩余路线。分身出现、归返、吸收、等分身和主 Agent 离场文案随界面语言同步更新。
 
-已经停稳等分身的父 Agent 会保留实际脚点；其他伙伴换功能区时，布局不会安排它执行实际不存在的换座。只有本轮确实观察到该身份恢复活动且回到当前在场名单，才解除此约束。首次拦截正在退场的父身仍会让它从实际位置走回安全停靠点，最后一个分身归位后也仍能按真实路线走出门。旧版十三人全体缩至 40% 的适配结果不再作为当前入场策略；当前以用户选定尺寸验证实际身体，容纳不下的身份等候空位。
+已经停稳等分身的父 Agent 会保留实际脚点；其他伙伴换功能区时，布局不会安排它执行实际不存在的换座。只有本轮确实观察到该身份恢复活动且回到当前在场名单，才解除此约束。首次拦截正在退场的父身仍会让它从实际位置走回安全停靠点，最后一个分身归位后也仍能按真实路线走出门。全员适配只改变共同的显示比例，不改变任务状态、真实父子关系或实际脚点。
 
 已入场伙伴互换功能区时，会先认领固定实际工位并保留其余合法旧席，再验证有限的临时让路方案。角色先真实走到空闲位置，另一位走到新工位，前者再走到最终工位；每段都重新申请原行路预约，并等待真实让路者归位。只有实际到达最终功能区才产生工位反馈。新活动、尺寸、语言、分身或可见性变化会撤销旧方案，从实际脚点重新协调。
 
@@ -136,7 +136,7 @@ Tool starts, correlated results, user input, child agents, turn endings and sess
 
 An unanswered question keeps its attention state while parallel tools continue. If a waiting event has no reliable call identifier, an unrelated result cannot prove it was answered: the last observed wait remains until an explicit new turn, interruption, session closure or matching elicitation response. A stale source is labeled as a lost signal.
 
-Open the room preferences to move the window to a secondary display. Use the native green window control or the Display menu to enter full screen. You can preview Hong Kong daylight, change rain, use reduced motion or low-power behavior, and manually scale agents with their nameplates from 65% to 135%. Crowd size, empty rooms and ordinary refreshes never lower that preference. Clone artwork is 80% of main artwork, with the same conservative reserved envelope and full-size labels. Layout retains safely admitted bodies and marks overflow identities as Waiting for space in the roster, summary and inspector. Movement queues and temporary yielding avoid occupied bodies; brief clone split/merge overlap is intentional.
+Open the room preferences to move the window to a secondary display. Use the native green window control or the Display menu to enter full screen. You can preview Hong Kong daylight, change rain, use reduced motion or low-power behavior, and choose a maximum Agent size with nameplates from 65% to 135%. Crowd size, empty rooms and ordinary refreshes never lower that preference. Clone artwork is 80% of main artwork, with the same conservative reserved envelope and full-size labels. Every observed active identity receives a room position. The chosen size is a ceiling; the complete cast scales down when needed, with no capacity waiting room or pagination. Movement queues and temporary yielding avoid occupied bodies; brief clone split/merge overlap is intentional.
 
 The larger Hong Kong clock sits beside a daily activity ledger and Daily Token / Weekly usage. Activity counts distinct observed active identities per Hong Kong calendar day, with separate main-agent and clone counts. Repeated turns count once and app restarts retain the day. Its private date/identity summaries retain at most fourteen days and exclude decorative visitors, plain metadata and rejected events. Token totals instead cover supported local session history across all projects, use Hong Kong calendar days and Monday–Sunday weeks, and display M/B/T units with exact counts in the keyboard-accessible source description. Initial imports and errors are explicitly marked incomplete.
 

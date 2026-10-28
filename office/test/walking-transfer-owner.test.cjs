@@ -86,7 +86,7 @@ function installRender(h,{unexpectedLayout=false}={}){
  const c=h.context,dom=new Map(),noop=()=>{},node=()=>({dataset:{},firstElementChild:{},replaceChildren(){},querySelector(){return this;}});let calls=0;
  Object.assign(c,{$:id=>{if(!dom.has(id))dom.set(id,node());return dom.get(id);},cloneLedger:{update:noop,rootFor:id=>id},attendanceModel:{update:()=>({present:c.snapshot.sessions,retired:['owner-002']})},Family:{build:()=>({info:new Map()})},paletteRegistry:{update:noop},familyGraph:{info:new Map()},measureActorFootprints:noop,selectedProject:'',roomSelectionExplicit:false,rooms:[],element:node,page:0,text:noop,tr:value=>value,I18n:{t:()=>''},previousAttention:new Set(),renderConnections:noop,renderRoster:noop,renderInspector:noop,refreshQuietPresentation:noop,updateSignalSummary:noop,venueStage:null,festivalStage:null,themeEnvironment:null,social:null,stationArrival:null,
   finiteExitIds:()=>new Set(),sceneOptions:()=>({currentPositions:new Map([...c.actors].map(([id,a])=>[id,{...a.position}]))}),
-  WalkingLayout:{layoutFixedWalking:(rows,options)=>{calls++;if(unexpectedLayout)assert.fail('metadata cannot rerun allocation during certified progress');assert.deepEqual(options.currentPositions.get('owner-000'),h.actors.get('owner-000').position);return{...page,transferCertificate:null};}},
+  WalkingLayout:{layoutAllWalking:(rows,options)=>{calls++;if(unexpectedLayout)assert.fail('metadata cannot rerun allocation during certified progress');assert.deepEqual(options.currentPositions.get('owner-000'),h.actors.get('owner-000').position);return{...page,transferCertificate:null};}},
   reconcileActors:()=>{for(const actor of c.actors.values()){actor.session=c.snapshot.sessions.find(s=>s.id===actor.id)||actor.session;c.requestStation(actor,c.currentPage.seats.get(actor.id));}}});
  vm.runInContext(production('nameplateMode')+production('render'),c);return()=>calls;
 }
@@ -159,8 +159,8 @@ test('an already observed but unadmitted real body prevents acceptance even when
  assert.equal(h.context.transferAvailable(changed.concat(session)),false,'matching cast size cannot disguise an outside admission owner');assert.equal(h.context.acceptTransfer(page.transferCertificate,changed.concat(session)),false);assert.equal(h.requests.length,0);
 });
 test('a new observed cast invalidates a running owner before ordinary allocation can admit its body',async()=>{
- const h=harness(),owner=await reachPhase(h,1),c=h.context,calls=installRender(h),ordinary=c.WalkingLayout.layoutFixedWalking;let incoming;
- c.WalkingLayout.layoutFixedWalking=(rows,options)=>{incoming=rows;return ordinary(rows,options);};
+ const h=harness(),owner=await reachPhase(h,1),c=h.context,calls=installRender(h),ordinary=c.WalkingLayout.layoutAllWalking;let incoming;
+ c.WalkingLayout.layoutAllWalking=(rows,options)=>{incoming=rows;return ordinary(rows,options);};
  c.snapshot.sessions.push({id:'new-incoming',provider:'codex',status:'active',activity:'planning'});c.render();
  assert.equal(calls(),1);assert.ok(incoming.some(s=>s.id==='new-incoming'));assert.equal(c.transferOwner,null);assert.equal(c.office.dataset.transferStatus,undefined);assert.equal(h.arrivals.length,0);
  await h.flush();await h.advance(60);assert.equal(c.transferValid(owner),false);assert.equal(h.arrivals.length,0,'new admission cannot resurrect or finish the retired proof');

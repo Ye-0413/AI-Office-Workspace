@@ -1,9 +1,5 @@
 'use strict';
-// Production fixed-size room, data surfaces and independent native components.
-// The historical density fixtures explicitly require automatic .4/.1 fitting;
-// retain them as legacy references rather than asserting the opposite of the
-// current user-selected-size contract. Fixed-size coverage exercises real
-// crowd admission, queued identities, body continuity and slider extremes.
+// Production fit-all room, full identities, data surfaces and native components.
 const {app}=require('electron');
 const {execFileSync}=require('node:child_process');
 const path=require('node:path');

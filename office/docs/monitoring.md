@@ -203,41 +203,30 @@ reconnect in the connection panel or one-click Initialize, followed by the
 host's normal plugin reload/new-session path. Startup starts the local runtime
 channel but does not rewrite host configuration.
 
-## Fixed visual size and crowd boundaries
+## Full-room fitting and the saved size ceiling
 
-The Agent size slider selects **65%–135%**. Count changes, empty rooms,
-ordinary observations, venue changes and window resizing do not change that
-preference. Refit retries allocation at the chosen size. Roots use full
-artwork size; direct and nested clones use **80%** of root artwork within the
-same conservative collision/nameplate envelope. The root/clone presentation
-multipliers are 1.5 and 1.2 before the user-selected outer scale.
+The Agent size slider selects a maximum of **65%–135%**. The room first tries
+the entire observed cast at that size. If it cannot fit, the bounded full-cast
+allocator reduces the shared display scale, retaining every identity, complete
+nameplate, parent link, furniture-side seat and safe walking envelope on one
+screen. It never allocates a partial cast, capacity waiting room or extra page.
+The saved maximum remains unchanged by arrivals, departures, metadata or window
+resizing. Full names and relationships remain available in the roster and
+inspector. Roots and clones share the fit; clone artwork stays **80%** of root
+artwork, including nested clones.
 
-A size change requested during a clone's split, return or absorption is saved
-immediately. Its existing bodies keep their proved physical size until that
-finite operation finishes; the room shows that the size change is pending.
-It then re-admits bodies at the requested size with a fresh geometry proof.
-Preference-only readmission does not create a new work-arrival response;
-actual new activity still receives its normal endpoint feedback.
+Ordinary traffic coordination still owns each real entry, split, return,
+yield and exit. Automatic fitting retains existing bodies and actual feet;
+current geometry, clock clearance and named clone endpoint overlaps are
+revalidated. A manual maximum change during a finite clone transition is saved
+immediately and applied after that transition safely finishes. A geometry-only
+readmission does not fabricate a work event or arrival response.
 
-The fixed allocator retains safe physical residents before admitting more
-identities. It proves complete envelopes and routes at the requested scale,
-using a size-safe entrance in the existing doorway approach where needed.
-An owned clone transition may keep its previously proved resident goals after
-fresh checks of the actual feet and transitions; it grants no new entry or exit
-permission. If an unchanged station blocks a real work change, a bounded fresh
-assignment can move that coworker within its valid work zone, with full route
-and transition proofs, before deferring the new destination.
-Unplaceable identities remain in the roster and are explicitly marked
-**Waiting for space** in the list, summary and inspector. They are not
-presented as working at a floor location they have not reached. Full labels,
-native identities and parent links remain available; crowding no longer
-selects a compact label mode or shrinks everyone to fit.
-
-This policy does not promise simultaneous floor bodies for every open
-session. Capacity depends on the chosen size, actual work zones and safe
-routes. Existing auto-fit demonstrations of thirteen bodies at 40% or dense
-hundred-body casts describe the previous policy and do not establish current
-fixed-size admission behavior.
+The fixed-size allocator remains available for compatibility fixtures; the
+production renderer uses the full-cast allocator. Model coverage includes
+100 mixed real identities, and the native production-page fixture verifies
+24 normal-motion and 100 reduced-motion identities without overflow, clipping,
+body/nameplate overlaps or changes to the saved maximum.
 
 ## Evidence boundaries
 
