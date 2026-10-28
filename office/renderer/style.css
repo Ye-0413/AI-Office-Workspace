@@ -106,7 +106,7 @@
 .visitor .actor-title{color:#536a48}.visitor-badge{font-size:10px;color:#67825b;letter-spacing:.05em}.visitor .actor-state{font-size:11px}
 .visitor .actor-bubble{width:max-content;min-width:100px;max-width:245px;white-space:normal;text-align:center;font-size:14px;line-height:1.55;padding:9px 12px;bottom:164px}
 .visitor .actor-bubble:empty{display:none}.visitor[data-zone="door"] .actor-bubble{transform:translateX(-80%)}
-.visitor[data-walking="true"] .character-body{animation:walking-bob 600ms linear infinite}
+.visitor[data-walking="true"] .character-body{animation:walking-bob 600ms cubic-bezier(.37,0,.63,1) infinite}
 .visitor-trinket{position:absolute;right:5px;top:65px;color:#718258;font-size:23px;text-shadow:0 1px #fff2d8;pointer-events:none}
 .visitor[data-rare="true"] .visitor-trinket{color:#bd9850}
 .room-prop[data-visitor-active="true"]{opacity:.8}.room-prop[data-visitor-active="true"] i{animation-play-state:running}
@@ -275,3 +275,16 @@
 .office[data-flat="true"][data-nameplate-mode="compact"] .actor .actor-relation{font-size:14px;line-height:18px}
 .office[data-flat="true"][data-nameplate-mode="compact"] .actor .actor-subline,
 .office[data-flat="true"][data-nameplate-mode="compact"] .actor[data-helper="true"] .actor-subline{display:none}
+
+/* Event cues: bubbles grow from their speaker, the waiting badge pops in and
+ * nudges at most three times, and a turn boundary releases a few sparks. */
+.actor .actor-bubble{transform-origin:var(--bubble-tail-x,50%) 100%;scale:.94;translate:0 4px;transition:opacity 150ms ease,scale 150ms var(--ease-out),translate 150ms var(--ease-out)}
+.actor .actor-bubble[data-show="true"]{scale:1;translate:0 0;transition-duration:200ms}
+.actor[data-attention="true"] .actor-mark{animation:mark-pop 260ms var(--ease-out),mark-nudge 4s cubic-bezier(.37,0,.63,1) 260ms 3}
+@keyframes mark-pop{0%{scale:.6}60%{scale:1.08}100%{scale:1}}
+@keyframes mark-nudge{0%,88%,100%{rotate:0deg}91%{rotate:-8deg}94%{rotate:7deg}97%{rotate:-3deg}}
+.turn-spark{color:#f3d991;font-size:13px;text-shadow:0 0 4px #f6dc9a99}
+.office[data-reduced-motion="true"] .actor .actor-bubble,.office[data-low-power="true"] .actor .actor-bubble{scale:1;translate:0 0}
+.office[data-reduced-motion="true"] .actor .actor-mark,.office[data-low-power="true"] .actor .actor-mark{animation:none}
+.office[data-hidden="true"] .actor .actor-mark{animation-play-state:paused}
+@media(prefers-reduced-motion:reduce){.actor .actor-bubble{scale:1;translate:0 0}.actor .actor-mark{animation:none}}

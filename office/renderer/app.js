@@ -760,6 +760,9 @@
     const effect = window.OfficeCloneMotion.burst({ anchor: anchor.node, kind, ownerId: actor.id, asset: assetURL('clawd-static-base.svg') });
     actor.cloneEffects.add(effect);
     effect.finished.finally(() => actor.cloneEffects.delete(effect));
+    if (kind === 'split' && anchor !== actor) effect.ready.then(() => {
+      if (actor.target && actors.get(actor.id) === actor) parentGlance(anchor, actor, actor.target);
+    }).catch(() => {});
     return effect;
   }
   function relatedClones(actor) {
@@ -1222,6 +1225,58 @@
     ], { duration: kind === 'delivery' ? 1400 : 900, easing: 'cubic-bezier(.77,0,.175,1)' });
     animation.finished.catch(() => {}).finally(() => effect.remove());
   }
+  // A turn boundary is the only evidence here; the sparkle never claims success.
+  function turnSparkles(point) {
+    if (quietSprites()) return;
+    const x = point.x * 12.8, y = point.y * 7.2 - 120;
+    [[-24, 34], [-9, 46], [10, 40], [25, 30]].forEach(([dx, rise], index) => {
+      const spark = element('span', 'scene-effect turn-spark', '✦');
+      $('effects').append(spark);
+      const motion = spark.animate([
+        { transform: `translate(${x + dx * .4}px,${y}px) scale(.6)`, opacity: 0 },
+        { transform: `translate(${x + dx * .8}px,${y - rise * .45}px) scale(1)`, opacity: 1, offset: .35 },
+        { transform: `translate(${x + dx}px,${y - rise}px) scale(.7)`, opacity: 0 }
+      ], { duration: 700, delay: 140 + index * 60, easing: 'cubic-bezier(.23,1,.32,1)', fill: 'backwards' });
+      motion.finished.catch(() => {}).finally(() => spark.remove());
+    });
+  }
+  const BODY_CUES = Object.freeze({
+    hop: { duration: 640, frames: [
+      { transform: 'translateY(0px) scale(1,1)', easing: 'cubic-bezier(.23,1,.32,1)' },
+      { transform: 'translateY(0px) scale(1.04,.94)', offset: .15, easing: 'cubic-bezier(.23,1,.32,1)' },
+      { transform: 'translateY(-6px) scale(.97,1.04)', offset: .45, easing: 'cubic-bezier(.37,0,.63,1)' },
+      { transform: 'translateY(0px) scale(1.04,.95)', offset: .75, easing: 'cubic-bezier(.37,0,.63,1)' },
+      { transform: 'translateY(0px) scale(1,1)' }] },
+    startle: { duration: 300, frames: [
+      { transform: 'translate(0px,0px)', easing: 'cubic-bezier(.37,0,.63,1)' },
+      { transform: 'translate(-1.5px,-1px)', offset: .2, easing: 'cubic-bezier(.37,0,.63,1)' },
+      { transform: 'translate(1.5px,0px)', offset: .45, easing: 'cubic-bezier(.37,0,.63,1)' },
+      { transform: 'translate(-1px,0px)', offset: .7, easing: 'cubic-bezier(.37,0,.63,1)' },
+      { transform: 'translate(0px,0px)' }] }
+  });
+  function leanFrames(direction) {
+    const lean = `rotate(${Math.sign(direction) * 2}deg)`;
+    return [{ transform: 'rotate(0deg)', easing: 'cubic-bezier(.37,0,.63,1)' }, { transform: lean, offset: .25 },
+      { transform: lean, offset: .7, easing: 'cubic-bezier(.37,0,.63,1)' }, { transform: 'rotate(0deg)' }];
+  }
+  // Body cues add onto whatever the body is doing and own no route or clock.
+  function bodyCue(actor, kind, direction = 0) {
+    if (quietSprites() || !actor?.body?.animate || actor.departing || actors.get(actor.id) !== actor) return;
+    const cue = kind === 'glance' ? direction && { duration: 1200, frames: leanFrames(direction) } : BODY_CUES[kind];
+    if (!cue) return;
+    actor.bodyCue?.cancel();
+    const motion = actor.body.animate(cue.frames, { duration: cue.duration, composite: 'add' });
+    actor.bodyCue = motion;
+    motion.finished.catch(() => {}).finally(() => { if (actor.bodyCue === motion) actor.bodyCue = null; });
+    requestAnimationFrame(() => {
+      if (actor.bodyCue === motion && kind !== 'hop') actor.performance?.cue?.(kind, { direction });
+    });
+  }
+  function parentGlance(parent, child, toward) {
+    if (!parent || parent === child || parent.motion) return;
+    const dx = (toward ?? currentPosition(child)).x - currentPosition(parent).x;
+    if (Math.abs(dx) >= .5) bodyCue(parent, 'glance', dx);
+  }
   async function enterClone(actor, seat) {
     const serial = cancelAction(actor);
     actor.target = seat;
@@ -1285,6 +1340,7 @@
     clonePhase(actor, 'absorbing');
     actor.navigation = { ...navigation, kind: 'absorb' };
     const effect = cloneEffect(actor, parent || actor, 'absorb');
+    parentGlance(parent, actor);
     if (!quietSprites() && effect) {
       await effect.ready;
       if (actor.serial !== serial || actors.get(actor.id) !== actor || destroyed) return;
@@ -1583,7 +1639,14 @@
       }
       depart(actor, !Scene.isClosed(actor.session)).catch(showError);
     }
-    for (const session of currentPage.visible.slice().sort((a,b) => cloneLedger.parentChain(a.id).length - cloneLedger.parentChain(b.id).length)) {
+    const admissionOrder = new Map();
+    for (const move of currentPage.scheduledProof?.entry.moves || []) {
+      if (!admissionOrder.has(move.id)) admissionOrder.set(move.id, admissionOrder.size);
+    }
+    // Preserve the proved entry order when a near seat would block a farther
+    // newcomer. Actual Traffic still owns and validates each physical leg.
+    for (const session of currentPage.visible.slice().sort((a,b) => cloneLedger.parentChain(a.id).length - cloneLedger.parentChain(b.id).length
+      || (admissionOrder.get(a.id) ?? currentPage.visible.length) - (admissionOrder.get(b.id) ?? currentPage.visible.length))) {
       if (restedClones.has(session.id) && !hasBodyActivity(session)) continue;
       const seat = nextSeats.get(session.id);
       if (!seat) throw new Error('全员布局缺少角色席位：' + session.id);
@@ -1605,9 +1668,11 @@
           const key = Scene.projectKey(session);
           archivedTurns.set(key, Math.min(3, (archivedTurns.get(key) || 0) + 1));
           addEffect('reply', actor.position);
+          if (!actor.motion) { bodyCue(actor, 'hop'); turnSparkles(actor.position); }
         }
         if (old.activity !== session.activity) social?.update();
         if (!actor.departing && actor.node.dataset.reaction !== 'true') finishAtStation(actor);
+        if (old.activity !== 'error' && session.activity === 'error' && !actor.motion) bodyCue(actor, 'startle');
         requestStation(actor, seat, Boolean(endpointParent(actor)));
       }
     }

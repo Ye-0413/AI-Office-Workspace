@@ -1,5 +1,34 @@
 # Local monitoring, token accounting and manual questions
 
+Cursor desktop/CLI observation also supports the completion-only compatibility
+configuration. A fresh `postToolUse` or `postToolUseFailure` hook with native
+conversation/generation identity and a tool name can establish observed activity
+without a matching start. It records the result itself, with no invented start,
+pending call or pre-observation execution time. A native Stop settles that
+generation; later results cannot reopen it. A newer generation can become active
+after the prior turn settles. Unpaired results never resolve existing waits or
+decrement other calls, and session teardown remains authoritative. Historical
+hook-spool contents are still skipped on startup. No new gating hooks or approval
+responses are required by this fallback.
+
+Cursor 3.25.6 joins 3.24.12 in the exact-source passive-response verification
+list, so an explicit reconnect also observes prompt, tool and helper starts on
+those hosts. The observer still returns only `{}`. Existing CLI processes and
+background workers can retain the configuration they loaded at startup; they
+must reload before new hook registrations take effect. Updating the office or
+rewriting hooks does not itself restart or interrupt a running AI task.
+
+Codex hook/rollout arbitration retains a native result that arrives after the
+hook lease expires but before its deferred start has replayed. Both original
+records replay in order, so a completed turn cannot inherit a phantom pending
+tool from that scheduling gap. Results retain their own outcomes and clocks.
+
+At manual sizes above 100%, admission can also validate the actual small root
+cast without requiring room for a hypothetical extra holding body. The same
+coordinator sweeps all entry and ordered exit legs at the unchanged size, and
+the renderer preserves the proved entry order. Future arrivals need their own
+proof; no body, nameplate, obstacle or collision envelope is reduced.
+
 **Last checked against source:** 2026-10-23.
 
 The local usage mechanisms adapt

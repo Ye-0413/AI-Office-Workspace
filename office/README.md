@@ -6,6 +6,10 @@ Version 0.22 keeps the selected Agent size fixed as the room gets busier. Clone 
 
 Monitoring and size behavior last checked against source: **2026-10-23**. Implementation details and coverage boundaries: [local monitoring guide](docs/monitoring.md).
 
+Cursor desktop/CLI activity is supported in completion-only compatibility mode. Fresh native tool results can reveal an active session even when its start was not observed; they do not create pending tools or reconstruct execution time. Existing waits, paired calls and explicit end boundaries retain their ownership.
+
+Cursor 桌面版／CLI 在仅观察完成事件的兼容模式下也可显示角色。新收到的原生工具结果可显示真实会话活动，不虚构工具开始、未完成调用或执行时长；已有等待、成对调用与明确结束边界继续有效。
+
 ## 当前动画展示
 
 **11 类活动，每类 8 种，共 88 种动作。**

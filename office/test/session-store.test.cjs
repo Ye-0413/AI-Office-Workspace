@@ -319,6 +319,30 @@ test('hook primary lease expires without pretending success; fresh correlated fa
   assert.equal(store.ingest(event('tool-start', { turnId: 't1', at: time, toolCallId: 'late', evidence: fallback })), false);
   assert.equal(store.ingest(event('turn-end', { turnId: 't1', at: time, evidence: fallback })), false);
 });
+test('a native result arriving after the hook lease expires waits for its deferred start', () => {
+  let time = 100000;
+  const store = createSessionStore({ now: () => time }), accepted = [];
+  store.onAccepted(e => accepted.push(e));
+  store.ingest(event('turn-start', { turnId: 't', at: time }));
+  time += 1000;
+  const start = event('tool-start', { at: time, turnId: 't', toolCallId: 'native-call',
+    activity: 'reading', evidence: { source: 'codex-jsonl', rawEvent: 'response_item:custom_tool_call' } });
+  assert.equal(store.ingest(start), false);
+  // No prune ran before this result. Previously it was discarded because
+  // its queued start had not yet created a pending call in the reducer.
+  time += 10001;
+  const result = event('tool-end', { at: time, turnId: 't', toolCallId: 'native-call',
+    outcome: 'unknown', evidence: { source: 'codex-jsonl', rawEvent: 'response_item:custom_tool_call_output' } });
+  assert.equal(store.ingest(result), false);
+  assert.equal(store.snapshot()[0].activeTools, 0);
+  store.prune();
+  assert.deepEqual(accepted.map(e => e.eventId), [accepted[0].eventId, start.eventId, result.eventId]);
+  assert.equal(store.snapshot()[0].activeTools, 0, 'replay cannot leave a phantom native call');
+  store.ingest(event('turn-end', { at: ++time, turnId: 't', activity: 'idle' }));
+  assert.equal(store.snapshot()[0].status, 'idle');
+  assert.equal(store.ingest(result), false);
+});
+
 test('a later official hook renews primary ownership after fallback recovery', () => {
   let time = 10000;
   const store = createSessionStore({ now: () => time });

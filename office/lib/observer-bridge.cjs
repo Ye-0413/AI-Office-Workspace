@@ -26,7 +26,12 @@ const EVENTS = Object.freeze({
   hermes: ['on_session_start','on_session_reset','pre_llm_call','pre_tool_call','post_tool_call','on_session_end','on_session_finalize','subagent_start','subagent_stop','on_human_input_request','on_human_input_resolved'],
 });
 const CURSOR_NON_GATING = ['sessionStart', 'sessionEnd', 'postToolUse', 'postToolUseFailure', 'subagentStop', 'preCompact', 'stop'];
-const CURSOR_DESKTOP_SHA = '044ce0931100af5fe95403e9a692b02932bc3e13a6763f576b851f503fefa518';
+// Exact installed desktop implementations whose empty hook response preserves
+// the host's own prompt/tool/subagent decisions. Unknown hosts stay passive-only.
+const CURSOR_DESKTOP_PROOFS = new Set([
+  '044ce0931100af5fe95403e9a692b02932bc3e13a6763f576b851f503fefa518', // 3.24.12
+  'ccb73f4cbb222e7f137137ec3bfffaff4b40afb211b4bea609ab3130084d30e0', // 3.25.6
+]);
 const MAX_CONFIG = 2 * 1024 * 1024;
 const MAX_READ = 64 * 1024;
 const MAX_LINE = 16 * 1024;
@@ -175,7 +180,7 @@ function cursorProof(homeDir) {
     const file = path.join(app, 'Contents', 'Resources', 'app', 'out', 'vs', 'workbench', 'workbench.desktop.main.js');
     try {
       const stat = fs.lstatSync(file);
-      if (stat.isFile() && !stat.isSymbolicLink() && stat.size < 64 * 1024 * 1024 && sha(fs.readFileSync(file)) === CURSOR_DESKTOP_SHA) return true;
+      if (stat.isFile() && !stat.isSymbolicLink() && stat.size < 64 * 1024 * 1024 && CURSOR_DESKTOP_PROOFS.has(sha(fs.readFileSync(file)))) return true;
     } catch {}
   }
   return false;
@@ -281,7 +286,7 @@ function createObserverBridge(options = {}) {
     if (!detail) {
       if (!installed) detail = '尚未安装观察配置；连接后只记录活动，不控制 AI';
       else if (provider === 'codex') detail = '观察配置已安装；请在 Codex /hooks 审核信任，收到真实事件后才可确认生效';
-      else if (provider === 'cursor') detail = cursorVerified ? '当前 Cursor 3.24.12 被动响应已静态核实；真实活动仍以收到的事件为准' : '保守兼容：只观察完成和结束事件；当前桌面版本的开始事件尚未核实';
+      else if (provider === 'cursor') detail = cursorVerified ? '当前 Cursor 被动响应已静态核实；已有 CLI／后台 Worker 需重新加载观察配置，真实活动以收到的事件为准' : '保守兼容：只观察完成和结束事件；当前桌面版本的开始事件尚未核实';
       else detail = '观察配置已安装；Claude Code 真实客户端收发尚待验证';
     }
     if (faults.has(provider)) detail = faults.get(provider);

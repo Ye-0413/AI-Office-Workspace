@@ -157,6 +157,29 @@ test('Cursor uses version one flat hook entries and preserves unrelated policy',
   assert.equal(JSON.parse(fs.readFileSync(file)).hooks.stop[0].command, 'user-stop');
 });
 
+test('Cursor desktop/CLI completion-only commands reach real session state through the passive spool', async t => {
+  const options = sandbox(t);
+  const { createSessionStore } = require('../lib/session-store.cjs');
+  const store = createSessionStore(), accepted = [];
+  store.onAccepted(event => accepted.push(event));
+  const bridge = createObserverBridge({ ...options, onEvent: event => store.ingest(event) });
+  assert.equal((await bridge.connect('cursor')).status, 'ok');
+  const before = fs.readFileSync(configFile(options, 'cursor'));
+  bridge.start(); t.after(() => bridge.stop());
+  for (const [conversation_id, tool_name] of [['desktop-chat', 'Read'], ['cli-chat', 'Write']]) {
+    const command = buildObserverCommand(options, 'cursor', 'postToolUse');
+    const result = await observe(options, { conversation_id, generation_id: 'native-generation',
+      tool_use_id: 'native-call', tool_name, workspace_roots: ['/fixture/project'] }, [], command);
+    assert.deepEqual(result, { code: 0, stdout: '{}\n', stderr: '' });
+  }
+  await until(() => store.snapshot().length === 2);
+  assert.deepEqual(store.snapshot().map(s => [s.id, s.activity, s.activeTools]).sort(), [
+    ['cursor:cli-chat', 'coding', 0], ['cursor:desktop-chat', 'reading', 0],
+  ]);
+  assert.ok(accepted.every(event => event.event === 'tool-end'));
+  assert.deepEqual(fs.readFileSync(configFile(options, 'cursor')), before, 'observation never changes hooks');
+});
+
 test('corrupt, duplicate-key, unsupported and symlink configurations are refused intact', async t => {
   const variants = ['{broken', '{"hooks":{},"hooks":{}}', '{"hooks":{"Stop":[]},"\\u0068ooks":{}}', '{"hooks":[]}'];
   for (const text of variants) {

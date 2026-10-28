@@ -144,8 +144,9 @@
     // remains an isolated <image>; no restricted SVG markup is embedded here.
     const crop = (name, content) => `<clipPath id="${id}-${name}">${content}</clipPath>`;
     const use = name => `<use href="#${id}-source" clip-path="url(#${id}-${name})"/>`;
-    svg.innerHTML = `<defs><image id="${id}-source" href="../assets/avatars/${Model.ASSET}" x="40" y="40" width="75" height="80"/>${crop('torso', '<path clip-rule="evenodd" d="M50 70h55v35H50ZM60 80v10h5V80ZM90 80v10h5V80Z"/>')}${crop('patch', '<path d="M60 72h5v5h-5ZM90 72h5v5h-5Z"/>')}${crop('eyes', '<path d="M60 80h5v10h-5ZM90 80h5v10h-5Z"/>')}${crop('left', '<path d="M40 85h10v10H40Z"/>')}${crop('right', '<path d="M105 85h10v10h-10Z"/>')}${crop('foot1', '<path d="M55 105h5v10h-5Z"/>')}${crop('foot2', '<path d="M65 105h5v10h-5Z"/>')}${crop('foot3', '<path d="M85 105h5v10h-5Z"/>')}${crop('foot4', '<path d="M95 105h5v10h-5Z"/>')}</defs><g class="ap-feet"><g class="ap-foot ap-foot-1">${use('foot1')}</g><g class="ap-foot ap-foot-2">${use('foot2')}</g><g class="ap-foot ap-foot-3">${use('foot3')}</g><g class="ap-foot ap-foot-4">${use('foot4')}</g></g><g class="ap-upper"><g class="ap-torso">${use('torso')}<g transform="translate(0 -64) scale(1 2)">${use('patch')}</g></g><g class="ap-eyes"><g class="ap-blink">${use('eyes')}</g></g><g class="ap-props-back"></g><g class="ap-props-transit"></g><g class="ap-arm ap-arm-left">${use('left')}</g><g class="ap-arm ap-arm-right">${use('right')}</g><g class="ap-props-front"></g></g>`;
+    svg.innerHTML = `<defs><image id="${id}-source" href="../assets/avatars/${Model.ASSET}" x="40" y="40" width="75" height="80"/>${crop('torso', '<path clip-rule="evenodd" d="M50 70h55v35H50ZM60 80v10h5V80ZM90 80v10h5V80Z"/>')}${crop('patch', '<path d="M60 72h5v5h-5ZM90 72h5v5h-5Z"/>')}${crop('eyes', '<path d="M60 80h5v10h-5ZM90 80h5v10h-5Z"/>')}${crop('left', '<path d="M40 85h10v10H40Z"/>')}${crop('right', '<path d="M105 85h10v10h-10Z"/>')}${crop('foot1', '<path d="M55 105h5v10h-5Z"/>')}${crop('foot2', '<path d="M65 105h5v10h-5Z"/>')}${crop('foot3', '<path d="M85 105h5v10h-5Z"/>')}${crop('foot4', '<path d="M95 105h5v10h-5Z"/>')}</defs><g class="ap-feet"><g class="ap-foot ap-foot-1">${use('foot1')}</g><g class="ap-foot ap-foot-2">${use('foot2')}</g><g class="ap-foot ap-foot-3">${use('foot3')}</g><g class="ap-foot ap-foot-4">${use('foot4')}</g></g><g class="ap-breath"><g class="ap-upper"><g class="ap-torso">${use('torso')}<g transform="translate(0 -64) scale(1 2)">${use('patch')}</g></g><g class="ap-eyes"><g class="ap-blink">${use('eyes')}</g></g><g class="ap-props-back"></g><g class="ap-props-transit"></g><g class="ap-arm ap-arm-left">${use('left')}</g><g class="ap-arm ap-arm-right">${use('right')}</g><g class="ap-props-front"></g></g></g>`;
     const back = svg.querySelector('.ap-props-back');
+    const breath = svg.querySelector('.ap-breath');
     const front = svg.querySelector('.ap-props-front');
     const transit = svg.querySelector('.ap-props-transit');
     layer.append(svg);
@@ -198,7 +199,40 @@
         releaseBridgeClocks(owner);
       });
     }
+    let landing = null;
+    function stopLanding() {
+      if (landing) { landing.cancel(); landing = null; }
+    }
+    let eyeCue = null;
+    function stopCue() {
+      if (eyeCue) { eyeCue.cancel(); eyeCue = null; }
+    }
+    // Brief eye reactions to observed room events. They add onto the current
+    // work track and own no clock, so cancelling one never moves a joint.
+    function cue(kind, { direction = 0 } = {}) {
+      const eyes = svg.querySelector('.ap-eyes');
+      if (destroyed || gait || layer.hidden || frozen.length || !last?.animate
+        || !['active', 'entering'].includes(presence) || typeof eyes?.animate !== 'function') return false;
+      const sine = 'cubic-bezier(.37,0,.63,1)';
+      let frames, duration;
+      if (kind === 'glance' && direction) {
+        const look = `translate(${Math.sign(direction) * 2}px,0px)`;
+        frames = [{ transform: 'translate(0px,0px)', easing: sine }, { transform: look, offset: .25 },
+          { transform: look, offset: .7, easing: sine }, { transform: 'translate(0px,0px)' }];
+        duration = 1200;
+      } else if (kind === 'startle') {
+        frames = [{ transform: 'scale(1,1)', easing: 'cubic-bezier(.23,1,.32,1)' },
+          { transform: 'scale(1.12,1.22)', offset: .2, easing: sine }, { transform: 'scale(1,1)' }];
+        duration = 600;
+      } else return false;
+      stopCue();
+      const motion = eyes.animate(frames, { duration, composite: 'add' });
+      eyeCue = motion;
+      motion.finished.catch(() => {}).finally(() => { if (eyeCue === motion) eyeCue = null; });
+      return true;
+    }
     function stopBridge(resumeClocks = true) {
+      stopLanding();
       for (const motion of bridges) motion.cancel();
       bridges.clear();
       releaseBridgeClocks(bridgeClockOwner, resumeClocks);
@@ -241,6 +275,7 @@
     }
     function freezeVisual() {
       if (frozen.length || !view?.getComputedStyle || !svg.querySelectorAll) return;
+      stopLanding(); stopCue();
       // Capture the actual composed pose, including an interrupted 180ms
       // bridge and its outgoing object. Pause the original CSS clocks instead
       // of changing program selectors or rebuilding any body crop.
@@ -315,7 +350,7 @@
       presence = active ? 'entering' : 'exiting';
     }
     function settleInactive() {
-      stopGait(); stopFade(); stopBridge(false); clearTransients();
+      stopCue(); stopGait(); stopFade(); stopBridge(false); clearTransients();
       layer.hidden = true; layer.style.opacity = '0';
       layer.dataset.animate = 'false';
       thawVisual(false);
@@ -417,7 +452,7 @@
       const timing = { duration: 600, iterations: Infinity, easing: 'linear' };
       const start = document.timeline?.currentTime;
       const curves = frames => frames.map((frame, index) => index < frames.length - 1
-        ? { easing: 'cubic-bezier(.77,0,.175,1)', ...frame } : frame);
+        ? { easing: 'cubic-bezier(.37,0,.63,1)', ...frame } : frame);
       for (const item of before) {
         const node = item.node;
         node.style.removeProperty('transform');
@@ -437,14 +472,18 @@
           const hold = 'translate(3px,4px) rotate(5deg)';
           frames = carrying && !left ? [{ transform: hold }, { transform: hold }] : [
             { transform: neutral, offset: 0 },
-            { transform: `translate(${-direction}px,1px) rotate(${direction * 5}deg)`, offset: .25 },
+            { transform: `translate(${-direction * 1.5}px,1px) rotate(${direction * 9}deg)`, offset: .28 },
             { transform: neutral, offset: .5 },
-            { transform: `translate(${direction}px,-1px) rotate(${-direction * 5}deg)`, offset: .75 },
+            { transform: `translate(${direction * 1.5}px,-1px) rotate(${-direction * 9}deg)`, offset: .78 },
             { transform: neutral, offset: 1 }
           ];
         } else if (node.classList.contains('ap-upper')) {
-          frames = [{ transform: neutral }, { transform: 'translate(0px,-1px) rotate(.3deg)', offset: .25 },
-            { transform: neutral, offset: .5 }, { transform: 'translate(0px,-1px) rotate(-.3deg)', offset: .75 }, { transform: neutral }];
+          // Body rises over the passing foot and sways toward it.
+          frames = [{ transform: neutral }, { transform: 'translate(.4px,-2px) rotate(.9deg)', offset: .25 },
+            { transform: neutral, offset: .5 }, { transform: 'translate(-.4px,-2px) rotate(-.9deg)', offset: .75 }, { transform: neutral }];
+        } else if (node.classList.contains('ap-eyes')) {
+          frames = [{ transform: neutral }, { transform: 'translate(0px,.5px) rotate(0deg)', offset: .32 },
+            { transform: neutral, offset: .5 }, { transform: 'translate(0px,.5px) rotate(0deg)', offset: .82 }, { transform: neutral }];
         } else frames = [{ transform: neutral }, { transform: neutral }];
         const trajectory = curves(frames);
         const loop = node.animate(trajectory, timing);
@@ -549,6 +588,7 @@
       }
       const resuming = Boolean(wasHidden || wasWalking || visual && presence !== 'active' && presence !== 'entering');
       const blend = (changed || wasWalking) && plan.animate;
+      if (blend) stopCue();
       const before = blend ? walkingPose || capture() : [];
       const oldProps = blend && !wasWalking ? retainProps() : null;
       if (resuming || !plan.animate) { stopFade(true); thawVisual(plan.animate && !changed); }
@@ -587,6 +627,21 @@
           const fading = animate(oldProps, [{ opacity: 1 }, { opacity: 0 }]);
           if (fading) fading.finished.catch(() => {}).finally(() => { oldProps.remove(); if (ghost === oldProps) ghost = null; });
         }
+        if (wasWalking && !quiet && typeof breath?.animate === 'function') {
+          // Settle into the work pose once the 180ms bridge has landed. It owns
+          // no work clock and adds onto breathing, so neither end can jump.
+          // Vertical scale stays at or below 1 so held props keep their frame.
+          stopLanding();
+          const sine = 'cubic-bezier(.37,0,.63,1)';
+          const settle = breath.animate([
+            { transform: 'scale(1,1)', easing: sine },
+            { transform: 'scale(1.035,.955)', offset: .3, easing: sine },
+            { transform: 'scale(.992,1)', offset: .65, easing: sine },
+            { transform: 'scale(1,1)' }
+          ], { duration: 460, delay: 180, composite: 'add' });
+          landing = settle;
+          settle.finished.catch(() => {}).finally(() => { if (landing === settle) landing = null; });
+        }
         finishBridgeClocks(clockOwner);
       }
       visual = plan; last = plan;
@@ -596,7 +651,7 @@
       if (destroyed) return;
       destroyed = true;
       systemMotion?.destroy();
-      stopGait(); stopFade(); thawVisual(false);
+      stopCue(); stopGait(); stopFade(); thawVisual(false);
       stopBridge(false); clearTransients();
       if (clockLease) { clockLease.release(); clockLease = null; }
       visibleClocks.clear();
@@ -613,7 +668,7 @@
     // A single shared media listener cancels finite fades as well as CSS
     // choreography. No wall-time credit is inferred from this local UI event.
     systemMotion = watchReduced(view, () => update(session, { ...inheritedOptions, now: undefined }));
-    return Object.freeze({ update, locomotion, destroy, get plan() { return last; } });
+    return Object.freeze({ update, locomotion, cue, destroy, get plan() { return last; } });
   }
   return Object.freeze({ create });
 });

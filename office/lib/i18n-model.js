@@ -312,6 +312,7 @@
     ['尚未安装观察配置；连接后只记录活动，不控制 AI', 'Observation is not configured. Connecting records activity without controlling AI'],
     ['观察配置已安装；请在 Codex /hooks 审核信任，收到真实事件后才可确认生效', 'Observation configured. Review trust in Codex /hooks; incoming events confirm it is active'],
     ['当前 Cursor 3.24.12 被动响应已静态核实；真实活动仍以收到的事件为准', 'Passive responses were checked against Cursor 3.24.12 code. Incoming events confirm actual activity'],
+    ['当前 Cursor 被动响应已静态核实；已有 CLI／后台 Worker 需重新加载观察配置，真实活动以收到的事件为准', 'Passive responses were checked against this Cursor version. Existing CLI/background workers must reload their hook configuration; incoming events confirm actual activity'],
     ['保守兼容：只观察完成和结束事件；当前桌面版本的开始事件尚未核实', 'Compatibility mode: observing completion and end events only. Start events in this desktop version are unverified'],
     ['观察配置已安装；Claude Code 真实客户端收发尚待验证', 'Observation configured. Events from a live Claude Code client are not yet verified'],
     ['没有本应用拥有的观察配置', 'No observation setup owned by this app'],

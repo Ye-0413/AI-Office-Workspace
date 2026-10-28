@@ -5,8 +5,8 @@
   "sourceHashes": {
     "office/lib/avatar-performance-model.js": "d5744f06c34164ca6d6c71794ed5b4456aea83b0a08720e680a31a1f1910e9c3",
     "office/lib/walk-timing.js": "2a0fb10aad03e13bea46faafaae86c4922cf54858abf842704b35a38720b3049",
-    "office/renderer/avatar-performance.js": "afdf79f209fe42f4b58fd50b1567f855e245c8d1a8940eafeecabf9ec6a7ea32",
-    "office/renderer/avatar-performance.css": "23c05995e4d7e849861eaea11ab4435319a758cfb9c5d7cdb33fcd8f0c3d8b2b",
+    "office/renderer/avatar-performance.js": "d23016e8f28de22bed28de90ffb96331918b8f2e4b1b17d230d50e311ef55639",
+    "office/renderer/avatar-performance.css": "1b670613c713a856763e5686d0a00df9509efdd7c5d7d6042fd32b50313b256e",
     "office/renderer/clone-motion.js": "6e05a742e6d03b29d1016d5aa925a0d12f894f0826b2f6b26f3921605bd80c6c",
     "office/renderer/clone-motion.css": "d6e8a048276af3359e316262f25bb2c59e8429a50dafad5442840eabea30bb78",
     "docs/animations/preview-body.js": "62d91da1250ba740843f29f9b69cd2ebb4a85a2c04e370a6b12be1a577a60ff6",
@@ -21,9 +21,9 @@
       "frames": 96,
       "fps": 48,
       "durationMs": 2000,
-      "distinctPngFrames": 80,
-      "bytes": 190145,
-      "sha256": "5883516216c0ff9f998704bf4a7643ef98bd08039861894c68c6f8d2f61c19fc",
+      "distinctPngFrames": 86,
+      "bytes": 292939,
+      "sha256": "a2c7635b30626b1243b9684778bb78882fd99711b3edb3f4a5f033628cf94026",
       "walkingCertificate": {
         "inPlace": true,
         "roomNavigationCertified": false,
@@ -83,9 +83,9 @@
       "frames": 96,
       "fps": 48,
       "durationMs": 2000,
-      "distinctPngFrames": 32,
-      "bytes": 286497,
-      "sha256": "ace966737def33adfaa9bd1632a529f53122f5d560e19ce2f02668e45e6899c4"
+      "distinctPngFrames": 42,
+      "bytes": 340590,
+      "sha256": "5c04985169b4031bcb224030664ce5a23531ed2c15896d99cbb6c04b9b89de0e"
     },
     {
       "file": "absorb.gif",
@@ -95,9 +95,9 @@
       "frames": 96,
       "fps": 48,
       "durationMs": 2000,
-      "distinctPngFrames": 36,
-      "bytes": 299059,
-      "sha256": "a010fb06f444245ad817bb663525855174af07c5593e788944c7e3c069b27cbe"
+      "distinctPngFrames": 44,
+      "bytes": 359342,
+      "sha256": "2fa039ab84e5534af7de5e2f71d262571edf475c6cc1360d3f47ac2a62f74bc1"
     }
   ],
   "restrictedImageElements": 0,

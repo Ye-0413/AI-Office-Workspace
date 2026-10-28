@@ -55,6 +55,53 @@ test('dense additions cannot evict or shrink residents; actual removal frees a f
   audit(after, 1); assert.equal(after.seats.has(few[0].id), false);
   assert.ok(after.visible.some(s => next.overflowIds.includes(s.id)), 'a waiting real identity can take the released slot');
 });
+test('two large roots enter and leave on fully swept routes without reserving a third body', () => {
+  const main = session('codex:main'), cursor = session('cursor:main', 'running', { provider: 'cursor' });
+  const footprints = new Map([main, cursor].map(s => [s.id, { left: 116, right: 124, top: 121, bottom: 94 }]));
+  for (const scale of [1.25, 1.35]) for (const resident of [false, true]) {
+    const first = resident ? Walking.layoutFixedWalking([main], { requestedScale: scale, footprints }) : null;
+    const page = Walking.layoutFixedWalking([main, cursor], { requestedScale: scale, footprints,
+      previousSeats: first?.seats, currentPositions: first ? new Map(first.seats) : new Map(),
+      residentIds: new Set(first?.seats.keys()) });
+    assert.deepEqual(page.overflowIds, []); assert.equal(page.uniformScale, scale);
+    assert.equal(page.proofMode, 'scheduled'); assert.deepEqual(page.holdingPoints, []);
+    const pixel = p => ({ x: p.x * Scene.WORLD.width / 100, y: p.y * Scene.WORLD.height / 100 });
+    for (const phase of ['entry', 'exit']) {
+      const proof = page.scheduledProof[phase], positions = new Map(proof.initialPositions);
+      for (const move of phase === 'entry' ? proof.moves : proof.steps) {
+        const f = footprints.get(move.id);
+        if (move.path && positions.has(move.id)) {
+          assert.ok(Math.abs(positions.get(move.id).x - move.path[0].x) < .001);
+          assert.ok(Math.abs(positions.get(move.id).y - move.path[0].y) < .001);
+        }
+        if (move.path) for (let i = 1; i < move.path.length; i++) {
+          const from = move.path[i - 1], to = move.path[i];
+          assert.ok(Walking.legalPoint(from, { uniformScale: scale, footprint: f }));
+          assert.ok(Walking.legalPoint(to, { uniformScale: scale, footprint: f }));
+          assert.ok(!Walking.OBSTACLES.some(r => Scene.segmentHitsRect(from, to, r, .8)));
+          for (const r of Scene.CLOCK_RESERVED) assert.equal(Scene.segmentHitsRect(pixel(from), pixel(to), {
+            x1: r.left - f.right * scale - 4, x2: r.right + f.left * scale + 4,
+            y1: r.top - f.bottom * scale - 4, y2: r.bottom + f.top * scale + 4,
+          }, 0), false, phase + ': reserved clock');
+          for (const [id, point] of positions) if (id !== move.id) {
+            const r = Scene.actorBounds(point, { uniformScale: scale, footprint: footprints.get(id) });
+            assert.equal(Scene.segmentHitsRect(pixel(from), pixel(to), {
+              x1: r.left - f.right * scale - page.gap, x2: r.right + f.left * scale + page.gap,
+              y1: r.top - f.bottom * scale - page.gap, y2: r.bottom + f.top * scale + page.gap,
+            }, 0), false, phase + ': ' + move.id + '/' + id);
+          }
+        }
+        if (phase === 'exit' && proof.removedIds.includes(move.id)) positions.delete(move.id);
+        else positions.set(move.id, move.target);
+      }
+      if (phase === 'exit') assert.equal(positions.size, 0);
+      else for (const [id, target] of page.seats) {
+        assert.ok(Math.abs(positions.get(id).x - target.x) < .001);
+        assert.ok(Math.abs(positions.get(id).y - target.y) < .001);
+      }
+    }
+  }
+});
 test('manual slider extremes preserve exact size and use a safe entrance instead of clearing the floor', () => {
   for (const scale of [.65, .8, 1, 1.35]) {
     const input = cast(8), page = Walking.layoutFixedWalking(input, { requestedScale: scale });

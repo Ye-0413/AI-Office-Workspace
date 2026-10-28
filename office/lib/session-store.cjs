@@ -103,6 +103,20 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
     const key = event.eventId ? `${id}:${event.eventId}` : null;
     if (key && seen.has(key)) return false;
     let s = sessions.get(id);
+    // Cursor's conservative integration intentionally installs only passive
+    // completion hooks on unverified hosts (including CLI versions). A fresh
+    // native result is real activity even when its start was not observed.
+    // Keep it as a result: never invent a start, a pending call, or its duration.
+    const cursorResult = event.provider === 'cursor' && event.event === 'tool-end'
+      && event.evidence?.source === 'hook'
+      && ['postToolUse', 'postToolUseFailure'].includes(event.evidence.rawEvent)
+      && Boolean(event.turnId && event.toolName)
+      && Number.isFinite(atValue) && at >= now() - staleMs && at <= now() + 5000;
+    const unpairedCursorResult = cursorResult && !(event.toolCallId && s?.tools.has(event.toolCallId));
+    if (unpairedCursorResult && (s?.closed || s?.pendingEnd
+      || event.toolCallId && s?.completedTools.has(event.toolCallId))) return false;
+    const observedCursorTurn = unpairedCursorResult && s && !s.turnOpen
+      && !s.tools.size && !s.waits.size && event.turnId !== s.turnId && at > s.lastEventAt;
     const metadata = event.event === 'metadata';
     const endedSnapshot = metadata && event.evidence?.snapshot === 'ended-turn';
     if (endedSnapshot) {
@@ -134,8 +148,8 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
       && Boolean(event.turnId && s?.turnId && event.turnId === s.turnId);
     const starts = event.event === 'turn-start' || event.event === 'session-start' || event.event === 'subagent-start';
     if (!s) {
-      // A dangling result/Stop cannot conjure a completed session on app launch.
-      if (event.event === 'tool-end' || terminal.has(event.event)) return false;
+      // Other dangling results and historical completions cannot create actors.
+      if (event.event === 'tool-end' && !unpairedCursorResult || terminal.has(event.event)) return false;
       s = {
         id, provider: event.provider, sessionId: event.sessionId,
         ...(event.subagentId ? { subagentId: event.subagentId } : {}),
@@ -152,14 +166,18 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
     }
     // Explicit new boundaries alone can reopen an ended session or turn.
     const pendingTool = event.toolCallId && s.tools.get(event.toolCallId);
+    const queuedStart = !pendingTool && isFallback(event) && event.event === 'tool-end' && event.toolCallId
+      ? [...s.deferredKeys].map(key => deferred.get(key)?.event).find(e => e?.toolCallId === event.toolCallId
+        && e.turnId === event.turnId && ['tool-start', 'waiting-user'].includes(e.event)) : null;
     const correlatedFallbackResult = isFallback(event) && event.event === 'tool-end'
-      && event.turnId && event.turnId === s.turnId && pendingTool && at >= pendingTool.startedAt;
+      && event.turnId && event.turnId === s.turnId && (pendingTool || queuedStart)
+      && at >= (pendingTool?.startedAt ?? queuedStart.at);
     const supplementalResult = correlatedFallbackResult && at < s.lastEventAt;
     const advancesKnownTurn = event.event === 'turn-start' && event.turnId && s.turnId
       && event.turnId !== s.turnId && s.turnStartedAt > 0 && turnStartAt > s.turnStartedAt;
     if (s.closed && !starts && !metadata && !nativeSessionEnd) return false;
     if (event.turnId && s.closedTurns.has(event.turnId) && !metadata && !nativeSessionEnd && !nativeSubagentEnd) return false;
-    if (!metadata && !nativeSessionEnd && event.turnId && s.turnId && event.turnId !== s.turnId && event.event !== 'turn-start') return false;
+    if (!metadata && !nativeSessionEnd && event.turnId && s.turnId && event.turnId !== s.turnId && event.event !== 'turn-start' && !observedCursorTurn) return false;
     if (event.event === 'turn-start' && event.turnId !== s.turnId && turnStartAt < s.turnStartedAt) return false;
     if (!metadata && !nativeSessionEnd && !nativeSubagentEnd && !correlatedFallbackResult && !advancesKnownTurn && at < s.lastEventAt - 2000) return false;
     // Official hooks have a bounded primary lease, not permanent ownership:
@@ -174,8 +192,15 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
       }
       if (at < s.hookAt && !correlatedFallbackResult) return false;
     }
+    // The primary lease may expire between a deferred native start and its
+    // result, before the next prune replays that start. Retain both facts for
+    // ordered replay; dropping this result would later create a phantom call.
+    if (correlatedFallbackResult && !pendingTool) {
+      if (replayToken !== deferredReplay) deferFallback(s, event, at);
+      return false;
+    }
     if (isHook(event) && event.event === 'tool-end' && event.toolCallId) discardDeferred(s, event.toolCallId);
-    if (event.event === 'tool-end' && (!event.toolCallId || !s.tools.has(event.toolCallId))) return false;
+    if (event.event === 'tool-end' && (!event.toolCallId || !s.tools.has(event.toolCallId)) && !unpairedCursorResult) return false;
     if (event.event === 'tool-start' && event.toolCallId && s.completedTools.has(event.toolCallId)) return false;
     if (event.event === 'tool-end') discardDeferred(s, event.toolCallId);
     if (key) {
@@ -184,7 +209,7 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
     }
     // Clear only after acceptance fences: an old/duplicate same-turn start
     // cannot erase the last real settlement merely by being observed again.
-    if (starts) delete s.settlementBoundary;
+    if (starts || observedCursorTurn) delete s.settlementBoundary;
     if (!supplementalResult) {
       if (event.title) s.title = String(event.title).slice(0, 100);
       if (event.projectPath) s.projectPath = String(event.projectPath).slice(0, 2048);
@@ -231,7 +256,7 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
       accepted(event); prune(false); emit(); return true;
     }
     if (isHook(event)) { s.hookAt = Math.max(s.hookAt, at); s.hookReceivedAt = now(); s.hookTurnId = event.turnId || s.turnId; }
-    if (event.event === 'turn-start' || (!s.turnId && event.turnId && !terminal.has(event.event))) {
+    if (event.event === 'turn-start' || observedCursorTurn || (!s.turnId && event.turnId && !terminal.has(event.event))) {
       if (s.turnId && s.turnId !== event.turnId) boundedAdd(s.closedTurns, s.turnId);
       if (s.turnId !== event.turnId || !s.turnOpen) {
         discardDeferred(s);
@@ -256,17 +281,25 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
       s.status = 'active'; s.attention = false;
       s.activity = event.activity || 'coding'; s.toolName = event.toolName || '';
     } else if (event.event === 'tool-end') {
-      // Results are correlated; an unrelated result never decrements work.
-      if (!callId || !s.tools.has(callId)) return false;
-      s.tools.delete(callId); boundedAdd(s.completedTools, callId, 128);
-      const matchingWait = s.waits.get(`call:${callId}`);
-      if (matchingWait && at >= matchingWait.at) s.waits.delete(`call:${callId}`);
-      const remaining = [...s.tools.values()].at(-1);
-      if (!supplementalResult) {
-        const waiting = [...s.tools.values()].some(tool => tool.activity === 'waiting-user');
-        s.activity = waiting ? 'waiting-user' : remaining?.activity || (event.outcome === 'failure' ? 'error' : 'planning');
-        s.toolName = remaining?.name || event.toolName || '';
-        s.status = waiting ? 'waiting' : 'active'; s.attention = waiting;
+      // Unpaired Cursor observations never decrement another call or clear a
+      // wait. Paired results retain the same correlation and settlement rules.
+      if (unpairedCursorResult) {
+        boundedAdd(s.completedTools, callId, 128);
+        if (!s.waits.size && !s.tools.size) {
+          s.activity = event.activity || 'unknown'; s.toolName = event.toolName || '';
+          s.status = 'active'; s.attention = event.outcome === 'failure';
+        }
+      } else {
+        s.tools.delete(callId); boundedAdd(s.completedTools, callId, 128);
+        const matchingWait = s.waits.get(`call:${callId}`);
+        if (matchingWait && at >= matchingWait.at) s.waits.delete(`call:${callId}`);
+        const remaining = [...s.tools.values()].at(-1);
+        if (!supplementalResult) {
+          const waiting = [...s.tools.values()].some(tool => tool.activity === 'waiting-user');
+          s.activity = waiting ? 'waiting-user' : remaining?.activity || (event.outcome === 'failure' ? 'error' : 'planning');
+          s.toolName = remaining?.name || event.toolName || '';
+          s.status = waiting ? 'waiting' : 'active'; s.attention = waiting;
+        }
       }
     } else if (event.event === 'activity') {
       // Some native protocols expose activity but no call ID. Present the fact
@@ -319,7 +352,7 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
       ...(event.toolCallId ? { toolCallId: event.toolCallId } : {}),
       // Keep the observed operation separate from the reducer's *current*
       // activity. A fast edit can start and finish between two UI snapshots.
-      observedActivity: event.event === 'tool-end' ? pendingTool?.activity || 'unknown' : event.activity || 'unknown',
+      observedActivity: event.event === 'tool-end' ? pendingTool?.activity || (unpairedCursorResult ? event.activity : 'unknown') : event.activity || 'unknown',
       summary: s.summary, toolName: event.toolName || '', outcome: event.outcome,
       evidence: event.evidence || {} });
     s.events = s.events.slice(-12);
