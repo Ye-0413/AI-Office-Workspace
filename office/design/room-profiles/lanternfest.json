@@ -1,0 +1,158 @@
+{
+  "id": "lanternfest",
+  "event": "lanternfest",
+  "kind": "holiday",
+  "nameZh": "上元水巷亭",
+  "nameEn": "Lantern Canal Pavilion",
+  "icon": "◈",
+  "effectVenue": "teahouse",
+  "architecture": "Octagonal radial timber pavilion, low canal openings and a front-right reference table",
+  "entry": [
+    50,
+    78
+  ],
+  "floor": [
+    5,
+    44,
+    95,
+    86
+  ],
+  "furniture": {
+    "library": [
+      65,
+      55,
+      100,
+      90
+    ],
+    "board": [
+      26,
+      38,
+      40,
+      48
+    ],
+    "bench": [
+      60,
+      40,
+      86,
+      54
+    ],
+    "desk": [
+      7,
+      44,
+      26,
+      62
+    ],
+    "sofa": [
+      0,
+      63,
+      25,
+      86
+    ],
+    "archive": [
+      42,
+      35,
+      57,
+      48
+    ]
+  },
+  "areas": {
+    "library": [
+      [
+        55,
+        62,
+        63,
+        83
+      ]
+    ],
+    "board": [
+      [
+        28,
+        50,
+        40,
+        59
+      ]
+    ],
+    "bench": [
+      [
+        58,
+        55,
+        63,
+        61
+      ]
+    ],
+    "desk": [
+      [
+        28,
+        61,
+        34,
+        71
+      ]
+    ],
+    "sofa": [
+      [
+        27,
+        74,
+        36,
+        84
+      ]
+    ],
+    "archive": [
+      [
+        42,
+        50,
+        57,
+        57
+      ]
+    ],
+    "front": [
+      [
+        38,
+        74,
+        53,
+        84
+      ]
+    ],
+    "lobby": [
+      [
+        38,
+        61,
+        54,
+        70
+      ]
+    ],
+    "exit": [
+      [
+        43,
+        75,
+        57,
+        83
+      ]
+    ]
+  },
+  "labels": {
+    "library": [
+      "灯影阅览案",
+      "Lantern reading table"
+    ],
+    "board": [
+      "灯纸绘图案",
+      "Paper drafting ledge"
+    ],
+    "bench": [
+      "灯具实验台",
+      "Lantern test counter"
+    ],
+    "desk": [
+      "水巷工作吧",
+      "Canal workbar"
+    ],
+    "sofa": [
+      "竹榻观灯席",
+      "Lantern-viewing lounge"
+    ],
+    "archive": [
+      "灯稿藏柜",
+      "Paper archive"
+    ]
+  }
+}

@@ -1,0 +1,166 @@
+{
+  "id": "valentine",
+  "event": "valentine",
+  "kind": "holiday",
+  "nameZh": "玫瑰字艺工坊",
+  "nameEn": "Rose Letterpress Atelier",
+  "icon": "❦",
+  "effectVenue": "workshop",
+  "architecture": "Rose plaster Art Nouveau vaults and stained-glass flowers around a left printing bank, rear type archive and large curved right computer island",
+  "entry": [
+    49,
+    78
+  ],
+  "floor": [
+    5,
+    46,
+    95,
+    86
+  ],
+  "furniture": {
+    "library": [
+      42,
+      31,
+      55,
+      46
+    ],
+    "archive": [
+      56,
+      31,
+      68,
+      46
+    ],
+    "board": [
+      0,
+      39,
+      28,
+      65
+    ],
+    "bench": [
+      21,
+      29,
+      40,
+      48
+    ],
+    "desk": [
+      66,
+      45,
+      100,
+      93
+    ],
+    "sofa": [
+      0,
+      62,
+      30,
+      100
+    ]
+  },
+  "extraObstacles": [
+    [
+      75,
+      19,
+      97,
+      48
+    ]
+  ],
+  "areas": {
+    "library": [
+      [
+        43,
+        48,
+        54,
+        56
+      ]
+    ],
+    "archive": [
+      [
+        56,
+        48,
+        65,
+        56
+      ]
+    ],
+    "board": [
+      [
+        30,
+        50,
+        37,
+        62
+      ]
+    ],
+    "bench": [
+      [
+        30,
+        50,
+        40,
+        56
+      ]
+    ],
+    "desk": [
+      [
+        57,
+        60,
+        64,
+        83
+      ]
+    ],
+    "sofa": [
+      [
+        32,
+        72,
+        40,
+        85
+      ]
+    ],
+    "front": [
+      [
+        44,
+        76,
+        55,
+        84
+      ]
+    ],
+    "lobby": [
+      [
+        43,
+        61,
+        55,
+        71
+      ]
+    ],
+    "exit": [
+      [
+        42,
+        75,
+        56,
+        83
+      ]
+    ]
+  },
+  "labels": {
+    "library": [
+      "字艺文库",
+      "Letterpress reference"
+    ],
+    "archive": [
+      "活字档案柜",
+      "Type archive"
+    ],
+    "board": [
+      "花窗绘图案",
+      "Stained-glass drafting"
+    ],
+    "bench": [
+      "玫瑰印刷台",
+      "Rose printing bench"
+    ],
+    "desk": [
+      "弧形工作岛",
+      "Curved computer island"
+    ],
+    "sofa": [
+      "粉绒沙龙",
+      "Rose velvet salon"
+    ]
+  }
+}

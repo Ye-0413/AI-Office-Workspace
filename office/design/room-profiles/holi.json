@@ -1,0 +1,164 @@
+{
+  "id": "holi",
+  "event": "holi",
+  "kind": "holiday",
+  "nameZh": "彩砂颜料庭",
+  "nameEn": "Pigment Courtyard",
+  "icon": "✺",
+  "effectVenue": "workshop",
+  "architecture": "Rajasthani carved sandstone courtyard with turquoise and magenta wall fields, a left pigment counter and offset right drawing island around a broad inlaid stone floor",
+  "entry": [
+    51,
+    78
+  ],
+  "floor": [
+    5,
+    40,
+    95,
+    86
+  ],
+  "furniture": {
+    "library": [
+      65,
+      21,
+      85,
+      40
+    ],
+    "board": [
+      71,
+      44,
+      93,
+      63
+    ],
+    "bench": [
+      0,
+      38,
+      26,
+      62
+    ],
+    "desk": [
+      22,
+      32,
+      37,
+      43
+    ],
+    "sofa": [
+      0,
+      63,
+      24,
+      97
+    ],
+    "archive": [
+      94,
+      48,
+      100,
+      81
+    ]
+  },
+  "areas": {
+    "library": [
+      [
+        59,
+        42,
+        64,
+        51
+      ],
+      [
+        66,
+        41.5,
+        84,
+        43.1
+      ]
+    ],
+    "board": [
+      [
+        71,
+        65,
+        92,
+        72
+      ]
+    ],
+    "bench": [
+      [
+        28,
+        48,
+        37,
+        62
+      ]
+    ],
+    "desk": [
+      [
+        28,
+        45,
+        38,
+        50
+      ]
+    ],
+    "sofa": [
+      [
+        26,
+        73,
+        35,
+        85
+      ]
+    ],
+    "archive": [
+      [
+        86,
+        74,
+        92,
+        84
+      ]
+    ],
+    "front": [
+      [
+        43,
+        75,
+        64,
+        84
+      ]
+    ],
+    "lobby": [
+      [
+        43,
+        60,
+        59,
+        71
+      ]
+    ],
+    "exit": [
+      [
+        44,
+        75,
+        58,
+        83
+      ]
+    ]
+  },
+  "labels": {
+    "library": [
+      "色谱书廊",
+      "Colour reference alcove"
+    ],
+    "board": [
+      "彩砂绘图岛",
+      "Pigment drawing island"
+    ],
+    "bench": [
+      "天然颜料台",
+      "Natural pigment bench"
+    ],
+    "desk": [
+      "砂岩工位",
+      "Sandstone workstations"
+    ],
+    "sofa": [
+      "彩织休息席",
+      "Woven lounge"
+    ],
+    "archive": [
+      "颜料档案柜",
+      "Pigment archive"
+    ]
+  }
+}

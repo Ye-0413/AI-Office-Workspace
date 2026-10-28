@@ -1,14 +1,17 @@
 /* The room only presents observations. It never approves or executes agent work. */
 (function () {
   'use strict';
-  const Scene = window.OfficeScene;
+  const BaseScene = window.OfficeScene;
+  let Scene = BaseScene;
   const Attendance = window.OfficeAttendance;
   const Director = window.OfficeAnimationDirector;
   const performanceClocks = window.OfficeAvatarPerformanceModel.createClockRegistry({ limit: 2048 });
   const Family = window.OfficeFamily;
   const Clones = window.OfficeClones;
   const Traffic = window.OfficeSceneTraffic;
-  const WalkingLayout = window.OfficeWalkingLayout;
+  const BaseWalkingLayout = window.OfficeWalkingLayout;
+  let WalkingLayout = BaseWalkingLayout;
+  let activeRoom = null;
   const WalkTiming = window.OfficeWalkTiming;
   const I18n = window.OfficeI18n;
   const bridge = window.office;
@@ -20,7 +23,9 @@
   const presentationReentries = new Map();
   const NAMEPLATE_METRICS_VERSION = 3;
   const archivedTurns = new Map();
-  const settingsDefaults = { rain: false, night: false, sceneTime: 'auto', sceneVenue: 'workshop', sceneTheme: 'auto', sceneWeather: 'auto', agentScale: 1, reducedMotion: false, lowPower: false, idleVisitor: true, sound: false, selectedProject: '', language: 'zh' };
+  // Older observation bridges without roomDesign retain their legacy room.
+  // Current native settings explicitly supply daily rotation by default.
+  const settingsDefaults = { rain: false, night: false, sceneTime: 'auto', sceneVenue: 'workshop', sceneTheme: 'auto', sceneWeather: 'auto', roomDesign: 'legacy', agentScale: 1, reducedMotion: false, lowPower: false, idleVisitor: true, sound: false, selectedProject: '', language: 'zh' };
   let settings = { ...settingsDefaults };
   let deferredPhysicalScale = null;
   const sizeStability = window.OfficeSizeStability.create({ requestedScale: settings.agentScale });
@@ -37,10 +42,11 @@
   const paletteRegistry = Family.createPaletteRegistry();
   const CLOCK_RESERVED = Scene.CLOCK_RESERVED;
   let ENTRY_POINT = { x: 87, y: 78, zone: 'exit' };
-  const traffic = Traffic.createCoordinator({ reservedRects: CLOCK_RESERVED, gap: scale => WalkingLayout.gapForScale(scale), limit: 256, maxConcurrent: 4, yieldBatchSize: 1,
+  const makeTraffic = () => Traffic.createCoordinator({ reservedRects: CLOCK_RESERVED, obstacles: WalkingLayout.OBSTACLES, gap: scale => WalkingLayout.gapForScale(scale), limit: 256, maxConcurrent: 8, passThrough: true, yieldBatchSize: 1,
     route: (from, to, actor) => walkingRoute(from, to, actor),
     holdingPoints: () => currentPage.holdingPoints,
     legalPoint: (point, actor) => WalkingLayout.legalPoint(point, { ...actor, reservedRects: CLOCK_RESERVED }) });
+  let traffic = makeTraffic();
   const trafficWaiters = new Map();
   let trafficTimer = 0;
   let blockedTrafficTimer = 0;
@@ -84,8 +90,10 @@
   const providerIds = window.OfficeProviders.getAllProviders().map(provider => provider.id === 'cursor-agent' ? 'cursor' : provider.id);
   const observedIds = new Set();
   let familyGraph = Family.build([]);
-  const visitor = window.OfficeIdleVisitor.create({ layer: $('visitors'), world, openDoor, context: () => ({ enabled: settings.idleVisitor, ready: snapshotReceived > 0, mode: snapshot.mode, busy: attendance.present.length > 0 || actors.size > 0, hidden: sceneHidden(), reducedMotion: reduced(), lowPower: settings.lowPower, language }) });
-  const sceneContext = () => ({ venue: settings.sceneVenue, scene: settings.sceneVenue, theme: settings.sceneTheme, weather: settings.sceneWeather,
+  const visitor = window.OfficeIdleVisitor.create({ layer: $('visitors'), world, openDoor, getScene: () => Scene, getLayout: () => WalkingLayout, context: () => ({ enabled: settings.idleVisitor, ready: snapshotReceived > 0, mode: snapshot.mode, busy: attendance.present.length > 0 || actors.size > 0, hidden: sceneHidden(), reducedMotion: reduced(), lowPower: settings.lowPower, language, roomKey:activeRoom?.id||'legacy' }) });
+  const sceneContext = () => ({ venue: settings.roomDesign==='legacy'?settings.sceneVenue:activeRoom?.effectVenue || settings.sceneVenue,
+    scene: settings.roomDesign==='legacy'?settings.sceneVenue:activeRoom?.effectVenue || settings.sceneVenue, theme: settings.sceneTheme, weather: settings.sceneWeather,
+    roomDesign: settings.roomDesign, room: activeRoom, layout: WalkingLayout,
     language, reducedMotion: reduced(), lowPower: settings.lowPower, hidden: sceneHidden(), fitting, scale: uniformScale, mode: snapshot.mode,
     artworkKey: $('room-art').dataset.artworkKey || '', dayPhase: office.dataset.dayPhase, now: Date.now() });
   const social = window.OfficeAgentSocial?.create({ layer: $('social-effects'), world, getActors: () => actors, getContext: sceneContext });
@@ -94,11 +102,53 @@
   office.addEventListener('office:actor-arrival', onStationArrival);
   const themeEnvironment = window.OfficeThemeEnvironment?.create({ office, world, getState: sceneContext });
   const venueStage = window.OfficeVenueStage?.create({ office, world, topbar: document.querySelector('.topbar'), getState: sceneContext,
-    onSelectVenue: id => saveSettings({ sceneVenue: id }), onInteraction: payload => social?.trigger(payload) });
+    onSelectVenue: id => saveSettings({ sceneVenue: id, roomDesign: 'legacy' }), onSelectRoom: id => saveSettings({ roomDesign: id }),
+    onCommitArtwork: commitRoomArtwork, onInteraction: payload => social?.trigger(payload) });
   const festivalStage = window.OfficeFestivalStage?.create({ office, world, topbar: document.querySelector('.topbar'), getState: sceneContext,
     onSelectTheme: (id,meta) => { venueStage?.update({ ...sceneContext(), theme: id, instant: meta?.source === 'keyboard' }); return saveSettings({ sceneTheme: id }); }, onSelectWeather: id => saveSettings({ sceneWeather: id }), onInteraction: payload => { themeEnvironment?.trigger(payload); social?.trigger(payload); } });
 
   office.dataset.festivals = String(Boolean(festivalStage));
+
+  function updateRoomSigns() {
+    for (const label of world.querySelectorAll('[data-zone-label]')) {
+      const zone=label.dataset.zoneLabel, furniture=activeRoom?.furniture[zone];
+      if (furniture) {
+        label.style.left=(furniture.x1+furniture.x2)/2+'%';label.style.top=furniture.y2+1+'%';label.style.transform='translateX(-50%)';
+        label.textContent=window.OfficeRoomDesigns.zoneLabel(activeRoom.id,zone,language);
+      } else {
+        label.style.removeProperty('left');label.style.removeProperty('top');label.style.removeProperty('transform');
+        label.textContent=tr(BaseScene.ZONES[zone]?.name||'');
+      }
+    }
+  }
+  function commitRoomArtwork(art) {
+    const room=art.layout||null;
+    if ((room?.id||'legacy')===(activeRoom?.id||'legacy')) return true;
+    // Finish finite physical journeys before replacing their floor. Room
+    // relocation changes scenery geometry, never observed work or identity.
+    if (hasFiniteClone() || cloneAwaitingReturn() || [...actors.values()].some(a=>a.motion||a.entryPending||a.departing)) return false;
+    const nextScene=room?window.OfficeRoomDesigns.createScene(BaseScene,room):BaseScene;
+    const nextLayout=room?BaseWalkingLayout.forScene(nextScene):BaseWalkingLayout;
+    const cast=[...actors.values()].map(a=>a.session);
+    const fitted=nextLayout.layoutAllWalking(cast,{passThrough:true,requestedScale:settings.agentScale,footprints:actorFootprints,reservedRects:CLOCK_RESERVED});
+    cancelPhysicalRoutes();
+    Scene=nextScene;WalkingLayout=nextLayout;activeRoom=room;traffic=makeTraffic();
+    currentPage=fitted;seats=fitted.seats;uniformScale=fitted.uniformScale;fitting=false;
+    ENTRY_POINT={...fitted.entryPoint,zone:'exit'};
+    office.dataset.roomChanging='true';
+    if(room)office.dataset.roomDesign=room.id;else delete office.dataset.roomDesign;
+    for(const actor of actors.values()){
+      const point=fitted.seats.get(actor.id);if(!point)throw new Error('Room geometry omitted an observed identity');
+      // Keep the original body, rig, name and work clocks. This scenery
+      // relocation is never dispatched as a work arrival or task event.
+      actor.position={...point};actor.target=point;actor.navigation=null;actor.resumeNavigation=null;
+      actor.node.style.transform=actorTransform(point,actor.helper);actor.node.style.zIndex=String(Math.round(point.y*10));
+      actor.node.dataset.walking='false';actor.node.dataset.traffic='arrived';
+    }
+    updateRoomSigns();visitor.tick();render();
+    requestAnimationFrame(()=>{if(!destroyed)delete office.dataset.roomChanging;});
+    return true;
+  }
 
   function tr(value) { return I18n.translate(language, String(value == null ? '' : value)); }
   function text(element, value) {
@@ -110,6 +160,7 @@
     document.title = I18n.t(language, 'app.title');
     for (const item of staticCopy) if (item.node.isConnected) item.node.nodeValue = tr(item.original);
     for (const item of staticAttributes) if (item.node.isConnected) item.node.setAttribute(item.name, tr(item.original));
+    updateRoomSigns();
     $('language-button').textContent = language === 'en' ? '中文' : 'EN';
     $('language-button').setAttribute('aria-label', language === 'en' ? 'Switch to Chinese' : '切换到 English');
     usageHistory?.updateLanguage();
@@ -171,7 +222,7 @@
   }
   function persona(session) { return window.OfficeAgentPersona.forSession(session); }
   function displayName(session) { const p = persona(session); return language === 'en' ? p.aliasEn : p.aliasZh; }
-  function zoneName(zone) { return zone === 'stage' ? (language === 'en' ? 'All-agent floor' : '全员席位') : window.OfficeVenues?.zoneLabel(settings.sceneVenue, zone, language) || tr(Scene.ZONES[zone]?.name || ''); }
+  function zoneName(zone) { return zone === 'stage' ? (language === 'en' ? 'All-agent floor' : '全员席位') : (activeRoom&&window.OfficeRoomDesigns.zoneLabel(activeRoom.id,zone,language)) || window.OfficeVenues?.zoneLabel(settings.sceneVenue, zone, language) || tr(Scene.ZONES[zone]?.name || ''); }
   function cloneSummary(session) { return I18n.t(language, 'family.clonesSummary', cloneLedger.stats(session.id)); }
   function archiveCount() { return selectedProject === Scene.ALL_ROOMS ? Math.min(3, [...archivedTurns.values()].reduce((sum, count) => sum + count, 0)) : archivedTurns.get(selectedProject) || 0; }
   function keepsakeIcon(session) { return ({teacup:'♨',paperboat:'⛵',bookmark:'▤',lantern:'✧',leaf:'❧',pebble:'◇',bell:'♧',pencil:'✎',shell:'⌁',star:'✦',acorn:'♧',ribbon:'⋈'})[persona(session).keepsake] || '✦'; }
@@ -449,7 +500,7 @@
     const closingPairs = closingDockPairs();
     const observedById = new Map(snapshot.sessions.map(session => [session.id, session]));
     for (const [child, parent] of closingPairs) { pinned.add(child); pinned.add(parent); }
-    return { allowTransfers: transferAvailable(incoming), transferEligibleIds: transferEligible(incoming), requestedScale: deferredPhysicalScale ?? settings.agentScale, maximumScale: deferredPhysicalScale ?? currentPage.scaleCeiling, residentIds: new Set(actors.keys()), venue: settings.sceneVenue, footprints: actorFootprints, reservedRects: CLOCK_RESERVED, previousSeats: seats, previousScale: uniformScale, previousRequestedScale: currentPage.requestedScale,
+    return { passThrough: true, allowTransfers: transferAvailable(incoming), transferEligibleIds: transferEligible(incoming), requestedScale: deferredPhysicalScale ?? settings.agentScale, maximumScale: deferredPhysicalScale ?? currentPage.scaleCeiling, residentIds: new Set(actors.keys()), venue: settings.sceneVenue, footprints: actorFootprints, reservedRects: CLOCK_RESERVED, previousSeats: seats, previousScale: uniformScale, previousRequestedScale: currentPage.requestedScale,
       closingDockPairs: closingPairs, openingDockPairs: openingDockPairs(incoming), finiteExitIds: new Set(exiting),
       // A settled absent ancestor has no ordinary station route. A first late
       // descendant, its real holding walk, and fresh work keep their own owners.
@@ -1655,8 +1706,8 @@
       if (!actor) { makeActor(session, seat); continue; }
       const old = actor.session, previousTurn = actor.lastTurnAt;
       actor.session = session; actor.spec = Scene.activitySpec(session); actor.helper = Boolean(session.parentId);
-      actor.body?.style.setProperty('--avatar-presentation-scale', String(1.5 * (actor.helper ? .8 : 1)));
-      actor.node.dataset.bodyRatio = String(actor.helper ? .8 : 1);
+      actor.body?.style.setProperty('--avatar-presentation-scale', String(1.5 * window.OfficeSizeStability.bodyRatio(session)));
+      actor.node.dataset.bodyRatio = String(window.OfficeSizeStability.bodyRatio(session));
       resumeActiveActor(actor);
       actor.target = seat;
       updateActorLabel(actor);

@@ -1,0 +1,40 @@
+{
+  "id": "songkran",
+  "event": "songkran",
+  "kind": "holiday",
+  "nameZh": "碧水陶艺亭",
+  "nameEn": "Turquoise Waterside Pavilion",
+  "icon": "≈",
+  "effectVenue": "teahouse",
+  "architecture": "Open Thai riverside ceramic pavilion with sweeping teak roof, turquoise glazed columns and solid pale stone floor, a long left pottery bench, rear-center design table, rear-right reference wall and front-right oval computer island",
+  "entry": [49, 78],
+  "floor": [5, 48, 95, 86],
+  "furniture": {
+    "library": [66, 23, 84, 48],
+    "board": [41, 39, 61, 49],
+    "bench": [0, 44, 36, 82],
+    "desk": [70, 56, 100, 90],
+    "sofa": [18, 36, 39, 46],
+    "archive": [90, 35, 100, 64]
+  },
+  "extraObstacles": [[0, 69, 11, 100]],
+  "areas": {
+    "library": [[65, 50, 84, 55]],
+    "board": [[42, 51, 61, 58]],
+    "bench": [[38, 54, 47, 74]],
+    "desk": [[60, 65, 68, 84]],
+    "sofa": [[38, 48, 45, 53]],
+    "archive": [[85, 50, 89, 58]],
+    "front": [[37, 75, 59, 84]],
+    "lobby": [[47, 61, 60, 72]],
+    "exit": [[42, 75, 57, 83]]
+  },
+  "labels": {
+    "library": ["水岸陶书墙", "Riverside ceramic library"],
+    "board": ["碧瓷构思案", "Glazed pottery design table"],
+    "bench": ["长廊陶艺台", "Long pottery bench"],
+    "desk": ["水光工作岛", "Waterside computer island"],
+    "sofa": ["柚木休息席", "Teak lounge"],
+    "archive": ["釉色样本柜", "Glaze specimen archive"]
+  }
+}

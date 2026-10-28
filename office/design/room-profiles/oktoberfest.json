@@ -1,0 +1,39 @@
+{
+  "id": "oktoberfest",
+  "event": "oktoberfest",
+  "kind": "holiday",
+  "nameZh": "蓝白山谷工坊",
+  "nameEn": "Blue-and-White Alpine Workshop",
+  "icon": "♧",
+  "effectVenue": "workshop",
+  "architecture": "Bavarian joinery and bread-science hall with blue-white peaked timber trusses, pale oak floor and alpine windows, an offset left reference table, rear-left computers, rear-right planning bench and large curved front-right baking island",
+  "entry": [49, 78],
+  "floor": [5, 40.5, 95, 86],
+  "furniture": {
+    "library": [21, 37, 45, 55],
+    "board": [66, 35, 88, 47],
+    "bench": [67, 49, 100, 93],
+    "desk": [8, 33, 28, 50],
+    "sofa": [0, 54, 18.5, 92],
+    "archive": [42, 19, 60, 40]
+  },
+  "areas": {
+    "library": [[23, 57, 44, 65], [47, 45, 55, 54]],
+    "board": [[60, 43, 64, 53], [67, 48, 85, 48.2]],
+    "bench": [[58, 61, 65, 82]],
+    "desk": [[9, 51, 19.5, 53.1]],
+    "sofa": [[21, 70, 30, 84]],
+    "archive": [[47, 42, 60, 47]],
+    "front": [[34, 75, 57, 84]],
+    "lobby": [[45, 59, 57, 71]],
+    "exit": [[41, 75, 56, 83]]
+  },
+  "labels": {
+    "library": ["山谷食谱案", "Alpine recipe reference"],
+    "board": ["橡木构思台", "Oak planning bench"],
+    "bench": ["面包实验岛", "Bread-science island"],
+    "desk": ["山窗工作吧", "Alpine-window computer bank"],
+    "sofa": ["蓝绒休息席", "Blue velvet lounge"],
+    "archive": ["陶罐档案墙", "Ceramic archive wall"]
+  }
+}

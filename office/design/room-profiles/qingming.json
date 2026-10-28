@@ -1,0 +1,172 @@
+{
+  "id": "qingming",
+  "event": "qingming",
+  "kind": "holiday",
+  "nameZh": "烟柳山房",
+  "nameEn": "Willow Mountain Study",
+  "icon": "❧",
+  "effectVenue": "teahouse",
+  "architecture": "Horizontal dark elm lintels, rectangular mist-and-willow loggia, cool grey stone and a left-front reading table",
+  "entry": [
+    51,
+    78
+  ],
+  "floor": [
+    5,
+    54,
+    95,
+    86
+  ],
+  "furniture": {
+    "library": [
+      0,
+      60,
+      34,
+      94
+    ],
+    "board": [
+      10,
+      45,
+      36,
+      56
+    ],
+    "bench": [
+      70,
+      46,
+      96,
+      56
+    ],
+    "desk": [
+      38,
+      47,
+      65,
+      56
+    ],
+    "sofa": [
+      85,
+      54,
+      100,
+      73
+    ],
+    "archive": [
+      0,
+      28,
+      9,
+      70
+    ]
+  },
+  "extraObstacles": [
+    [
+      14,
+      55,
+      18.5,
+      62
+    ]
+  ],
+  "areas": {
+    "library": [
+      [
+        36,
+        67,
+        43,
+        84
+      ]
+    ],
+    "board": [
+      [
+        37,
+        58,
+        43,
+        65
+      ],
+      [
+        20,
+        58,
+        34,
+        59.1
+      ]
+    ],
+    "bench": [
+      [
+        70,
+        58,
+        83,
+        65
+      ]
+    ],
+    "desk": [
+      [
+        39,
+        58,
+        65,
+        65
+      ]
+    ],
+    "sofa": [
+      [
+        75,
+        68,
+        83,
+        80
+      ]
+    ],
+    "archive": [
+      [
+        36,
+        61,
+        43,
+        65
+      ]
+    ],
+    "front": [
+      [
+        46,
+        76,
+        68,
+        84
+      ]
+    ],
+    "lobby": [
+      [
+        47,
+        66,
+        64,
+        74
+      ]
+    ],
+    "exit": [
+      [
+        44,
+        75,
+        58,
+        83
+      ]
+    ]
+  },
+  "labels": {
+    "library": [
+      "烟柳阅览案",
+      "Willow reading table"
+    ],
+    "board": [
+      "纸鸢绘图案",
+      "Kite drafting counter"
+    ],
+    "bench": [
+      "春水标本台",
+      "Spring specimen bench"
+    ],
+    "desk": [
+      "山窗工位",
+      "Mountain-window workstations"
+    ],
+    "sofa": [
+      "柳影休息席",
+      "Willow lounge"
+    ],
+    "archive": [
+      "纸卷取阅廊",
+      "Scroll archive aisle"
+    ]
+  }
+}

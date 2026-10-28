@@ -1,0 +1,158 @@
+{
+  "id": "halloween",
+  "event": "halloween",
+  "kind": "holiday",
+  "nameZh": "南瓜钟楼阁",
+  "nameEn": "Pumpkin Clocktower Attic",
+  "icon": "☾",
+  "effectVenue": "observatory",
+  "architecture": "Asymmetrical Gothic clocktower roof, pointed dusk windows, central-back laboratory and right round planning table",
+  "entry": [
+    50,
+    78
+  ],
+  "floor": [
+    5,
+    45,
+    95,
+    86
+  ],
+  "furniture": {
+    "library": [
+      70,
+      13,
+      92,
+      52
+    ],
+    "board": [
+      66,
+      48,
+      86,
+      63
+    ],
+    "bench": [
+      39,
+      39,
+      63,
+      50
+    ],
+    "desk": [
+      14,
+      33,
+      33,
+      52
+    ],
+    "sofa": [
+      2,
+      54,
+      24,
+      83
+    ],
+    "archive": [
+      94,
+      42,
+      100,
+      78
+    ]
+  },
+  "areas": {
+    "library": [
+      [
+        88,
+        53,
+        92,
+        65
+      ]
+    ],
+    "board": [
+      [
+        64,
+        65,
+        88,
+        72
+      ]
+    ],
+    "bench": [
+      [
+        41,
+        52,
+        62,
+        58
+      ]
+    ],
+    "desk": [
+      [
+        26,
+        54,
+        35,
+        62
+      ]
+    ],
+    "sofa": [
+      [
+        26,
+        67,
+        35,
+        84
+      ]
+    ],
+    "archive": [
+      [
+        88,
+        79,
+        93,
+        85
+      ]
+    ],
+    "front": [
+      [
+        40,
+        74,
+        65,
+        84
+      ]
+    ],
+    "lobby": [
+      [
+        38,
+        61,
+        61,
+        70
+      ]
+    ],
+    "exit": [
+      [
+        43,
+        75,
+        57,
+        83
+      ]
+    ]
+  },
+  "labels": {
+    "library": [
+      "钟楼藏书",
+      "Clocktower library"
+    ],
+    "board": [
+      "圆形星图案",
+      "Round chart table"
+    ],
+    "bench": [
+      "钟机械实验台",
+      "Clockwork bench"
+    ],
+    "desk": [
+      "尖窗工作小间",
+      "Gothic work carrels"
+    ],
+    "sofa": [
+      "紫绒夜读席",
+      "Velvet reading lounge"
+    ],
+    "archive": [
+      "草本档案柜",
+      "Botanical archive"
+    ]
+  }
+}

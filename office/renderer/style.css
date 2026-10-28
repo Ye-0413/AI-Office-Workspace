@@ -288,3 +288,5 @@
 .office[data-reduced-motion="true"] .actor .actor-mark,.office[data-low-power="true"] .actor .actor-mark{animation:none}
 .office[data-hidden="true"] .actor .actor-mark{animation-play-state:paused}
 @media(prefers-reduced-motion:reduce){.actor .actor-bubble{scale:1;translate:0 0}.actor .actor-mark{animation:none}}
+/* Clones are compact companions: body and plate shrink together around the feet. */
+.actor[data-helper="true"] .actor-button{scale:.82;transform-origin:88px 129px}

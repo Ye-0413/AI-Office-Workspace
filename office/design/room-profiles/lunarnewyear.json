@@ -1,0 +1,166 @@
+{
+  "id": "lunarnewyear",
+  "event": "lunarnewyear",
+  "kind": "holiday",
+  "nameZh": "新春朱漆院",
+  "nameEn": "Lunar New Year Courtyard",
+  "icon": "◈",
+  "effectVenue": "teahouse",
+  "architecture": "Vermilion siheyuan colonnades, jade glazed roof, central round council island and rear-left computing ledge",
+  "entry": [
+    49,
+    78
+  ],
+  "floor": [
+    5,
+    38,
+    95,
+    86
+  ],
+  "furniture": {
+    "library": [
+      0,
+      17,
+      16,
+      58
+    ],
+    "board": [
+      35,
+      40,
+      65,
+      56
+    ],
+    "bench": [
+      74,
+      35,
+      100,
+      57
+    ],
+    "desk": [
+      18,
+      32,
+      35,
+      43
+    ],
+    "sofa": [
+      74,
+      54,
+      100,
+      82
+    ],
+    "archive": [
+      84,
+      12,
+      100,
+      37
+    ]
+  },
+  "extraObstacles": [
+    [
+      0,
+      67,
+      26,
+      100
+    ]
+  ],
+  "areas": {
+    "library": [
+      [
+        6,
+        60,
+        15,
+        65
+      ]
+    ],
+    "board": [
+      [
+        36,
+        58,
+        64,
+        65
+      ]
+    ],
+    "bench": [
+      [
+        66,
+        43,
+        72,
+        57
+      ]
+    ],
+    "desk": [
+      [
+        18,
+        45,
+        33,
+        52
+      ]
+    ],
+    "sofa": [
+      [
+        65,
+        65,
+        72,
+        81
+      ]
+    ],
+    "archive": [
+      [
+        68,
+        38,
+        72,
+        42
+      ]
+    ],
+    "front": [
+      [
+        36,
+        74,
+        61,
+        84
+      ]
+    ],
+    "lobby": [
+      [
+        28,
+        57,
+        34,
+        67
+      ]
+    ],
+    "exit": [
+      [
+        42,
+        75,
+        57,
+        83
+      ]
+    ]
+  },
+  "labels": {
+    "library": [
+      "朱漆藏书阁",
+      "Lacquer book gallery"
+    ],
+    "board": [
+      "团圆议事案",
+      "Round council table"
+    ],
+    "bench": [
+      "新春器物台",
+      "New Year instrument bar"
+    ],
+    "desk": [
+      "竹庭工位",
+      "Courtyard work ledge"
+    ],
+    "sofa": [
+      "锦绣休息席",
+      "Brocade lounge"
+    ],
+    "archive": [
+      "新春卷宗柜",
+      "New Year archive"
+    ]
+  }
+}

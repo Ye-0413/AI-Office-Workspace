@@ -1,0 +1,158 @@
+{
+  "id": "tanabata",
+  "event": "tanabata",
+  "kind": "holiday",
+  "nameZh": "七夕星纸馆",
+  "nameEn": "Celestial Paper Gallery",
+  "icon": "✧",
+  "effectVenue": "observatory",
+  "architecture": "Japanese bamboo-and-paper celestial gallery under a diagonal ribbed moon-and-star skylight, cobalt night garden, woven floor, zigzag right book wall and low front-left computing table",
+  "entry": [
+    54,
+    78
+  ],
+  "floor": [
+    5,
+    42.8,
+    95,
+    86
+  ],
+  "furniture": {
+    "library": [
+      67,
+      20,
+      100,
+      50
+    ],
+    "board": [
+      74,
+      46,
+      100,
+      73
+    ],
+    "bench": [
+      21,
+      34,
+      40,
+      43
+    ],
+    "desk": [
+      0,
+      55,
+      40,
+      91
+    ],
+    "sofa": [
+      9,
+      42,
+      25,
+      56
+    ],
+    "archive": [
+      42,
+      34,
+      63,
+      42
+    ]
+  },
+  "areas": {
+    "library": [
+      [
+        65,
+        52,
+        72,
+        60
+      ]
+    ],
+    "board": [
+      [
+        65,
+        62,
+        72,
+        76
+      ]
+    ],
+    "bench": [
+      [
+        27,
+        45,
+        39,
+        52
+      ]
+    ],
+    "desk": [
+      [
+        42,
+        65,
+        50,
+        83
+      ]
+    ],
+    "sofa": [
+      [
+        27,
+        47,
+        35,
+        53
+      ]
+    ],
+    "archive": [
+      [
+        43,
+        44,
+        62,
+        51
+      ]
+    ],
+    "front": [
+      [
+        51,
+        75,
+        70,
+        84
+      ]
+    ],
+    "lobby": [
+      [
+        45,
+        55,
+        62,
+        68
+      ]
+    ],
+    "exit": [
+      [
+        47,
+        75,
+        62,
+        83
+      ]
+    ]
+  },
+  "labels": {
+    "library": [
+      "折屏星文库",
+      "Celestial folding-screen library"
+    ],
+    "board": [
+      "星图绘卷台",
+      "Star-chart drafting"
+    ],
+    "bench": [
+      "竹庭仪器台",
+      "Bamboo instrument counter"
+    ],
+    "desk": [
+      "月光工作案",
+      "Moonlit low worktable"
+    ],
+    "sofa": [
+      "纸灯休息席",
+      "Paper-lantern lounge"
+    ],
+    "archive": [
+      "星纸卷宗柜",
+      "Celestial-paper archive"
+    ]
+  }
+}

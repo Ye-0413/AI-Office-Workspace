@@ -52,7 +52,7 @@
       if (session.status!=='active' || session.closed || session.disconnected || session.attention || !zone || Scene.activitySpec(session).zone!==zone) return 'activity';
       if (activityKey(actor)!==record.activityKey || zone!==record.zone) return 'activity';
       if (actor.entryPending || actor.stagedEntry || actor.departing || actor.completing || actor.holdingFamily || actor.retireRequested || physicalBusy(actor,ctx) || actor.node.dataset.walking==='true' || actor.node.dataset.reaction==='true') return 'physical-owner';
-      const area=areas[zone]?.find(area=>(!actor.target?.area || area.id===actor.target.area) && record.position.x>=area.x1-.000001 && record.position.x<=area.x2+.000001 && record.position.y>=area.y1-.000001 && record.position.y<=area.y2+.000001);
+      const area=(ctx.layout?.ZONE_AREAS||areas)[zone]?.find(area=>(!actor.target?.area || area.id===actor.target.area) && record.position.x>=area.x1-.000001 && record.position.x<=area.x2+.000001 && record.position.y>=area.y1-.000001 && record.position.y<=area.y2+.000001);
       const targetZone=actor.target?.workZone || (actor.target?.zone==='stage' ? zone : actor.target?.zone);
       if (!actor.node.isConnected || !actor.body?.isConnected || !same(actor.position,record.position) || !same(actor.target,record.position) || targetZone!==zone || !area) return 'endpoint';
       const style=view.getComputedStyle(actor.node), actual=physical(actor);
@@ -122,7 +122,7 @@
     function mount(zone,blocked=blockedRects()) {
       if(!blocked)return null;
       const rx=zone==='board'?30:54,ry=zone==='board'?24:36;
-      for(const [x,y] of MOUNTS[zone]) {
+      for(const [x,y] of getContext()?.room?.stationMounts?.[zone]||MOUNTS[zone]) {
         const bounds={left:x-rx,right:x+rx,top:y-ry,bottom:y+ry};
         if(!blocked.some(rect=>overlaps(bounds,rect)))return {x,y,bounds};
       }

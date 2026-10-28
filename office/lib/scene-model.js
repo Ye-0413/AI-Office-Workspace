@@ -19,7 +19,7 @@
   // The button starts at -115: the source feet at y=115 meet the route anchor.
   const ACTOR_FOOTPRINT = Object.freeze({
     root: Object.freeze({ left: 112, right: 120, top: 118, bottom: 92 }),
-    helper: Object.freeze({ left: 116, right: 124, top: 118, bottom: 90 }),
+    helper: Object.freeze({ left: 96, right: 102, top: 98, bottom: 76 }),
   });
   const ZONES = Object.freeze({
     library: { name: '资料书架', x: 19, y: 44, seats: [[19, 44], [30, 46], [7, 44], [30, 70], [15, 83]] },
@@ -63,6 +63,7 @@
     'waiting-user': { zone: 'front', label: '等你回复', verb: '请回到原工具处理', asset: 'clawd-notification.svg', prop: 'attention' },
     'waiting-tool': { zone: 'bench', label: '工具运行中', verb: '等待工具返回', asset: 'clawd-working-thinking.svg', prop: 'wait' },
     idle: { zone: 'sofa', label: '这一轮已歇下', verb: '会话仍在，等待下一项工作', asset: 'clawd-coffee-hand.svg', prop: 'coffee' },
+    resting: { zone: 'sofa', label: '暂无信号 · 小憩', verb: '超过 30 秒没有新信号，先在咖啡角休息', asset: 'clawd-coffee-hand.svg', prop: 'coffee', resting: true },
     error: { zone: 'bench', label: '遇到问题', verb: '请查看原工具的错误', asset: 'clawd-error.svg', prop: 'error' },
     unknown: { zone: 'lobby', label: '观察中', verb: '尚无可识别的工作事件', asset: 'clawd-static-base.svg', prop: 'none' }
   });
@@ -116,10 +117,11 @@
   function legalActorPoint(point, options = {}) {
     if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return false;
     const grid = options.layoutMode === 'grid';
-    if (!grid && (point.x < 5 || point.x > 95 || point.y < 40.7 || point.y > 86)) return false;
+    const domain = options.domain || { x1: 5, x2: 95, y1: 40.7, y2: 86 };
+    if (!grid && (point.x < domain.x1 || point.x > domain.x2 || point.y < domain.y1 || point.y > domain.y2)) return false;
     // Seats and route endpoints use the same furniture clearance. A point
     // inside the route's .8 margin must never be offered as an arrival target.
-    if (!grid && OBSTACLES.some(rect => inside(point, rect, .8))) return false;
+    if (!grid && (options.obstacles || OBSTACLES).some(rect => inside(point, rect, .8))) return false;
     const bounds = actorBounds(point, options), viewport = options.viewport || ACTOR_VIEWPORT;
     if (bounds.left < viewport.left - 1e-7 || bounds.right > viewport.right + 1e-7 || bounds.top < viewport.top - 1e-7 || bounds.bottom > viewport.bottom + 1e-7) return false;
     return !(options.reservedRects || []).some(rect => rect && (!rect.ownerId || rect.ownerId !== (options.id || options.session?.id))
@@ -223,6 +225,8 @@
     if (isClosed(session)) return { zone: 'archive', label: '会话已结束', verb: '归档并离开房间', asset: 'clawd-working-carrying.svg', prop: 'archive', closed: true };
     // Attention is an explicit upstream signal. Do not turn ordinary quiet into sleep.
     if (session.attention && session.activity !== 'error') return SPECS['waiting-user'];
+    // Presentation-only: the renderer marks a quiet open session, never the source.
+    if (session.resting === true) return SPECS.resting;
     return SPECS[session.activity] || SPECS.unknown;
   }
 

@@ -1,0 +1,158 @@
+{
+  "id": "nationalday",
+  "event": "nationalday",
+  "kind": "holiday",
+  "nameZh": "朱红设计学堂",
+  "nameEn": "Vermilion Design Academy",
+  "icon": "◈",
+  "effectVenue": "workshop",
+  "architecture": "Folded vermilion civic roof, white structural fins, left model-planning island and right-front computing bar",
+  "entry": [
+    55,
+    78
+  ],
+  "floor": [
+    5,
+    46,
+    95,
+    86
+  ],
+  "furniture": {
+    "library": [
+      64,
+      30,
+      82,
+      51
+    ],
+    "board": [
+      5,
+      45,
+      48,
+      64
+    ],
+    "bench": [
+      5,
+      33,
+      31,
+      50
+    ],
+    "desk": [
+      70,
+      54,
+      100,
+      95
+    ],
+    "sofa": [
+      0,
+      60,
+      25,
+      82
+    ],
+    "archive": [
+      92,
+      25,
+      100,
+      65
+    ]
+  },
+  "areas": {
+    "library": [
+      [
+        61,
+        53,
+        68,
+        61
+      ]
+    ],
+    "board": [
+      [
+        28,
+        66,
+        47,
+        75
+      ]
+    ],
+    "bench": [
+      [
+        50,
+        47,
+        57,
+        52
+      ]
+    ],
+    "desk": [
+      [
+        60,
+        65,
+        68,
+        84
+      ]
+    ],
+    "sofa": [
+      [
+        27,
+        76,
+        34,
+        84
+      ]
+    ],
+    "archive": [
+      [
+        84,
+        46,
+        90,
+        51
+      ]
+    ],
+    "front": [
+      [
+        49,
+        76,
+        58,
+        85
+      ]
+    ],
+    "lobby": [
+      [
+        50,
+        58,
+        59,
+        71
+      ]
+    ],
+    "exit": [
+      [
+        48,
+        75,
+        62,
+        83
+      ]
+    ]
+  },
+  "labels": {
+    "library": [
+      "城市设计文库",
+      "Design reference gallery"
+    ],
+    "board": [
+      "城市模型案",
+      "City model island"
+    ],
+    "bench": [
+      "材料实验台",
+      "Material test bench"
+    ],
+    "desk": [
+      "设计计算吧",
+      "Design computing bar"
+    ],
+    "sofa": [
+      "石庭休息席",
+      "Stone-court lounge"
+    ],
+    "archive": [
+      "城市图档墙",
+      "Civic drawing wall"
+    ]
+  }
+}

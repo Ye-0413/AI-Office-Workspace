@@ -1,0 +1,214 @@
+{
+  "id": "loykrathong",
+  "event": "loykrathong",
+  "kind": "holiday",
+  "nameZh": "水灯观星阁",
+  "nameEn": "Lotus-Lantern Observatory",
+  "icon": "✵",
+  "effectVenue": "observatory",
+  "architecture": "Thai overwater research pavilion with layered teak roofs, gold lotus lattice, night-water views and a solid fan-shaped floor between a front-left crescent computer bar and diagonal right instrument peninsula",
+  "entry": [
+    54,
+    78
+  ],
+  "floor": [
+    6,
+    42,
+    94,
+    84
+  ],
+  "furniture": {
+    "library": [
+      18,
+      23,
+      31,
+      42
+    ],
+    "board": [
+      45,
+      30,
+      56,
+      41
+    ],
+    "bench": [
+      62,
+      37,
+      97,
+      76
+    ],
+    "desk": [
+      4,
+      53,
+      40,
+      87
+    ],
+    "sofa": [
+      11,
+      39,
+      29,
+      53
+    ],
+    "archive": [
+      32,
+      23,
+      38,
+      42
+    ]
+  },
+  "extraObstacles": [
+    [
+      68,
+      31,
+      79,
+      41
+    ],
+    [
+      0,
+      0,
+      18,
+      40
+    ],
+    [
+      0,
+      40,
+      12,
+      46
+    ],
+    [
+      0,
+      46,
+      6,
+      55
+    ],
+    [
+      90,
+      0,
+      100,
+      44
+    ],
+    [
+      93,
+      44,
+      100,
+      54
+    ],
+    [
+      97,
+      54,
+      100,
+      61
+    ],
+    [
+      0,
+      82,
+      8,
+      100
+    ],
+    [
+      92,
+      82,
+      100,
+      100
+    ]
+  ],
+  "areas": {
+    "library": [
+      [
+        30.5,
+        44,
+        37,
+        51
+      ]
+    ],
+    "board": [
+      [
+        44,
+        43,
+        59,
+        51
+      ]
+    ],
+    "bench": [
+      [
+        53,
+        48,
+        60,
+        69
+      ]
+    ],
+    "desk": [
+      [
+        42,
+        65,
+        49,
+        83
+      ]
+    ],
+    "sofa": [
+      [
+        30.5,
+        47,
+        39,
+        51.8
+      ]
+    ],
+    "archive": [
+      [
+        39.5,
+        43,
+        44,
+        51
+      ]
+    ],
+    "front": [
+      [
+        51,
+        75,
+        71,
+        83
+      ]
+    ],
+    "lobby": [
+      [
+        43,
+        55,
+        58,
+        68
+      ]
+    ],
+    "exit": [
+      [
+        47,
+        75,
+        62,
+        82.5
+      ]
+    ]
+  },
+  "labels": {
+    "library": [
+      "水灯藏书阁",
+      "Lotus-lantern library"
+    ],
+    "board": [
+      "夜航舆图台",
+      "Night-navigation map table"
+    ],
+    "bench": [
+      "莲灯观测台",
+      "Lotus instrument peninsula"
+    ],
+    "desk": [
+      "弦月工作吧",
+      "Crescent computer bar"
+    ],
+    "sofa": [
+      "水榭休息席",
+      "Waterside lounge"
+    ],
+    "archive": [
+      "莲阁文献柜",
+      "Lotus pavilion archive"
+    ]
+  }
+}

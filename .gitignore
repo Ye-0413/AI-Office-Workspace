@@ -22,6 +22,10 @@ docs/**
 docs/scenes/frames/
 !docs/animations/
 !docs/animations/**
+!docs/rooms/
+!docs/rooms/README.md
+!docs/rooms/index.html
+!docs/rooms/manifest.json
 !docs/guides/
 !docs/guides/copilot-setup.md
 !docs/guides/copilot-setup.zh-CN.md

@@ -1,0 +1,164 @@
+{
+  "id": "bookday",
+  "event": "bookday",
+  "kind": "holiday",
+  "nameZh": "天光环形书院",
+  "nameEn": "Skylit Literary Atrium",
+  "icon": "▥",
+  "effectVenue": "workshop",
+  "architecture": "Circular Brutalist literary atrium with tall sloping concrete ribs, indigo radial bookshelves, cork floor and a large offset ring reading island",
+  "entry": [
+    49,
+    78
+  ],
+  "floor": [
+    5,
+    42,
+    95,
+    86
+  ],
+  "furniture": {
+    "library": [
+      19,
+      41,
+      52,
+      68
+    ],
+    "board": [
+      39,
+      36,
+      62,
+      46
+    ],
+    "bench": [
+      0,
+      31,
+      20,
+      63
+    ],
+    "desk": [
+      70,
+      36,
+      93,
+      57
+    ],
+    "sofa": [
+      68,
+      63,
+      100,
+      100
+    ],
+    "archive": [
+      93,
+      31,
+      100,
+      65
+    ]
+  },
+  "areas": {
+    "library": [
+      [
+        54,
+        49,
+        62,
+        66
+      ]
+    ],
+    "board": [
+      [
+        53,
+        48,
+        63,
+        55
+      ]
+    ],
+    "bench": [
+      [
+        5,
+        65,
+        18,
+        74
+      ]
+    ],
+    "desk": [
+      [
+        63.8,
+        45,
+        68.5,
+        61
+      ],
+      [
+        72,
+        59,
+        91,
+        61.8
+      ]
+    ],
+    "sofa": [
+      [
+        58,
+        72,
+        66,
+        84
+      ]
+    ],
+    "archive": [
+      [
+        88,
+        59,
+        92,
+        61
+      ]
+    ],
+    "front": [
+      [
+        39,
+        75,
+        56,
+        84
+      ]
+    ],
+    "lobby": [
+      [
+        43,
+        69,
+        57,
+        74
+      ]
+    ],
+    "exit": [
+      [
+        42,
+        75,
+        57,
+        83
+      ]
+    ]
+  },
+  "labels": {
+    "library": [
+      "环形阅览岛",
+      "Ring reading island"
+    ],
+    "board": [
+      "天光书稿台",
+      "Skylit manuscript counter"
+    ],
+    "bench": [
+      "古籍修复台",
+      "Book restoration bench"
+    ],
+    "desk": [
+      "靛蓝工作小间",
+      "Indigo work carrels"
+    ],
+    "sofa": [
+      "软木沙龙",
+      "Cork-floor salon"
+    ],
+    "archive": [
+      "卡片档案柜",
+      "Card catalogue"
+    ]
+  }
+}

@@ -1,0 +1,164 @@
+{
+  "id": "midautumn",
+  "event": "midautumn",
+  "kind": "holiday",
+  "nameZh": "月白天井阁",
+  "nameEn": "Moon Court Pavilion",
+  "icon": "☽",
+  "effectVenue": "observatory",
+  "architecture": "Pearl limestone dome, offset giant moon window, crescent reference island and right-front celestial instrument table",
+  "entry": [
+    50,
+    78
+  ],
+  "floor": [
+    5,
+    35,
+    95,
+    86
+  ],
+  "furniture": {
+    "library": [
+      9,
+      38,
+      39,
+      59
+    ],
+    "board": [
+      41,
+      33,
+      71,
+      43
+    ],
+    "bench": [
+      64,
+      60,
+      100,
+      85
+    ],
+    "desk": [
+      74,
+      34,
+      100,
+      48
+    ],
+    "sofa": [
+      0,
+      63,
+      28,
+      94
+    ],
+    "archive": [
+      0,
+      15,
+      15,
+      47
+    ]
+  },
+  "areas": {
+    "library": [
+      [
+        13,
+        60.5,
+        38,
+        62.1
+      ],
+      [
+        41,
+        46,
+        48,
+        62
+      ]
+    ],
+    "board": [
+      [
+        42,
+        45,
+        70,
+        51
+      ]
+    ],
+    "bench": [
+      [
+        55,
+        64,
+        62,
+        82
+      ]
+    ],
+    "desk": [
+      [
+        74,
+        50,
+        93,
+        57
+      ]
+    ],
+    "sofa": [
+      [
+        30,
+        72,
+        39,
+        85
+      ]
+    ],
+    "archive": [
+      [
+        17,
+        35,
+        27,
+        37
+      ]
+    ],
+    "front": [
+      [
+        41,
+        75,
+        53,
+        84
+      ]
+    ],
+    "lobby": [
+      [
+        42,
+        63,
+        53,
+        72
+      ]
+    ],
+    "exit": [
+      [
+        43,
+        75,
+        57,
+        83
+      ]
+    ]
+  },
+  "labels": {
+    "library": [
+      "月弯文库",
+      "Crescent library"
+    ],
+    "board": [
+      "月相绘图案",
+      "Moon-chart island"
+    ],
+    "bench": [
+      "星仪实验台",
+      "Celestial instrument table"
+    ],
+    "desk": [
+      "望月工位",
+      "Moon-view workstations"
+    ],
+    "sofa": [
+      "月白休息席",
+      "Pearl lounge"
+    ],
+    "archive": [
+      "月谱藏柜",
+      "Moon atlas archive"
+    ]
+  }
+}

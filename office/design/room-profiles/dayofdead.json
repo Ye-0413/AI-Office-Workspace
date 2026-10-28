@@ -1,0 +1,40 @@
+{
+  "id": "dayofdead",
+  "event": "dayofdead",
+  "kind": "holiday",
+  "nameZh": "万寿菊记忆书院",
+  "nameEn": "Marigold Memory Hacienda",
+  "icon": "❁",
+  "effectVenue": "workshop",
+  "architecture": "Mexican terracotta hacienda archive with cobalt alcoves and courtyard arcades, long rear-left memory shelves, rear-center planning table, split reference and restoration island on the right, front-left computing bank and left linen lounge",
+  "entry": [51, 78],
+  "floor": [5, 41.8, 95, 86],
+  "furniture": {
+    "library": [68, 39, 82, 62],
+    "bench": [82, 39, 97, 62],
+    "board": [40, 31, 64, 41],
+    "desk": [1, 55, 35, 84],
+    "sofa": [5, 36, 28, 53],
+    "archive": [1, 14, 34, 38]
+  },
+  "extraObstacles": [[72, 28, 97, 44], [0, 72, 22, 100], [77, 71, 100, 100]],
+  "areas": {
+    "library": [[68, 64, 80, 70], [59, 46, 66, 60]],
+    "bench": [[82, 64, 94, 69]],
+    "board": [[42, 43, 63, 49]],
+    "desk": [[37, 60, 46, 83]],
+    "sofa": [[30, 44, 38, 52]],
+    "archive": [[30, 41.8, 38, 49]],
+    "front": [[47, 75, 71, 84]],
+    "lobby": [[46, 56, 62, 70]],
+    "exit": [[44, 75, 60, 83]]
+  },
+  "labels": {
+    "library": ["纪念文库案", "Memory reference island"],
+    "bench": ["图稿修复台", "Drawing restoration bench"],
+    "board": ["庭院构思案", "Courtyard planning table"],
+    "desk": ["陶土工作台", "Terracotta computer bank"],
+    "sofa": ["棉麻休息席", "Linen lounge"],
+    "archive": ["记忆藏书墙", "Memory archive wall"]
+  }
+}

@@ -1,0 +1,208 @@
+{
+  "id": "buddha",
+  "event": "buddha",
+  "kind": "holiday",
+  "nameZh": "莲影静院",
+  "nameEn": "Lotus Cloister",
+  "icon": "❧",
+  "effectVenue": "teahouse",
+  "architecture": "White limestone lotus skylight cloister, bamboo furnishings and right-hand specimen reading island",
+  "entry": [
+    47,
+    78
+  ],
+  "floor": [
+    5,
+    39.5,
+    95,
+    86
+  ],
+  "furniture": {
+    "library": [
+      51,
+      43,
+      99,
+      78
+    ],
+    "board": [
+      22,
+      34,
+      38,
+      44
+    ],
+    "bench": [
+      69,
+      35,
+      91,
+      50
+    ],
+    "desk": [
+      0,
+      58,
+      28,
+      96
+    ],
+    "sofa": [
+      10,
+      42,
+      27,
+      54
+    ],
+    "archive": [
+      41,
+      33,
+      60,
+      42
+    ]
+  },
+  "obstacles": [
+    [
+      51,
+      53,
+      65,
+      67
+    ],
+    [
+      55,
+      46,
+      72,
+      61
+    ],
+    [
+      67,
+      48,
+      99,
+      77
+    ],
+    [
+      22,
+      34,
+      38,
+      44
+    ],
+    [
+      69,
+      35,
+      91,
+      50
+    ],
+    [
+      0,
+      58,
+      28,
+      96
+    ],
+    [
+      10,
+      42,
+      27,
+      54
+    ],
+    [
+      41,
+      33,
+      60,
+      42
+    ]
+  ],
+  "areas": {
+    "library": [
+      [
+        43,
+        55,
+        50,
+        72
+      ]
+    ],
+    "board": [
+      [
+        29,
+        46,
+        39,
+        52
+      ]
+    ],
+    "bench": [
+      [
+        62,
+        39.5,
+        67,
+        41.5
+      ]
+    ],
+    "desk": [
+      [
+        30,
+        68,
+        39,
+        84
+      ]
+    ],
+    "sofa": [
+      [
+        12,
+        56,
+        27,
+        57.9
+      ]
+    ],
+    "archive": [
+      [
+        41,
+        44,
+        51,
+        50
+      ]
+    ],
+    "front": [
+      [
+        42,
+        76,
+        61,
+        84
+      ]
+    ],
+    "lobby": [
+      [
+        41,
+        61,
+        50,
+        71
+      ]
+    ],
+    "exit": [
+      [
+        40,
+        75,
+        55,
+        83
+      ]
+    ]
+  },
+  "labels": {
+    "library": [
+      "莲影阅览岛",
+      "Lotus reading island"
+    ],
+    "board": [
+      "静院绘图案",
+      "Cloister drafting"
+    ],
+    "bench": [
+      "竹庭实验台",
+      "Bamboo instrument bench"
+    ],
+    "desk": [
+      "清心工作吧",
+      "Quiet workbar"
+    ],
+    "sofa": [
+      "竹榻静息席",
+      "Bamboo lounge"
+    ],
+    "archive": [
+      "莲院文献柜",
+      "Cloister archive"
+    ]
+  }
+}

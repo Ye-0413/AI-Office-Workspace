@@ -1,0 +1,164 @@
+{
+  "id": "labourday",
+  "event": "labourday",
+  "kind": "holiday",
+  "nameZh": "包豪斯创作大厅",
+  "nameEn": "Bauhaus Makers Hall",
+  "icon": "⚒",
+  "effectVenue": "workshop",
+  "architecture": "Red steel sawtooth skylight factory hall, central shared computing table and side-wall maker benches",
+  "entry": [
+    30,
+    78
+  ],
+  "floor": [
+    5,
+    46,
+    95,
+    86
+  ],
+  "furniture": {
+    "library": [
+      26,
+      28,
+      40,
+      51
+    ],
+    "board": [
+      72,
+      46,
+      97,
+      66
+    ],
+    "bench": [
+      0,
+      42,
+      25,
+      75
+    ],
+    "desk": [
+      35,
+      53,
+      64,
+      80
+    ],
+    "sofa": [
+      84,
+      65,
+      100,
+      94
+    ],
+    "archive": [
+      42,
+      37,
+      65,
+      53
+    ]
+  },
+  "areas": {
+    "library": [
+      [
+        27,
+        53,
+        33,
+        60
+      ]
+    ],
+    "board": [
+      [
+        72,
+        68,
+        82,
+        75
+      ]
+    ],
+    "bench": [
+      [
+        27,
+        63,
+        33,
+        78
+      ]
+    ],
+    "desk": [
+      [
+        66,
+        59,
+        70,
+        79
+      ],
+      [
+        37,
+        82,
+        63,
+        85
+      ]
+    ],
+    "sofa": [
+      [
+        75,
+        78,
+        82,
+        85
+      ]
+    ],
+    "archive": [
+      [
+        67,
+        47,
+        70,
+        53
+      ]
+    ],
+    "front": [
+      [
+        28,
+        80,
+        34,
+        85
+      ]
+    ],
+    "lobby": [
+      [
+        27,
+        53,
+        33,
+        62
+      ]
+    ],
+    "exit": [
+      [
+        27,
+        75,
+        33,
+        83
+      ]
+    ]
+  },
+  "labels": {
+    "library": [
+      "共创文库",
+      "Makers library"
+    ],
+    "board": [
+      "构造绘图案",
+      "Construction drafting"
+    ],
+    "bench": [
+      "协作工具台",
+      "Shared tool bench"
+    ],
+    "desk": [
+      "共同计算长桌",
+      "Communal computing table"
+    ],
+    "sofa": [
+      "工坊休息席",
+      "Makers lounge"
+    ],
+    "archive": [
+      "材料样本柜",
+      "Materials archive"
+    ]
+  }
+}

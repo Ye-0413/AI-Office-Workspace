@@ -33,6 +33,9 @@ required.push('lib/usage-log.cjs','lib/usage-api.cjs','renderer/usage-history.js
 required.push('renderer/avatar-fallback.js','renderer/avatar-fallback.css');
 required.push('renderer/station-arrival.js','renderer/station-arrival.css','lib/window-visibility.cjs');
 required.push('lib/scene-artwork.js','assets/scenes/themes/generation.json',...require('../lib/scene-artwork.js').CATALOG.map(item=>'assets/scenes/themes/'+item.id+'.jpg'));
+required.push('lib/room-calendar.js','lib/room-holiday-designs.js','lib/room-designs.js','renderer/room-designs.css',
+  'assets/scenes/rooms/generation.json','docs/room-designs.md',
+  ...require('../lib/room-designs.js').CATALOG.map(item=>'assets/scenes/rooms/'+item.id+'.png'));
 required.push('lib/venue-model.js','lib/festival-studies.js','lib/festival-model.js','lib/social-interactions.js','renderer/venue-stage.js','renderer/venue-stage.css','renderer/festival-stage.js','renderer/festival-stage.css','renderer/agent-social.js','renderer/agent-social.css','renderer/theme-environment.js','renderer/theme-environment.css','assets/scenes/teahouse.jpg','assets/scenes/observatory.jpg','assets/scenes/generation.json');
 for(const name of required){if(!files.has('/'+name))throw new Error('Missing packaged file: '+name);if(!matchesSource(name))throw new Error('Packaged file differs from current source: '+name);}
 const integrations=['lib/provider-catalog.cjs','lib/provider-catalog.json','lib/provider-labels.js','lib/upstream-adapter.cjs','lib/upstream-integrations.cjs','lib/special-integrations.cjs','lib/plugin-integrations.cjs','lib/plugin-jsonc.cjs','lib/hermes-observer.cjs','lib/native-lock.cjs','hooks/hermes-plugin/plugin.yaml','hooks/hermes-plugin/__init__.py','assets/helpers/mini-office-flock','native/mini-office-flock.c','node_modules/@iarna/toml/toml.js','docs/upstream-compatibility.md'];

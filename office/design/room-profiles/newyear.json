@@ -1,0 +1,158 @@
+{
+  "id": "newyear",
+  "event": "newyear",
+  "kind": "holiday",
+  "nameZh": "新年天际阁",
+  "nameEn": "New Year Skyline Loft",
+  "icon": "✦",
+  "effectVenue": "observatory",
+  "architecture": "Curved midnight rooftop glazing, champagne-brass radial planning island, left-front laptop table and harbour skyline",
+  "entry": [
+    51,
+    78
+  ],
+  "floor": [
+    5,
+    44,
+    95,
+    86
+  ],
+  "furniture": {
+    "library": [
+      3,
+      27,
+      24,
+      54
+    ],
+    "board": [
+      33,
+      48,
+      69,
+      68
+    ],
+    "bench": [
+      72,
+      36,
+      96,
+      56
+    ],
+    "desk": [
+      0,
+      58,
+      29,
+      90
+    ],
+    "sofa": [
+      76,
+      58,
+      100,
+      100
+    ],
+    "archive": [
+      35,
+      40,
+      64,
+      48
+    ]
+  },
+  "areas": {
+    "library": [
+      [
+        25,
+        45,
+        31,
+        55
+      ]
+    ],
+    "board": [
+      [
+        36,
+        70,
+        67,
+        77
+      ]
+    ],
+    "bench": [
+      [
+        66,
+        44,
+        71,
+        46.5
+      ]
+    ],
+    "desk": [
+      [
+        31,
+        70,
+        36,
+        84
+      ]
+    ],
+    "sofa": [
+      [
+        70,
+        70,
+        74,
+        84
+      ]
+    ],
+    "archive": [
+      [
+        30,
+        44,
+        33,
+        46
+      ]
+    ],
+    "front": [
+      [
+        39,
+        78,
+        63,
+        85
+      ]
+    ],
+    "lobby": [
+      [
+        38,
+        73,
+        62,
+        79
+      ]
+    ],
+    "exit": [
+      [
+        44,
+        75,
+        58,
+        83
+      ]
+    ]
+  },
+  "labels": {
+    "library": [
+      "夜航城市文库",
+      "Skyline reference library"
+    ],
+    "board": [
+      "新年愿景岛",
+      "New Year planning island"
+    ],
+    "bench": [
+      "星夜实验台",
+      "Night-sky instrument bench"
+    ],
+    "desk": [
+      "天际计算桌",
+      "Skyline computing table"
+    ],
+    "sofa": [
+      "天际休息席",
+      "Skyline lounge"
+    ],
+    "archive": [
+      "城市蓝图柜",
+      "City drawing archive"
+    ]
+  }
+}

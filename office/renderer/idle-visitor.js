@@ -1,14 +1,15 @@
 /* A decorative guest lives outside the observed-session roster. */
 (function(root){
   'use strict';
-  root.OfficeIdleVisitor={create({layer,world,context,openDoor}){
-    const Scene=root.OfficeScene,Model=root.OfficeVisitorModel,Dialogue=root.OfficeVisitorDialogue;
+  root.OfficeIdleVisitor={create({layer,world,context,openDoor,getScene,getLayout}){
+    let Scene=getScene?.()||root.OfficeScene;
+    const Model=root.OfficeVisitorModel,Dialogue=root.OfficeVisitorDialogue;
     const director=Model.createVisitor();
     const quotes=Model.createShuffleBag(Dialogue.entries);
     const names=[['栗子','Chestnut'],['糯米','Mochi'],['布丁','Pudding'],['小苔','Moss'],['汤圆','Dumpling'],['豆包','Beanbun'],['松果','Pinecone'],['饼干','Biscuit']];
     let guest=null,disposed=false,lastContext=null,poseNonce=0;
     const make=(tag,cls)=>{const el=document.createElement(tag);if(cls)el.className=cls;return el;};
-    const transform=p=>'translate3d('+(p.x*12.8)+'px,'+(p.y*7.2)+'px,0) scale('+((.76+p.y/500)*.88)+')';
+    const transform=p=>'translate3d('+(p.x*12.8)+'px,'+(p.y*7.2)+'px,0) scale('+(Scene.ROOM_LAYOUT ? .65 : (.76+p.y/500)*.88)+')';
     function pose(name,replay=false){if(!guest)return;const c=lastContext,quiet=c.reducedMotion||c.lowPower||c.hidden;const asset=quiet?'clawd-static-base.svg':name;guest.wantedPose=name;if(guest.asset===asset&&(!replay||quiet))return;guest.asset=asset;guest.image.dataset.asset=asset;guest.image.src='../assets/avatars/'+asset+(replay&&!quiet?'?_t='+(++poseNonce):'');}
     function stopMotion(){if(!guest?.motion)return;const matrix=new DOMMatrixReadOnly(getComputedStyle(guest.node).transform);guest.point={x:matrix.m41/12.8,y:matrix.m42/7.2};guest.node.style.transform=transform(guest.point);guest.motion.cancel();guest.motion=null;guest.node.dataset.walking='false';}
     function clearProps(){for(const prop of world.querySelectorAll('[data-visitor-active]'))delete prop.dataset.visitorActive;}
@@ -26,7 +27,8 @@
     }
     async function travel(target,generation,stopSerial,leaving){
       stopMotion();const current=guest;if(!current)return;
-      const path=Scene.route(current.point,target),length=path.slice(1).reduce((sum,p,i)=>sum+Scene.distance(path[i],p),0);
+      const path=Scene.ROOM_LAYOUT?getLayout().route(current.point,target,{uniformScale:.65}):Scene.route(current.point,target),length=path.slice(1).reduce((sum,p,i)=>sum+Scene.distance(path[i],p),0);
+      if(Scene.ROOM_LAYOUT&&path.length<2&&Scene.distance(current.point,target)>.001){remove();director.clear();return;}
       const finish=()=>{if(guest!==current||current.generation!==generation||current.stopSerial!==stopSerial)return false;current.point={x:target.x,y:target.y};current.node.style.transform=transform(current.point);current.node.style.zIndex=String(Math.round(target.y*10));current.node.dataset.walking='false';return true;};
       if(!lastContext.reducedMotion&&length>.65&&path.length>1){
         let traveled=0;const frames=path.map((point,index)=>{if(index)traveled+=Scene.distance(path[index-1],point);return{transform:transform(point),offset:traveled/length};});
@@ -43,7 +45,10 @@
       speak(current.stop.zone);tick();
     }
     function tick(){
-      if(disposed)return;const previous=lastContext;lastContext=context();const state=director.update(lastContext);
+      if(disposed)return;const previous=lastContext;lastContext=context();
+      if(previous&&previous.roomKey!==lastContext.roomKey){remove();director.clear();}
+      Scene=getScene?.()||root.OfficeScene;
+      const state=director.update(lastContext);
       if(state.phase==='absent'){remove();return;}
       if(!guest&&state.phase==='leaving'){director.departed(state.generation);return;}
       if(!guest)create();copy();
@@ -58,7 +63,10 @@
         else pose(guest.wantedPose);
         if(lastContext.hidden)guest.bubble.dataset.show='false';
       }
-      if(state.stop&&guest.stopSerial!==state.stopSerial){guest.leaving=false;guest.generation=state.generation;guest.stopSerial=state.stopSerial;guest.stop=state.stop;guest.node.dataset.zone=state.stop.zone;guest.bubble.dataset.show='false';guest.trinket.textContent='';clearProps();travel(state.stop.point,state.generation,state.stopSerial,false);}
+      if(state.stop&&guest.stopSerial!==state.stopSerial){guest.leaving=false;guest.generation=state.generation;guest.stopSerial=state.stopSerial;
+        const zone=({window:'library',plant:'lobby',door:'exit'})[state.stop.zone]||state.stop.zone;
+        guest.stop=Scene.ROOM_LAYOUT?{...state.stop,point:Scene.ZONES[zone]||Scene.ZONES.lobby}:state.stop;
+        guest.node.dataset.zone=state.stop.zone;guest.bubble.dataset.show='false';guest.trinket.textContent='';clearProps();travel(guest.stop.point,state.generation,state.stopSerial,false);}
     }
     const timer=setInterval(tick,1000);
     return{tick,destroy(){disposed=true;clearInterval(timer);remove();director.clear();}};

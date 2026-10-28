@@ -1,0 +1,5 @@
+/* Complete paintings have their own architecture and windows. */
+.office[data-room-design] :is(.studio-door,.window-scenery,.window-weather,.room-prop,.archive-stack,.theme-environment,.festival-stage,.festival-chooser,.venue-detail){display:none!important}
+.office[data-room-changing="true"] .actor{transition:none!important}
+.office[data-room-design] .venue-widget{scale:.75}
+.office[data-room-design] .floor-sign{background:#273736d9;color:#fff7df;border-color:#f1e6bb66;letter-spacing:.025em}

@@ -1,0 +1,158 @@
+{
+  "id": "chungyeung",
+  "event": "chungyeung",
+  "kind": "holiday",
+  "nameZh": "重阳云岭书斋",
+  "nameEn": "Cloud Ridge Study",
+  "icon": "⌁",
+  "effectVenue": "workshop",
+  "architecture": "Horizontal ochre-stone cliffside arches, panoramic autumn ridge glazing and front-left herbarium drafting table",
+  "entry": [
+    52,
+    78
+  ],
+  "floor": [
+    5,
+    50,
+    95,
+    86
+  ],
+  "furniture": {
+    "library": [
+      73,
+      22,
+      100,
+      65
+    ],
+    "board": [
+      4,
+      55,
+      35,
+      86
+    ],
+    "bench": [
+      13,
+      43,
+      34,
+      57
+    ],
+    "desk": [
+      37,
+      42,
+      63,
+      54
+    ],
+    "sofa": [
+      74,
+      62,
+      100,
+      93
+    ],
+    "archive": [
+      0,
+      18,
+      12,
+      66
+    ]
+  },
+  "areas": {
+    "library": [
+      [
+        65,
+        56,
+        71,
+        63
+      ]
+    ],
+    "board": [
+      [
+        37,
+        65,
+        45,
+        83
+      ]
+    ],
+    "bench": [
+      [
+        36,
+        58,
+        42,
+        63
+      ]
+    ],
+    "desk": [
+      [
+        45,
+        56,
+        62,
+        62
+      ]
+    ],
+    "sofa": [
+      [
+        65,
+        72,
+        72,
+        84
+      ]
+    ],
+    "archive": [
+      [
+        46,
+        64,
+        53,
+        70
+      ]
+    ],
+    "front": [
+      [
+        46,
+        76,
+        62,
+        84
+      ]
+    ],
+    "lobby": [
+      [
+        54,
+        64,
+        63,
+        73
+      ]
+    ],
+    "exit": [
+      [
+        45,
+        75,
+        59,
+        83
+      ]
+    ]
+  },
+  "labels": {
+    "library": [
+      "云岭植物志",
+      "Mountain herbarium"
+    ],
+    "board": [
+      "登高绘图案",
+      "Ridge drafting table"
+    ],
+    "bench": [
+      "山菊标本台",
+      "Specimen bench"
+    ],
+    "desk": [
+      "山窗工位",
+      "Mountain-window workstations"
+    ],
+    "sofa": [
+      "菊香休息席",
+      "Chrysanthemum lounge"
+    ],
+    "archive": [
+      "标本归档席",
+      "Specimen archive aisle"
+    ]
+  }
+}

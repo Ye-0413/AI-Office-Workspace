@@ -1,0 +1,172 @@
+{
+  "id": "christmas",
+  "event": "christmas",
+  "kind": "holiday",
+  "nameZh": "雪夜邮政工坊",
+  "nameEn": "Snowfall Post Atelier",
+  "icon": "✧",
+  "effectVenue": "workshop",
+  "architecture": "Asymmetrical Nordic Alpine A-frame, tall snow window, front-left oval correspondence island and back-center reference wall",
+  "entry": [
+    55,
+    78
+  ],
+  "floor": [
+    5,
+    45,
+    95,
+    86
+  ],
+  "furniture": {
+    "library": [
+      35,
+      37,
+      67,
+      49
+    ],
+    "board": [
+      22,
+      35,
+      35,
+      48
+    ],
+    "bench": [
+      68,
+      35,
+      88,
+      53
+    ],
+    "desk": [
+      3,
+      45,
+      40,
+      77
+    ],
+    "sofa": [
+      81,
+      53,
+      100,
+      85
+    ],
+    "archive": [
+      3,
+      45,
+      40,
+      77
+    ]
+  },
+  "extraObstacles": [
+    [
+      0,
+      10,
+      10,
+      57
+    ],
+    [
+      10,
+      11,
+      22,
+      48
+    ]
+  ],
+  "areas": {
+    "library": [
+      [
+        48,
+        51,
+        66,
+        58
+      ]
+    ],
+    "board": [
+      [
+        41,
+        50,
+        47,
+        59
+      ]
+    ],
+    "bench": [
+      [
+        68,
+        55,
+        79,
+        63
+      ]
+    ],
+    "desk": [
+      [
+        42,
+        61,
+        51,
+        76
+      ]
+    ],
+    "sofa": [
+      [
+        71,
+        67,
+        79,
+        84
+      ]
+    ],
+    "archive": [
+      [
+        7,
+        79,
+        36,
+        85
+      ]
+    ],
+    "front": [
+      [
+        53,
+        74,
+        69,
+        84
+      ]
+    ],
+    "lobby": [
+      [
+        53,
+        61,
+        66,
+        70
+      ]
+    ],
+    "exit": [
+      [
+        49,
+        75,
+        63,
+        83
+      ]
+    ]
+  },
+  "labels": {
+    "library": [
+      "邮笺文库",
+      "Correspondence library"
+    ],
+    "board": [
+      "雪窗绘图案",
+      "Snow-window drafting"
+    ],
+    "bench": [
+      "包裹实验台",
+      "Parcel test bench"
+    ],
+    "desk": [
+      "书信计算岛",
+      "Correspondence console"
+    ],
+    "sofa": [
+      "松木休息席",
+      "Pinewood lounge"
+    ],
+    "archive": [
+      "信件分拣岛",
+      "Letter archive island"
+    ]
+  }
+}

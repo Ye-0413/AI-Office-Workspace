@@ -1,0 +1,172 @@
+{
+  "id": "midsummer",
+  "event": "midsummer",
+  "kind": "holiday",
+  "nameZh": "白桦夏光长屋",
+  "nameEn": "Birch Meadow Longhouse",
+  "icon": "☀",
+  "effectVenue": "teahouse",
+  "architecture": "Scandinavian meadow longhouse with sweeping white-birch roof arches, flax timber and sunset glazing, an offset oval planning island and continuous right-hand computing bar",
+  "entry": [
+    55,
+    78
+  ],
+  "floor": [
+    5,
+    39.5,
+    95,
+    86
+  ],
+  "furniture": {
+    "library": [
+      52,
+      28,
+      70,
+      38
+    ],
+    "board": [
+      13,
+      39,
+      41,
+      67
+    ],
+    "bench": [
+      36,
+      28,
+      51,
+      38
+    ],
+    "desk": [
+      75,
+      29,
+      100,
+      65
+    ],
+    "sofa": [
+      75,
+      64,
+      100,
+      100
+    ],
+    "archive": [
+      0,
+      35,
+      9,
+      58
+    ]
+  },
+  "extraObstacles": [
+    [
+      14,
+      28,
+      34,
+      38
+    ]
+  ],
+  "areas": {
+    "library": [
+      [
+        53,
+        40,
+        70,
+        49
+      ]
+    ],
+    "board": [
+      [
+        16,
+        69,
+        40,
+        77
+      ],
+      [
+        43,
+        50,
+        51,
+        65
+      ]
+    ],
+    "bench": [
+      [
+        43,
+        40,
+        51,
+        48
+      ]
+    ],
+    "desk": [
+      [
+        66,
+        46,
+        73,
+        64
+      ]
+    ],
+    "sofa": [
+      [
+        66,
+        73,
+        73,
+        84
+      ]
+    ],
+    "archive": [
+      [
+        10.2,
+        45,
+        12,
+        57
+      ]
+    ],
+    "front": [
+      [
+        44,
+        75,
+        63,
+        84
+      ]
+    ],
+    "lobby": [
+      [
+        47,
+        58,
+        63,
+        70
+      ]
+    ],
+    "exit": [
+      [
+        48,
+        75,
+        63,
+        83
+      ]
+    ]
+  },
+  "labels": {
+    "library": [
+      "白桦文献柜",
+      "Birch reference counter"
+    ],
+    "board": [
+      "夏光舆图岛",
+      "Summer-light map island"
+    ],
+    "bench": [
+      "草甸标本台",
+      "Meadow specimen counter"
+    ],
+    "desk": [
+      "长窗工作吧",
+      "Long-window workbar"
+    ],
+    "sofa": [
+      "亚麻休息席",
+      "Linen lounge"
+    ],
+    "archive": [
+      "草木藏书架",
+      "Meadow archive shelves"
+    ]
+  }
+}

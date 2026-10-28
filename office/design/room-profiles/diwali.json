@@ -1,0 +1,172 @@
+{
+  "id": "diwali",
+  "event": "diwali",
+  "kind": "holiday",
+  "nameZh": "琉蓝灯影庭",
+  "nameEn": "Sapphire Light Court",
+  "icon": "✦",
+  "effectVenue": "observatory",
+  "architecture": "Polygonal sandstone jali light court with a faceted dome, inset brass-lit niches, sapphire-and-brass floor and a large curved left planning island",
+  "entry": [
+    52,
+    78
+  ],
+  "floor": [
+    5,
+    45.8,
+    95,
+    86
+  ],
+  "furniture": {
+    "library": [
+      41,
+      26,
+      53,
+      45
+    ],
+    "board": [
+      5,
+      45,
+      40,
+      78
+    ],
+    "bench": [
+      10,
+      37,
+      35,
+      51
+    ],
+    "desk": [
+      61,
+      37,
+      88,
+      51
+    ],
+    "sofa": [
+      82,
+      52,
+      100,
+      94
+    ],
+    "archive": [
+      54,
+      26,
+      61,
+      45
+    ]
+  },
+  "extraObstacles": [
+    [
+      90,
+      27,
+      100,
+      55
+    ],
+    [
+      0,
+      48,
+      5,
+      100
+    ]
+  ],
+  "areas": {
+    "library": [
+      [
+        43,
+        47,
+        53,
+        55
+      ]
+    ],
+    "board": [
+      [
+        42,
+        55,
+        49,
+        76
+      ]
+    ],
+    "bench": [
+      [
+        41,
+        47,
+        45,
+        53
+      ]
+    ],
+    "desk": [
+      [
+        63,
+        53,
+        84,
+        62
+      ]
+    ],
+    "sofa": [
+      [
+        72,
+        65,
+        80,
+        84
+      ]
+    ],
+    "archive": [
+      [
+        55,
+        47,
+        60,
+        55
+      ]
+    ],
+    "front": [
+      [
+        49,
+        76,
+        69,
+        84
+      ]
+    ],
+    "lobby": [
+      [
+        51,
+        60,
+        67,
+        72
+      ]
+    ],
+    "exit": [
+      [
+        45,
+        75,
+        60,
+        83
+      ]
+    ]
+  },
+  "labels": {
+    "library": [
+      "灯庭文献墙",
+      "Light-court reference wall"
+    ],
+    "board": [
+      "琉蓝绘图岛",
+      "Sapphire drafting island"
+    ],
+    "bench": [
+      "黄铜观测台",
+      "Brass observation bench"
+    ],
+    "desk": [
+      "花窗工作吧",
+      "Jali-window workbar"
+    ],
+    "sofa": [
+      "灯影休息龛",
+      "Lamplit lounge niche"
+    ],
+    "archive": [
+      "砂岩文献柜",
+      "Sandstone archive"
+    ]
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "id": "carnival",
+  "event": "carnival",
+  "kind": "holiday",
+  "nameZh": "运河面具工坊",
+  "nameEn": "Canal Mask Palazzo",
+  "icon": "◇",
+  "effectVenue": "workshop",
+  "architecture": "Venetian marble palazzo with pale blue scalloped vaults and three canal windows, a split oval mask-reference and craft island at front left, long right maskmaking counter and rear computing bank",
+  "entry": [51, 78],
+  "floor": [5, 49.5, 95, 86],
+  "furniture": {
+    "library": [11, 48, 24, 73],
+    "bench": [24, 48, 35, 73],
+    "board": [68, 43, 100, 73],
+    "desk": [34, 37, 63, 49],
+    "sofa": [80, 65, 100, 100],
+    "archive": [0, 37, 6, 76]
+  },
+  "extraObstacles": [[8, 12, 29, 52], [84, 24, 100, 44]],
+  "areas": {
+    "library": [[10, 75, 29, 84]],
+    "bench": [[37, 54, 47, 70]],
+    "board": [[59, 53, 66, 70]],
+    "desk": [[38, 51, 62, 57]],
+    "sofa": [[69, 75, 78, 84]],
+    "archive": [[7, 78, 16, 84]],
+    "front": [[41, 75, 66, 84]],
+    "lobby": [[45, 61, 59, 71]],
+    "exit": [[44, 75, 59, 83]]
+  },
+  "labels": {
+    "library": ["面具样稿案", "Mask pattern reference"],
+    "bench": ["面具修饰台", "Mask finishing bench"],
+    "board": ["长案构思席", "Long design counter"],
+    "desk": ["运河计算台", "Canal computer bank"],
+    "sofa": ["红绒沙龙", "Crimson velvet salon"],
+    "archive": ["面具档案柜", "Mask archive drawers"]
+  }
+}

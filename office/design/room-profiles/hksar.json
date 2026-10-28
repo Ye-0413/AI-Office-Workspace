@@ -1,0 +1,166 @@
+{
+  "id": "hksar",
+  "event": "hksar",
+  "kind": "holiday",
+  "nameZh": "维港城市客厅",
+  "nameEn": "Harbour Civic Studio",
+  "icon": "≈",
+  "effectVenue": "workshop",
+  "architecture": "Curved ferry-terminal steel clerestories, harbour mosaic and a sweeping shared civic-design island",
+  "entry": [
+    52,
+    78
+  ],
+  "floor": [
+    5,
+    45,
+    95,
+    86
+  ],
+  "furniture": {
+    "library": [
+      0,
+      12,
+      29,
+      52
+    ],
+    "board": [
+      47,
+      44,
+      70,
+      69
+    ],
+    "bench": [
+      0,
+      53,
+      34,
+      87
+    ],
+    "desk": [
+      71,
+      44,
+      94,
+      69
+    ],
+    "sofa": [
+      77,
+      58,
+      100,
+      91
+    ],
+    "archive": [
+      37,
+      39,
+      59,
+      48
+    ]
+  },
+  "extraObstacles": [
+    [
+      73,
+      39,
+      100,
+      54
+    ]
+  ],
+  "areas": {
+    "library": [
+      [
+        30,
+        47,
+        36,
+        54
+      ]
+    ],
+    "board": [
+      [
+        45,
+        71,
+        61,
+        79
+      ]
+    ],
+    "bench": [
+      [
+        36,
+        63,
+        43,
+        83
+      ]
+    ],
+    "desk": [
+      [
+        64,
+        71,
+        74,
+        79
+      ]
+    ],
+    "sofa": [
+      [
+        72,
+        72,
+        76,
+        84
+      ]
+    ],
+    "archive": [
+      [
+        38,
+        50,
+        46,
+        58
+      ]
+    ],
+    "front": [
+      [
+        46,
+        80,
+        68,
+        85
+      ]
+    ],
+    "lobby": [
+      [
+        38,
+        60,
+        45,
+        72
+      ]
+    ],
+    "exit": [
+      [
+        46,
+        75,
+        59,
+        83
+      ]
+    ]
+  },
+  "labels": {
+    "library": [
+      "城市文库",
+      "Civic library"
+    ],
+    "board": [
+      "海港议事岛",
+      "Harbour planning island"
+    ],
+    "bench": [
+      "航运模型台",
+      "Maritime model bench"
+    ],
+    "desk": [
+      "城市设计协作席",
+      "City design workbar"
+    ],
+    "sofa": [
+      "渡轮休息席",
+      "Ferry lounge"
+    ],
+    "archive": [
+      "城市图档柜",
+      "Civic drawing archive"
+    ]
+  }
+}

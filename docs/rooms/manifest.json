@@ -1,0 +1,402 @@
+{
+  "schemaVersion": 1,
+  "version": "0.23.0",
+  "scope": "33 complete original room paintings: six everyday interiors and all 27 holiday occasions. Public static capsule markers and optional production geometry overlays only.",
+  "rooms": [
+    {
+      "id": "rain-courtyard",
+      "file": "office/assets/scenes/rooms/rain-courtyard.png",
+      "sha256": "5478d897071e766030e007079b4d44b72f106a48f7f99990ef8c93bdf506dfca",
+      "bytes": 2983425,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "5fe08b688c7702ce1dec5c934c4e2070b0517413e03049f56dbc46caadea947c"
+    },
+    {
+      "id": "orbital-bridge",
+      "file": "office/assets/scenes/rooms/orbital-bridge.png",
+      "sha256": "651da533670f77a49ed464756d339b4a878fab5de64413447b890d8f3a7d2bdc",
+      "bytes": 2579204,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "6e2ac15f9054b8804b3a9ea6160972c89e9ee6c5cc61348571c39fac824f0701"
+    },
+    {
+      "id": "grand-library",
+      "file": "office/assets/scenes/rooms/grand-library.png",
+      "sha256": "b5c12586972d0934124f904437b815f413f174027f957c533f4a55f561bd00a7",
+      "bytes": 3273662,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "3f7a0487568b33113c61162105487e1322c52bda32ed428a3f88acf9c4dad676"
+    },
+    {
+      "id": "glasshouse",
+      "file": "office/assets/scenes/rooms/glasshouse.png",
+      "sha256": "f3d17caee2f7e773b7a6495d880f189625d13ec1567aa1cf82d5516338dd1908",
+      "bytes": 3471830,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "9bb2ba7a86efe9fdb81f625f2b2e35c3516f9fa0f2cf8ed8f82a959d7d865ede"
+    },
+    {
+      "id": "coastal-atelier",
+      "file": "office/assets/scenes/rooms/coastal-atelier.png",
+      "sha256": "2826223129049e2649fce88eaa124beb82e776c10d51a4adaba3822d0d2dc174",
+      "bytes": 3128773,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "2de6b53fa1b15167c11c9002dec4856222ebc446815bda1230c972c57f5c855e"
+    },
+    {
+      "id": "undersea-lab",
+      "file": "office/assets/scenes/rooms/undersea-lab.png",
+      "sha256": "185018981c74630c82ff258ef37226e4cf281b00a92274b0af10100dd0f368a7",
+      "bytes": 2462811,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "8af647cac5eb57a7bb4df0cc2420bb4e782783aa7323f343922ed7442d82b6c5"
+    },
+    {
+      "id": "newyear",
+      "file": "office/assets/scenes/rooms/newyear.png",
+      "sha256": "84a5e8ec53c2f7225998338f46b765ec92671bfde2e565e65b328c2677c57ac5",
+      "bytes": 2572122,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "1fcc97c46c958ea6998e04c52c617196cb7c2dfb01e4d87487bec16835ef57d3"
+    },
+    {
+      "id": "lunarnewyear",
+      "file": "office/assets/scenes/rooms/lunarnewyear.png",
+      "sha256": "a5e5867388ef2b97319532ad09185efa92b05fe3da2441a1193fa20689c20cd6",
+      "bytes": 2900658,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "b61b1f9e93f29265fccc2b294d02ff4ad51931afc3312ef271cc059e7f933523"
+    },
+    {
+      "id": "lanternfest",
+      "file": "office/assets/scenes/rooms/lanternfest.png",
+      "sha256": "bc6f65b2924300f0cdae3c0bcc476adf243fb9510a83de38b606b58f12aec667",
+      "bytes": 2849179,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "d68fb9479642b639c75142d7eadbc9304d26ff7e0e9ed9daf0700931c235ae77"
+    },
+    {
+      "id": "valentine",
+      "file": "office/assets/scenes/rooms/valentine.png",
+      "sha256": "3422260520638c33166b1325f8476d116b46fcb5b5e275bd3cdd2d616a6c0d0a",
+      "bytes": 2975988,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "6d1749e9ff5d42d9f1d8f2cc93ca9a9a905e6aacdfffed928fca383687385388"
+    },
+    {
+      "id": "holi",
+      "file": "office/assets/scenes/rooms/holi.png",
+      "sha256": "9ceacc0f2106c92fe182d8730e99013e20deb536b8cdb519f092850301e3788d",
+      "bytes": 3027924,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "4a81f320e7168603282c081f930672a77e0724a08cbc0df42a165f04215411f8"
+    },
+    {
+      "id": "stpatrick",
+      "file": "office/assets/scenes/rooms/stpatrick.png",
+      "sha256": "f37bd4883436f69d8b6293456054d2249c2d8e02244ad28f7d7b511cdd5b0b2e",
+      "bytes": 3260004,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "f959469e239f2abb75013088da42ecec552ec9adfb03b1d9c59c1662ea132c85"
+    },
+    {
+      "id": "carnival",
+      "file": "office/assets/scenes/rooms/carnival.png",
+      "sha256": "12ffe0d9a95497aefefad310b6db1cd9c3d7f40e4b57b7026a80d25421c6e2dc",
+      "bytes": 3148413,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "22e11dbaef0117ecd8773b511324628ec450b6861323c11c071d08274b3ef578"
+    },
+    {
+      "id": "easter",
+      "file": "office/assets/scenes/rooms/easter.png",
+      "sha256": "d48e31cf4078697d9b4d4a9a6b24e6d05aeadc4ff1f14a17331eb005d09a07fb",
+      "bytes": 2864351,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "0e577eb49b1b4914effd46cadd7d9df838482060864cd95ec57a19d1d7af50fb"
+    },
+    {
+      "id": "qingming",
+      "file": "office/assets/scenes/rooms/qingming.png",
+      "sha256": "996d884e63bfa4377ea29d2a820f1b22710c9bd736375347314636a9450fbc11",
+      "bytes": 2914299,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "75ad82b38bfae6f4c59f2827e252bd822128a1291493f0a9c839ca1eac4de331"
+    },
+    {
+      "id": "songkran",
+      "file": "office/assets/scenes/rooms/songkran.png",
+      "sha256": "166704adcd0abce3b0236529de4e539192c8ef43c50c01dfa13b7b056446e9f7",
+      "bytes": 2939986,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "9bad9ac49620a53c7cd7639ccbdd59a23500ee981de925b8f9d78c80938d7db2"
+    },
+    {
+      "id": "bookday",
+      "file": "office/assets/scenes/rooms/bookday.png",
+      "sha256": "b90ae95e342eea1d4b8e603d79dfa69b1291116a3e001ae1bcb8c033d7f74663",
+      "bytes": 3020507,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "6a89d4376e4e44ee32279ad8465ad9ba67ee6b40c9f1d5f1b3edec13ae4fbf01"
+    },
+    {
+      "id": "labourday",
+      "file": "office/assets/scenes/rooms/labourday.png",
+      "sha256": "3b7b9bb831be86db4af40cdeb86076790898f926be0eae47a8cc073435873bb9",
+      "bytes": 3188146,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "21ccd3ffe5e46228631b1ccf3d24d8e38206a554b2d4402b750a62b6703f037a"
+    },
+    {
+      "id": "buddha",
+      "file": "office/assets/scenes/rooms/buddha.png",
+      "sha256": "e85a0bba1313535b43dfb30d709a5136b3c12190c982140377828f1843de6e33",
+      "bytes": 2849354,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "105c70368ed5441056dfcf122e34fd47e29179f33d8a7887ddb2cfef672df87b"
+    },
+    {
+      "id": "dragonboat",
+      "file": "office/assets/scenes/rooms/dragonboat.png",
+      "sha256": "6d0fdb335b1e2ff805678f350ad3383e35ce768757645e5c095ae60de964ce17",
+      "bytes": 3064776,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "3b3e87545c2d9e3ecf9645ca4774943ae116f8a7047822ecd0a8d7d361c04d39"
+    },
+    {
+      "id": "midsummer",
+      "file": "office/assets/scenes/rooms/midsummer.png",
+      "sha256": "81d7c913b0eafaddb746e5b87d500f545e984b1f8afe52dc1bab45002e0c92bd",
+      "bytes": 2752971,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "5f6ad7b8a30e4d8d1e795541e8de3c6c2e5f3b1a596cf960822670a3eff97655"
+    },
+    {
+      "id": "hksar",
+      "file": "office/assets/scenes/rooms/hksar.png",
+      "sha256": "91bb986686101b18a2cf9b7a987e5bc33fd664b632fa6df3f9547bddbe909e9a",
+      "bytes": 2969013,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "a0b4f19145a2b4bac66741e4b11b11386dffeb222acc19d75bfef2e8c41beb9a"
+    },
+    {
+      "id": "tanabata",
+      "file": "office/assets/scenes/rooms/tanabata.png",
+      "sha256": "c8f1cf82cae2923f7af946938e060ca1e1a53518b22805c102f8371fabacd29c",
+      "bytes": 3293852,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "9270b6fd2c49b242e6fc907d9d98ac3b10fe11591eec3502f8f2109061e3126d"
+    },
+    {
+      "id": "midautumn",
+      "file": "office/assets/scenes/rooms/midautumn.png",
+      "sha256": "6dbeb4db1400bc775bc562793fa5fa70f7eec5b6b279fb7ad344bb14b6ab7b5a",
+      "bytes": 2606737,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "0cb9146217a4efe490735f8087dc2a8686431bcd1cd66b133d41e011a50bae23"
+    },
+    {
+      "id": "oktoberfest",
+      "file": "office/assets/scenes/rooms/oktoberfest.png",
+      "sha256": "ea540459b9f8dc352fe8b65a31f1b5ec53e8848f069d172a59d9bb9bfb2076d9",
+      "bytes": 2958528,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "9c887d707e6d45bd4c476e3226e689a42e20d67e0ce091a38f6dd381d55d98cf"
+    },
+    {
+      "id": "nationalday",
+      "file": "office/assets/scenes/rooms/nationalday.png",
+      "sha256": "fd701c9b7cbe9d0b947cd2d885d0624a00383f519d150ba4786102eaed2870f5",
+      "bytes": 2572771,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "517556815d120e9e57457233452bd40bc1a591291100d7b46e22e77b13461adf"
+    },
+    {
+      "id": "chungyeung",
+      "file": "office/assets/scenes/rooms/chungyeung.png",
+      "sha256": "d898d312b34f25281882046d9970161abcf1c91313257f6ce8cd5884fe364cb5",
+      "bytes": 3427871,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "fe98efc05f2995133a05605e70fa7c216e5aee6efe128572e1a4e5f7026f2c09"
+    },
+    {
+      "id": "halloween",
+      "file": "office/assets/scenes/rooms/halloween.png",
+      "sha256": "d958ab54a4e7835a9672b06894902b33f557571429d976dd7f1794aaecaceeb8",
+      "bytes": 3047491,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "e8a7d118832d652b511467e07b8347fc234a2c6a086810be4cfe0a2b308a9978"
+    },
+    {
+      "id": "dayofdead",
+      "file": "office/assets/scenes/rooms/dayofdead.png",
+      "sha256": "a442796e42ae9b2dc75cad6acf5df37334ec965d9eb7eded007afee0b1ba9bcc",
+      "bytes": 2954078,
+      "width": 1672,
+      "height": 940,
+      "geometrySha256": "e2f46a381825c5ead05bc513c653bded4e91a984eda6b72a59b5fc4dc5af4e42"
+    },
+    {
+      "id": "diwali",
+      "file": "office/assets/scenes/rooms/diwali.png",
+      "sha256": "b5e3c05c83531d50a1d9bdf99cb4ddf4db7e49549cb61ce3f62ae7d140d70196",
+      "bytes": 3247378,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "4787f6fb1f10979709a422ddc1464eb423185da7306abee8143e99922ceb78fb"
+    },
+    {
+      "id": "loykrathong",
+      "file": "office/assets/scenes/rooms/loykrathong.png",
+      "sha256": "44b6a3f1d4187f79097ef68964c3bccb519b5592be7c0715bfc2c3076a52372b",
+      "bytes": 2806477,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "b251bbf3a70f5869e2883c1082b732f1015d3931979481f73d844caf38c64ea3"
+    },
+    {
+      "id": "thanksgiving",
+      "file": "office/assets/scenes/rooms/thanksgiving.png",
+      "sha256": "9555d7922e89ba16e6a979d78fe7300db9c6f2a182355b0392c6656f00c59918",
+      "bytes": 2776381,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "d3e67c1b7232e09b534e8d52adc2aac01bb2954755ec18dcdf2801a7ddb4c2b3"
+    },
+    {
+      "id": "christmas",
+      "file": "office/assets/scenes/rooms/christmas.png",
+      "sha256": "fd224f917f71a76d50a26d8adc8969a487695d15e61cbcdfa47ceec6cc8c0709",
+      "bytes": 2482738,
+      "width": 1672,
+      "height": 941,
+      "geometrySha256": "0cf1ac76f7db192c91e41898eb0f313155fc1d404814b7199368ca482d52d2b7"
+    }
+  ],
+  "everydayIds": [
+    "rain-courtyard",
+    "orbital-bridge",
+    "grand-library",
+    "glasshouse",
+    "coastal-atelier",
+    "undersea-lab"
+  ],
+  "holidayEvents": [
+    "newyear",
+    "lunarnewyear",
+    "lanternfest",
+    "valentine",
+    "holi",
+    "stpatrick",
+    "carnival",
+    "easter",
+    "qingming",
+    "songkran",
+    "bookday",
+    "labourday",
+    "buddha",
+    "dragonboat",
+    "midsummer",
+    "hksar",
+    "tanabata",
+    "midautumn",
+    "oktoberfest",
+    "nationalday",
+    "chungyeung",
+    "halloween",
+    "dayofdead",
+    "diwali",
+    "loykrathong",
+    "thanksgiving",
+    "christmas"
+  ],
+  "preview": {
+    "identities": 2,
+    "source": "Synthetic root reading and its synthetic planning helper, fitted by production scene/walking models with passThrough enabled and a 125% ceiling.",
+    "avatars": "Original code-native SVG capsule markers; no restored character assets, avatar URLs, observed sessions or native captures.",
+    "helperBodyRatio": 0.8,
+    "helperFrameScale": 0.82,
+    "restrictedArtworkReads": 0,
+    "networkRequests": 0,
+    "certifiesLiveClient": false,
+    "certifiesAvatarChoreography": false,
+    "certifiesArbitraryCrowdReadability": false
+  },
+  "sourceHashes": {
+    "office/package.json": "f5fcfc844518b45693869acc8e9383ced59d578147241c7b6b2bcbc4d11d659b",
+    "office/lib/room-calendar.js": "a35fa84a2194d1b3ef8ffdabd0e70f684f038bda7c76f2ee3c094fcab810762a",
+    "office/lib/festival-model.js": "364e8df83764d494fd707302d865688abdc27f1fb350dd2c19e7c8a636d66c77",
+    "office/lib/festival-studies.js": "0787c8d4a3af218a2d379be877283d121354a84d76b6e897b1066c62454b4489",
+    "office/lib/provider-labels.js": "4072b55267d17bb0338d72afc4d241bb8e1c08b80db64734a0378c33a4be777e",
+    "office/lib/room-designs.js": "395b009cd9f35fb8166e7fadda504e94b3682c1ce58345632c1f23d4e3a985e4",
+    "office/lib/room-holiday-designs.js": "1aa463cd8657226e1aafd684d654a952f259ec40fe0d95d3ca3107ec93069f78",
+    "office/lib/scene-model.js": "97c44d2d554a8fa923dc5c1547ffb72ae0b4b07bd6eb338c4fcba7ba98384ebf",
+    "office/lib/walking-layout.js": "542d2891b1697666d2695d9827b51d2ceb355077094efdbfff2a7fa00ef8f7da",
+    "office/lib/scene-traffic.js": "f6e5ee9259e3fec2bca35f011ad12612488b9d50a55fa149e8c5b9e7dea21224",
+    "office/lib/size-stability.js": "1edc0c91b79b90159eaf6019458a4e303b919ac0a31d0b2af02bf675a28d395e",
+    "office/renderer/style.css": "c0e37be167b377e38f5ac7bc9be1bf601a0bed93997b2dcb460fafc0c9c5ee17",
+    "office/scripts/sync-room-designs.cjs": "7bb38e1675a6bae56fc430979e370690b769b71ebc968dd2e4971940acba90ad",
+    "office/scripts/render-room-gallery.cjs": "a3a7cb8799d6f04d2d17447364530366b67a76d5641f8fc359372a5cfa1cde95",
+    "office/assets/scenes/rooms/generation.json": "3d94abc1daa13bd12c44b5fceecf47fbbf53946a6cb1d47377b2238e7bf1f497",
+    "office/design/room-profiles/newyear.json": "15ab5d569db329450fa131a339c14f4c42b52ae8f134d1d1d4d86c63e064a49e",
+    "office/design/room-profiles/lunarnewyear.json": "0527dca36c0a8a36f9fd9d93650d6fd5dab9339463dffde79085be92f2a4bfaa",
+    "office/design/room-profiles/lanternfest.json": "0308c259c50878aeafa841eab34b38cbf99650eec0cd767f7f6204b90154e789",
+    "office/design/room-profiles/valentine.json": "215642cefc04e22a34449f0bb8fab00d6edb049df89b741336f8f63898a6cd79",
+    "office/design/room-profiles/holi.json": "91ce4b034400884c7a15cca335b56f5631b32c33555d1c6560fbf4b8e886a429",
+    "office/design/room-profiles/stpatrick.json": "c858a241c9ae8a2579b363e1317486cb0f283c0fe7790a8ae79a7bce78f7e655",
+    "office/design/room-profiles/carnival.json": "c1c53935f21c220a5689f8bb8e4bd700c4739f3a605cff2d8169a0b5a9ff3778",
+    "office/design/room-profiles/easter.json": "fad37ab688a254e983d61b309bcbee27ddcfefca56e02b871028df7c06826c5f",
+    "office/design/room-profiles/qingming.json": "014a8c911550001e64074c2829a5cf1dba5734cf58028846eb7443dafa1cd8e1",
+    "office/design/room-profiles/songkran.json": "f894ae12ecd499194f7e5a2aa5968c9b5b8a9157778ab0c1ab51f23ed3302bf4",
+    "office/design/room-profiles/bookday.json": "1e96127cf8d2d25d99f5fa67a95e729aeda79290d516a7321205e634fddb45a7",
+    "office/design/room-profiles/labourday.json": "6bc669d7678be538798d3443c03b7aa724112a3115fd2331357e99200d81d241",
+    "office/design/room-profiles/buddha.json": "31cd204dfeab58f14b38df864453b73b28846fc75d3c609400477c2d76dfaa5f",
+    "office/design/room-profiles/dragonboat.json": "d64dfd1b21264d822ad91b74aabd67416180c201bc5f9f2e457bfe74bf5246ab",
+    "office/design/room-profiles/midsummer.json": "29a813043d876d450452ca5f7eab1f4ad4b09042817847ce0ae7e5660c18cfba",
+    "office/design/room-profiles/hksar.json": "e6f89355298110625bae789d78ce6177037d1112178d4026ff1ca7732de257e9",
+    "office/design/room-profiles/tanabata.json": "93da2b08dc238ba9b40cea85240cf319da063c28ecd958145236049748b0c797",
+    "office/design/room-profiles/midautumn.json": "fdbace4d9786454d94c7581ef0e02e89fdc2faa2fefd031d6553ef7c751c391a",
+    "office/design/room-profiles/oktoberfest.json": "848969ca0738e1003a6d5a7af41bbd8b372a941a8609830bd230d15f09ef7db5",
+    "office/design/room-profiles/nationalday.json": "1ace6746e95663cba0dfc2354f1afa5a4e7cdcd3e9df0ee849879a270c2c2a94",
+    "office/design/room-profiles/chungyeung.json": "6e81f8aaef51c6896e845d230aad7a1b0dd1cbbb23bcf2a48a47268556f7836d",
+    "office/design/room-profiles/halloween.json": "c9ad42475c927d0159583cbb11212cfeccb1f62be489f50ab436bc050f086e20",
+    "office/design/room-profiles/dayofdead.json": "b59b172b608ab1f85bfae3bc9c5b177abaa4e6eb56f2acc1045bd4e4f2498143",
+    "office/design/room-profiles/diwali.json": "da43c1d9804a1ea79f6f0cd4ce193dfb579329ad981a00edb643d55cccb6e68b",
+    "office/design/room-profiles/loykrathong.json": "3b3a35e153b2df52595e644c0f320d3a56681f227c6cba9ededb6ce6278e2eed",
+    "office/design/room-profiles/thanksgiving.json": "8a6cb26a5c73eb3cc216c74c55b3c50f029677e044c28d98e153db3458a413be",
+    "office/design/room-profiles/christmas.json": "39013f9466b351a3991a518aca3fed0b71eee3a9d80215b3d0b07d5166f39cce"
+  },
+  "html": {
+    "file": "index.html",
+    "sha256": "46c9ecc33a6987e67c757153f1b6eb47f440d145ee27296ac1545270c77a1dd6",
+    "bytes": 113821
+  }
+}

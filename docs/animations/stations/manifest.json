@@ -1,5 +1,5 @@
 {
-  "version": "0.22.0",
+  "version": "0.23.0",
   "scope": "Twelve original furniture glyph programs through the actual OfficeStationArrival controller, presented as independent offline endpoint fixtures. Transparent mounted synthetic actor geometry and active synthetic sessions only; no provider connection, room navigation, body contact or IK is demonstrated or certified.",
   "sampling": {
     "fps": 48,
@@ -15,11 +15,11 @@
     "continuousOwnerLifetimeCertified": false
   },
   "sourceHashes": {
-    "office/lib/scene-model.js": "d7be1eaf83f66aa348c2141dd15e7b297b223b86ed7628d6896cd32b6527942e",
-    "office/lib/scene-traffic.js": "be29c677fbf611685e9d10982e8c00cedfd84a6c04f71f7e4ea01e27b575ae08",
-    "office/lib/walking-layout.js": "3bae871ea27e30234e0c3e0de0726fcb10849f7cbd588b60ead5fc53641c6f3d",
+    "office/lib/scene-model.js": "97c44d2d554a8fa923dc5c1547ffb72ae0b4b07bd6eb338c4fcba7ba98384ebf",
+    "office/lib/scene-traffic.js": "f6e5ee9259e3fec2bca35f011ad12612488b9d50a55fa149e8c5b9e7dea21224",
+    "office/lib/walking-layout.js": "542d2891b1697666d2695d9827b51d2ceb355077094efdbfff2a7fa00ef8f7da",
     "office/lib/social-interactions.js": "37f4a7664472781a1bcb878babb436a8eab8ffb254f7a0e5b79a94da43cbf5c0",
-    "office/renderer/station-arrival.js": "63d323a1c1cfc03bfb534fdcd32339aa79c7e88756e31fd4c7dc5cb3dc2e7147",
+    "office/renderer/station-arrival.js": "2b1741f9dc211cd9770e328496b2e3b119b2718179a248c7f19035a143551d0b",
     "office/renderer/station-arrival.css": "62701902956ee13310a52e148a588029299a560e2c54d65fa9ad804ffb181c96",
     "office/scripts/render-station-previews.cjs": "8f334644a0385d0a3d7cb9129d2ba7f832445b593a5ab7424ef1be335d3eadf8"
   },

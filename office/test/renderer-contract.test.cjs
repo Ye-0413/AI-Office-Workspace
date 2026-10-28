@@ -28,7 +28,7 @@ function context(extra = {}) {
   const nodes = new Map();
   const errors = [];
   const sandbox = {
-    Scene, Director, I18n, window: {OfficeVenues:require('../lib/venue-model.js')}, cloneLedger:Clones.createLedger().update(extra.snapshot?.sessions || []), restedClones:new Set(), persona:require('../lib/agent-persona.js').forSession, keepsakeIcon:()=> '✦',settings:{},language:'zh', bridge: {}, mutationPending: false, snapshot:{sessions:[],connections:[]},setupAssistant:null,
+    Scene, Director, I18n, activeRoom:null, window: {OfficeVenues:require('../lib/venue-model.js'),OfficeRoomDesigns:require('../lib/room-designs.js')}, cloneLedger:Clones.createLedger().update(extra.snapshot?.sessions || []), restedClones:new Set(), persona:require('../lib/agent-persona.js').forSession, keepsakeIcon:()=> '✦',settings:{},language:'zh', bridge: {}, mutationPending: false, snapshot:{sessions:[],connections:[]},setupAssistant:null,
     $: id => { if (!nodes.has(id)) nodes.set(id, node()); return nodes.get(id); },
     text: (target, value) => { target.textContent = String(value ?? ''); },
     element: (tag, className, content) => ({ ...node(content), tagName: tag, className }),

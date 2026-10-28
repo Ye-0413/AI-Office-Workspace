@@ -1,0 +1,170 @@
+{
+  "id": "stpatrick",
+  "event": "stpatrick",
+  "kind": "holiday",
+  "nameZh": "三叶海崖书屋",
+  "nameEn": "Shamrock Cliff Lodge",
+  "icon": "☘",
+  "effectVenue": "teahouse",
+  "architecture": "Circular Irish stone lodge with curved oak rafters, moss-green ceramic roof and round sea windows, a horseshoe map counter on the right and low front-left computing island",
+  "entry": [
+    49,
+    78
+  ],
+  "floor": [
+    5,
+    40.5,
+    95,
+    86
+  ],
+  "furniture": {
+    "library": [
+      35,
+      17,
+      64,
+      40
+    ],
+    "board": [
+      61,
+      35,
+      91,
+      64
+    ],
+    "bench": [
+      14,
+      25,
+      32,
+      42
+    ],
+    "desk": [
+      4,
+      59,
+      31,
+      86
+    ],
+    "sofa": [
+      0,
+      38,
+      23,
+      59
+    ],
+    "archive": [
+      95,
+      21,
+      100,
+      64
+    ]
+  },
+  "areas": {
+    "library": [
+      [
+        37,
+        42,
+        59,
+        50
+      ]
+    ],
+    "board": [
+      [
+        53,
+        49,
+        59,
+        64
+      ],
+      [
+        63,
+        66,
+        89,
+        73
+      ]
+    ],
+    "bench": [
+      [
+        25,
+        44,
+        33,
+        53
+      ]
+    ],
+    "desk": [
+      [
+        33,
+        65,
+        42,
+        83
+      ]
+    ],
+    "sofa": [
+      [
+        25,
+        55,
+        34,
+        58
+      ]
+    ],
+    "archive": [
+      [
+        88,
+        66,
+        94,
+        73
+      ],
+      [
+        92.5,
+        43,
+        94,
+        62
+      ]
+    ],
+    "front": [
+      [
+        44,
+        75,
+        65,
+        84
+      ]
+    ],
+    "lobby": [
+      [
+        40,
+        54,
+        52,
+        69
+      ]
+    ],
+    "exit": [
+      [
+        43,
+        74,
+        57,
+        83
+      ]
+    ]
+  },
+  "labels": {
+    "library": [
+      "海崖藏书墙",
+      "Cliffside book wall"
+    ],
+    "board": [
+      "马蹄航图台",
+      "Horseshoe chart counter"
+    ],
+    "bench": [
+      "黄铜仪器台",
+      "Brass instrument bench"
+    ],
+    "desk": [
+      "橡木工作岛",
+      "Oak computer island"
+    ],
+    "sofa": [
+      "海窗休息席",
+      "Sea-window lounge"
+    ],
+    "archive": [
+      "陶器藏柜",
+      "Ceramic archive"
+    ]
+  }
+}

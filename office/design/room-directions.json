@@ -1,0 +1,310 @@
+{
+  "schemaVersion": 1,
+  "scope": "Six everyday interiors plus a distinct complete interior for every Hong Kong and existing international room-calendar occasion.",
+  "requirements": [
+    "Brand-new architecture, style and furniture layout for each room",
+    "Navigation, work stations and entrances match each delivered painting",
+    "Hong Kong daily shuffle remains stable within a civil day and across restarts",
+    "Holiday selection overrides ordinary daily rotation; manual choices remain available",
+    "Real identities, parent links, observed state, full-cast fitting, bilingual UI and reduced motion remain intact"
+  ],
+  "holidayDirections": [
+    {
+      "id": "newyear",
+      "nameZh": "新年天际阁",
+      "nameEn": "New Year Skyline Loft",
+      "kind": "holiday",
+      "event": "newyear",
+      "direction": "A split-level-looking but single-floor Hong Kong rooftop typography-free design loft, curved glass skyline facade, midnight-blue steel and warm gold; central radial planning table, left-front coding island, right-rear book gallery.",
+      "status": "implemented-and-geometry-verified",
+      "deliveredArchitecture": "Curved midnight rooftop glazing, champagne-brass radial planning island, left-front laptop table and harbour skyline",
+      "profile": "room-profiles/newyear.json"
+    },
+    {
+      "id": "lunarnewyear",
+      "nameZh": "新春朱漆院",
+      "nameEn": "Lunar New Year Courtyard",
+      "kind": "holiday",
+      "event": "lunarnewyear",
+      "direction": "Chinese siheyuan invention academy with vermilion lacquer colonnades, upturned roof beams and jade stone floor; circular central council island, back-left computing ledge, left library, right instrument counter, open front-left approach.",
+      "status": "implemented-and-geometry-verified",
+      "deliveredArchitecture": "Vermilion siheyuan colonnades, jade glazed roof, central round council island and rear-left computing ledge",
+      "profile": "room-profiles/lunarnewyear.json"
+    },
+    {
+      "id": "lanternfest",
+      "nameZh": "上元水巷亭",
+      "nameEn": "Lantern Canal Pavilion",
+      "kind": "holiday",
+      "event": "lanternfest",
+      "direction": "An octagonal Chinese canal-side paper-engineering pavilion with illuminated lattice roof and warm water reflections outside, narrow low work counters in radial wall bays; an empty diagonal central floor, reading gallery front-right and computing bank left.",
+      "status": "implemented-and-geometry-verified",
+      "deliveredArchitecture": "Octagonal radial timber pavilion, low canal openings and a front-right reference table",
+      "profile": "room-profiles/lanternfest.json"
+    },
+    {
+      "id": "valentine",
+      "nameZh": "巴黎书信工坊",
+      "nameEn": "Paris Letter Atelier",
+      "kind": "holiday",
+      "event": "valentine",
+      "direction": "A Parisian Art Nouveau letterpress atelier with flowing rose-plaster arches, curved stained glass, mahogany type drawers and cream herringbone floor; long left drafting counter and a front-right curved computer/press island, no central twin desks.",
+      "status": "implemented-and-geometry-verified",
+      "deliveredArchitecture": "Rose plaster Art Nouveau vaults and stained-glass flowers around a left printing bank, rear type archive and large curved right computer island",
+      "profile": "room-profiles/valentine.json"
+    },
+    {
+      "id": "holi",
+      "nameZh": "彩砂拱廊",
+      "nameEn": "Pigment Courtyard",
+      "kind": "holiday",
+      "event": "holi",
+      "direction": "Rajasthani sandstone colonnaded pigment laboratory with vivid mineral plaster and carved jali screens, a flat spacious courtyard floor, asymmetric long color-testing counter at left and scalloped reading bay at back-right; dry pigment stays on furniture.",
+      "status": "implemented-and-geometry-verified",
+      "deliveredArchitecture": "Rajasthani carved sandstone courtyard with turquoise and magenta wall fields, a left pigment counter and offset right drawing island around a broad inlaid stone floor",
+      "profile": "room-profiles/holi.json"
+    },
+    {
+      "id": "stpatrick",
+      "nameZh": "三叶石屋",
+      "nameEn": "Clover Stone Lodge",
+      "kind": "holiday",
+      "event": "stpatrick",
+      "direction": "Irish circular stone lodge research salon with a sweeping curved turf-inspired roof, emerald glazed tiles and round sea-facing windows; horseshoe planning bench right, library across center-back, coding island front-left, no scattered shamrock stickers.",
+      "status": "implemented-and-geometry-verified",
+      "deliveredArchitecture": "Circular Irish stone lodge with curved oak rafters, moss-green ceramic roof and round sea windows, a horseshoe map counter on the right and low front-left computing island",
+      "profile": "room-profiles/stpatrick.json"
+    },
+    {
+      "id": "carnival",
+      "nameZh": "威尼斯面具画坊",
+      "nameEn": "Venetian Mask Atelier",
+      "kind": "holiday",
+      "event": "carnival",
+      "direction": "Venetian palazzo mask-design salon with three high canal windows, scalloped pale blue ceiling, terrazzo and burgundy velvet; right diagonal mask/testing counter, a small left drawing island and long back computing ledge.",
+      "status": "implemented-and-geometry-verified",
+      "deliveredArchitecture": "Venetian marble palazzo with pale blue scalloped vaults and three canal windows, a split oval mask-reference and craft island at front left, long right maskmaking counter and rear computing bank",
+      "profile": "room-profiles/carnival.json"
+    },
+    {
+      "id": "easter",
+      "nameZh": "春光玻璃谷仓",
+      "nameEn": "Spring Glass Barn",
+      "kind": "holiday",
+      "event": "easter",
+      "direction": "Scandinavian A-frame glass potting barn, whitewashed rafters and soft yellow resin floor; broad planting/testing island back-right, small computer/worktable front-right, library under left eaves, clear central cross-shaped circulation.",
+      "status": "implemented-and-geometry-verified",
+      "deliveredArchitecture": "Scandinavian A-frame glass barn with white timber rafters, a lemon-yellow specimen peninsula on the right, split botanical-reference and drafting counter left, rear meadow lounge and front-right computing table",
+      "profile": "room-profiles/easter.json"
+    },
+    {
+      "id": "qingming",
+      "nameZh": "烟柳山房",
+      "nameEn": "Willow Mountain Study",
+      "kind": "holiday",
+      "event": "qingming",
+      "direction": "Quiet Chinese ink-inspired mountain memorial study with tall open stone loggia and distant misty willow valley, limestone and weathered grey elm; left-front reading terrace table, right-back instrument bench, diagonal planning ledge at rear-left; no cemetery caricatures.",
+      "status": "implemented-and-geometry-verified",
+      "deliveredArchitecture": "Horizontal dark elm lintels, rectangular mist-and-willow loggia, cool grey stone and a left-front reading table",
+      "profile": "room-profiles/qingming.json"
+    },
+    {
+      "id": "songkran",
+      "nameZh": "清泉陶亭",
+      "nameEn": "Water Ceramic Pavilion",
+      "kind": "holiday",
+      "event": "songkran",
+      "direction": "Open Thai waterside ceramic research pavilion with sweeping teak roof and turquoise glazed structural columns; long left ceramic instrument bar, right foreground coding counter, back-right reference alcove and wide bare limestone floor; water remains outside.",
+      "status": "implemented-and-geometry-verified",
+      "deliveredArchitecture": "Open Thai riverside ceramic pavilion with sweeping teak roof, turquoise glazed columns and solid pale stone floor, a long left pottery bench, rear-center design table, rear-right reference wall and front-right oval computer island",
+      "profile": "room-profiles/songkran.json"
+    },
+    {
+      "id": "bookday",
+      "nameZh": "环形书院",
+      "nameEn": "Circular Book Atrium",
+      "kind": "holiday",
+      "event": "bookday",
+      "direction": "A dramatic contemporary circular literary atrium, pale concrete ribs and indigo radial book galleries with a broad flat cork floor; a central curved reference island, back-right coding carrels, left drafting wall and shallow front-right lounge.",
+      "status": "implemented-and-geometry-verified",
+      "deliveredArchitecture": "Circular Brutalist literary atrium with tall sloping concrete ribs, indigo radial bookshelves, cork floor and a large offset ring reading island",
+      "profile": "room-profiles/bookday.json"
+    },
+    {
+      "id": "labourday",
+      "nameZh": "包豪斯创作大厅",
+      "nameEn": "Bauhaus Makers Hall",
+      "kind": "holiday",
+      "event": "labourday",
+      "direction": "A communal Bauhaus makers assembly hall with sawtooth skylights, red tubular steel, cream factory brick and grey terrazzo; long testing benches on left and back-right, front-center collaborative coding table, library to rear-left and clear broad right aisle.",
+      "status": "implemented-and-geometry-verified",
+      "deliveredArchitecture": "Red steel sawtooth skylight factory hall, central shared computing table and side-wall maker benches",
+      "profile": "room-profiles/labourday.json"
+    },
+    {
+      "id": "buddha",
+      "nameZh": "莲影静院",
+      "nameEn": "Lotus Cloister",
+      "kind": "holiday",
+      "event": "buddha",
+      "direction": "A serene contemporary lotus cloister study, white stone colonnades and circular skylight, warm bamboo fittings and pale jade floor; perimeter low research ledges, a right-center reference island and quiet rear-left planning table. Respectful architectural setting with no figures or worshippers.",
+      "status": "implemented-and-geometry-verified",
+      "deliveredArchitecture": "White limestone lotus skylight cloister, bamboo furnishings and right-hand specimen reading island",
+      "profile": "room-profiles/buddha.json"
+    },
+    {
+      "id": "dragonboat",
+      "nameZh": "龙舟河岸工坊",
+      "nameEn": "Dragon Boat Boathouse",
+      "kind": "holiday",
+      "event": "dragonboat",
+      "direction": "A long riverside boathouse research workshop, exposed blue-green timber trusses, wide river windows and light dock-plank floor; left-front long coding bench, right-rear model testing bar, central-back planning counter and reference storage on the left wall; boat forms mounted outside the walking floor.",
+      "status": "implemented-and-geometry-verified",
+      "deliveredArchitecture": "Long teal cross-truss boathouse, front-left computing bench and split central boat-reference counter",
+      "profile": "room-profiles/dragonboat.json"
+    },
+    {
+      "id": "midsummer",
+      "nameZh": "仲夏白桦长屋",
+      "nameEn": "Midsummer Birch Hall",
+      "kind": "holiday",
+      "event": "midsummer",
+      "direction": "A Scandinavian meadow longhouse with white birch arches, sweeping glazed garden end wall, pale flax and honey wood; a round planning island left-center, right-wall computer bank and a long back reference bench, no flower objects on the wide central floor.",
+      "status": "implemented-and-geometry-verified",
+      "deliveredArchitecture": "Scandinavian meadow longhouse with sweeping white-birch roof arches, flax timber and sunset glazing, an offset oval planning island and continuous right-hand computing bar",
+      "profile": "room-profiles/midsummer.json"
+    },
+    {
+      "id": "hksar",
+      "nameZh": "维港城市客厅",
+      "nameEn": "Harbour Civic Studio",
+      "kind": "holiday",
+      "event": "hksar",
+      "direction": "A Hong Kong harbour civic design studio inspired by green-and-white ferry-terminal architecture, curved steel clerestories, tiled mosaic structural panels and terrazzo, with harbour beyond rear glazing; a central-right crescent planning desk, left data wall and front-left instrument island.",
+      "status": "implemented-and-geometry-verified",
+      "deliveredArchitecture": "Curved ferry-terminal steel clerestories, harbour mosaic and a sweeping shared civic-design island",
+      "profile": "room-profiles/hksar.json"
+    },
+    {
+      "id": "tanabata",
+      "nameZh": "七夕星纸廊",
+      "nameEn": "Star Paper Gallery",
+      "kind": "holiday",
+      "event": "tanabata",
+      "direction": "An airy Japanese bamboo-and-paper celestial gallery with a dramatic diagonal ribbed skylight and cobalt night garden, pale woven floor; a zig-zag reference wall on right, left foreground computing island, rear-left plan counter and shallow right-back test bench, a broad diagonal open route.",
+      "status": "implemented-and-geometry-verified",
+      "deliveredArchitecture": "Japanese bamboo-and-paper celestial gallery under a diagonal ribbed moon-and-star skylight, cobalt night garden, woven floor, zigzag right book wall and low front-left computing table",
+      "profile": "room-profiles/tanabata.json"
+    },
+    {
+      "id": "midautumn",
+      "nameZh": "月白天井阁",
+      "nameEn": "Moon Court Pavilion",
+      "kind": "holiday",
+      "event": "midautumn",
+      "direction": "A contemporary Chinese moon-viewing pavilion, giant circular moon window and sweeping celadon dome, white stone and jade inlay floor; a left crescent reading bench, right long coding wall, low central-back planning island and front-right testing table. Entirely new spatial design.",
+      "status": "implemented-and-geometry-verified",
+      "deliveredArchitecture": "Pearl limestone dome, offset giant moon window, crescent reference island and right-front celestial instrument table",
+      "profile": "room-profiles/midautumn.json"
+    },
+    {
+      "id": "oktoberfest",
+      "nameZh": "巴伐利亚木作厅",
+      "nameEn": "Bavarian Joinery Hall",
+      "kind": "holiday",
+      "event": "oktoberfest",
+      "direction": "A lofty Bavarian timber-joinery and bread-science hall, crossing white-and-blue roof trusses, pale oak and blue ceramic tiles; right-front curved craft/testing island, back-left computing bank and an offset central-left reference table, broad empty central-right aisle.",
+      "status": "implemented-and-geometry-verified",
+      "deliveredArchitecture": "Bavarian joinery and bread-science hall with blue-white peaked timber trusses, pale oak floor and alpine windows, an offset left reference table, rear-left computers, rear-right planning bench and large curved front-right baking island",
+      "profile": "room-profiles/oktoberfest.json"
+    },
+    {
+      "id": "nationalday",
+      "nameZh": "朱红设计学堂",
+      "nameEn": "Vermilion Design Academy",
+      "kind": "holiday",
+      "event": "nationalday",
+      "direction": "A contemporary Chinese civic design academy with a folded vermilion structural roof, white architectural fins and dark polished stone; a large left-middle planning island, rear-right reference gallery, right-front computing counter and rear-left material-testing bench.",
+      "status": "implemented-and-geometry-verified",
+      "deliveredArchitecture": "Folded vermilion civic roof, white structural fins, left model-planning island and right-front computing bar",
+      "profile": "room-profiles/nationalday.json"
+    },
+    {
+      "id": "chungyeung",
+      "nameZh": "重阳云岭书斋",
+      "nameEn": "Cloud Ridge Study",
+      "kind": "holiday",
+      "event": "chungyeung",
+      "direction": "A cliffside mountain herbarium study with a broad panoramic ridge window, ochre stone arches, weathered cedar and chrysanthemum-yellow woven materials; long library on right, left-back specimen bench, offset front-left drafting table and rear-center computing ledge; hiking terrain outside only.",
+      "status": "implemented-and-geometry-verified",
+      "deliveredArchitecture": "Horizontal ochre-stone cliffside arches, panoramic autumn ridge glazing and front-left herbarium drafting table",
+      "profile": "room-profiles/chungyeung.json"
+    },
+    {
+      "id": "halloween",
+      "nameZh": "南瓜钟楼阁",
+      "nameEn": "Pumpkin Clocktower Attic",
+      "kind": "holiday",
+      "event": "halloween",
+      "direction": "A welcoming Gothic clockwork botanist attic with asymmetric slate roof, pointed violet dusk windows and dark carved walnut, amber light. Coding carrels back-left, tall curved library back-right, instrument bench center-back, round planning table right-middle and lounge front-left. No standard workshop footprint.",
+      "status": "implemented-and-geometry-verified",
+      "deliveredArchitecture": "Asymmetrical Gothic clocktower roof, pointed dusk windows, central-back laboratory and right round planning table",
+      "profile": "room-profiles/halloween.json"
+    },
+    {
+      "id": "dayofdead",
+      "nameZh": "花忆庭廊",
+      "nameEn": "Marigold Memory Hacienda",
+      "kind": "holiday",
+      "event": "dayofdead",
+      "direction": "A Mexican hacienda archival remembrance studio with terracotta arcades, a luminous cream courtyard and cobalt wall niches, warm marigold and candlelight integrated in shelves; long back-left archive, right-center reference island and front-left computing bench. Respectful remembrance, no caricature or costume figures.",
+      "status": "implemented-and-geometry-verified",
+      "deliveredArchitecture": "Mexican terracotta hacienda archive with cobalt alcoves and courtyard arcades, long rear-left memory shelves, rear-center planning table, split reference and restoration island on the right, front-left computing bank and left linen lounge",
+      "profile": "room-profiles/dayofdead.json"
+    },
+    {
+      "id": "diwali",
+      "nameZh": "万灯石庭",
+      "nameEn": "Sandstone Light Court",
+      "kind": "holiday",
+      "event": "diwali",
+      "direction": "An Indian sandstone jali-screen light court with a polygonal domed ceiling, intricate brass inlay and deep sapphire stone floor; a long low coding bench rear-right, reading alcove front-right, large asymmetric planning island left-middle and instrument counter at rear-left; diyas recessed in safe wall/table surfaces.",
+      "status": "implemented-and-geometry-verified",
+      "deliveredArchitecture": "Polygonal sandstone jali light court with a faceted dome, inset brass-lit niches, sapphire-and-brass floor and a large curved left planning island",
+      "profile": "room-profiles/diwali.json"
+    },
+    {
+      "id": "loykrathong",
+      "nameZh": "莲灯水阁",
+      "nameEn": "Lotus Light Pavilion",
+      "kind": "holiday",
+      "event": "loykrathong",
+      "direction": "A Thai overwater research pavilion with a sweeping layered teak roof, golden lattice and night-water views, solid wide polished teak floor; a right-side long instrument peninsula, a rear-left library and a front-left crescent computing bench, rear-center planning alcove. All lotus water vessels outside the solid walking floor.",
+      "status": "implemented-and-geometry-verified",
+      "deliveredArchitecture": "Thai overwater research pavilion with layered teak roofs, gold lotus lattice, night-water views and a solid fan-shaped floor between a front-left crescent computer bar and diagonal right instrument peninsula",
+      "profile": "room-profiles/loykrathong.json"
+    },
+    {
+      "id": "thanksgiving",
+      "nameZh": "丰收圆谷仓",
+      "nameEn": "Harvest Round Barn",
+      "kind": "holiday",
+      "event": "thanksgiving",
+      "direction": "A warm North American harvest round-barn research atelier, curved Shaker timber walls and high radial beams, burnt-orange and cream woven furnishings; a back-center seed reference wall, right-middle testing island and left-front communal coding table, front-right quiet lounge.",
+      "status": "implemented-and-geometry-verified",
+      "deliveredArchitecture": "Warm round timber barn with radial Shaker-style roof beams, honey oak floor and autumn meadow windows, rear seed archive, left botanical reference and planning bank, right testing island, front-left computers and curved front-right wicker lounge",
+      "profile": "room-profiles/thanksgiving.json"
+    },
+    {
+      "id": "christmas",
+      "nameZh": "雪夜邮政工坊",
+      "nameEn": "Snowfall Post Atelier",
+      "kind": "holiday",
+      "event": "christmas",
+      "direction": "A Nordic Alpine snow-post research atelier with a soaring asymmetrical A-frame, huge snowy blue window, cream pine and forest-green built-ins, chimney at back-left; left-front computer sorting island, back-center archives, right-back instrument bench and a curved right-foreground lounge. A warm complete new architecture, not a tree added to the ordinary office.",
+      "status": "implemented-and-geometry-verified",
+      "deliveredArchitecture": "Asymmetrical Nordic Alpine A-frame, tall snow window, front-left oval correspondence island and back-center reference wall",
+      "profile": "room-profiles/christmas.json"
+    }
+  ]
+}

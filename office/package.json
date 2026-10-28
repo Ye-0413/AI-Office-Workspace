@@ -1,6 +1,6 @@
 {
   "name": "ai-mini-office",
-  "version": "0.22.0",
+  "version": "0.23.0",
   "description": "A tiny living office for observing local AI agent sessions.",
   "main": "main.cjs",
   "type": "commonjs",
@@ -18,11 +18,13 @@
     "verify:packaged-hook": "node scripts/smoke-packaged-hook.cjs",
     "verify:packaged-flow": "node scripts/verify-packaged-flow.cjs",
     "verify:packaged-usage": "node scripts/verify-packaged-usage.cjs",
-    "prebuild": "node scripts/prepare-build.cjs",
-    "prebuild:mac": "node scripts/prepare-build.cjs",
-    "prebuild:mac:x64": "node scripts/prepare-build.cjs --arch x64",
-    "pretest": "node scripts/sync-provider-catalog.cjs --check",
+    "prebuild": "node scripts/sync-room-designs.cjs --check && node scripts/prepare-build.cjs",
+    "prebuild:mac": "node scripts/sync-room-designs.cjs --check && node scripts/prepare-build.cjs",
+    "prebuild:mac:x64": "node scripts/sync-room-designs.cjs --check && node scripts/prepare-build.cjs --arch x64",
+    "pretest": "node scripts/sync-provider-catalog.cjs --check && node scripts/sync-room-designs.cjs --check",
     "sync:providers": "node scripts/sync-provider-catalog.cjs",
+    "check:rooms": "node scripts/sync-room-designs.cjs --check",
+    "sync:rooms": "node scripts/sync-room-designs.cjs",
     "verify:codex-restart": "electron scripts/verify-codex-restart.cjs"
   },
   "devDependencies": {

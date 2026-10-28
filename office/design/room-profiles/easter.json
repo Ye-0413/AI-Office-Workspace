@@ -1,0 +1,40 @@
+{
+  "id": "easter",
+  "event": "easter",
+  "kind": "holiday",
+  "nameZh": "春野玻璃谷仓",
+  "nameEn": "Spring Meadow Glass Barn",
+  "icon": "❀",
+  "effectVenue": "teahouse",
+  "architecture": "Scandinavian A-frame glass barn with white timber rafters, a lemon-yellow specimen peninsula on the right, split botanical-reference and drafting counter left, rear meadow lounge and front-right computing table",
+  "entry": [47, 78],
+  "floor": [5, 47, 95, 86],
+  "furniture": {
+    "library": [17, 43, 26, 62],
+    "board": [26, 43, 35, 62],
+    "bench": [57, 42, 100, 59],
+    "desk": [70, 58, 100, 96],
+    "sofa": [38, 37, 53, 47],
+    "archive": [0, 37, 6, 67]
+  },
+  "extraObstacles": [[9, 20, 28, 57], [28, 34, 38, 45], [0, 70, 13, 100]],
+  "areas": {
+    "library": [[17, 64, 31, 72]],
+    "board": [[37, 49, 47, 61]],
+    "bench": [[58, 61, 68, 68], [49, 49, 55, 58]],
+    "desk": [[60, 70, 68, 84]],
+    "sofa": [[39, 49, 54, 55]],
+    "archive": [[14, 69, 23, 77]],
+    "front": [[34, 75, 59, 84]],
+    "lobby": [[39, 59, 55, 71]],
+    "exit": [[39, 75, 55, 83]]
+  },
+  "labels": {
+    "library": ["植物志案", "Botanical reference counter"],
+    "board": ["春芽绘图案", "Spring specimen drafting"],
+    "bench": ["黄瓷育苗岛", "Lemon specimen peninsula"],
+    "desk": ["白木工作桌", "Pale-wood computer table"],
+    "sofa": ["草甸休息席", "Meadow lounge"],
+    "archive": ["种子档案柜", "Seed archive drawers"]
+  }
+}

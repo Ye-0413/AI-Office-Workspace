@@ -110,7 +110,7 @@
     return svg;
   }
 
-  function create({ office, world, topbar, getState = () => ({}), onSelectVenue, onInteraction } = {}) {
+  function create({ office, world, topbar, getState = () => ({}), onSelectVenue, onSelectRoom, onCommitArtwork, onInteraction } = {}) {
     if (!office || !world || !topbar || !root.OfficeVenues) return { update() {}, destroy() {} };
     const model = root.OfficeVenues;
     const originalArt = world.querySelector('#room-art');
@@ -125,11 +125,22 @@
     const chooser=node('div','venue-chooser'), label=node('label','venue-chooser-label'), select=node('select','venue-select');
     select.id='venue-select'; label.htmlFor=select.id;
     for(const venue of model.CATALOG){const option=node('option','');option.value=venue.id;select.append(option);}
+    if(root.OfficeRoomDesigns){
+      const automatic=node('option','');automatic.value='daily';select.prepend(automatic);
+      for(const room of root.OfficeRoomDesigns.CATALOG){const option=node('option','');option.value=room.id;select.append(option);}
+    }
     chooser.append(label,select); topbar.insertBefore(chooser,topbar.querySelector('.room-switcher') || topbar.querySelector('.top-actions'));
     const records=new Map(), surfaces=new Set(), animations=new Set(), pendingImages=new Set();
     let state={venue:model.DEFAULT_VENUE,language:'zh',reducedMotion:false,lowPower:false,hidden:false,dayPhase:'morning'}, destroyed=false, artGeneration=0, paintedArtwork='', requestedArtwork='', selectionSource='pointer', lastFeedback=null;
     const artMotions=new Map(), artTargets=new Map();
-    const artworkFor=venue=>root.OfficeSceneArtwork?.resolve(state)||{key:venue.id,venue:venue.id,id:null,background:venue.background,altZh:venue.subtitleZh,altEn:venue.subtitleEn};
+    const artworkFor=venue=>{
+      if(state.roomDesign&&state.roomDesign!=='legacy'&&root.OfficeRoomDesigns){
+        const selected=root.OfficeRoomDesigns.resolve({selection:state.roomDesign,now:state.now});
+        return{...selected,id:selected.event||selected.id,venue:selected.room.effectVenue,layout:selected.room,
+          altZh:selected.room.nameZh+'全景',altEn:selected.room.nameEn+' room'};
+      }
+      return root.OfficeSceneArtwork?.resolve(state)||{key:venue.id,venue:venue.id,id:null,background:venue.background,altZh:venue.subtitleZh,altEn:venue.subtitleEn};
+    };
     const describeArt=art=>language()==='en'?art.altEn:art.altZh;
     const language=()=>state.language==='en'?'en':'zh';
     const copy=()=>COPY[language()];
@@ -237,6 +248,13 @@
       const incoming=node('img','venue-art-buffer');incoming.alt='';incoming.draggable=false;incoming.setAttribute('aria-hidden','true');incoming.dataset.venue=venue.id;incoming.dataset.artworkKey=art.key;
       if(!await loadImage(incoming,path)){if(!destroyed&&generation===artGeneration){stage.dataset.artState='error';chooser.dataset.artState='error';select.setAttribute('aria-busy','false');say('loadError');}return;}
       if(destroyed||generation!==artGeneration)return;
+      const layoutChange=Boolean(art.layout||office.dataset.roomDesign);
+      // The image is decoded before the floor changes. A finite physical
+      // owner may defer the swap; the regular artwork check retries later.
+      try{
+        if(onCommitArtwork?.(art)===false){requestedArtwork=paintedArtwork;stage.dataset.artState='pending';chooser.dataset.artState='pending';select.setAttribute('aria-busy','false');return;}
+      }catch(_){requestedArtwork=paintedArtwork;stage.dataset.artState='error';chooser.dataset.artState='error';select.setAttribute('aria-busy','false');say('loadError');return;}
+      if(layoutChange)instant=true;
       // Reuse the exact picture, including its current alpha on re-entry.
       // An already outgoing picture keeps its original finite fade deadline;
       // rapid theme choices cannot repeatedly extend its lifetime.
@@ -268,10 +286,16 @@
       paintedArtwork=art.key;originalArt.dataset.venue=venue.id;originalArt.dataset.artworkKey=art.key;originalArt.dataset.theme=art.id||'';stage.dataset.artState='ready';chooser.dataset.artState='ready';select.setAttribute('aria-busy','false');cancelArt();discardSurfaces();
     }
     function choose(){
+      const selection=select.value;
+      if(selection==='daily'||root.OfficeRoomDesigns?.get(selection)){
+        const source=selectionSource;selectionSource='pointer';
+        try{const result=onSelectRoom?.(selection,{source});if(result?.catch)result.catch(()=>{});}catch(_){}
+        return;
+      }
       const id=model.getVenue(select.value).id;
-      if(id===state.venue)return;
+      if(id===state.venue&&(!state.roomDesign||state.roomDesign==='legacy'))return;
       const source=selectionSource;selectionSource='pointer';
-      update({...state,venue:id,instant:source==='keyboard'});
+      update({...state,venue:id,roomDesign:'legacy',instant:source==='keyboard'});
       try{const result=onSelectVenue?.(id,{source});if(result?.catch)result.catch(()=>{});}catch(_){/* Settings persistence reports its own error. */}
     }
     listen(select,'keydown',()=>{selectionSource='keyboard';});listen(select,'pointerdown',()=>{selectionSource='pointer';});listen(select,'change',choose);
@@ -281,10 +305,18 @@
       const venue=model.getVenue(state.venue),changed=previous.venue!==state.venue;
       office.dataset.venue=state.venue;stage.dataset.venue=state.venue;stage.dataset.phase=state.dayPhase||'morning';stage.dataset.quiet=String(quiet());
       stage.setAttribute('aria-label',language()==='en'?venue.subtitleEn:venue.subtitleZh);
-      chooser.dataset.venue=state.venue;label.textContent=copy().choose;select.setAttribute('aria-label',copy().chooseLabel);select.title=(language()==='en'?venue.nameEn:venue.nameZh)+' · '+copy().hint;select.value=state.venue;
-      [...select.options].forEach(option=>{const item=model.getVenue(option.value);option.textContent=item.icon+' '+(language()==='en'?item.nameEn:item.nameZh);});
+      chooser.dataset.venue=state.venue;label.textContent=copy().choose;select.setAttribute('aria-label',copy().chooseLabel);select.title=(language()==='en'?venue.nameEn:venue.nameZh)+' · '+copy().hint;select.value=state.roomDesign&&state.roomDesign!=='legacy'?state.roomDesign:state.venue;
+      const selectedArt=artworkFor(venue);
+      [...select.options].forEach(option=>{
+        if(option.value==='daily'){option.textContent=(language()==='en'?'Daily room · ':'每日新房间 · ')+(language()==='en'?selectedArt.layout?.nameEn||'Automatic':selectedArt.layout?.nameZh||'自动');return;}
+        const item=root.OfficeRoomDesigns?.get(option.value)||model.getVenue(option.value);option.textContent=item.icon+' '+(language()==='en'?item.nameEn:item.nameZh);
+      });
       for(const record of records.values()){
         const visible=record.venue===state.venue;record.widget.hidden=!visible;
+        const index=model.getVenue(record.venue).interactions.indexOf(record.item);
+        const anchor=state.room?.furniture[['board','bench','sofa'][index]];
+        record.widget.style.left=(anchor?(anchor.x1+anchor.x2)/2:record.item.x)+'%';
+        record.widget.style.top=(anchor?(anchor.y1+anchor.y2)/2:record.item.y)+'%';
         if(!visible||quiet()){
           const brewing=['pouring','steeping'].includes(record.phase);stop(record);
           if(brewing){record.count++;record.phase='ready';if(visible)say('tea',record.count);}
@@ -295,7 +327,7 @@
       else if(lastFeedback){const saved=lastFeedback;say(saved.key,saved.arg);}
       const art=artworkFor(venue);
       office.dataset.fullTheme=String(Boolean(art.id));
-      if(changed||requestedArtwork!==art.key)paint(venue,Boolean(next.instant||quiet()));
+      if(requestedArtwork!==art.key)paint(venue,Boolean(next.instant||quiet()));
       else if(originalArt)originalArt.alt=describeArt(art);
       if(quiet())for(const effect of artMotions.values())effect.finish();
     }
@@ -304,7 +336,7 @@
       update,
       refreshArtwork(now=Date.now()){
         if(destroyed)return;
-        state={...state,now};
+        state={...state,...getState(),now};
         const venue=model.getVenue(state.venue);
         if(requestedArtwork!==artworkFor(venue).key)paint(venue,quiet());
       },

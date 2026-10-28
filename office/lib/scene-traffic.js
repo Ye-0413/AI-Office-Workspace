@@ -46,6 +46,8 @@
     let gap = Number.isFinite(options.gap) ? Math.max(0, options.gap) : 8;
     const limit = Math.max(2, Math.min(4096, Math.floor(options.limit) || 256));
     const maxConcurrent = Math.max(1, Math.min(8, Math.floor(options.maxConcurrent) || 1));
+    // Walkers may pass through one another; furniture and reserved art still block.
+    const passThrough = options.passThrough === true;
     // The production renderer can yield between cooperative proofs. Pure
     // layout callers retain a synchronous complete proof by default.
     const yieldBatchSize = Math.max(0, Math.min(256, Math.floor(options.yieldBatchSize) || 0));
@@ -107,6 +109,7 @@
     }
     function targetBlockers(r, target = r.target) {
       const moving = actors.get(r.id), destination = rect(target, moving);
+      if (passThrough) return reservedRects.filter(other => intersects(destination, other.bounds, 400 / world.width, 400 / world.height)).map(other => other.id);
       return [...actors.values()].filter(other => other.id !== r.id && !other.staged && !(same(target, r.target) && r.overlapIds.includes(other.id))
         && intersects(destination, rect(other.position, other), gapX, gapY)).map(other => other.id)
         .concat(reservedRects.filter(other => intersects(destination, other.bounds, 400 / world.width, 400 / world.height)).map(other => other.id))
@@ -141,7 +144,9 @@
     }
     function findPath(r, target = r.target, temporary = false) {
       const actor = actors.get(r.id), start = actor.position;
-      if (!legalPoint(start, actor) || !legalPoint(target, actor) || targetBlockers(r, target).length) return null;
+      // A pass-through body may resize where it stands; it only has to leave.
+      const startLegal = passThrough || legalPoint(start, actor);
+      if (!startLegal || !legalPoint(target, actor) || targetBlockers(r, target).length) return null;
       if (same(start, target)) return [start];
       if (r.instant && !temporary) return [start, target];
       // Depth changes during walking. The largest envelope in the rendered
@@ -151,11 +156,11 @@
         return { left: -b.x1, right: b.x2, top: y - b.y1, bottom: b.y2 - y };
       });
       const extent = Object.fromEntries(['left', 'right', 'top', 'bottom'].map(key => [key, Math.max(...samples.map(s => s[key]))]));
-      const blockers = [...actors.values()].filter(other => other.id !== r.id && !other.staged).map(other => {
+      const blockers = [...actors.values()].filter(other => !passThrough && other.id !== r.id && !other.staged).map(other => {
         const b = rect(other.position, other);
         return { id: other.id, bounds: b, gapX, gapY, x1: b.x1 - extent.right - gapX, x2: b.x2 + extent.left + gapX,
           y1: b.y1 - extent.bottom - gapY, y2: b.y2 + extent.top + gapY };
-      }).concat(corridors(r.id).map(other => ({ ...other, gapX, gapY,
+      }).concat((passThrough ? [] : corridors(r.id)).map(other => ({ ...other, gapX, gapY,
         x1: other.bounds.x1 - extent.right - gapX, x2: other.bounds.x2 + extent.left + gapX,
         y1: other.bounds.y1 - extent.bottom - gapY, y2: other.bounds.y2 + extent.top + gapY })), reservedRects.map(other => ({ ...other, gapX: 400 / world.width, gapY: 400 / world.height,
         x1: other.bounds.x1 - extent.right - 400 / world.width, x2: other.bounds.x2 + extent.left + 400 / world.width,
@@ -180,7 +185,7 @@
       // A deliberate clone source still receives only its named parent exemption.
       if (!clear(start, start)) return null;
       const pathClear = path => path.length > 1 && same(path[0], start) && same(path.at(-1), target)
-        && path.every((p, i) => legalPoint(p, actor) && (!i || clear(path[i - 1], p)));
+        && path.every((p, i) => (!i && passThrough || legalPoint(p, actor)) && (!i || clear(path[i - 1], p)));
       const original = baseRoute(start, target, actor);
       if (pathClear(original)) return original.map(p => ({ ...p }));
       const nodes = [start, target];

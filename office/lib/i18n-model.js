@@ -127,6 +127,8 @@
     ['构建实验台', 'Build bench'],
     ['代码工位', 'Coding desks'],
     ['咖啡休息角', 'Coffee corner'],
+    ['暂无信号 · 小憩', 'No signal · resting'],
+    ['超过 30 秒没有新信号，先在咖啡角休息', 'No new signal for over 30 seconds; resting in the coffee corner'],
     ['成果架', 'Results shelf'],
     ['观察位', 'Observation spot'],
     ['离开房间', 'Leaving the room'],
