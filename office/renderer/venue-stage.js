@@ -299,6 +299,12 @@
       try{const result=onSelectVenue?.(id,{source});if(result?.catch)result.catch(()=>{});}catch(_){/* Settings persistence reports its own error. */}
     }
     listen(select,'keydown',()=>{selectionSource='keyboard';});listen(select,'pointerdown',()=>{selectionSource='pointer';});listen(select,'change',choose);
+    function updateDailyChoiceLabel(){
+      const option=[...select.options].find(item=>item.value==='daily');
+      if(!option)return;
+      const room=root.OfficeRoomDesigns.resolve({selection:'daily',now:state.now}).room;
+      option.textContent=(language()==='en'?'Daily room · ':'每日新房间 · ')+(language()==='en'?room.nameEn:room.nameZh);
+    }
     function update(next={}){
       if(destroyed)return;
       const previous=state;state={...state,...next,venue:model.getVenue(next.venue===undefined?state.venue:next.venue).id,language:next.language===undefined?state.language:next.language==='en'?'en':'zh'};
@@ -306,11 +312,11 @@
       office.dataset.venue=state.venue;stage.dataset.venue=state.venue;stage.dataset.phase=state.dayPhase||'morning';stage.dataset.quiet=String(quiet());
       stage.setAttribute('aria-label',language()==='en'?venue.subtitleEn:venue.subtitleZh);
       chooser.dataset.venue=state.venue;label.textContent=copy().choose;select.setAttribute('aria-label',copy().chooseLabel);select.title=(language()==='en'?venue.nameEn:venue.nameZh)+' · '+copy().hint;select.value=state.roomDesign&&state.roomDesign!=='legacy'?state.roomDesign:state.venue;
-      const selectedArt=artworkFor(venue);
       [...select.options].forEach(option=>{
-        if(option.value==='daily'){option.textContent=(language()==='en'?'Daily room · ':'每日新房间 · ')+(language()==='en'?selectedArt.layout?.nameEn||'Automatic':selectedArt.layout?.nameZh||'自动');return;}
+        if(option.value==='daily')return;
         const item=root.OfficeRoomDesigns?.get(option.value)||model.getVenue(option.value);option.textContent=item.icon+' '+(language()==='en'?item.nameEn:item.nameZh);
       });
+      updateDailyChoiceLabel();
       for(const record of records.values()){
         const visible=record.venue===state.venue;record.widget.hidden=!visible;
         const index=model.getVenue(record.venue).interactions.indexOf(record.item);
@@ -337,6 +343,7 @@
       refreshArtwork(now=Date.now()){
         if(destroyed)return;
         state={...state,...getState(),now};
+        updateDailyChoiceLabel();
         const venue=model.getVenue(state.venue);
         if(requestedArtwork!==artworkFor(venue).key)paint(venue,quiet());
       },

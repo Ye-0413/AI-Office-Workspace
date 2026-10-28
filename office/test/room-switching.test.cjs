@@ -86,6 +86,23 @@ test('manual choice survives holiday dates, heartbeat and controller restart; se
   restored.update({language:'zh'});assert.equal(restored.query('.venue-select').value,'daily');assert.match(restored.query('.venue-select').options[0].textContent,/每日新房间/);
 });
 
+for(const roomDesign of ['loykrathong','legacy'])test(`Daily option advertises the automatic Hong Kong room during ${roomDesign} selection and date changes`,async()=>{
+  const before='2026-10-29T15:59:59.999Z',after='2026-10-29T16:00:00.000Z',holiday='2026-12-25T04:00:00Z';
+  const h=fixture({roomDesign,now:before});await h.ready();
+  const select=h.query('.venue-select'),daily=select.options.find(option=>option.value==='daily');
+  const selected=select.options.find(option=>option.value===select.value),selectedValue=select.value,selectedLabel=selected.textContent;
+  const painted=h.painted(),geometry=h.geometry(),commits=h.commits.length;
+  const first=Rooms.resolve({selection:'daily',now:before}),next=Rooms.resolve({selection:'daily',now:after});
+  assert.equal(first.id,'glasshouse');assert.notEqual(first.id,next.id);
+  assert.equal(daily.textContent,'Daily room · '+first.room.nameEn);
+  h.controller.refreshArtwork(after);await flush();assert.equal(daily.textContent,'Daily room · '+next.room.nameEn);
+  h.controller.refreshArtwork(holiday);await flush();assert.equal(daily.textContent,'Daily room · '+Rooms.get('christmas').nameEn);
+  assert.equal(select.value,selectedValue);assert.equal(selected.textContent,selectedLabel);assert.equal(h.state.roomDesign,roomDesign);
+  assert.equal(h.painted(),painted);assert.equal(h.geometry(),geometry);assert.equal(h.commits.length,commits);assert.equal(h.pending.length,0,'only the automatic option caption changes');
+  h.update({language:'zh'});assert.equal(daily.textContent,'每日新房间 · '+Rooms.get('christmas').nameZh);
+  const manual=Rooms.get(roomDesign)||Venues.getVenue(selectedValue);assert.equal(selected.textContent,manual.icon+' '+manual.nameZh);assert.equal(select.value,selectedValue);
+});
+
 test('a finite physical owner defers the whole swap and refresh retries the same decoded choice later',async()=>{
   const h=fixture();await h.ready();h.allowCommit(false);const before=h.commits.length;
   h.update({roomDesign:'orbital-bridge'});await h.decode('orbital-bridge');

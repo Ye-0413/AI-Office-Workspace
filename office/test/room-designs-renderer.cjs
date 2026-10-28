@@ -21,6 +21,7 @@ async function choose(id){
   await run(`(()=>{const select=document.getElementById('venue-select');select.value=${JSON.stringify(id)};select.dispatchEvent(new Event('change',{bubbles:true}));})()`);
   await until(`document.getElementById('room-art').dataset.artworkKey===${JSON.stringify('room:'+id)}&&document.getElementById('office').dataset.roomDesign===${JSON.stringify(id)}`,'room art and geometry commit together: '+id);
   assert.equal(await run(`(()=>{const room=OfficeRoomDesigns.get(${JSON.stringify(id)}),language=document.documentElement.lang==='en'?'en':'zh';return document.getElementById('venue-select').selectedOptions[0].textContent.includes(language==='en'?room.nameEn:room.nameZh)&&[...document.querySelectorAll('[data-zone-label]')].every(n=>n.textContent===OfficeRoomDesigns.zoneLabel(room.id,n.dataset.zoneLabel,language));})()`),true,'room names and furniture signs follow the current language');
+  assert.equal(await run(`(()=>{const language=document.documentElement.lang==='en'?'en':'zh',daily=OfficeRoomDesigns.resolve({selection:'daily',now:Date.now()}).room;return [...document.getElementById('venue-select').options].find(n=>n.value==='daily').textContent.includes(language==='en'?daily.nameEn:daily.nameZh);})()`),true,'Daily advertises the automatic calendar room while the manual room stays selected');
 }
 function audit(){
   const world=document.getElementById('world').getBoundingClientRect(),fx=1280/world.width,fy=720/world.height;
