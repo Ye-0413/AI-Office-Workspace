@@ -12,7 +12,7 @@ const signalFunction=between('  function updateSignalSummary()','  function acto
 function node(id='',className=''){return{id,className,textContent:'',dataset:{},children:[],attributes:{},append(...children){this.children.push(...children);},setAttribute(key,value){this.attributes[key]=value;}};}
 function context(language='en'){
  const nodes=new Map([['room-summary',node('room-summary')],['signal-summary',node('signal-summary')],['inspect-title',node('inspect-title')]]);
- const c=vm.createContext({language,I18n,$:id=>nodes.get(id),document:{createElement:()=>node()},actors:new Map(),snapshot:{sessions:[]},office:{dataset:{}},currentPage:{overflowIds:[]},bodyIds:new Set(),deferredPhysicalScale:null,Scene:{timestamp:()=>0,providerName:()=> 'Codex'},timeAgo:()=>'',displayName:()=> 'Fixed alias',fullRelation:'1 active clone · 1 total',spec:{label:'构思方案'}});
+ const c=vm.createContext({language,I18n,$:id=>nodes.get(id),document:{createElement:()=>node()},actors:new Map(),snapshot:{sessions:[]},attendance:{signalLost:[]},office:{dataset:{}},currentPage:{overflowIds:[]},bodyIds:new Set(),deferredPhysicalScale:null,Scene:{timestamp:()=>0,providerName:()=> 'Codex'},timeAgo:()=>'',displayName:()=> 'Fixed alias',fullRelation:'1 active clone · 1 total',spec:{label:'构思方案'}});
  vm.runInContext(copyFunctions+elementFunction+signalFunction,c);c.nodes=nodes;return c;
 }
 function summary(c,{roots=0,helpers=0,quiet=0,scale=1,requested=1,overflow=0}={}){
@@ -60,6 +60,17 @@ test('all three actual renderer title paths localize only an absent application 
  for(const locale of ['en','zh'])for(const missing of [undefined,null,'']){
   const expected=locale==='en'?'Untitled task':'未命名任务',r=titles(context(locale),missing);
   assert.equal(r.inspector,expected);assert.equal(r.roster,expected);assert.ok(r.aria.includes(' · '+expected+' · '));
+ }
+});
+test('crowded rooms surface readable roster guidance and parked signals in both languages without hiding active work',()=>{
+ for(const language of ['en','zh']){
+  const c=context(language);c.attendance.signalLost=Array.from({length:52},(_,i)=>'lost-'+i);
+  const text=summary(c,{roots:3,scale:.12}).textContent;
+  assert.equal(c.office.dataset.readability,'crowded');assert.match(text,/12%/);
+  assert.match(text,language==='en'?/52 with lost signal.*open roster for readable details/:/52 位信号中断.*点名单查看详情/);
+  assert.equal(c.roomSessions.length,3);assert.equal(c.office.dataset.overflowCount,'0');
+  summary(c,{roots:3,scale:.8});assert.equal(c.office.dataset.readability,'readable');
+  assert.doesNotMatch(c.nodes.get('room-summary').textContent,/12%/);
  }
 });
 

@@ -1807,7 +1807,7 @@
     $('greet-agent').disabled = !actor || actor.departing || Boolean(spec.stale) || cloneBusy(actor) || actor.holdingFamily;
     text($('inspect-title'), session.title || tr('未命名任务'));
     const makingRoom = actor && (actor.yielding || actor.node?.dataset.traffic === 'queued');
-    text($('inspect-location'), attendance.retired.includes(session.id) || restedClones.has(session.id) ? session.parentId ? '分身暂歇' : '门外休息'
+    text($('inspect-location'), attendance.retired.includes(session.id) || restedClones.has(session.id) ? spec.stale ? '信号中断 · 保留在名单' : session.parentId ? '分身暂歇' : '门外休息'
       : makingRoom ? (language === 'en' ? 'Temporarily making room · ' : '临时让路 · ') + zoneName((actor.target || spec).zone)
         : actor && actor.motion ? (language === 'en' ? 'Heading to ' : '前往') + zoneName((actor.target || spec).zone) : zoneName(actor?.target?.zone || spec.zone));
     text($('inspect-summary'), session.summary || spec.verb);
@@ -1822,7 +1822,7 @@
     $('inspect-helper').title = session.parentId ? $('inspect-helper').textContent : I18n.t(language, 'family.clonesHint');
     text($('open-source'), '打开项目文件夹 ↗');
     $('open-source').disabled = !session.projectPath;
-    text($('inspect-action-note'), Scene.needsAttention(session) ? '请回到 ' + Scene.providerName(session.provider) + ' 回答或处理审批。' : spec.stale ? '最后位置已保留，尚不能确认当前进度。' : '此按钮打开 Finder。任务与对话请回到原工具查看。');
+    text($('inspect-action-note'), Scene.needsAttention(session) ? '请回到 ' + Scene.providerName(session.provider) + ' 回答或处理审批。' : spec.stale ? '身份和末次状态已保留；信号中断不代表任务结束。' : '此按钮打开 Finder。任务与对话请回到原工具查看。');
     text($('inspect-source'), sourceName(session.evidence && session.evidence.source));
     text($('inspect-confidence'), confidenceName(session.evidence && session.evidence.confidence));
     text($('inspect-animation'), Director.plan(session, { now: Date.now(), language }).detail);
@@ -1894,7 +1894,7 @@
       const parent = familyGraph.byId.get(session.parentId);
       if (parent) { const relation = element('span','roster-relation'); relation.textContent = '↳ ' + I18n.t(language,'identity.parent',{name:displayName(parent)}); copy.append(relation); }
       else if (!session.parentId) { const relation = element('span','roster-relation'); relation.textContent = cloneSummary(session); relation.title = I18n.t(language, 'family.clonesHint'); copy.append(relation); }
-      row.append(copy, element('span', 'roster-state', (attendance.retired.includes(session.id) || restedClones.has(session.id) ? tr(session.parentId ? '分身暂歇' : '门外休息') : tr(spec.label)) + ' →'));
+      row.append(copy, element('span', 'roster-state', (attendance.retired.includes(session.id) || restedClones.has(session.id) ? tr(spec.stale ? '信号中断 · 保留在名单' : session.parentId ? '分身暂歇' : '门外休息') : tr(spec.label)) + ' →'));
       row.addEventListener('click', () => { $('roster-dialog').close(); selectSession(session.id); });
       fragment.append(row);
     }
@@ -1931,6 +1931,19 @@
     cloneLedger.update(snapshot.sessions, Date.now());
     for (const session of snapshot.sessions) if (hasBodyActivity(session)) restedClones.delete(session.id);
     attendance = attendanceModel.update(snapshot.sessions);
+    // A lost signal supplies no exit or clone-completion evidence. Unload
+    // only the visual body after grace, retaining the exact source/roster row.
+    // Remove it before fitting: a stale pinned foot must not shrink live work.
+    if (attendance.signalLost?.length) {
+      const wasClearing = clearingActors;
+      clearingActors = true;
+      try {
+        for (const id of attendance.signalLost) {
+          observedIds.delete(id);
+          removeActor(id);
+        }
+      } finally { clearingActors = wasClearing; }
+    }
     familyGraph = Family.build(snapshot.sessions);
     const openFamilies = snapshot.sessions.filter(session => !Scene.isClosed(session))
       .map(session => cloneLedger.rootFor(session.id) || familyGraph.info.get(session.id)?.rootId || session.id);
@@ -1995,6 +2008,10 @@
     $('status-dot').dataset.status = localAttention.length ? 'waiting' : roomSessions.length ? 'active' : 'empty';
     let summary = roomSessions.length ? tr(rootCount + ' 项独立任务') + (helpers ? ' · ' + tr(helpers + ' 位临时帮手') : '') : tr('实时办公室 · 等待任务入驻');
     if (quiet) summary += ' · ' + tr(quiet + ' 项信号暂未更新');
+    if (attendance.signalLost?.length) summary += ' · ' + I18n.t(language, 'room.signalLost', { count: attendance.signalLost.length });
+    const crowded = roomSessions.length > 0 && uniformScale < .35;
+    office.dataset.readability = crowded ? 'crowded' : 'readable';
+    if (crowded) summary += ' · ' + I18n.t(language, 'room.crowded', { percent: Math.max(1, Math.round(uniformScale * 100)) });
     if (deferredPhysicalScale !== null) summary += language === 'en' ? ' · size change after clone transition' : ' · 等分身过渡完成后调整大小';
     office.dataset.overflowCount = '0';
     $('room-summary').textContent = summary;

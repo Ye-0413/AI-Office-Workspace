@@ -1,14 +1,14 @@
 /* One paper ledger: observed agents at left, reported session tokens at right. */
-.activity-stats{left:calc(47.65% - 242px);width:232px;padding:7px 8px;display:grid;grid-template-columns:104px minmax(0,1fr);gap:8px}
+.activity-stats{left:calc(47.65% - 250px);width:240px;padding:4px 8px;display:grid;grid-template-columns:104px minmax(0,1fr);gap:8px}
 .activity-agent-stats{min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.activity-agent-stats .stats-label{font-size:9px;letter-spacing:0}
-.activity-agent-stats strong{font-size:31px;line-height:34px}
-.activity-agent-stats .stats-detail{font-size:8px;gap:4px}
-.home-token-usage{margin:0;min-width:0;padding-left:9px;border-left:1px solid #bba373;display:flex;flex-direction:column;gap:5px;color:#3e503e}
+.activity-agent-stats .stats-label{font-size:11px;letter-spacing:0}
+.activity-agent-stats strong{font-size:36px;line-height:38px}
+.activity-agent-stats .stats-detail{font-size:10px;gap:4px}
+.home-token-usage{margin:0;min-width:0;padding-left:9px;border-left:1px solid #bba373;display:flex;flex-direction:column;gap:4px;color:#3e503e}
 .home-token-usage>div{min-width:0}
-.home-token-usage dt{font-size:8px;line-height:12px;white-space:nowrap;color:#5b624a}
-.home-token-usage dd{margin:0;font-size:18px;line-height:24px;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.025em;white-space:nowrap}
-.home-token-usage dd[data-long="true"]{font-size:16px;letter-spacing:-.035em}
+.home-token-usage dt{font-size:11px;line-height:14px;white-space:nowrap;color:#5b624a}
+.home-token-usage dd{margin:0;font-size:22px;line-height:26px;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.025em;white-space:nowrap}
+.home-token-usage dd[data-long="true"]{font-size:18px;letter-spacing:-.035em}
 .home-token-usage[data-error="true"] dd{color:#8c503c}
 .home-token-usage[data-importing="true"] dt::after{content:' ·';color:#8b6d43}
 .home-token-usage:focus-visible{outline:2px solid #745936;outline-offset:4px;border-radius:1px}

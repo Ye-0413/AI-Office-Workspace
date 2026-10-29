@@ -32,7 +32,7 @@ function sender(configFile) {
   return raw => { try { if (queue.length < 32) { queue.push(raw); drain(); } } catch {} };
 }
 function createObserver(provider, send) {
-  const parents = new Map(), seen = new Set(), candidates = new Map(), toolNames = new Map(), questions = new Map();
+  const parents = new Map(), seen = new Set(), candidates = new Map(), toolNames = new Map(), questions = new Map(), clawRuns = new Map();
   const remember = (map, key, value) => { map.set(key, value); while (map.size > 256) map.delete(map.keys().next().value); };
   function emit(event, session, fields = {}) {
     if (!text(session)) return;
@@ -52,7 +52,7 @@ function createObserver(provider, send) {
     if (key) { seen.add(key); while (seen.size > 1024) seen.delete(seen.values().next().value); }
     send(raw);
     if (event === 'PostToolUse' || event === 'PostToolUseFailure') toolNames.delete(toolKey);
-    if (event === 'SessionEnd') { parents.delete(session); candidates.delete(session); }
+    if (event === 'SessionEnd') { parents.delete(session); candidates.delete(session); clawRuns.delete(session); }
   }
   function opencode(event, cwd, v2 = false) {
     const p = (v2 ? event?.data : event?.properties) || {}, info = p.info || {};
@@ -116,8 +116,21 @@ function createObserver(provider, send) {
   function openclaw(name, event = {}, ctx = {}) {
     const sid = text(event.sessionId) || text(ctx.sessionId) || text(event.sessionKey) || text(ctx.sessionKey);
     const fields = { cwd: ctx.workspaceDir || event.cwd || event.workspaceDir, tool_name: event.toolName || ctx.toolName, tool_use_id: event.toolCallId || ctx.toolCallId, turn_id: event.runId || ctx.runId };
-    const map = { session_start: 'SessionStart', model_call_started: 'UserPromptSubmit', before_tool_call: 'PreToolUse', before_compaction: 'PreCompact', after_compaction: 'PostCompact' };
-    if (name === 'after_tool_call') emit(event.error ? 'PostToolUseFailure' : 'PostToolUse', sid, fields);
+    const map = { session_start: 'SessionStart', before_tool_call: 'PreToolUse', before_compaction: 'PreCompact', after_compaction: 'PostCompact' };
+    if (name === 'before_agent_start') {
+      // A native run, rather than each model/tool iteration, opens the turn.
+      // Repeated callbacks for that run must not clear an existing wait.
+      const run = text(fields.turn_id);
+      if (run && clawRuns.get(sid) === run) return;
+      if (sid && run) remember(clawRuns, sid, run);
+      emit('UserPromptSubmit', sid, fields);
+    } else if (name === 'agent_end') {
+      // This is the native run boundary. It never closes the conversation.
+      // Missing outcome evidence cannot be promoted to successful completion.
+      if (event.success === true) emit('Stop', sid, fields);
+      else if (event.success === false) emit(event.error ? 'StopFailure' : 'Stop', sid,
+        { ...fields, ...(event.error ? {} : { interrupted: true }) });
+    } else if (name === 'after_tool_call') emit(event.error ? 'PostToolUseFailure' : 'PostToolUse', sid, fields);
     else if (name === 'model_call_ended') { if (event.outcome === 'error') emit(['aborted', 'terminated'].includes(event.failureKind) ? 'Interrupt' : 'StopFailure', sid, fields); }
     else if (name === 'session_end' && !['new', 'reset', 'compaction'].includes(event.reason)) emit('SessionEnd', sid, fields);
     else if (map[name]) emit(map[name], sid, fields);

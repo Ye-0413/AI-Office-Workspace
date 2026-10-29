@@ -34,6 +34,26 @@ project cannot be distinguished using that native hook contract. OMP's raw
 `agent_end` requires a confirmed main-session stop candidate and a noncontinuing
 boundary. OpenClaw session reset/compaction does not close the actor.
 
+OpenClaw's native run vocabulary was checked against its installed 2026.4.21
+SDK and runtime. The passive plugin registers `before_agent_start` and
+`agent_end`; `model_call_started` / `model_call_ended` are not native hook names
+in that host. Repeated starts with the same native run ID do not reset waits.
+A successful `agent_end` settles that run without closing the conversation;
+an explicit failed run preserves error or cancellation evidence, and missing
+outcomes do not claim completion. Session and run IDs remain separate, and
+late completion from a prior run cannot settle a newer one. The legacy model
+response adapter preserves errors without treating a model reply as a whole
+run completion. Existing installations need an explicit reconnect and their
+host's normal plugin reload; app startup does not rewrite client settings or
+restart AI work. Newer hosts can gate `agent_end` behind conversation access
+or remove `before_agent_start`. Registration failure for one callback leaves
+the other passive hooks available. The owned configuration continues to set
+`allowConversationAccess: false`; no grant is added to obtain a completion
+callback. On such hosts tool/session observations and signal-loss roster
+recovery remain available, while run completion requires a boundary the host
+actually delivers. See [OpenClaw hook permissions](https://docs.openclaw.ai/plugins/hooks).
+Contract fixtures do not certify a live upgraded host.
+
 ## Configuration ownership
 
 `createUpstreamIntegrations` produces configuration plans for the common JSON

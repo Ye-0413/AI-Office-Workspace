@@ -29,8 +29,9 @@
    * (production source: 100; default attendance memory: 256).
    * entering/leaving are edge-triggered IDs; retired describes this snapshot.
    */
-  function createAttendance({ idleMs = 20000, now = Date.now, maxEntries = 256 } = {}) {
+  function createAttendance({ idleMs = 20000, signalGraceMs = 20000, now = Date.now, maxEntries = 256 } = {}) {
     const grace = Number.isFinite(Number(idleMs)) ? Math.max(0, Number(idleMs)) : 20000;
+    const signalGrace = Number.isFinite(Number(signalGraceMs)) ? Math.max(0, Number(signalGraceMs)) : 20000;
     const capacity = Number.isInteger(maxEntries) && maxEntries > 0 ? maxEntries : 256;
     const clock = () => { const at = Number(now()); return Number.isFinite(at) ? at : 0; };
     const freshHookArrival = (session, time) => {
@@ -57,10 +58,14 @@
       }
       const protectedParents = new Set();
       const activeParents = new Set();
-      // Uncertain helpers do not prove their parent finished. A known active
-      // helper additionally proves its parent is participating again.
+      // Keep an uncertain helper's anchor through its visual grace only.
+      // Losing the signal changes floor presence, never native completion.
       for (const session of current.values()) {
         if (closed(session) || confirmedIdle(session)) continue;
+        if (uncertain(session)) {
+          const entry = entries.get(session.id);
+          if (!entry || entry.phase !== 'present' || time - (entry.uncertainSince ?? time) >= signalGrace) continue;
+        }
         const active = working(session);
         const visited = new Set([session.id]);
         let parentId = session.parentId;
@@ -71,7 +76,7 @@
         }
       }
 
-      const present = [], entering = [], leaving = [], retired = [];
+      const present = [], entering = [], leaving = [], retired = [], signalLost = [];
       for (const [id, session] of current) {
         const at = eventTime(session.lastEventAt);
         const nextSignature = signature(session);
@@ -81,9 +86,11 @@
         let entry = entries.get(id);
         if (!entry) {
           const historicalIdle = idle && (initial || at < startedAt) && !freshHookArrival(session, time);
-          entry = { phase: closed(session) || historicalIdle ? 'retired' : 'present',
-            reason: closed(session) ? 'closed' : historicalIdle ? 'initial-idle' : '',
+          const historicalUncertain = uncertain(session) && !protectedByChild;
+          entry = { phase: closed(session) || historicalIdle || historicalUncertain ? 'retired' : 'present',
+            reason: closed(session) ? 'closed' : historicalUncertain ? 'signal-lost' : historicalIdle ? 'initial-idle' : '',
             idleSince: idle && !historicalIdle ? time : null,
+            uncertainSince: uncertain(session) ? time : null,
             lastEventAt: at, signature: nextSignature, protectedByChild,
             seen: ++sequence };
           if (entry.phase === 'present') entering.push(id);
@@ -98,12 +105,20 @@
             // Time passing, a stale flag, metadata and repeated idle snapshots
             // cannot resurrect someone who already left.
             const resumed = activeChild || freshArrival
-              || (working(session) && (advanced || changed || entry.reason === 'absent'));
+              || (working(session) && (advanced || (changed && entry.reason !== 'signal-lost') || entry.reason === 'absent'));
             if (resumed) {
               entry.phase = 'present'; entry.reason = ''; entry.idleSince = idle ? time : null;
+              entry.uncertainSince = uncertain(session) ? time : null;
               entering.push(id);
             }
+          } else if (uncertain(session) && !protectedByChild) {
+            entry.idleSince = null;
+            if (entry.uncertainSince === null) entry.uncertainSince = time;
+            if (time - entry.uncertainSince >= signalGrace) {
+              entry.phase = 'retired'; entry.reason = 'signal-lost'; leaving.push(id);
+            }
           } else if (idle) {
+            entry.uncertainSince = null;
             if (entry.idleSince === null) {
               entry.idleSince = entry.protectedByChild ? time : Math.min(time, at || time);
             }
@@ -112,6 +127,7 @@
             }
           } else {
             entry.idleSince = null;
+            entry.uncertainSince = uncertain(session) ? entry.uncertainSince ?? time : null;
           }
           entry.lastEventAt = Math.max(entry.lastEventAt, at);
           entry.signature = nextSignature; entry.protectedByChild = protectedByChild;
@@ -119,7 +135,10 @@
         }
         entries.delete(id); entries.set(id, entry);
         if (entry.phase === 'present') present.push(session);
-        else retired.push(id);
+        else {
+          retired.push(id);
+          if (entry.reason === 'signal-lost') signalLost.push(id);
+        }
       }
       for (const [id, entry] of entries) {
         if (current.has(id) || entry.phase === 'retired') continue;
@@ -136,7 +155,7 @@
         while (entries.size > capacity && eviction.length) entries.delete(eviction.shift()[0]);
       }
       initial = false;
-      return { present, entering, leaving, retired };
+      return { present, entering, leaving, retired, signalLost };
     }
 
     return { update,

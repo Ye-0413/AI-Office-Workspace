@@ -65,6 +65,26 @@ treat a token write as work. Historical token imports can include requests
 made while the studio was closed; those imports cannot create room actors or
 credit working time.
 
+### Lost signals and floor readability (2026-10-29)
+
+The reducer still labels a source with no fresh evidence for three minutes as
+stale; it does not complete the turn or discard pending calls/waits. Visual
+attendance gives an already-present disconnected body twenty further seconds
+of grace, then removes only that body before fitting the remaining cast. The
+original identity, parent relationship, state and event history stay in the
+roster. An initially stale row stays in the roster immediately. New observed
+work returns the same identity; clearing a stale flag without newer evidence
+does not. A currently active descendant protects its real ancestor anchors.
+No exit, clone-completion or success event is emitted for a lost signal.
+
+The all-active cast still fits on one floor without hiding identities. Below
+the fitter's recommended 35% scale the room shows an explicit bilingual size
+notice and directs the user to readable roster details. It never overwrites
+the saved size ceiling. `electron test/signal-loss-renderer.cjs` covers a dense
+55-body cast, expiration of 52 lost signals, readable recovery of the original
+three active bodies, roster retention, same-identity recovery and live-child
+ancestry. The fixture uses isolated synthetic observations, not a live client.
+
 [`session-usage-monitor.cjs`](../lib/session-usage-monitor.cjs) imports Codex
 and Claude Code accounting independently from the live reducer.
 [`additional-session-monitor.cjs`](../lib/additional-session-monitor.cjs)

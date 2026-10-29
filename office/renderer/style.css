@@ -183,13 +183,14 @@
 @media(max-width:800px){.room-status-copy{max-width:150px}.inspect-persona{padding:7px 9px}.inspector-actions .button{min-height:30px;padding:5px 8px}}
 
 /* A timber timepiece and daily ledger occupy the back wall, above the walkway. */
-.day-clock{position:absolute;left:47.65%;top:65px;z-index:5;width:216px;height:100px;padding:7px 12px 6px;border:3px solid #66472e;border-radius:4px;color:#f3e3b9;background:repeating-linear-gradient(0deg,#b8956412 0 1px,transparent 1px 4px),linear-gradient(120deg,#936d43,#725333);box-shadow:inset 0 1px 0 #c9a56e,inset 0 -2px 0 #4e3825,0 3px 3px #2d211b73;cursor:pointer;isolation:isolate;display:flex;flex-direction:column;justify-content:center}
+.day-clock{position:absolute;left:47.65%;top:65px;z-index:5;width:220px;height:100px;padding:4px 10px;border:3px solid #66472e;border-radius:4px;color:#f3e3b9;background:repeating-linear-gradient(0deg,#b8956412 0 1px,transparent 1px 4px),linear-gradient(120deg,#936d43,#725333);box-shadow:inset 0 1px 0 #c9a56e,inset 0 -2px 0 #4e3825,0 3px 3px #2d211b73;cursor:pointer;isolation:isolate;display:flex;flex-direction:column;justify-content:center}
 .day-clock::before{content:"";position:absolute;inset:21px 8px 6px;border:1px solid #302f25;background:linear-gradient(#34372e,#444538);box-shadow:inset 0 2px 4px #171b1b66;z-index:-1}
-.clock-label{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#f4dbac;font-size:9px;letter-spacing:.025em;line-height:14px;font-weight:600;white-space:nowrap}.clock-status{display:flex;align-items:center;gap:4px}.day-clock-icon{font-size:10px;letter-spacing:0;color:#edcb86}
+.clock-label{display:flex;align-items:center;justify-content:space-between;gap:4px;color:#f4dbac;font-size:11px;letter-spacing:.025em;line-height:14px;font-weight:600;white-space:nowrap}.clock-status{display:flex;align-items:center;gap:4px}.day-clock-icon{font-size:10px;letter-spacing:0;color:#edcb86}
 .day-clock time{display:block;font-variant-numeric:tabular-nums;text-shadow:0 1px 0 #1f2924;white-space:nowrap;color:#fff2c4}
-#hk-clock{font-size:51px;line-height:50px;font-weight:650;letter-spacing:.025em}
-#hk-date{font-size:11px;line-height:14px;font-weight:500;letter-spacing:.01em}
-#day-phase{display:block;color:#f3dcad;font-size:9px;line-height:14px;letter-spacing:.01em;white-space:nowrap}
+#hk-clock{font-size:56px;line-height:54px;font-weight:650;letter-spacing:.025em}
+#hk-date{font-size:13px;line-height:16px;font-weight:500;letter-spacing:.01em}
+#day-phase{display:block;color:#f3dcad;font-size:11px;line-height:14px;letter-spacing:.01em;white-space:nowrap}
+.office[data-time-preview="true"] :is(.clock-label,#day-phase){font-size:10px;letter-spacing:0}
 .clock-feet{position:absolute;left:9px;right:9px;bottom:-6px;height:4px;border-left:7px solid #403025;border-right:7px solid #403025;pointer-events:none}
 .day-clock:focus-visible{outline:3px solid #f6d68b;outline-offset:4px}
 .observation-status{display:flex;align-items:center;gap:6px;padding:0 7px;color:#f3e4c4;font-size:10px;white-space:nowrap}.observation-status .mode-dot{background:#ccd4ab}

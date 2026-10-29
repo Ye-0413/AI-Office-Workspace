@@ -24,7 +24,7 @@ const DIALECTS = Object.freeze({
   pi: { session_start:'SessionStart', before_agent_start:'UserPromptSubmit', agent_end:'Stop', session_before_compact:'PreCompact', session_compact:'PostCompact', session_shutdown:'SessionEnd', tool_call:'PreToolUse', tool_result:'PostToolUse' },
   omp: { session_start:'SessionStart', session_switch:'SessionStart', session_branch:'SessionStart', before_agent_start:'UserPromptSubmit', agent_end:'Stop', session_before_compact:'PreCompact', session_compact:'PostCompact', session_shutdown:'SessionEnd', tool_call:'PreToolUse', tool_result:'PostToolUse' },
   'deepseek-harness': { 'turn/start':'UserPromptSubmit', 'tool/call':'PreToolUse', 'tool/result':'PostToolUse', 'turn/end':'Stop' },
-  openclaw: { session_start:'SessionStart', model_call_started:'UserPromptSubmit', before_tool_call:'PreToolUse', after_tool_call:'PostToolUse', before_compaction:'PreCompact', after_compaction:'PostCompact', model_call_ended:'Stop', session_end:'SessionEnd' },
+  openclaw: { session_start:'SessionStart', before_agent_start:'UserPromptSubmit', agent_end:'Stop', model_call_started:'UserPromptSubmit', before_tool_call:'PreToolUse', after_tool_call:'PostToolUse', before_compaction:'PreCompact', after_compaction:'PostCompact', model_call_ended:'Stop', session_end:'SessionEnd', Interrupt:'Stop' },
   opencode: { 'session.created':'SessionStart', 'session.deleted':'SessionEnd', 'session.idle':'Stop', 'session.error':'StopFailure', 'session.compacted':'PostCompact' },
   mimocode: { 'session.created':'SessionStart', 'session.deleted':'SessionEnd', 'session.idle':'Stop', 'session.error':'StopFailure', 'session.compacted':'PostCompact' },
 });
@@ -79,6 +79,12 @@ function adaptUpstream(provider, raw, options = {}, normalizeCommon) {
   // OMP's extension confirms a main-session stop candidate before agent_end.
   // An isolated raw callback cannot prove that boundary, so require its adapter.
   if (canonical === 'omp' && nativeEvent === 'agent_end' && (raw.willContinue === true || raw.main_session_stop_confirmed !== true)) return null;
+  if (canonical === 'openclaw' && nativeEvent === 'agent_end') {
+    if (raw.success !== true && raw.success !== false) return null;
+    if (raw.success === false && raw.error) event='StopFailure';
+  }
+  // A legacy model response is not a whole-run completion boundary.
+  if (canonical === 'openclaw' && nativeEvent === 'model_call_ended' && raw.outcome !== 'error') return null;
   if (canonical === 'openclaw' && nativeEvent === 'session_end' && ['new','reset','compaction'].includes(raw.reason)) return null;
   if (canonical === 'codewhale' && nativeEvent === 'mode_change' && raw.DEEPSEEK_MODE !== 'compact' && raw.DEEPSEEK_PREVIOUS_MODE !== 'compact') event='Notification';
   const data=record(raw.data) ? raw.data : {};
@@ -91,7 +97,6 @@ function adaptUpstream(provider, raw, options = {}, normalizeCommon) {
   let session=actualId(first(raw.session_id,raw.sessionId,raw.conversationId,raw.conversation_id,raw.session_key,raw.sessionKey,ctx.sessionId,ctx.sessionKey));
   if (!session && canonical === 'deepseek-harness') session=actualId(raw.session?.id);
   if (!session && ['opencode','mimocode'].includes(canonical)) session=actualId(first(raw.sessionID,raw.properties?.sessionID,raw.properties?.info?.id));
-  if (!session && canonical === 'openclaw') session=actualId(first(raw.runId,ctx.runId));
   if (!session && canonical === 'codewhale') session=actualId(raw.DEEPSEEK_SESSION_ID);
   let subagent=actualId(first(raw.subagent_id,raw.subagentId));
   if (!subagent && ['SubagentStart','SubagentStop'].includes(event) && actualId(raw.agent_id) && raw.agent_id !== canonical && !getProvider(raw.agent_id)) subagent=raw.agent_id;
@@ -112,7 +117,7 @@ function adaptUpstream(provider, raw, options = {}, normalizeCommon) {
   if (event === 'Stop' && (raw.failed === true || (canonical === 'deepseek-harness' && (data.reason?.kind || data.reason) === 'error'))) event='StopFailure';
   if (canonical === 'antigravity-cli' && event === 'Stop' && /error|fail/i.test(raw.terminationReason || '')) event='StopFailure';
   if (canonical === 'openclaw' && nativeEvent === 'model_call_ended' && raw.outcome === 'error' && !['aborted','terminated'].includes(raw.failureKind)) event='StopFailure';
-  const turn=actualId(first(raw.turn_id,raw.turnId,raw.prompt_id,raw.promptId,raw.generation_id,raw.openclaw_run_id,raw.runId));
+  const turn=actualId(first(raw.turn_id,raw.turnId,raw.prompt_id,raw.promptId,raw.generation_id,raw.openclaw_run_id,raw.runId,canonical==='openclaw'?ctx.runId:undefined));
   const call=actualId(first(raw.tool_use_id,raw.toolUseId,raw.tool_call_id,raw.toolCallId,toolCall.id,data.callId));
   const nativeId=actualId(first(raw.event_id,raw.eventId));
   const intermediate={ hook_event_name:event, session_id:session, ...(cwd?{cwd}:{}), ...(subagent||child?{subagent_id:subagent||child}:{}),
@@ -129,7 +134,9 @@ function adaptUpstream(provider, raw, options = {}, normalizeCommon) {
   if (parent && parent !== session) normalized.parentId=key(canonical,parent);
   else if (subagent && !child) normalized.parentId=key(canonical,session);
   else delete normalized.parentId;
-  if (['Interrupt','StopCancelled','stop_cancelled'].includes(nativeEvent) || (event === 'Stop' && (raw.interrupted === true || ['cancelled','aborted'].includes(raw.status)))) {
+  const clawCancelled=canonical==='openclaw' && ((nativeEvent==='agent_end' && raw.success===false && !raw.error)
+    || (nativeEvent==='model_call_ended' && ['aborted','terminated'].includes(raw.failureKind)));
+  if (['Interrupt','StopCancelled','stop_cancelled'].includes(nativeEvent) || clawCancelled || (event === 'Stop' && (raw.interrupted === true || ['cancelled','aborted'].includes(raw.status)))) {
     normalized.event='interrupted';normalized.activity='idle';normalized.outcome='cancelled';normalized.summary='本轮已中断';
   }
   // Some native clients omit call IDs. Preserve a point-in-time observation

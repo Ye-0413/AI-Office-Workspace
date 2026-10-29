@@ -68,12 +68,59 @@ test('active helpers protect an idle parent across project rooms, and grace star
   time = 5019; assert.deepEqual(model.update([parent, closed]).leaving, []);
   time = 5020; result = model.update([parent, closed]); assert.deepEqual(result.leaving, ['parent']);
 });
-test('uncertain child cannot prove its parent finished, and helper ancestry handles cycles safely', () => {
+test('uncertain children retain their ancestor through grace without proving completion; ancestry handles cycles safely', () => {
   let time = 1000; const model = createAttendance({ idleMs: 20, now: () => time });
   const sessions = [idle('root', 500), task('child', { parentId: 'root', status: 'stale', activity: 'unknown', disconnected: true }),
     task('cycle-a', { parentId: 'cycle-b' }), task('cycle-b', { parentId: 'cycle-a' })];
-  model.update(sessions); time = 100000;
+  model.update(sessions.map(s => s.id === 'child' ? { ...s, status: 'active', disconnected: false } : s));
+  time = 100000;
   assert.equal(model.update(sessions).present.length, 4);
+  time += 20000;
+  const result = model.update(sessions);
+  assert.deepEqual(result.signalLost, ['child']);
+  assert.deepEqual(result.present.map(s => s.id), ['root', 'cycle-a', 'cycle-b']);
+  assert.equal(sessions[1].closed, undefined);
+});
+test('52 old lost signals remain in the roster without consuming floor places or changing their truth', () => {
+  const model = createAttendance({ now: () => 100000 });
+  const stale = Array.from({ length: 52 }, (_, i) => Object.freeze(task('stale-' + i,
+    { status: 'stale', activity: 'unknown', disconnected: true, activeTools: i === 0 ? 1 : 0, attention: i === 1 })));
+  const live = [task('working'), task('waiting', { status: 'waiting', activity: 'waiting-user', attention: true })];
+  const input = stale.concat(live), truth = structuredClone(input), result = model.update(input);
+  assert.deepEqual(result.present, live); assert.equal(result.signalLost.length, 52);
+  assert.equal(result.retired.length, 52); assert.deepEqual(result.leaving, []);
+  assert.deepEqual(input, truth);
+});
+test('signal-loss grace expires once, fresh evidence restores the same identity and a new outage gets its own grace', () => {
+  let time = 1000; const model = createAttendance({ now: () => time, signalGraceMs: 20 });
+  const live = task('same', { parentId: 'real-parent' }); model.update([live]);
+  const stale = Object.freeze({ ...live, disconnected: true, status: 'stale', activity: 'unknown', activeTools: 1 });
+  time = 2000; assert.equal(model.update([stale]).present.length, 1);
+  time = 2019; assert.deepEqual(model.update([stale]).leaving, []);
+  time = 2020; let result = model.update([stale]);
+  assert.deepEqual(result.leaving, ['same']); assert.deepEqual(result.signalLost, ['same']);
+  assert.equal(model.state('same').reason, 'signal-lost');
+  time = 3000; assert.deepEqual(model.update([stale]).leaving, []);
+  assert.deepEqual(model.update([live]).entering, [], 'clearing a stale flag without fresh evidence cannot reopen the body');
+  const resumed = { ...live, lastEventAt: ++time };
+  result = model.update([resumed]); assert.deepEqual(result.entering, ['same']); assert.equal(result.present[0], resumed);
+  assert.deepEqual(result.signalLost, []); assert.equal(resumed.parentId, 'real-parent');
+  time++; model.update([{ ...stale, lastEventAt: resumed.lastEventAt }]);
+  time += 19; assert.equal(model.update([{ ...stale, lastEventAt: resumed.lastEventAt }]).present.length, 1);
+  time++; assert.deepEqual(model.update([{ ...stale, lastEventAt: resumed.lastEventAt }]).signalLost, ['same']);
+});
+test('fresh live descendants retain every stale ancestor, then release only their floor presence after loss', () => {
+  let time = 1000; const model = createAttendance({ now: () => time, signalGraceMs: 20 });
+  const root = task('root', { status: 'stale', disconnected: true });
+  const parent = task('parent', { parentId: 'root', status: 'stale', disconnected: true });
+  const child = task('child', { parentId: 'parent' });
+  assert.equal(model.update([root, parent, child]).present.length, 3);
+  time = 100000; assert.equal(model.update([child, parent, root]).present.length, 3);
+  const stoppedSignal = { ...child, status: 'stale', disconnected: true };
+  model.update([root, stoppedSignal, parent]); time += 20;
+  const result = model.update([root, stoppedSignal, parent]);
+  assert.deepEqual(result.present, []); assert.deepEqual(result.signalLost.sort(), ['child', 'parent', 'root']);
+  assert.ok([root, parent, stoppedSignal].every(s => !s.closed));
 });
 test('closed sessions depart immediately, children remain governed by their own observed state', () => {
   let time = 1000; const model = createAttendance({ now: () => time });

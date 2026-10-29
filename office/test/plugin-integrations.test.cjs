@@ -141,6 +141,69 @@ test('DSH and OpenClaw observe exact native fields without content, approval hoo
   claw.openclaw('session_end', { sessionId: 'claw-task', reason: 'shutdown' }); assert.equal(events.at(-1).hook_event_name, 'SessionEnd');
   assert.ok(!JSON.stringify(events).includes('PRIVATE'));
 });
+test('OpenClaw registers the native 2026.4 agent lifecycle without nonexistent model callbacks or policy handlers', async () => {
+  // Pinned against the installed 2026.4.21 SDK PluginHookName contract.
+  const allowed = new Set(['session_start', 'before_agent_start', 'before_tool_call', 'after_tool_call',
+    'before_compaction', 'after_compaction', 'agent_end', 'session_end']);
+  const callbacks = new Map();
+  const plugin = await import(pathToFileURL(path.resolve(__dirname, '../hooks/passive-plugins/openclaw.mjs')).href);
+  plugin.default.register({ on(name, callback) {
+    assert.ok(allowed.has(name), 'unsupported or policy hook: ' + name); callbacks.set(name, callback);
+  } });
+  assert.deepEqual([...callbacks.keys()].sort(), [...allowed].sort());
+  for (const callback of callbacks.values()) assert.equal(callback({}, {}), undefined, 'observation cannot return a policy decision');
+});
+test('native OpenClaw runs settle independently, preserve pending tools and reject a late prior-run completion', () => {
+  let time = 1000; const raw = [], store = createSessionStore({ now: () => time });
+  const observer = createObserver('openclaw', event => {
+    raw.push(event); const normalized = normalizeEvent('openclaw', event, { source: 'hook', receivedAt: time++ });
+    assert.ok(normalized); store.ingest(normalized);
+  });
+  const ctx = { sessionId: 'native-session', runId: 'run-1', workspaceDir: '/fixture/project' };
+  observer.openclaw('before_agent_start', { prompt: 'PRIVATE' }, ctx);
+  observer.openclaw('before_tool_call', { toolName: 'read', toolCallId: 'read-1', params: { text: 'PRIVATE' } }, ctx);
+  const before = raw.length;
+  observer.openclaw('before_agent_start', {}, ctx); assert.equal(raw.length, before, 'same run cannot reset pending state');
+  observer.openclaw('agent_end', { success: true, messages: ['PRIVATE'] }, ctx);
+  assert.equal(store.snapshot()[0].activeTools, 1); assert.equal(store.snapshot()[0].activity, 'waiting-tool');
+  observer.openclaw('after_tool_call', { toolName: 'read', toolCallId: 'read-1', result: 'PRIVATE' }, ctx);
+  let session = store.snapshot()[0];
+  assert.equal(session.status, 'idle'); assert.equal(session.activeTools, 0); assert.equal(session.closed, false);
+  const second = { ...ctx, runId: 'run-2' };
+  observer.openclaw('before_agent_start', {}, second);
+  observer.openclaw('agent_end', { success: true }, ctx);
+  session = store.snapshot()[0]; assert.equal(session.status, 'active'); assert.equal(session.turnId, 'run-2');
+  observer.openclaw('agent_end', { success: true }, second);
+  assert.equal(store.snapshot()[0].status, 'idle'); assert.equal(store.snapshot()[0].id, session.id);
+  assert.doesNotMatch(JSON.stringify(raw), /PRIVATE/);
+});
+test('an unavailable OpenClaw lifecycle hook cannot disable the remaining passive hooks or expand host access', async () => {
+  const callbacks = new Map(), warnings = [];
+  const plugin = await import(pathToFileURL(path.resolve(__dirname, '../hooks/passive-plugins/openclaw.mjs')).href);
+  plugin.default.register({ logger: { warn: message => warnings.push(message) }, on(name, callback) {
+    if (['before_agent_start', 'agent_end'].includes(name)) throw Error('unavailable by host contract/policy');
+    callbacks.set(name, callback);
+  } });
+  assert.deepEqual([...callbacks.keys()], ['session_start','before_tool_call','after_tool_call','before_compaction','after_compaction','session_end']);
+  assert.equal(warnings.length, 2);
+  assert.equal(callbacks.get('before_tool_call')({}, {}), undefined);
+  assert.equal(callbacks.get('after_tool_call')({}, {}), undefined);
+});
+test('OpenClaw missing outcomes do not complete a run and explicit failures/cancellation keep their own evidence', () => {
+  const raw = [], observer = createObserver('openclaw', event => raw.push(event));
+  const ctx = { sessionId: 'native-session', runId: 'native-run' };
+  observer.openclaw('agent_end', {}, ctx); observer.openclaw('agent_end', { success: 'true' }, ctx);
+  assert.deepEqual(raw, []);
+  observer.openclaw('agent_end', { success: false, error: 'PRIVATE' }, ctx);
+  let event = normalizeEvent('openclaw', raw.at(-1), { source: 'hook' });
+  assert.equal(event.event, 'error'); assert.equal(event.activity, 'error');
+  observer.openclaw('agent_end', { success: false }, ctx);
+  event = normalizeEvent('openclaw', raw.at(-1), { source: 'hook' });
+  assert.equal(event.event, 'interrupted'); assert.equal(event.outcome, 'cancelled');
+  observer.openclaw('model_call_ended', { outcome: 'error', failureKind: 'aborted' }, ctx);
+  assert.equal(normalizeEvent('openclaw', raw.at(-1), { source: 'hook' }).event, 'interrupted');
+  assert.doesNotMatch(JSON.stringify(raw), /PRIVATE/);
+});
 test('real plugin activity without call IDs reaches the store without phantom tools or clearing identified work/waits', () => {
   let now = 1000; const normalized = [], store = createSessionStore({ now: () => now });
   const observer = createObserver('deepseek-harness', raw => { const event = normalizeEvent('deepseek-harness', raw, { receivedAt: now++, source: 'hook' }); assert.ok(event); normalized.push(event); store.ingest(event); });

@@ -20,7 +20,7 @@ const native={
  mimocode:{type:'session.created',properties:{info:{id:'mimo-session'}}},
  pi:{type:'before_agent_start',session_id:'pi-session'},
  omp:{type:'before_agent_start',session_id:'omp-session'},
- openclaw:{type:'model_call_started',sessionId:'claw-session'},
+ openclaw:{type:'before_agent_start',sessionId:'claw-session'},
  qoder:{hook_event_name:'UserPromptSubmit',session_id:'qoder-session'},
  reasonix:{hook_event_name:'UserPromptSubmit',session_id:'reasonix-session'},
  qoderwork:{hook_event_name:'UserPromptSubmit',session_id:'qoderwork-session'},
@@ -106,6 +106,21 @@ test('OMP continuation and OpenClaw reset boundaries cannot falsely close workin
  assert.equal(adapt('omp',{type:'agent_end',session_id:'s',main_session_stop_confirmed:true}).event,'turn-end');
  assert.equal(adapt('openclaw',{type:'session_end',sessionId:'s',reason:'reset'}),null);
  assert.equal(adapt('openclaw',{type:'session_end',sessionId:'s',reason:'shutdown'}).event,'session-end');
+});
+test('OpenClaw native run boundaries keep session and run identities separate and require explicit outcomes',()=>{
+ const context={sessionId:'conversation',runId:'native-run'};
+ const started=adapt('openclaw',{type:'before_agent_start',context});
+ assert.equal(started.event,'turn-start');assert.equal(started.sessionId,'conversation');assert.equal(started.turnId,'native-run');
+ const ended=adapt('openclaw',{type:'agent_end',context,success:true});
+ assert.equal(ended.event,'turn-end');assert.equal(ended.id,started.id);assert.equal(ended.turnId,'native-run');
+ assert.equal(adapt('openclaw',{type:'agent_end',context}),null);
+ assert.equal(adapt('openclaw',{type:'agent_end',context,success:'true'}),null);
+ const cancelled=adapt('openclaw',{type:'agent_end',context,success:false});
+ assert.equal(cancelled.event,'interrupted');assert.equal(cancelled.outcome,'cancelled');
+ assert.equal(adapt('openclaw',{type:'agent_end',context,success:false,error:'PRIVATE'}).event,'error');
+ assert.equal(adapt('openclaw',{type:'model_call_ended',context,outcome:'ok'}),null);
+ assert.equal(adapt('openclaw',{type:'model_call_ended',context,outcome:'error',failureKind:'aborted'}).event,'interrupted');
+ assert.equal(adapt('openclaw',{type:'agent_end',runId:'only-a-run',success:true}),null,'a run id is not a conversation identity');
 });
 
 test('workpermission events remain working observations and interrupted boundaries never succeed',()=>{

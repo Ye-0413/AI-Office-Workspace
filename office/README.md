@@ -6,6 +6,10 @@ Current builds fit every observed active Agent into the room. The selected size 
 
 Monitoring and size behavior last checked against source: **2026-10-23**. Implementation details and coverage boundaries: [local monitoring guide](docs/monitoring.md).
 
+The signal-loss fix observes OpenClaw's native `before_agent_start` / `agent_end` run boundaries. A lost signal keeps an existing body on the floor for twenty seconds, then retains its identity and last state in the roster while releasing its floor position. This does not complete or close the native session. Fresh work restores the same identity; live descendants retain their actual ancestor anchors. Very dense active casts show a bilingual size notice with readable details in the roster.
+
+信号恢复修复使用 OpenClaw 原生 `before_agent_start`／`agent_end` 运行边界。已在场角色信号中断后保留二十秒，再释放画面位置，身份与末次状态继续留在名单；不会据此结束原会话。新活动恢复同一身份，仍有活跃分身的真实祖先会保留在场。真实活跃人数过多时，中英文提示会注明缩小比例，并引导查看可读名单。
+
 Cursor desktop/CLI activity is supported in completion-only compatibility mode. Fresh native tool results can reveal an active session even when its start was not observed; they do not create pending tools or reconstruct execution time. Existing waits, paired calls and explicit end boundaries retain their ownership.
 
 Cursor 桌面版／CLI 在仅观察完成事件的兼容模式下也可显示角色。新收到的原生工具结果可显示真实会话活动，不虚构工具开始、未完成调用或执行时长；已有等待、成对调用与明确结束边界继续有效。
@@ -108,7 +112,7 @@ Codex 的线程 UUID 与每轮 ID 分开识别，子 Agent 日志中复制的父
 
 28 种接入方式已做隔离配置和事件回归检查；这不表示 28 种真实客户端都已运行。Codex 已验证真实多 Agent 日志到角色显示，其他客户端仍需实际会话验收。各工具的宿主版本、配置路径与已知边界见 `docs/upstream-compatibility.md`。KiroCrew 的网关、目录和配置锁使用随应用打包的 macOS 原生小程序，无需额外 Python。
 
-房间默认跟随香港时间，晨曦、上午、午后、日落和夜晚使用连续的天色与室内灯光。左侧木窗与门上的玻璃都能看见海港剪影，慢云、渡轮、城市灯与海面反光保持在窗内。背墙木框钟使用醒目的 51px 数字，同时显示香港完整日期与星期；挂钟指针也与真实香港时间同步。中英文日期随界面语言切换，香港午夜会自动更新。点击时钟可预览时段，再用「回到此刻」恢复实时；预览期间时钟仍显示真实香港时间、日期和星期。减少动作、节能和隐藏窗口都会暂停装饰循环，不改变真实任务状态。
+房间默认跟随香港时间，晨曦、上午、午后、日落和夜晚使用连续的天色与室内灯光。左侧木窗与门上的玻璃都能看见海港剪影，慢云、渡轮、城市灯与海面反光保持在窗内。背墙木框钟使用醒目的 56px 数字，同时显示香港完整日期与星期；挂钟指针也与真实香港时间同步。中英文日期随界面语言切换，香港午夜会自动更新。点击时钟可预览时段，再用「回到此刻」恢复实时；预览期间时钟仍显示真实香港时间、日期和星期。减少动作、节能和隐藏窗口都会暂停装饰循环，不改变真实任务状态。
 
 中文昵称是古籍中已有的完整名字，不再拼接前后词。英文昵称池有 4,096 个短单词，如 Lumi、Cosmo、Orbit；昵称池有限，昵称不作为身份标识。昵称随界面语言切换，不再需要单独选择风格。每个身份还有固定的小性格、纪念物和问候，任务详情保留原始标题与 ID。「打个招呼」只触发工作室里的回应。主 Agent 下方显示「分身 X 活跃 · 累计 Y」；累计按完整身份去重，包含本次观察中已经结束的分身，跨房间切换仍保留。真实子任务本轮完成也会收回身体，保留仍开放的底层会话；同一身份接到新工作后重新分身，累计不重复增加。普通闲置、失联、缺少快照都不会被当成已结束；新工作可以中断归位。
 
