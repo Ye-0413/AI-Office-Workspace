@@ -88,7 +88,7 @@ Daily room uses a stable Hong Kong date schedule: six different everyday interio
 
 ## Agent 外观与快捷操作
 
-[认识五位伙伴：外形、性格与动作故事](../README.zh-CN.md#五位伙伴五种性格) · [Meet the five companions](../README.md#meet-the-workshop) · [支持的 AI 工具与功能](../README.zh-CN.md#支持哪些-ai-工具)
+[认识五位伙伴：外形、性格与动作故事](../docs/companions.md#五位伙伴五种性格) · [Meet the five companions](../docs/companions.md#meet-the-workshop) · [支持的 AI 工具与功能](../README.zh-CN.md#支持哪些-ai-工具)
 
 每个主 Agent 家族随机分配五只工坊伙伴之一：**纸团**（奶油白折纸）、**墨豆**（深蓝墨滴）、**苔盒**（陶土与苔藓）、**线团**（珊瑚色毛线）、**灯籽**（透明琥珀与暖光）。Claude 也使用新角色。分身继承主身的造型与配色，体型更小；同一场景中每个主 Agent 的「造型＋配色」唯一。先分配五种原色造型，超过五个家族时复用造型并添加配色变体。在场家族不随新成员加入或离开而换外观，离场过渡结束前仍保留其外观名额。名牌家族色与编号继续区分真实身份和父子关系。用途说明是角色性格设定，不会改变工具能力或任务分配。
 

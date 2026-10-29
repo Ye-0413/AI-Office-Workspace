@@ -92,6 +92,27 @@
       "file": "ai-work-space-brand.jpg",
       "bytes": 166072,
       "sha256": "bbe11387ba21ba363e4083b6dcbff4e4a412af2ac3053c6a6b5399cfd900ae56"
+    },
+    {
+      "file": "ai-work-space-search.jpg",
+      "bytes": 41831,
+      "sha256": "33a80d4ede7929325d05161bb9fa9b81d51a319acf2c4c7a7747ac468a53d9bb",
+      "sourceFilm": "AI-Work-Space-product-tour-60s.mp4",
+      "filmTimestampSeconds": 6.5
+    },
+    {
+      "file": "ai-work-space-sizing.jpg",
+      "bytes": 38272,
+      "sha256": "e3f3298a467a27e4929e229ef49f97037e9b32a3728818cd19d978824cd53eaf",
+      "sourceFilm": "AI-Work-Space-product-tour-60s.mp4",
+      "filmTimestampSeconds": 23.8
+    },
+    {
+      "file": "ai-work-space-observatory.jpg",
+      "bytes": 93899,
+      "sha256": "7c7dbb41b66f1765ed82590b042086052aa78daa9f01e9e7caaf76665f62732c",
+      "sourceFilm": "AI-Work-Space-brand-40s.mp4",
+      "filmTimestampSeconds": 28
     }
   ]
 }

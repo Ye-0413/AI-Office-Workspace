@@ -33,6 +33,10 @@ All four edits contain Chinese and English on-screen copy. The brand film, produ
 
 See the [reproduction guide](../../office/scripts/promo/README.md) for capture and rendering commands. / 录制与重新剪辑方法见[制作说明](../../office/scripts/promo/README.md)。
 
+README stills preserve the full edited frame: search at 6.500s and sizing at 23.800s in the product tour; the observatory at 28.000s in the brand film. The [extraction script](../../office/scripts/promo/extract-readme-stills.py) verifies the published films' SHA-256 hashes and exports three 960 × 540 JPEGs, totaling about 174 KB.
+
+README 静帧保留完整后期画面：功能片 6.500 秒的搜索、23.800 秒的尺寸设置，以及品牌片 28.000 秒的星台。[提取脚本](../../office/scripts/promo/extract-readme-stills.py)核对已发布成片的 SHA-256，再导出三张 960 × 540 JPEG，合计约 174 KB。
+
 ## Artwork and credits / 素材与署名
 
 The films and previews contain the project's workshop characters and environments. Their creation records, retained upstream acknowledgements and applicable artwork terms are documented in the [originality statement](../../ORIGINALITY.md), [artwork notice](../../office/assets/WORKSHOP-ARTWORK-NOTICE.md) and [project notices](../../NOTICE.md). The [source-code license](../../LICENSE) does not by itself grant an open artwork license.
