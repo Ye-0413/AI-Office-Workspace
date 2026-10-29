@@ -10,6 +10,10 @@ The signal-loss fix observes OpenClaw's native `before_agent_start` / `agent_end
 
 信号恢复修复使用 OpenClaw 原生 `before_agent_start`／`agent_end` 运行边界。已在场角色信号中断后保留二十秒，再释放画面位置，身份与末次状态继续留在名单；不会据此结束原会话。新活动恢复同一身份，仍有活跃分身的真实祖先会保留在场。真实活跃人数过多时，中英文提示会注明缩小比例，并引导查看可读名单。
 
+The daily Agent total and Daily Token / Weekly usage values use a brief 200 ms flip only when their displayed number changes. Initial loading and unchanged refreshes stay still; rapid updates share the current flip and always expose the latest value. Reduced motion, low power and hidden windows use instant updates without replaying skipped flips.
+
+今日 Agent 总数与今日／本周 Token 数值变化时，会短暂翻转 200 毫秒；首次加载和相同数字刷新不播放。连续更新合并到当前翻转，无障碍读取始终使用最新数值。减少动作、节能或隐藏窗口时直接更新，不补播动画。
+
 Cursor desktop/CLI activity is supported in completion-only compatibility mode. Fresh native tool results can reveal an active session even when its start was not observed; they do not create pending tools or reconstruct execution time. Existing waits, paired calls and explicit end boundaries retain their ownership.
 
 Cursor 桌面版／CLI 在仅观察完成事件的兼容模式下也可显示角色。新收到的原生工具结果可显示真实会话活动，不虚构工具开始、未完成调用或执行时长；已有等待、成对调用与明确结束边界继续有效。

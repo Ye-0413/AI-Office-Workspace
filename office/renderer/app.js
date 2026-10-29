@@ -32,7 +32,6 @@
   let settingsRequest = 0;
   let language = 'zh';
   const usageHistory = window.OfficeUsageHistory?.create({ bridge, getLanguage: () => language });
-  const homeTokenUsage = window.OfficeHomeTokenUsage?.create({ language });
   const manualQuestions = window.OfficeManualQuestions?.create({ bridge, language });
   const setupAssistant = window.OfficeSetupAssistant?.create({ bridge, getLanguage: () => language });
   const scenery = window.OfficeDayScenery.create({ office, world, layer: $('window-scenery') });
@@ -87,6 +86,8 @@
   let mutationPending = false;
   let previousAttention = new Set();
   const mediaReduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const numberFlip = window.OfficeNumberFlip?.create({ getContext: () => ({ reducedMotion: reduced(), lowPower: settings.lowPower, hidden: sceneHidden() }) });
+  const homeTokenUsage = window.OfficeHomeTokenUsage?.create({ language, numberFlip });
   const providerIds = window.OfficeProviders.getAllProviders().map(provider => provider.id === 'cursor-agent' ? 'cursor' : provider.id);
   const observedIds = new Set();
   let familyGraph = Family.build([]);
@@ -153,7 +154,9 @@
   function tr(value) { return I18n.translate(language, String(value == null ? '' : value)); }
   function text(element, value) {
     const literal = element.id === 'inspect-title' || element.id === 'inspect-session-id' || /(?:^|\s)(?:roster-task|project-option)(?:\s|$)/.test(element.className || '');
-    element.textContent = literal ? String(value == null ? '' : value) : tr(value);
+    const next = literal ? String(value == null ? '' : value) : tr(value);
+    if (element.id === 'today-total' && typeof numberFlip !== 'undefined' && numberFlip) numberFlip.update(element, next);
+    else element.textContent = next;
   }
   function applyLanguage() {
     document.documentElement.lang = language === 'en' ? 'en' : 'zh-CN';
@@ -2093,6 +2096,7 @@
     }
     if (transferOwner && (next?.reducedMotion || next?.lowPower || mediaReduce.matches || sceneHidden())) revokeTransfer('quiet', null, false);
     settings = { ...settingsDefaults, ...next, agentScale: nextScale };
+    numberFlip?.sync();
     const previousLanguage = language;
     language = settings.language === 'en' ? 'en' : 'zh';
     applyLanguage();
@@ -2214,6 +2218,7 @@
     if (event.key === 'Escape' && !document.querySelector('dialog[open]')) { selectedSession = ''; $('inspector').hidden = true; for (const actor of actors.values()) updateActorLabel(actor); }
   });
   function refreshVisibility() {
+    numberFlip?.sync();
     if (sceneHidden()) revokeTransfer('hidden');
     office.dataset.hidden = String(sceneHidden());
     for (const actor of [...actors.values()]) {
@@ -2261,6 +2266,7 @@
     window.removeEventListener('resize', refreshScale);
     document.removeEventListener('visibilitychange', refreshVisibility);
     usageHistory?.dispose();
+    numberFlip?.destroy();
     manualQuestions?.dispose();
     setupAssistant?.dispose();
     visitor.destroy();

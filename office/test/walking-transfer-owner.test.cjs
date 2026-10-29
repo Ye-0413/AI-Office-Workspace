@@ -126,7 +126,7 @@ async function reachPhase(h,index){
  assert.equal(h.context.office.dataset.transferStep,String(index));return owner;
 }
 function installVisibility(h){
- const c=h.context;Object.assign(c,{sceneHidden:()=>c.quiet,settleQuietCloneEffects:()=>{},setPose:()=>{},visitor:{tick(){}},venueStage:null,festivalStage:null,themeEnvironment:null,social:null,stationArrival:null,scenery:{update(){}},ensureMotionTicker:()=>{}});
+ const c=h.context;Object.assign(c,{numberFlip:null,sceneHidden:()=>c.quiet,settleQuietCloneEffects:()=>{},setPose:()=>{},visitor:{tick(){}},venueStage:null,festivalStage:null,themeEnvironment:null,social:null,stationArrival:null,scenery:{update(){}},ensureMotionTicker:()=>{}});
  const start=source.indexOf('  function refreshVisibility()'),end=source.indexOf("  document.addEventListener('visibilitychange'",start);assert.ok(start>=0&&end>start);vm.runInContext(source.slice(start,end),c);
 }
 for(const [index,reason]of [[0,'fresh-semantic'],[1,'fit'],[2,'hidden']])test('phase '+index+' cancellation at '+reason+' fences its old leg and queued continuation',async()=>{

@@ -31,7 +31,7 @@ function fixture(){
   }
   const context={Scene,office,$:id=>{assert.equal(id,'world-frame');return frame;},window,ResizeObserver,
     document:{removeEventListener(){}},actors,seats,uniformScale:.4,destroyed:false,
-    refreshVisibility(){},onStationArrival(){},usageHistory:null,setupAssistant:null,manualQuestions:{dispose(){calls.questionsDisposed=(calls.questionsDisposed||0)+1;}},
+    numberFlip:null,refreshVisibility(){},onStationArrival(){},usageHistory:null,setupAssistant:null,manualQuestions:{dispose(){calls.questionsDisposed=(calls.questionsDisposed||0)+1;}},
     visitor:{destroy(){}},stationArrival:null,social:null,venueStage:null,festivalStage:null,themeEnvironment:null,
     scenery:{destroy(){}},performanceClocks:{clear(){}},unsubscribe:null,
     clockTimer:0,secondsTimer:0,navigationTimer:0,frameTimer:0,admissionFrame:0,trafficTimer:0,doorTimer:0,

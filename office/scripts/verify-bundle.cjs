@@ -32,6 +32,7 @@ const required=['main.cjs','preload.cjs','renderer/index.html','renderer/app.js'
 required.push('lib/usage-log.cjs','lib/usage-api.cjs','renderer/usage-history.js','lib/setup-manager.cjs','renderer/setup-assistant.js','renderer/setup-assistant.css','lib/provider-detection.cjs','lib/observer-command-owner.cjs');
 required.push('renderer/avatar-fallback.js','renderer/avatar-fallback.css');
 required.push('renderer/station-arrival.js','renderer/station-arrival.css','lib/window-visibility.cjs');
+required.push('renderer/number-flip.js','renderer/number-flip.css');
 required.push('lib/scene-artwork.js','assets/scenes/themes/generation.json',...require('../lib/scene-artwork.js').CATALOG.map(item=>'assets/scenes/themes/'+item.id+'.jpg'));
 required.push('lib/room-calendar.js','lib/room-holiday-designs.js','lib/room-designs.js','renderer/room-designs.css',
   'assets/scenes/rooms/generation.json','docs/room-designs.md',

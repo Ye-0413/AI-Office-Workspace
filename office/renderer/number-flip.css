@@ -1,0 +1,9 @@
+/* Keep the ledger's measured layout and its one accessible current value. */
+.number-counter{position:relative;isolation:isolate}
+.number-counter>.number-value{display:block;backface-visibility:hidden;transform-origin:50% 50%}
+.number-counter>.number-outgoing{position:absolute;inset:0;pointer-events:none;backface-visibility:hidden;transform-origin:50% 50%;white-space:nowrap}
+.number-outgoing::before{content:attr(data-number)}
+#today-total.number-counter{text-align:center}
+@media(prefers-reduced-motion:reduce){.number-counter>.number-value{transform:none!important;opacity:1!important}.number-counter>.number-outgoing{display:none}}
+.office:is([data-reduced-motion="true"],[data-low-power="true"],[data-hidden="true"]) .number-counter>.number-value{transform:none!important;opacity:1!important}
+.office:is([data-reduced-motion="true"],[data-low-power="true"],[data-hidden="true"]) .number-counter>.number-outgoing{display:none}

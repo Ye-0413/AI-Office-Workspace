@@ -45,8 +45,11 @@
     function render() {
       const available = usage?.available === true, error = Boolean(usage?.error), importing = Boolean(usage?.importing);
       get('home-token-daily-label').textContent = tr('daily'); get('home-token-weekly-label').textContent = tr('weekly');
-      get('home-token-daily').textContent = available ? formatTokens(usage.dailyTokens) : '—';
-      get('home-token-weekly').textContent = available ? formatTokens(usage.weeklyTokens) : '—';
+      for (const [id, value] of [['home-token-daily', usage?.dailyTokens], ['home-token-weekly', usage?.weeklyTokens]]) {
+        const node = get(id), next = available ? formatTokens(value) : '—';
+        if (config.numberFlip) config.numberFlip.update(node, next);
+        else node.textContent = next;
+      }
       for (const id of ['home-token-daily', 'home-token-weekly']) get(id).dataset.long = String(get(id).textContent.length > 7);
       panel.dataset.available = String(available); panel.dataset.error = String(error); panel.dataset.importing = String(importing);
       const details = [tr('source'), tr('units')];
