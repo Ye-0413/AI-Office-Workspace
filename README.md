@@ -6,7 +6,7 @@
 
 **Observe your agent team collaboration in your spare display**
 
-[Download for macOS](https://github.com/Ye-0413/AI-Office-Workspace/releases/tag/v0.24.0) · [简体中文](README.zh-CN.md) · [Release notes](docs/releases/release-v0.24.0.md)
+[Download for macOS](https://github.com/Ye-0413/AI-Office-Workspace/releases/tag/v0.24.0) · [简体中文](README.zh-CN.md) · [28 supported tools](#supported-agent-tools) · [Release notes](docs/releases/release-v0.24.0.md)
 
 A quiet desktop studio for your real **Codex, Claude Code, Cursor, OpenCode** sessions and their helpers—made for a spare display.
 
@@ -21,6 +21,64 @@ A quiet desktop studio for your real **Codex, Claude Code, Cursor, OpenCode** se
 | :---: | :---: | :---: | :---: |
 
 *Click to watch/download. Real v0.24.0 recordings, updated brand titles, bilingual captions; gallery demonstrations are labeled. [Media details](docs/media/README.md).*
+
+## Supported agent tools
+
+**28 tools. One shared workspace.**
+
+<table width="100%">
+  <tr>
+    <td align="left" width="240"><img src="docs/media/tool-icons/codex.svg" align="middle" width="36" height="36" alt="Codex CLI"> &nbsp;<strong>Codex CLI</strong></td>
+    <td align="left" width="240"><img src="docs/media/tool-icons/claude-code.svg" align="middle" width="36" height="36" alt="Claude Code"> &nbsp;<strong>Claude Code</strong></td>
+    <td align="left" width="240"><img src="docs/media/tool-icons/cursor-agent.svg" align="middle" width="36" height="36" alt="Cursor Agent"> &nbsp;<strong>Cursor Agent</strong></td>
+    <td align="left" width="240"><img src="docs/media/tool-icons/copilot-cli.svg" align="middle" width="36" height="36" alt="Copilot CLI"> &nbsp;<strong>Copilot CLI</strong></td>
+  </tr>
+  <tr>
+    <td align="left" width="240"><img src="docs/media/tool-icons/gemini-cli.svg" align="middle" width="36" height="36" alt="Gemini CLI"> &nbsp;<strong>Gemini CLI</strong></td>
+    <td align="left" width="240"><img src="docs/media/tool-icons/opencode.svg" align="middle" width="36" height="36" alt="OpenCode"> &nbsp;<strong>OpenCode</strong></td>
+    <td align="left" width="240"><img src="docs/media/tool-icons/openclaw.svg" align="middle" width="36" height="36" alt="OpenClaw"> &nbsp;<strong>OpenClaw</strong></td>
+    <td align="left" width="240"><img src="docs/media/tool-icons/hermes.svg" align="middle" width="36" height="36" alt="Hermes Agent"> &nbsp;<strong>Hermes Agent</strong></td>
+  </tr>
+  <tr>
+    <td align="left" width="240"><img src="docs/media/tool-icons/kimi-cli.svg" align="middle" width="36" height="36" alt="Kimi Code"> &nbsp;<strong>Kimi Code</strong></td>
+    <td align="left" width="240"><img src="docs/media/tool-icons/qwen-code.svg" align="middle" width="36" height="36" alt="Qwen Code"> &nbsp;<strong>Qwen Code</strong></td>
+    <td align="left" width="240"><img src="docs/media/tool-icons/mimocode.svg" align="middle" width="36" height="36" alt="MiMo Code"> &nbsp;<strong>MiMo Code</strong></td>
+    <td align="left" width="240"><img src="docs/media/tool-icons/minimax.svg" align="middle" width="36" height="36" alt="MiniMax Code"> &nbsp;<strong>MiniMax Code</strong></td>
+  </tr>
+  <tr>
+    <td align="left" width="240"><img src="docs/media/tool-icons/pi.svg" align="middle" width="36" height="36" alt="Pi"> &nbsp;<strong>Pi</strong></td>
+    <td align="left" width="240"><img src="docs/media/tool-icons/omp.svg" align="middle" width="36" height="36" alt="OMP"> &nbsp;<strong>OMP</strong></td>
+    <td align="left" width="240"><img src="docs/media/tool-icons/codebuddy.svg" align="middle" width="36" height="36" alt="CodeBuddy"> &nbsp;<strong>CodeBuddy</strong></td>
+    <td align="left" width="240"><img src="docs/media/tool-icons/traecode.svg" align="middle" width="36" height="36" alt="TraeCode"> &nbsp;<strong>TraeCode</strong></td>
+  </tr>
+  <tr>
+    <td align="left" width="240"><img src="docs/media/tool-icons/kiro-cli.svg" align="middle" width="36" height="36" alt="Kiro CLI"> &nbsp;<strong>Kiro CLI</strong></td>
+    <td align="left" width="240"><img src="docs/media/tool-icons/kirocrew.svg" align="middle" width="36" height="36" alt="KiroCrew"> &nbsp;<strong>KiroCrew</strong></td>
+    <td align="left" width="240"><img src="docs/media/tool-icons/antigravity-cli.svg" align="middle" width="36" height="36" alt="Antigravity CLI"> &nbsp;<strong>Antigravity CLI</strong></td>
+    <td align="left" width="240"><img src="docs/media/tool-icons/qoder.svg" align="middle" width="36" height="36" alt="Qoder"> &nbsp;<strong>Qoder</strong></td>
+  </tr>
+  <tr>
+    <td align="left" width="240"><img src="docs/media/tool-icons/qoderwork.svg" align="middle" width="36" height="36" alt="QoderWork"> &nbsp;<strong>QoderWork</strong></td>
+    <td align="left" width="240"><img src="docs/media/tool-icons/qwenwork.svg" align="middle" width="36" height="36" alt="QwenWork"> &nbsp;<strong>QwenWork</strong></td>
+    <td align="left" width="240"><img src="docs/media/tool-icons/workbuddy.svg" align="middle" width="36" height="36" alt="WorkBuddy"> &nbsp;<strong>WorkBuddy</strong></td>
+    <td align="left" width="240"><img src="docs/media/tool-icons/grok-build.svg" align="middle" width="36" height="36" alt="Grok Build"> &nbsp;<strong>Grok Build</strong></td>
+  </tr>
+  <tr>
+    <td align="left" width="240"><img src="docs/media/tool-icons/codewhale.svg" align="middle" width="36" height="36" alt="CodeWhale"> &nbsp;<strong>CodeWhale</strong></td>
+    <td align="left" width="240"><img src="docs/media/tool-icons/zcode.svg" align="middle" width="36" height="36" alt="ZCode"> &nbsp;<strong>ZCode</strong></td>
+    <td align="left" width="240"><img src="docs/media/tool-icons/reasonix.svg" align="middle" width="36" height="36" alt="Reasonix"> &nbsp;<strong>Reasonix</strong></td>
+    <td align="left" width="240"><img src="docs/media/tool-icons/deepseek-harness.svg" align="middle" width="36" height="36" alt="DeepSeek Harness"> &nbsp;<strong>DeepSeek Harness<sup>*</sup></strong></td>
+  </tr>
+</table>
+
+*DeepSeek Harness is experimental.*
+
+| More than activity | Supported tools |
+| --- | --- |
+| **Local Token accounting** | Codex · Claude Code · Gemini CLI · Pi · OMP · Kimi Code · OpenCode |
+| **Manual native questions** | OpenCode 1.x ≥ 1.18.31 · MiMo Code 0.1.x ≥ 0.1.15 |
+
+All 28 have configuration/event regression coverage; Codex has real multi-agent verification. Other clients still need live-session checks. [Connection guide](office/docs/upstream-compatibility.md) · [Usage coverage](office/docs/monitoring.md#actual-coverage) · [Icon credits](docs/media/tool-icons/README.md)
 
 ## Meet the workshop
 
@@ -63,27 +121,6 @@ The first five main agents receive different designs; later families use color v
 **33 rooms** · 6 everyday + 27 holiday · Hong Kong calendar · Day/night lighting · English / 中文
 
 Choose a room or follow the calendar. Designed for a **5-inch, 1280 × 720 display**, and ordinary macOS windows. [Explore the room gallery →](docs/rooms/README.md)
-
-## Bring your tools
-
-| Coverage | Tools |
-| --- | --- |
-| **Activity observation · 28** | Codex CLI, Claude Code, Cursor Agent, Copilot CLI, Gemini CLI, OpenCode, OpenClaw, Hermes Agent & more |
-| **Local Token accounting · 7** | Codex, Claude Code, Gemini CLI, Pi, OMP, Kimi Code, OpenCode |
-| **Manual native questions** | OpenCode 1.x ≥ 1.18.31 · MiMo Code 0.1.x ≥ 0.1.15 |
-
-All 28 have configuration/event regression coverage. Codex has real multi-agent verification; other clients still need live-session checks. [Compatibility](office/docs/upstream-compatibility.md) · [Coverage](office/docs/monitoring.md#actual-coverage)
-
-<details>
-<summary>All 28 observation integrations</summary>
-
-- **Hooks / logs · 21:** Codex CLI, Claude Code, Copilot CLI, Gemini CLI, Antigravity CLI, Cursor Agent, CodeBuddy, Kiro CLI, KiroCrew, Kimi Code, Qwen Code, ZCode, CodeWhale, Qoder, Reasonix, QoderWork, QwenWork, WorkBuddy, TraeCode, Grok Build, MiniMax Code. Codex also observes bounded local session logs.
-- **Plugins · 5:** OpenCode, MiMo Code, OpenClaw, Hermes Agent, DeepSeek Harness *(experimental)*.
-- **Extensions · 2:** Pi, OMP.
-
-[Authoritative provider registry](agents/registry.js)
-
-</details>
 
 ## Get the studio
 

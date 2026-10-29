@@ -48,6 +48,12 @@ are recorded in `assets/source/SOUND-CANDIDATES.md` and the corresponding
 
 ## Lobe Icons
 
+The README tool grid uses 18 brand SVGs from
+`@lobehub/icons-static-svg@1.95.0`, with neutral display tiles added by this
+project. The remaining 10 icons are project-authored letter markers, not
+official product logos. Sources, checksums, fallback labels and the retained
+MIT license are recorded in [the README icon directory](docs/media/tool-icons/README.md).
+
 Selected Agent icon source assets come from
 `@lobehub/icons-static-png@1.95.0` (`light/` variant), with editable SVG
 companions obtained from the official Lobe Icons website at

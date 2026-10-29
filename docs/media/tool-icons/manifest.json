@@ -1,0 +1,595 @@
+{
+  "schemaVersion": 1,
+  "registry": "../../../agents/registry.js",
+  "count": 28,
+  "brandCount": 18,
+  "fallbackCount": 10,
+  "package": {
+    "name": "@lobehub/icons-static-svg",
+    "version": "1.95.0",
+    "tarball": "https://registry.npmjs.org/@lobehub/icons-static-svg/-/icons-static-svg-1.95.0.tgz",
+    "integrity": "sha512-VSObF66DUVQe0EK3xbIoFcw+Fcia1+bLVFkMsQbmz0zCceMxPmoLImS5VM5SM7zL+/NarZ11/ySNfkekcomIkQ==",
+    "sha256": "3b8a6e03df4ba6f882c759dbb0caf5fa2ce490b0a19fff82457adf39770a7ba6",
+    "license": "MIT",
+    "licenseUrl": "https://raw.githubusercontent.com/lobehub/lobe-icons/53ead06d734cc6c003db5a87860907c4bbadfbc0/LICENSE",
+    "licenseSHA256": "add9d7531d1b21646317a8958e38fc727506fa39d24bdecb44154d943c82753a"
+  },
+  "icons": [
+    {
+      "id": "claude-code",
+      "name": "Claude Code",
+      "icon": "claude-code.svg",
+      "width": 72,
+      "height": 72,
+      "sha256": "20c57c2d0a4a2ed1b9870c547733d8553e3d19e744d8202e6b65d14ad271b253",
+      "bytes": 1923,
+      "fallback": false,
+      "license": "MIT",
+      "wrapperLicense": "AGPL-3.0-only",
+      "source": {
+        "name": "Lobe Icons",
+        "package": "@lobehub/icons-static-svg",
+        "version": "1.95.0",
+        "url": "https://unpkg.com/@lobehub/icons-static-svg@1.95.0/icons/claude-color.svg",
+        "archivePath": "package/icons/claude-color.svg",
+        "sha256": "a3101f3047a119aa11825ad9369510f0c472428c8c52d420e31bc62db44a8364",
+        "licenseUrl": "https://raw.githubusercontent.com/lobehub/lobe-icons/53ead06d734cc6c003db5a87860907c4bbadfbc0/LICENSE",
+        "treatment": "Original SVG geometry preserved inside a neutral tile; monochrome currentColor set to #202923."
+      }
+    },
+    {
+      "id": "deepseek-harness",
+      "name": "DeepSeek Harness (experimental)",
+      "icon": "deepseek-harness.svg",
+      "width": 72,
+      "height": 72,
+      "sha256": "0d64fbac6fe9d21b091e5a21ce6e2ea8ac98162bf65dab029277cfe06cd18cdf",
+      "bytes": 2431,
+      "fallback": false,
+      "license": "MIT",
+      "wrapperLicense": "AGPL-3.0-only",
+      "source": {
+        "name": "Lobe Icons",
+        "package": "@lobehub/icons-static-svg",
+        "version": "1.95.0",
+        "url": "https://unpkg.com/@lobehub/icons-static-svg@1.95.0/icons/deepseek-color.svg",
+        "archivePath": "package/icons/deepseek-color.svg",
+        "sha256": "deba5f98a5c1796e20fcac3149bcd7eb8a32f0bdd04d048819400b1f28bd1439",
+        "licenseUrl": "https://raw.githubusercontent.com/lobehub/lobe-icons/53ead06d734cc6c003db5a87860907c4bbadfbc0/LICENSE",
+        "treatment": "Original SVG geometry preserved inside a neutral tile; monochrome currentColor set to #202923."
+      }
+    },
+    {
+      "id": "codex",
+      "name": "Codex CLI",
+      "icon": "codex.svg",
+      "width": 72,
+      "height": 72,
+      "sha256": "be6fe4fdacc0b7406ed1f4fb7a6989cf8eccf7b11662e2d604cfa1dab4c8096e",
+      "bytes": 1910,
+      "fallback": false,
+      "license": "MIT",
+      "wrapperLicense": "AGPL-3.0-only",
+      "source": {
+        "name": "Lobe Icons",
+        "package": "@lobehub/icons-static-svg",
+        "version": "1.95.0",
+        "url": "https://unpkg.com/@lobehub/icons-static-svg@1.95.0/icons/openai.svg",
+        "archivePath": "package/icons/openai.svg",
+        "sha256": "a595df6b423920c67a7f8f73c063e4bfb72d415948097b6cac063a2366bb5186",
+        "licenseUrl": "https://raw.githubusercontent.com/lobehub/lobe-icons/53ead06d734cc6c003db5a87860907c4bbadfbc0/LICENSE",
+        "treatment": "Original SVG geometry preserved inside a neutral tile; monochrome currentColor set to #202923."
+      }
+    },
+    {
+      "id": "copilot-cli",
+      "name": "Copilot CLI",
+      "icon": "copilot-cli.svg",
+      "width": 72,
+      "height": 72,
+      "sha256": "1caaeabe1e1d021a0f4d0d73724c38c6064f01e195819e776c755453e2b47ac9",
+      "bytes": 2246,
+      "fallback": false,
+      "license": "MIT",
+      "wrapperLicense": "AGPL-3.0-only",
+      "source": {
+        "name": "Lobe Icons",
+        "package": "@lobehub/icons-static-svg",
+        "version": "1.95.0",
+        "url": "https://unpkg.com/@lobehub/icons-static-svg@1.95.0/icons/githubcopilot.svg",
+        "archivePath": "package/icons/githubcopilot.svg",
+        "sha256": "bbc7fddc13448236e5edea8c399d2072dc40aa5da5bca07f7a2f412405c500a3",
+        "licenseUrl": "https://raw.githubusercontent.com/lobehub/lobe-icons/53ead06d734cc6c003db5a87860907c4bbadfbc0/LICENSE",
+        "treatment": "Original SVG geometry preserved inside a neutral tile; monochrome currentColor set to #202923."
+      }
+    },
+    {
+      "id": "gemini-cli",
+      "name": "Gemini CLI",
+      "icon": "gemini-cli.svg",
+      "width": 72,
+      "height": 72,
+      "sha256": "7f1abfe815c6ce1aff3ccf2dc39bae25ecfe265ff976a0ba2f93d60869bf336d",
+      "bytes": 1146,
+      "fallback": false,
+      "license": "MIT",
+      "wrapperLicense": "AGPL-3.0-only",
+      "source": {
+        "name": "Lobe Icons",
+        "package": "@lobehub/icons-static-svg",
+        "version": "1.95.0",
+        "url": "https://unpkg.com/@lobehub/icons-static-svg@1.95.0/icons/geminicli-color.svg",
+        "archivePath": "package/icons/geminicli-color.svg",
+        "sha256": "c2f54ebaa4c3b9191c6a07f7b0c66bc78e4abe486003dc564469cf650672663e",
+        "licenseUrl": "https://raw.githubusercontent.com/lobehub/lobe-icons/53ead06d734cc6c003db5a87860907c4bbadfbc0/LICENSE",
+        "treatment": "Original SVG geometry preserved inside a neutral tile; monochrome currentColor set to #202923."
+      }
+    },
+    {
+      "id": "antigravity-cli",
+      "name": "Antigravity CLI",
+      "icon": "antigravity-cli.svg",
+      "width": 72,
+      "height": 72,
+      "sha256": "34319241ddb3e189e4978056d1f8f8264b43270ec9c35169231f83fb3e0fe8d7",
+      "bytes": 7869,
+      "fallback": false,
+      "license": "MIT",
+      "wrapperLicense": "AGPL-3.0-only",
+      "source": {
+        "name": "Lobe Icons",
+        "package": "@lobehub/icons-static-svg",
+        "version": "1.95.0",
+        "url": "https://unpkg.com/@lobehub/icons-static-svg@1.95.0/icons/antigravity-color.svg",
+        "archivePath": "package/icons/antigravity-color.svg",
+        "sha256": "652128cf55a28bb958563ee372d0bd00208d9e6fd446f523f77aafd811eef8ca",
+        "licenseUrl": "https://raw.githubusercontent.com/lobehub/lobe-icons/53ead06d734cc6c003db5a87860907c4bbadfbc0/LICENSE",
+        "treatment": "Original SVG geometry preserved inside a neutral tile; monochrome currentColor set to #202923."
+      }
+    },
+    {
+      "id": "cursor-agent",
+      "name": "Cursor Agent",
+      "icon": "cursor-agent.svg",
+      "width": 72,
+      "height": 72,
+      "sha256": "7c93045b4658669ede4327d31ebd4e122f9bbf2e0fbadaccc81fa1d3545bdebd",
+      "bytes": 776,
+      "fallback": false,
+      "license": "MIT",
+      "wrapperLicense": "AGPL-3.0-only",
+      "source": {
+        "name": "Lobe Icons",
+        "package": "@lobehub/icons-static-svg",
+        "version": "1.95.0",
+        "url": "https://unpkg.com/@lobehub/icons-static-svg@1.95.0/icons/cursor.svg",
+        "archivePath": "package/icons/cursor.svg",
+        "sha256": "0cb51bddf264ae108926fd554c063ef40fc1aac3c5c921ddb39ad184e4e5d0ef",
+        "licenseUrl": "https://raw.githubusercontent.com/lobehub/lobe-icons/53ead06d734cc6c003db5a87860907c4bbadfbc0/LICENSE",
+        "treatment": "Original SVG geometry preserved inside a neutral tile; monochrome currentColor set to #202923."
+      }
+    },
+    {
+      "id": "codebuddy",
+      "name": "CodeBuddy",
+      "icon": "codebuddy.svg",
+      "width": 72,
+      "height": 72,
+      "sha256": "12d8732cd6b05d264e20027c2dcdbf3d86634e8b43fada925e96b91f9e5f622a",
+      "bytes": 1812,
+      "fallback": false,
+      "license": "MIT",
+      "wrapperLicense": "AGPL-3.0-only",
+      "source": {
+        "name": "Lobe Icons",
+        "package": "@lobehub/icons-static-svg",
+        "version": "1.95.0",
+        "url": "https://unpkg.com/@lobehub/icons-static-svg@1.95.0/icons/codebuddy-color.svg",
+        "archivePath": "package/icons/codebuddy-color.svg",
+        "sha256": "033d5da624460e686046f22b4e242b6b86484ad84ec4877e4efa15a9fb642b97",
+        "licenseUrl": "https://raw.githubusercontent.com/lobehub/lobe-icons/53ead06d734cc6c003db5a87860907c4bbadfbc0/LICENSE",
+        "treatment": "Original SVG geometry preserved inside a neutral tile; monochrome currentColor set to #202923."
+      }
+    },
+    {
+      "id": "kiro-cli",
+      "name": "Kiro CLI",
+      "icon": "kiro-cli.svg",
+      "width": 72,
+      "height": 72,
+      "sha256": "bf96ffe46ad93d58dfecbceb3d91b4ec6f9ce7c43d0cb359338cd424af592963",
+      "bytes": 1181,
+      "fallback": false,
+      "license": "MIT",
+      "wrapperLicense": "AGPL-3.0-only",
+      "source": {
+        "name": "Lobe Icons",
+        "package": "@lobehub/icons-static-svg",
+        "version": "1.95.0",
+        "url": "https://unpkg.com/@lobehub/icons-static-svg@1.95.0/icons/kiro-color.svg",
+        "archivePath": "package/icons/kiro-color.svg",
+        "sha256": "4eae4d6e818da7342c32c7d443ab7c97b93c544db9af379d5b5bf7f0a3127d66",
+        "licenseUrl": "https://raw.githubusercontent.com/lobehub/lobe-icons/53ead06d734cc6c003db5a87860907c4bbadfbc0/LICENSE",
+        "treatment": "Original SVG geometry preserved inside a neutral tile; monochrome currentColor set to #202923."
+      }
+    },
+    {
+      "id": "kirocrew",
+      "name": "KiroCrew",
+      "icon": "kirocrew.svg",
+      "width": 72,
+      "height": 72,
+      "sha256": "1e3491f8be0bc8960d1f87161d6beb9736369e5b51949370f26066327e38ac74",
+      "bytes": 530,
+      "fallback": true,
+      "license": "AGPL-3.0-only",
+      "wrapperLicense": "AGPL-3.0-only",
+      "source": {
+        "name": "AI Work Space neutral letter marker",
+        "monogram": "KC",
+        "url": "../../../office/scripts/promo/prepare-readme-tool-icons.cjs",
+        "reason": "No unambiguous licensed product mark selected. This letter marker is not an official logo."
+      }
+    },
+    {
+      "id": "kimi-cli",
+      "name": "Kimi Code",
+      "icon": "kimi-cli.svg",
+      "width": 72,
+      "height": 72,
+      "sha256": "6e2b5148c29fe7a1484af37f0c28d8c53061a6ba6016c42accbf8ccea0c13466",
+      "bytes": 1062,
+      "fallback": false,
+      "license": "MIT",
+      "wrapperLicense": "AGPL-3.0-only",
+      "source": {
+        "name": "Lobe Icons",
+        "package": "@lobehub/icons-static-svg",
+        "version": "1.95.0",
+        "url": "https://unpkg.com/@lobehub/icons-static-svg@1.95.0/icons/kimi-color.svg",
+        "archivePath": "package/icons/kimi-color.svg",
+        "sha256": "74a7292aeb0220445d14c5d397d75760e2e8c6ed6a9e5fe4f3023471bf62a9ff",
+        "licenseUrl": "https://raw.githubusercontent.com/lobehub/lobe-icons/53ead06d734cc6c003db5a87860907c4bbadfbc0/LICENSE",
+        "treatment": "Original SVG geometry preserved inside a neutral tile; monochrome currentColor set to #202923. A dark inset backplate provides contrast for the original white Kimi mark."
+      }
+    },
+    {
+      "id": "qwen-code",
+      "name": "Qwen Code",
+      "icon": "qwen-code.svg",
+      "width": 72,
+      "height": 72,
+      "sha256": "2d12a11b52f1fe42b33f0ed27912261c18ca5831846ee19492bdefc7a2e15883",
+      "bytes": 2267,
+      "fallback": false,
+      "license": "MIT",
+      "wrapperLicense": "AGPL-3.0-only",
+      "source": {
+        "name": "Lobe Icons",
+        "package": "@lobehub/icons-static-svg",
+        "version": "1.95.0",
+        "url": "https://unpkg.com/@lobehub/icons-static-svg@1.95.0/icons/qwen-color.svg",
+        "archivePath": "package/icons/qwen-color.svg",
+        "sha256": "77f5768c66d08ce1d3d14e73373975c1bc0454be88c81523ddd0ffd7e2974029",
+        "licenseUrl": "https://raw.githubusercontent.com/lobehub/lobe-icons/53ead06d734cc6c003db5a87860907c4bbadfbc0/LICENSE",
+        "treatment": "Original SVG geometry preserved inside a neutral tile; monochrome currentColor set to #202923."
+      }
+    },
+    {
+      "id": "zcode",
+      "name": "ZCode",
+      "icon": "zcode.svg",
+      "width": 72,
+      "height": 72,
+      "sha256": "7fbf4e0c41d14aba41671f8297c2310128325184e444a68fecab83fa570cd882",
+      "bytes": 524,
+      "fallback": true,
+      "license": "AGPL-3.0-only",
+      "wrapperLicense": "AGPL-3.0-only",
+      "source": {
+        "name": "AI Work Space neutral letter marker",
+        "monogram": "ZC",
+        "url": "../../../office/scripts/promo/prepare-readme-tool-icons.cjs",
+        "reason": "No unambiguous licensed product mark selected. This letter marker is not an official logo."
+      }
+    },
+    {
+      "id": "codewhale",
+      "name": "CodeWhale",
+      "icon": "codewhale.svg",
+      "width": 72,
+      "height": 72,
+      "sha256": "786b73dbeeebec14ac2bf8c8215577a2fe0fcf57094159dd2dce20a6c75390b8",
+      "bytes": 532,
+      "fallback": true,
+      "license": "AGPL-3.0-only",
+      "wrapperLicense": "AGPL-3.0-only",
+      "source": {
+        "name": "AI Work Space neutral letter marker",
+        "monogram": "CW",
+        "url": "../../../office/scripts/promo/prepare-readme-tool-icons.cjs",
+        "reason": "No unambiguous licensed product mark selected. This letter marker is not an official logo."
+      }
+    },
+    {
+      "id": "opencode",
+      "name": "OpenCode",
+      "icon": "opencode.svg",
+      "width": 72,
+      "height": 72,
+      "sha256": "48a437475684fdf5dabade65c899d445d8442a1718676771198bc74964b0e4fd",
+      "bytes": 456,
+      "fallback": false,
+      "license": "MIT",
+      "wrapperLicense": "AGPL-3.0-only",
+      "source": {
+        "name": "Lobe Icons",
+        "package": "@lobehub/icons-static-svg",
+        "version": "1.95.0",
+        "url": "https://unpkg.com/@lobehub/icons-static-svg@1.95.0/icons/opencode.svg",
+        "archivePath": "package/icons/opencode.svg",
+        "sha256": "7cfa6e9d6726f7c9fa26c7d9aef0dfec52d20a137380454340f30f12ccbfd302",
+        "licenseUrl": "https://raw.githubusercontent.com/lobehub/lobe-icons/53ead06d734cc6c003db5a87860907c4bbadfbc0/LICENSE",
+        "treatment": "Original SVG geometry preserved inside a neutral tile; monochrome currentColor set to #202923."
+      }
+    },
+    {
+      "id": "mimocode",
+      "name": "MiMo Code",
+      "icon": "mimocode.svg",
+      "width": 72,
+      "height": 72,
+      "sha256": "9a22202a137acaa0ded4e9025d1e2e1d632170b51ab8b08bdffd47b9fe528903",
+      "bytes": 2767,
+      "fallback": false,
+      "license": "MIT",
+      "wrapperLicense": "AGPL-3.0-only",
+      "source": {
+        "name": "Lobe Icons",
+        "package": "@lobehub/icons-static-svg",
+        "version": "1.95.0",
+        "url": "https://unpkg.com/@lobehub/icons-static-svg@1.95.0/icons/xiaomimimo.svg",
+        "archivePath": "package/icons/xiaomimimo.svg",
+        "sha256": "b04ad7dad52af2212c4567daf0ee6856f2c4625c92c680a27f9880295d558b71",
+        "licenseUrl": "https://raw.githubusercontent.com/lobehub/lobe-icons/53ead06d734cc6c003db5a87860907c4bbadfbc0/LICENSE",
+        "treatment": "Original SVG geometry preserved inside a neutral tile; monochrome currentColor set to #202923."
+      }
+    },
+    {
+      "id": "pi",
+      "name": "Pi",
+      "icon": "pi.svg",
+      "width": 72,
+      "height": 72,
+      "sha256": "3834fce7afb971b3e77b671230bf65fa6928ed9e8964397355b8538ab4707047",
+      "bytes": 522,
+      "fallback": false,
+      "license": "MIT",
+      "wrapperLicense": "AGPL-3.0-only",
+      "source": {
+        "name": "Lobe Icons",
+        "package": "@lobehub/icons-static-svg",
+        "version": "1.95.0",
+        "url": "https://unpkg.com/@lobehub/icons-static-svg@1.95.0/icons/pi.svg",
+        "archivePath": "package/icons/pi.svg",
+        "sha256": "d82978781b824273c55473822c1f243a6ed34fc6e8c2dbfe1a90dfc66ae43ee8",
+        "licenseUrl": "https://raw.githubusercontent.com/lobehub/lobe-icons/53ead06d734cc6c003db5a87860907c4bbadfbc0/LICENSE",
+        "treatment": "Original SVG geometry preserved inside a neutral tile; monochrome currentColor set to #202923."
+      }
+    },
+    {
+      "id": "omp",
+      "name": "OMP",
+      "icon": "omp.svg",
+      "width": 72,
+      "height": 72,
+      "sha256": "6ced6a708926eb381902ac3f81c096e071c30d000ad980c3ad9720e033735108",
+      "bytes": 520,
+      "fallback": true,
+      "license": "AGPL-3.0-only",
+      "wrapperLicense": "AGPL-3.0-only",
+      "source": {
+        "name": "AI Work Space neutral letter marker",
+        "monogram": "OM",
+        "url": "../../../office/scripts/promo/prepare-readme-tool-icons.cjs",
+        "reason": "No unambiguous licensed product mark selected. This letter marker is not an official logo."
+      }
+    },
+    {
+      "id": "openclaw",
+      "name": "OpenClaw",
+      "icon": "openclaw.svg",
+      "width": 72,
+      "height": 72,
+      "sha256": "c2b33205b501e9ec1a9d694e61b48b1304ad3666aae2923b0d546ecd7073bd7e",
+      "bytes": 2317,
+      "fallback": false,
+      "license": "MIT",
+      "wrapperLicense": "AGPL-3.0-only",
+      "source": {
+        "name": "Lobe Icons",
+        "package": "@lobehub/icons-static-svg",
+        "version": "1.95.0",
+        "url": "https://unpkg.com/@lobehub/icons-static-svg@1.95.0/icons/openclaw-color.svg",
+        "archivePath": "package/icons/openclaw-color.svg",
+        "sha256": "4123c0c75dda5b28e3e0d38075514085bf546178a620776344813c08fa41277c",
+        "licenseUrl": "https://raw.githubusercontent.com/lobehub/lobe-icons/53ead06d734cc6c003db5a87860907c4bbadfbc0/LICENSE",
+        "treatment": "Original SVG geometry preserved inside a neutral tile; monochrome currentColor set to #202923."
+      }
+    },
+    {
+      "id": "hermes",
+      "name": "Hermes Agent",
+      "icon": "hermes.svg",
+      "width": 72,
+      "height": 72,
+      "sha256": "5d791ad406f9dde425db5c9ee3f206602836ce8a53c0b72341ead97e600a6d7d",
+      "bytes": 20015,
+      "fallback": false,
+      "license": "MIT",
+      "wrapperLicense": "AGPL-3.0-only",
+      "source": {
+        "name": "Lobe Icons",
+        "package": "@lobehub/icons-static-svg",
+        "version": "1.95.0",
+        "url": "https://unpkg.com/@lobehub/icons-static-svg@1.95.0/icons/hermesagent.svg",
+        "archivePath": "package/icons/hermesagent.svg",
+        "sha256": "02d43c0a91fc2ee41f2684fc39613ff6687de29a4b079665bace5303671dd63b",
+        "licenseUrl": "https://raw.githubusercontent.com/lobehub/lobe-icons/53ead06d734cc6c003db5a87860907c4bbadfbc0/LICENSE",
+        "treatment": "Original SVG geometry preserved inside a neutral tile; monochrome currentColor set to #202923."
+      }
+    },
+    {
+      "id": "qoder",
+      "name": "Qoder",
+      "icon": "qoder.svg",
+      "width": 72,
+      "height": 72,
+      "sha256": "8652f142897eb6c7f91e48dec31fc557f15836cb0eac39ff55c0c0165fd0298d",
+      "bytes": 6411,
+      "fallback": false,
+      "license": "MIT",
+      "wrapperLicense": "AGPL-3.0-only",
+      "source": {
+        "name": "Lobe Icons",
+        "package": "@lobehub/icons-static-svg",
+        "version": "1.95.0",
+        "url": "https://unpkg.com/@lobehub/icons-static-svg@1.95.0/icons/qoder-color.svg",
+        "archivePath": "package/icons/qoder-color.svg",
+        "sha256": "396596d247477e2a036c141a16ec266df7b14c0130b777a68fd04bc89af50bc8",
+        "licenseUrl": "https://raw.githubusercontent.com/lobehub/lobe-icons/53ead06d734cc6c003db5a87860907c4bbadfbc0/LICENSE",
+        "treatment": "Original SVG geometry preserved inside a neutral tile; monochrome currentColor set to #202923."
+      }
+    },
+    {
+      "id": "reasonix",
+      "name": "Reasonix",
+      "icon": "reasonix.svg",
+      "width": 72,
+      "height": 72,
+      "sha256": "da3dbf3796dbe22d62382c1a9eb1164f33fa6c275fa9e9b6e853ea9258871b55",
+      "bytes": 530,
+      "fallback": true,
+      "license": "AGPL-3.0-only",
+      "wrapperLicense": "AGPL-3.0-only",
+      "source": {
+        "name": "AI Work Space neutral letter marker",
+        "monogram": "RX",
+        "url": "../../../office/scripts/promo/prepare-readme-tool-icons.cjs",
+        "reason": "No unambiguous licensed product mark selected. This letter marker is not an official logo."
+      }
+    },
+    {
+      "id": "qoderwork",
+      "name": "QoderWork",
+      "icon": "qoderwork.svg",
+      "width": 72,
+      "height": 72,
+      "sha256": "e9d9b9c6b039f7958361acd2f675280b18a6aa4c22be764bc1cab13b7505f9f9",
+      "bytes": 532,
+      "fallback": true,
+      "license": "AGPL-3.0-only",
+      "wrapperLicense": "AGPL-3.0-only",
+      "source": {
+        "name": "AI Work Space neutral letter marker",
+        "monogram": "QO",
+        "url": "../../../office/scripts/promo/prepare-readme-tool-icons.cjs",
+        "reason": "No unambiguous licensed product mark selected. This letter marker is not an official logo."
+      }
+    },
+    {
+      "id": "qwenwork",
+      "name": "QwenWork",
+      "icon": "qwenwork.svg",
+      "width": 72,
+      "height": 72,
+      "sha256": "78740c0bfa83bb190dad817c3ff61f77001e7576653cec9e66c2035d8bae09f2",
+      "bytes": 530,
+      "fallback": true,
+      "license": "AGPL-3.0-only",
+      "wrapperLicense": "AGPL-3.0-only",
+      "source": {
+        "name": "AI Work Space neutral letter marker",
+        "monogram": "QW",
+        "url": "../../../office/scripts/promo/prepare-readme-tool-icons.cjs",
+        "reason": "No unambiguous licensed product mark selected. This letter marker is not an official logo."
+      }
+    },
+    {
+      "id": "workbuddy",
+      "name": "WorkBuddy",
+      "icon": "workbuddy.svg",
+      "width": 72,
+      "height": 72,
+      "sha256": "81cdb7ff0f07f853fb94da8d58d1bb7e43691ba26fe4fbbaf47e8f77fdebec84",
+      "bytes": 532,
+      "fallback": true,
+      "license": "AGPL-3.0-only",
+      "wrapperLicense": "AGPL-3.0-only",
+      "source": {
+        "name": "AI Work Space neutral letter marker",
+        "monogram": "WB",
+        "url": "../../../office/scripts/promo/prepare-readme-tool-icons.cjs",
+        "reason": "No unambiguous licensed product mark selected. This letter marker is not an official logo."
+      }
+    },
+    {
+      "id": "traecode",
+      "name": "TraeCode",
+      "icon": "traecode.svg",
+      "width": 72,
+      "height": 72,
+      "sha256": "02043946b63302761cb66532bc2613596b8bab533fe7f7e96640d461d70588ce",
+      "bytes": 530,
+      "fallback": true,
+      "license": "AGPL-3.0-only",
+      "wrapperLicense": "AGPL-3.0-only",
+      "source": {
+        "name": "AI Work Space neutral letter marker",
+        "monogram": "TC",
+        "url": "../../../office/scripts/promo/prepare-readme-tool-icons.cjs",
+        "reason": "No unambiguous licensed product mark selected. This letter marker is not an official logo."
+      }
+    },
+    {
+      "id": "grok-build",
+      "name": "Grok Build",
+      "icon": "grok-build.svg",
+      "width": 72,
+      "height": 72,
+      "sha256": "c47202357d06a73b32ce41db19a1195e45e7ae050254da1efb0e99558efbb258",
+      "bytes": 534,
+      "fallback": true,
+      "license": "AGPL-3.0-only",
+      "wrapperLicense": "AGPL-3.0-only",
+      "source": {
+        "name": "AI Work Space neutral letter marker",
+        "monogram": "GB",
+        "url": "../../../office/scripts/promo/prepare-readme-tool-icons.cjs",
+        "reason": "No unambiguous licensed product mark selected. This letter marker is not an official logo."
+      }
+    },
+    {
+      "id": "minimax",
+      "name": "MiniMax Code",
+      "icon": "minimax.svg",
+      "width": 72,
+      "height": 72,
+      "sha256": "e479888098c5692ffc9e7f2caf381511bee2cb13cf9316ed71bd810812386cbd",
+      "bytes": 1799,
+      "fallback": false,
+      "license": "MIT",
+      "wrapperLicense": "AGPL-3.0-only",
+      "source": {
+        "name": "Lobe Icons",
+        "package": "@lobehub/icons-static-svg",
+        "version": "1.95.0",
+        "url": "https://unpkg.com/@lobehub/icons-static-svg@1.95.0/icons/minimax-color.svg",
+        "archivePath": "package/icons/minimax-color.svg",
+        "sha256": "7f7187fa6d9b341ac5f22f6c5a970523afb439dc45566d64eb4f4b9b604d6b01",
+        "licenseUrl": "https://raw.githubusercontent.com/lobehub/lobe-icons/53ead06d734cc6c003db5a87860907c4bbadfbc0/LICENSE",
+        "treatment": "Original SVG geometry preserved inside a neutral tile; monochrome currentColor set to #202923."
+      }
+    }
+  ]
+}

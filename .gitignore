@@ -31,6 +31,11 @@ docs/scenes/frames/
 !docs/media/ai-work-space-search.jpg
 !docs/media/ai-work-space-sizing.jpg
 !docs/media/ai-work-space-observatory.jpg
+!docs/media/tool-icons/
+!docs/media/tool-icons/*.svg
+!docs/media/tool-icons/README.md
+!docs/media/tool-icons/manifest.json
+!docs/media/tool-icons/LICENSE*
 !docs/companions.md
 !docs/rooms/
 !docs/rooms/README.md
