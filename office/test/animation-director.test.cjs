@@ -21,10 +21,11 @@ test('all 50 original SVGs are accounted for; selected assets are declared and r
   assert.equal(new Set([...selected, ...excluded]).size, 50);
   assert.deepEqual([...new Set([...selected, ...excluded])].sort(), original);
   assert.ok(selected.length >= 20, 'use a meaningful part of the original animation library');
-  // A clean source checkout has the manifest without restricted SVGs. Keep
-  // validating actual restored artwork when an authorized local copy exists.
-  if (fs.existsSync(directory)) {
-    assert.deepEqual(fs.readdirSync(directory).filter(name => /^clawd.*\.svg$/.test(name)).sort(), original);
+  // A clean source checkout includes workshop PNGs but no restricted SVGs.
+  // If any authorized SVGs are restored, require the complete upstream set.
+  const restored = fs.existsSync(directory) ? fs.readdirSync(directory).filter(name => /^clawd.*\.svg$/.test(name)).sort() : [];
+  if (restored.length > 0) {
+    assert.deepEqual(restored, original);
     for (const filename of selected) {
       const content = fs.readFileSync(path.join(directory, filename), 'utf8');
       assert.match(content, /<svg\b/);
