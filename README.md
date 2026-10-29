@@ -1,128 +1,102 @@
-# AI Office Workspace · 小小工作室
+<p align="center">
+  <img src="office/assets/studio-icon.png" width="88" alt="AI Office Workspace icon">
+</p>
 
-一个把真实 AI 活动变成房间日常的 macOS 桌面应用，为 5 英寸、1280 × 720 副屏设计。当前版本 **0.23.0**。
+# AI Office Workspace
 
-节日机关的状态、提示和画面保持一致：礼盒真正打开与合上，快速反向操作从当前姿态接续。手动社交只邀请点击位置附近的两位伙伴；切换语言、房间或主题时，旧道具自然退场。使用时长分别遵循各 Agent 自己的事件和失联边界，迟到事件不会回扣无关伙伴的记录。
+**A little room for real AI work.**
 
-密集场景使用更大的单行昵称，主 Agent 名字下常驻活跃／历史分身数；名牌、家族角标与纪念物仍在原固定范围内。 家具反馈同时避开移动角色的已知终点，减少刚出现就被返回的伙伴打断。
+Watch your AI sessions become paper, ink, moss, yarn and warm light. They read, think, build and wait in a cozy desktop studio, while their real identities and parent–helper relationships stay intact.
+
+[Download v0.24.0](https://github.com/Ye-0413/AI-Office-Workspace/releases/tag/v0.24.0) · [简体中文](README.zh-CN.md) · [Release notes](docs/releases/release-v0.24.0.md) · [Originality & credits](ORIGINALITY.md)
+
+<picture>
+  <source media="(prefers-reduced-motion: reduce)" srcset="docs/animations/workshop-demo.png">
+  <img src="docs/animations/workshop-demo.svg" width="1100" alt="Five workshop companions in a public animation demonstration">
+</picture>
+
+*Offline native-rendered samples of production character motions, composed with synthetic sessions and a smaller family helper. This is not a screenshot of a user's live tasks. [Static preview](docs/animations/workshop-demo.png).*
+
+Designed for a **5-inch, 1280 × 720 secondary display**; also runs as a normal macOS window.
 
 [![Office quality](https://github.com/Ye-0413/AI-Office-Workspace/actions/workflows/office-quality.yml/badge.svg)](https://github.com/Ye-0413/AI-Office-Workspace/actions/workflows/office-quality.yml)
 
-## 当前动画 · 11 类 × 8 种 = 88 种
+## Meet the workshop
 
-新增 **33 个完整空间：6 个日常房间与 27 个节日房间**，每个都有独立建筑风格、家具布局、入口与通道。默认「每日新房间」按香港日期稳定随机轮换，香港节日与已有国际节庆自动换入对应房间；手动选择会一直保留。所有已观察的 Agent 同屏适配，保留真实身份、父子关系与原动作时钟。
+Five companions have their own silhouette, material and way of moving:
 
-[浏览全部新房间与布局 →](docs/rooms/README.md) · [日期规则与中英界面说明](office/docs/room-designs.md)
+- **Folio · 纸团** — folded cream paper, short origami feet and careful little creases.
+- **Ink · 墨豆** — a low navy ink creature with a bright eye slit; helpers separate into droplets and merge back.
+- **Moss · 苔盒** — grounded terracotta, small roots and a living moss back.
+- **Thread · 线团** — coral yarn, a loop ear and a loose strand that becomes part of its gestures.
+- **Glow · 灯籽** — a translucent amber seed with four tiny supports and a quiet inner light.
 
-阅读、搜索、思考规划、写代码、设计、测试、构建、命令执行、等待工具、等待用户与异常排查，每类都有八套不同的关节动作和工作道具。下面同时播放每类的一个例子。
+The first five main-agent families use five different base designs. Additional families receive color variants; each helper inherits its real root's shape and color at a smaller size. Existing families keep their appearance as others arrive or leave. These are visual personalities, not changes to an AI tool's abilities.
 
-![当前 11 类活动动画同步预览](docs/animations/overview.gif)
+The character concepts and reference were supplied by the user. Sprite sheets were made with AI-assisted image generation, then integrated with project-authored rendering and motion. [Read the bilingual provenance statement](ORIGINALITY.md).
 
-**[查看全部 88 种动画 GIF 图鉴 →](docs/animations/README.md)** · [静态总览](docs/animations/overview.png)
+## 550 ways to be at work
 
-当前有 **12 种双人互动**，三个房间各四种：传蓝图、纸飞机、磁石拼图、齿轮对转；敬茶、传茶点、接风铃、竹扇送风；绘星线、传星笺、一起看流星、拼合纸轨道。[查看当前双人动画 →](docs/animations/README.md#双人互动--12-种)
+**5 companions × 11 observed activities × 10 distinct performances.** Each material gets its own props, contact sequence and movement: paper folds and feeds, roots touch leaf keypads, yarn threads through small mechanisms, and light follows translucent tracks.
 
-![四种工坊双人互动](docs/animations/social/workshop.gif)
+Reading · Searching · Planning · Coding · Designing · Testing · Building · Running · Waiting for tools · Waiting for you · Error
 
-上方 88 套工作图集使用原创示意角色，播放应用当前的关节动画与道具，同步为 12 秒循环；应用保留实际动作节奏，同类动作按约 18–24 秒可见工作时间轮换。双人图鉴是 3.5 秒的离线道具采样，胶囊身体保持静止。这些公开图集不包含受限角色外观，不代表真实任务或工具结果。
+Coding keeps a recognizable input action; building assembles parts; running maintains an already-started mechanism. Waiting stops the work. Errors keep a visible jam, break or knot without pretending it has been repaired. A confirmed tool success gets a small, deduplicated response; completion requires actual completion evidence.
 
-新增的步态与分身特效也可直接预览（原创示意外观）：
+Open **Room preferences → Workshop companions → Motion gallery** to explore every character, activity and variation, with play/pause controls. [Browse public animation previews](docs/animations/README.md).
 
-![实际四足步态](docs/animations/lifecycle/walking.gif)
-![分身凝聚特效](docs/animations/lifecycle/split.gif)
-![分身归返特效](docs/animations/lifecycle/absorb.gif)
+## A room that respects the work
 
-- 所有项目的主 Agent 与分身在同一层同时显示；多个 Codex session 保留独立身份，家族颜色、组号与真实父子连线帮助辨识。
-- 中文昵称使用《山海经》中的 155 个完整神话名字，二至四字，如诸犍、九凤、英招、烛九阴；英文是四至五个字母的一个单词，如 Lumi、Cosmo、Orbit。同一个身份的昵称保持稳定。
-- 主 Agent 的身体从门口真实走入；分身在实际父级身上凝聚，再走向工作区，结束后走回父级并吸收，显示「结束分身。」。短暂工具切换会合并，持续活动才改变目的地。
-- 多人确认退场后，会先验证真实离场路线；能沿原尺寸走出时保留共同尺寸，位置释放后仍保留适配尺寸，可手动重新适配。分身、归返和离场状态随中英文切换同步翻译。
-- 自动适配后的角色大小保持稳定，人数减少或状态刷新不会再自动放大；「房间偏好」可手动调大小或重新适配。工作区换位会先保留已占用的真实工位。符合已验证空间条件的两人交换，可先步行到空闲位置让路，再依次抵达最终工位；主 Agent 等分身时保持原位置。临时让路不会触发工作到站动画，状态刷新不会重启路线。
-- 留场等待分身的父 Agent 保持实际脚点，其他角色换工作区不会借用它的移动权限；新工作恢复、首次回泊和最终退场分别按真实状态接续。
-- 身体沿家具之间的路径渐进起步、到站减速并在转角放慢；四足相位随行路距离变化，走停从当前关节和道具续接，最多八条路线并行。行进中的角色可相互穿过，家具与时钟仍是障碍，到站后的完整身体与名牌保持分离。
-- Agent 与名牌的偏好大小为 65%–135%；拥挤时全体等比例适配，显示实际比例。脚底锚定地面，缩放与路线可从当前画面打断，普通快照不重建身体、不重播动作。
-- 新工作可打断分身归位并续接原动作；名牌增长、调整大小不会截断回收。角色图片暂时失效时显示同位置的原创备用身体，恢复时平滑衔接。
-- 真实走到书架、白板、代码桌和实验台后，会触发对应家具回应：三种房间共 12 套原创小机关。布局微调与普通快照不会反复播放，机关避开角色与时钟。
-- 正常站立工作的 Agent 在隐藏窗口后保留原关节动画与当前姿态，恢复时从原相位继续；动作轮换只累计可见工作时间。
-- 社交会等待真实行程与尺寸调整完成；手动点击只邀请附近的可用伙伴，没有合适的双人组合就保留原状态。被新工作或语言、房间、主题切换打断时，当前纸笺、茶杯等道具从原姿态短暂淡出，角色动作和工作时钟照常接续。
-- 场景跟随香港的一天，木窗与门窗同步变化；时钟显示时间、完整日期和星期，旁边统计今日已观察到的活跃 Agent。
-- 「使用记录」将已观测的身份、主子关系、活动、工作／等待时长和调用次数持久保存在本机；可按日期、工具和关系筛选，查看时间线或导出 CSV，重启后仍在。
-- 连接面板提供「一键初始化」：自动识别本机已有工具，逐项安装或更新观察配置，保留原配置与备份；失败可单独重试，原工具的信任确认仍清楚标出。
-- 支持中文／English、细雨、减少动作和节能观察；空闲访客有 10 个区域与 500 条中英双语气泡。
-- 工具目录对齐 28 种 Agent；只观察活动，审批和回答继续在原 AI 工具中完成。
+- **Real families.** Independent sessions keep their IDs. Helpers emerge from their observed parent, walk to work and return to that parent; nested relationships remain visible.
+- **Larger companions, readable names.** Choose a fixed size from 65% to 135%. Agent counts never shrink bodies or labels. Moving agents may cross; settled work positions keep their complete body and nameplate envelopes separate. If a chosen size cannot safely admit a new body, it waits for floor space and remains in the roster.
+- **Motion that can rest.** Metadata refreshes preserve animation owners and playback. Hiding the window pauses the original clocks; reduced motion and low power keep calm, informative poses.
+- **A changing place.** Six everyday rooms and 27 holiday rooms have distinct architecture and layouts. Daily room follows the Hong Kong calendar; a manual choice persists. [Explore the rooms](docs/rooms/README.md).
+- **Useful at a glance.** Search companions with **⌘K**, inspect actual ancestry and activity, and review local history, Daily Token and Weekly usage. [Monitoring coverage and limits](office/docs/monitoring.md).
+- **Small moments.** Furniture responds to a genuine arrival when there is room. Twelve pair interactions and optional, clearly decorative visitors add life without fabricating AI work.
 
-<details>
-<summary>查看工作室场景背景</summary>
+## Local observation, explicit connections
 
-![小小工作室房间背景](office/assets/office-room.jpg)
+The studio reads supported local session logs and events from hooks or plugins you choose to connect. It needs no cloud account, AI API key or telemetry service. Settings and observation history stay in the app's local data directory; the detailed storage boundaries are documented in the [app guide](office/README.md#local-data-and-credits).
 
-</details>
+**Connect AI tools → Initialize** detects existing tools and installs or updates owned observation configuration after your click. The catalog includes 28 integrations, with support varying by host and version. Configuration and event fixtures do not mean every real client has been verified. Tool approvals remain in the original AI tool; decorative activity never makes a task succeed.
 
-## 家具到站响应
+## Get v0.24.0
 
-伙伴真正走到书架、白板、代码桌或实验台后，家具会作出约 1.4 秒的小回应。三种房间各有四套，合计 **12 种原创机关**；它们回应到站，不表示工具进度或任务成功。
+**macOS 13 or later · Apple Silicon / arm64.** This is the currently verified target. The release includes a self-contained Electron runtime, so installed users do not need Node.js or a development server.
 
-**山海工坊**：翻页与书签、图纸连线、电路卷轴、小针盘。
+1. Open the [v0.24.0 Release page](https://github.com/Ye-0413/AI-Office-Workspace/releases/tag/v0.24.0) and download the arm64 DMG or ZIP.
+2. With the DMG, drag **AI Mini Office.app** into **Applications**; with the ZIP, extract it and move the app there.
+3. Open the app, connect the AI tools you use, then produce a fresh event in the original tool.
 
-![山海工坊的四种家具到站响应](docs/animations/stations/workshop.gif)
+The current distribution uses local ad-hoc signing and is not Apple-notarized. macOS may display an unidentified-developer warning; review the release source and checksum before deciding whether to open it. This project does not require disabling system security protections.
 
-**港湾茶舍**：茶笺卷轴与签叶、折札、滤茶、温茶柱与气泡。
+[What's new in v0.24.0](docs/releases/release-v0.24.0.md) · [Release index](docs/releases/README.md)
 
-![港湾茶舍的四种家具到站响应](docs/animations/stations/teahouse.gif)
+## Run from source
 
-**星台观测室**：星册与指星环、星座连线、浑仪、镜片光圈。
-
-![星台观测室的四种家具到站响应](docs/animations/stations/observatory.gif)
-
-这三张公开图鉴由应用当前的生产模块离线采样，只展示原创家具机关，不作为房间导航、身体接触或 IK 的验证。普通快照与同区微移不会重播；空间不足时跳过装饰，减少动作、节能及隐藏窗口时停止播放。
-
-## 场景与小互动
-
-三种室内背景：**山海工坊、港湾茶舍、星台观测室**。各有三种机关和四套双 Agent 互动：递图纸、纸飞机、拼磁贴、齿轮对转；敬茶、传茶点、风铃应答、竹扇送风；共绘星线、传星笺、一起看流星、拼合纸星轨。双人互动持续 2.8–3.2 秒，只改变原创装饰，不改变真实工作、位置或会话。
-
-山海工坊有 **43 幅完整节令房间画面**，分别重绘织物、桌面器物、墙面陈设与窗外氛围；家具和通道保留同一布局。港湾茶舍与星台保留各自室内画面，配合节令布景。
-
-![43 幅完整节令工坊](docs/scenes/rooms.png)
-
-节令库有 **43 套机关主题**，每套 41 个连续运动采样，点击后可改变实际机关状态；四季、万圣节、圣诞节、清明、新年、新春、中秋、赏樱、仲夏与墨西哥亡灵节等保持统一的温暖像素风格。场景设计和动画由独立 Agent 交叉审查，快速重复操作也从当前画面续接。
-
-![43 套节令机关动画图鉴](docs/scenes/overview.gif)
-
-[查看场景、玩法、日期规则与动画清单](docs/scenes/README.md)。自动模式按香港日期选择已核实的节日及四季；其它文化或季节灵感可手动预览。雨雪是可选择的装饰天气。预览始终保留真实香港时钟、日期与星期。
-
-## 运行与构建
-
-主应用位于 `office/`。根目录的 `agents/`、`hooks/`、`src/` 等保留为集成注册表与参考源码；请从 `office/` 运行应用。
-
-需要 macOS 13+ 和 Node.js 24+，本地验证目标为 Apple Silicon。
+The application lives in **`office/`**. The root package belongs to the retained upstream reference project. For development, use macOS, Node.js 24+ and Xcode Command Line Tools for the native helper.
 
 ```sh
 git clone https://github.com/Ye-0413/AI-Office-Workspace.git
-cd AI-Office-Workspace/office
-npm ci
-
-# 从你本地、已取得使用权限的原项目目录准备角色素材。
-node scripts/prepare-local-artwork.cjs --from /absolute/path/to/original-project
-
-npm test
-npm start
-# 生成本地 .app、DMG 和 ZIP：
-npm run build:mac
+cd AI-Office-Workspace
+npm --prefix office ci
+npm --prefix office test
+npm --prefix office start
 ```
 
-素材准备脚本不会联网；它核对固定版本的 50 个 SVG 和图标的 SHA-256，然后仅写入本项目的本地素材目录。原素材来自 [原项目](https://github.com/rullerzhou-afk/clawd-on-desk)，对应版本 `c52e2df6ff778bf85310166882c516385f2f6eab`。应用构建使用本项目原创的工作室图标 `office/assets/studio-icon.png`；设计提示词保存在 `office/docs/studio-icon-prompt.txt`，不使用上游图标。
+```sh
+# Native renderer smoke check
+npm --prefix office run verify:renderer
+# Local .app, DMG and ZIP
+npm --prefix office run build:mac
+```
 
-构建产物位于 `dist-mini-office/`。安装包包含 Electron／Node 运行时，安装后无需开发服务器。
+Builds are written to `dist-mini-office/`. The five workshop companions are included in the public source; they do not require restoring upstream character artwork. Legacy artwork may be prepared only from an authorized local checkout, using the optional procedure in the [app guide](office/README.md#公开源码版准备).
 
-## 素材与许可
+## Source, artwork and attribution
 
-代码使用 **AGPL-3.0-only**，详见 [LICENSE](LICENSE)。代码许可不覆盖原角色素材；原素材声明保留所有权利并限制再分发，详见 [素材许可](office/assets/ORIGINAL-ARTWORK-LICENSE.txt)。公开源码不包含这些受限素材，也不发布含有这些素材的安装包；拥有相应权限后才能使用或分发。生成的房间背景及其原始提示随 `office/assets/` 和 `office/docs/` 保留。
+Source code is licensed **AGPL-3.0-only**: [LICENSE](LICENSE). The repository builds on and preserves code, provider definitions and history from [Clawd on Desk](UPSTREAM-README.md); it is not an entirely original codebase.
 
-原项目的代码、集成注册表和相关通知保留用于溯源，见 [第三方通知](office/UPSTREAM-NOTICE.md) 与 [参考项目说明](UPSTREAM-README.md)。
+The five workshop characters, generated environments and application icon have documented project-specific creation records. Character artwork retains **All Rights Reserved** under the [artwork notice](office/assets/WORKSHOP-ARTWORK-NOTICE.md); the code license does not grant an open artwork license. Existing third-party licenses and notices remain applicable. [Originality statement](ORIGINALITY.md) · [Notices](NOTICE.md) · [App credits](office/UPSTREAM-NOTICE.md).
 
-## 验证与边界
-
-Office quality 在每次 main 推送与 PR 上运行自动测试及原生观察锁检查。动画图鉴核对全部 88 种真实程序、GIF 动画帧与源码一致性；原生窗口检查覆盖 100 位角色同屏、逐帧位置连续与无重叠、分身恢复、时钟日期及中英文界面。公开源码检查无需还原角色素材。 百人压力测试检查身份、入场进度与完整包络；极密场景仍需缩小，不表示五英寸屏幕上的百人名牌已达到可读验收。
-
-28 种工具的隔离事件／配置检查，不等同于 28 种真实客户端都已运行。Codex 已有实际活动观察记录；本机 Hermes Gateway 的 11 个观察钩子已确认加载，下一次真实任务仍需实际使用验收。
-
-更多说明见 [应用文档](office/README.md)。
+Other retained language READMEs describe the upstream reference project, rather than this release. Current project documentation is available in English here and in [简体中文](README.zh-CN.md).

@@ -2,21 +2,26 @@
 // Real production page, local request cancellation and synthetic observations.
 // No provider configurations, user sessions, model messages or network calls.
 const {app,BrowserWindow,ipcMain}=require('electron');
+const Size=require('../lib/size-stability.js');
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),os=require('node:os');
 const profile=fs.mkdtempSync(path.join(os.tmpdir(),'office-native-body-'));
 app.setPath('userData',profile);app.disableHardwareAcceleration();
 let win,emptyRoom,blockArtwork=true,snapshotReads=0;
-let settings={language:'zh',agentScale:1,sceneTheme:'spring',sceneWeather:'off',reducedMotion:false,idleVisitor:false};
+// Isolate the internal joint/bitmap fallback; the public appearance catalog
+// always uses creatures with separate neutral-health native coverage.
+let settings={language:'zh',agentAppearance:'mixed',agentScale:1,sceneTheme:'spring',sceneWeather:'off',reducedMotion:false,idleVisitor:false};
+let releaseInitialSnapshot;
+const initialSnapshotGate=new Promise(resolve=>{releaseInitialSnapshot=resolve;});
 const task=id=>({id:'codex:fallback-'+id,sessionId:'fallback-'+id,provider:'codex',status:'active',activity:'reading',activeTools:1,lastEventAt:Date.now(),events:[],projectPath:'/fixture/fallback'});
 const tasks=[task('one'),task('two')];
 let snapshot={mode:'live',now:Date.now(),connections:[],sessions:tasks};
 const errors=[],expectedFailures=[],checks=[],pause=ms=>new Promise(r=>setTimeout(r,ms));
 const preview=process.env.MINI_OFFICE_PREVIEW_DIR;
-const run=source=>win.webContents.executeJavaScript(source,true);
-const allBody=condition=>`[...document.querySelectorAll('.actor[data-session-id]')].length===2&&[...document.querySelectorAll('.character-body')].every(b=>${condition})`;
+const run=async source=>{try{return await win.webContents.executeJavaScript(source,true);}catch(error){error.message+='; renderer expression: '+source.slice(0,220);throw error;}};
+const allBody=condition=>`[...document.querySelectorAll('.actor[data-session-id]')].length===2&&[...document.querySelectorAll('.actor[data-session-id] .character-body')].every(b=>${condition})`;
 const allArrived=`document.getElementById('office').dataset.entranceQueue==='0'&&[...document.querySelectorAll('.actor[data-session-id]')].length===2&&[...document.querySelectorAll('.actor[data-session-id]')].every(n=>{const actor=fallbackActors.get(n.dataset.sessionId);return actor&&!actor.pendingStation&&!actor.navigation&&!actor.motion&&!actor.routeReservation&&!actor.resumeNavigation&&!actor.yielding&&Math.abs(actor.position.x-actor.target.x)<.001&&Math.abs(actor.position.y-actor.target.y)<.001&&getComputedStyle(n).visibility!=='hidden'&&Number(getComputedStyle(n).opacity)>.99&&n.dataset.traffic==='arrived'&&n.dataset.walking!=='true'&&!n.getAnimations().some(animation=>animation.pending||animation.playState==='running');})`;
 const send=sessions=>{snapshot={...snapshot,sessions,now:Date.now()};win.webContents.send('office:snapshot',snapshot);};
-async function until(source,label,ms=6000){const end=Date.now()+ms;while(Date.now()<end){if(await run(source))return;await pause(20);}throw Error(label+' '+JSON.stringify(await run(`({hidden:document.hidden,visibility:document.visibilityState,mediaReduced:matchMedia('(prefers-reduced-motion: reduce)').matches,officeQuiet:{reduced:document.getElementById('office').dataset.reducedMotion,lowPower:document.getElementById('office').dataset.lowPower},trace:(window.fallbackTrace||[]).slice(-20),bodies:[...document.querySelectorAll('.character-body')].map(b=>({bitmap:b.dataset.bitmapHealth,rig:b.dataset.rigHealth,healing:b.dataset.rigHealing,staticHealing:b.dataset.bitmapHealing,filter:getComputedStyle(b.querySelector('img')).filter})),errors:document.getElementById('error-message').textContent})`)));}
+async function until(source,label,ms=6000){const end=Date.now()+ms;while(Date.now()<end){if(await run(source))return;await pause(20);}throw Error(label+' '+JSON.stringify(await run(`({hidden:document.hidden,visibility:document.visibilityState,mediaReduced:matchMedia('(prefers-reduced-motion: reduce)').matches,officeQuiet:{reduced:document.getElementById('office').dataset.reducedMotion,lowPower:document.getElementById('office').dataset.lowPower},trace:(window.fallbackTrace||[]).slice(-20),bodies:[...document.querySelectorAll('.actor[data-session-id] .character-body')].map(b=>({bitmap:b.dataset.bitmapHealth,rig:b.dataset.rigHealth,healing:b.dataset.rigHealing,staticHealing:b.dataset.bitmapHealing,filter:getComputedStyle(b.querySelector('img')).filter})),errors:document.getElementById('error-message').textContent})`)));}
 async function screen(name){if(preview){fs.mkdirSync(preview,{recursive:true});fs.writeFileSync(path.join(preview,name+'.png'),(await win.webContents.capturePage()).toPNG());}}
 function frozenPixels(capture){
   const size=capture.getSize(),pixels=Buffer.from(capture.toBitmap());
@@ -35,7 +40,7 @@ function coloredPixels(capture,sample,tolerance=115){
 }
 function bodyPoint(sample,x,y){
   const r=sample.rect,scale=sample.presentationScale;
-  assert.equal(scale,1.5,'pixel sampling must use the actual enlarged presentation scale');
+  assert.equal(scale,Size.PRESENTATION_SCALE,'pixel sampling must use the actual enlarged presentation scale');
   return{x:r.x+r.width*(77.5+(x-77.5)*scale)/154,y:r.y+r.height*(115+(y-115)*scale)/129};
 }
 function bodyCoverage(capture,sample){
@@ -88,7 +93,7 @@ const guard=setTimeout(()=>{console.error('Native fallback fixture timed out');a
 app.whenReady().then(async()=>{
   // Later observations are explicitly pushed below. Holding the automatic
   // poll avoids an unrelated heartbeat consuming the 220ms fault window.
-  for(const[name,fn]of Object.entries({snapshot:()=>++snapshotReads===1?snapshot:new Promise(()=>{}),settings:()=>settings,'set-settings':patch=>(settings={...settings,...patch}),displays:()=>[]}))ipcMain.handle('office:'+name,(_,...args)=>fn(...args));
+  for(const[name,fn]of Object.entries({snapshot:()=>++snapshotReads===1?initialSnapshotGate.then(()=>snapshot):new Promise(()=>{}),settings:()=>settings,'set-settings':patch=>(settings={...settings,...patch}),displays:()=>[]}))ipcMain.handle('office:'+name,(_,...args)=>fn(...args));
   ipcMain.on('office:renderer-error',(_,message)=>errors.push(message));
   win=new BrowserWindow({width:1280,height:720,useContentSize:true,show:true,focusable:false,webPreferences:{preload:path.join(__dirname,'../preload.cjs'),sandbox:true,contextIsolation:true,nodeIntegration:false,backgroundThrottling:false}});
   win.webContents.session.webRequest.onBeforeRequest({urls:['file://*/*','http://*/*','https://*/*']},(details,callback)=>{
@@ -98,8 +103,15 @@ app.whenReady().then(async()=>{
     if(/^https?:/.test(details.url)){errors.push('Unexpected network request');callback({cancel:true});return;}
     callback({cancel:blocked});
   });
+  // Install the internal model adapter before app.js captures its allocator.
+  // This isolated dependency stub never appears as a public appearance mode.
+  await win.loadURL('about:blank');
+  win.webContents.debugger.attach('1.3');
+  await win.webContents.debugger.sendCommand('Page.enable');
+  await win.webContents.debugger.sendCommand('Page.addScriptToEvaluateOnNewDocument',{source:`(()=>{Object.defineProperty(window,'OfficePublicArtwork',{configurable:true,get:()=>undefined,set:()=>{}});let model;Object.defineProperty(window,'OfficeAgentAppearance',{configurable:true,get:()=>model,set:value=>{model={...value,createAllocator:()=>null,forSession:()=>null};}});})()`});
   await win.loadFile(path.join(__dirname,'../renderer/index.html'));
   await run(`window.fallbackActors=new Map();window.fallbackTrace=[];document.getElementById('office').addEventListener('office:actor-arrival',event=>fallbackActors.set(event.detail.actorId,event.detail.actor));const trace=()=>{fallbackTrace.push({at:performance.now(),hidden:document.hidden,mediaReduced:matchMedia('(prefers-reduced-motion: reduce)').matches,bodies:[...document.querySelectorAll('.actor[data-session-id]')].map(n=>({id:n.dataset.sessionId,traffic:n.dataset.traffic,walking:n.dataset.walking,rig:n.querySelector('.character-body').dataset.rigHealth,healing:n.querySelector('.character-body').dataset.rigHealing}))});if(fallbackTrace.length>200)fallbackTrace.shift();};new MutationObserver(trace).observe(document.getElementById('actors'),{subtree:true,attributes:true,attributeFilter:['data-rig-health','data-rig-healing']});document.addEventListener('visibilitychange',trace);void 0`);
+  releaseInitialSnapshot();
   await until(allBody(`b.dataset.bitmapHealth==='failed'&&b.dataset.rigHealth==='failed'`),'both bitmap and rig must fail through real local requests');
   await until(allArrived,'both real main bodies must finish their physical entrance before fixed-position compositor controls',20000);
   await until(`document.querySelector('.venue-stage')?.dataset.artState==='ready'&&document.getElementById('room-art').dataset.theme==='spring'&&!document.querySelector('.venue-art-buffer')`,'reference room artwork must finish its real transition');await pause(450);
@@ -180,12 +192,12 @@ app.whenReady().then(async()=>{
   // A second failure is scheduled by actual RAFs while the next heal is
   // demonstrably active; capture latency cannot move it outside that window.
   blockArtwork=true;
-  await run(`[...document.querySelectorAll('.character-body')].forEach(b=>{b.querySelector('img').src='../assets/avatars/clawd-static-base.svg?native-fault=second';b.querySelector('.ap-rig defs image').setAttribute('href','../assets/avatars/clawd-static-base.svg?native-fault=second')});void 0`);
+  await run(`[...document.querySelectorAll('.actor[data-session-id] .character-body')].forEach(b=>{b.querySelector('img').src='../assets/avatars/clawd-static-base.svg?native-fault=second';b.querySelector('.ap-rig defs image').setAttribute('href','../assets/avatars/clawd-static-base.svg?native-fault=second')});void 0`);
   await until(allBody(`b.dataset.bitmapHealth==='failed'&&b.dataset.rigHealth==='failed'`),'second real fault must arrive');
   await pause(3100);blockArtwork=false;send(tasks.map(t=>({...t,activity:'planning',lastEventAt:Date.now()})));
   await until(allBody(`b.dataset.rigHealing==='true'`),'second healing window must start',1500);
   blockArtwork=true;
-  await run(`window.faultDuringHealing=false;let remaining=3;function interrupt(){if(--remaining>0){requestAnimationFrame(interrupt);return;}faultDuringHealing=[...document.querySelectorAll('.character-body')].every(b=>b.dataset.rigHealing==='true');[...document.querySelectorAll('.character-body')].forEach(b=>{b.querySelector('img').src='../assets/avatars/clawd-static-base.svg?native-fault=interrupted';b.querySelector('.ap-rig defs image').setAttribute('href','../assets/avatars/clawd-static-base.svg?native-fault=interrupted')});}requestAnimationFrame(interrupt);void 0`);
+  await run(`window.faultDuringHealing=false;let remaining=3;function interrupt(){if(--remaining>0){requestAnimationFrame(interrupt);return;}faultDuringHealing=[...document.querySelectorAll('.actor[data-session-id] .character-body')].every(b=>b.dataset.rigHealing==='true');[...document.querySelectorAll('.actor[data-session-id] .character-body')].forEach(b=>{b.querySelector('img').src='../assets/avatars/clawd-static-base.svg?native-fault=interrupted';b.querySelector('.ap-rig defs image').setAttribute('href','../assets/avatars/clawd-static-base.svg?native-fault=interrupted')});}requestAnimationFrame(interrupt);void 0`);
   const interrupted=await captureFrames(31,{blended:true,label:'interrupted-healing'});assert.equal(await run('faultDuringHealing'),true);
   checks.push({name:'failure interrupts a confirmed material heal without losing a body in 31 captured frames',frames:interrupted.length});
   blockArtwork=false;await pause(3100);send(tasks.map(t=>({...t,activity:'planning',lastEventAt:Date.now()})));
@@ -196,7 +208,7 @@ app.whenReady().then(async()=>{
   send(tasks.map(t=>({...t,activity:'coding',lastEventAt:Date.now()})));
   await until(`[...document.querySelectorAll('.avatar-performance')].every(n=>n.dataset.kind==='keyboard')`,'fresh coding performance must precede same-clock fault check');
   await until(allArrived,'both actual coding journeys must finish before the independent same-clock resource baseline',20000);
-  await run(`(async()=>{const bodies=[...document.querySelectorAll('.character-body')],finite=bodies.flatMap(b=>b.getAnimations({subtree:true})).filter(a=>Number.isFinite(Number(a.effect.getTiming().iterations)));await Promise.allSettled(finite.map(a=>a.finished));await new Promise(resolve=>requestAnimationFrame(resolve));await Promise.all(bodies.flatMap(b=>b.getAnimations({subtree:true})).filter(a=>typeof a.animationName==='string').map(a=>a.ready));})()`);
+  await run(`(async()=>{const bodies=[...document.querySelectorAll('.actor[data-session-id] .character-body')],finite=bodies.flatMap(b=>b.getAnimations({subtree:true})).filter(a=>Number.isFinite(Number(a.effect.getTiming().iterations)));await Promise.allSettled(finite.map(a=>a.finished));await new Promise(resolve=>requestAnimationFrame(resolve));await Promise.all(bodies.flatMap(b=>b.getAnimations({subtree:true})).filter(a=>typeof a.animationName==='string').map(a=>a.ready));})()`);
   const bitmapBefore=await run(`[...document.querySelectorAll('.character-body>img')].map(n=>n.src)`);
   await run(`window.currentHealthClocks=originalBodies.map(old=>old.node.querySelector('.avatar-performance').getAnimations({subtree:true}).filter(a=>typeof a.animationName==='string').map(a=>({a,time:a.currentTime})));void 0`);
   blockArtwork=true;
@@ -212,7 +224,7 @@ app.whenReady().then(async()=>{
     if(mode==='quiet')await run(`const n=document.getElementById('setting-reducedMotion');n.checked=true;n.dispatchEvent(new Event('change',{bubbles:true}));void 0`);
     blockArtwork=true;
     send(tasks.map(t=>({...t,activity:mode==='unknown'?'unknown':'reading',lastEventAt:Date.now()})));
-    await run(`[...document.querySelectorAll('.character-body')].forEach(b=>{b.querySelector('img').src='../assets/avatars/clawd-static-base.svg?native-fault=${mode}';b.querySelector('.ap-rig defs image').setAttribute('href','../assets/avatars/clawd-static-base.svg?native-fault=${mode}')});void 0`);
+    await run(`[...document.querySelectorAll('.actor[data-session-id] .character-body')].forEach(b=>{b.querySelector('img').src='../assets/avatars/clawd-static-base.svg?native-fault=${mode}';b.querySelector('.ap-rig defs image').setAttribute('href','../assets/avatars/clawd-static-base.svg?native-fault=${mode}')});void 0`);
     await until(allBody(`b.dataset.bitmapHealth==='failed'&&b.dataset.rigHealth==='failed'`),mode+' must enter real dual failure');
     if(mode==='unknown'){
       // Failed resource facts can precede the real 220ms work-to-native and

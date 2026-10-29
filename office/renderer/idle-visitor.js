@@ -7,23 +7,35 @@
     const director=Model.createVisitor();
     const quotes=Model.createShuffleBag(Dialogue.entries);
     const names=[['栗子','Chestnut'],['糯米','Mochi'],['布丁','Pudding'],['小苔','Moss'],['汤圆','Dumpling'],['豆包','Beanbun'],['松果','Pinecone'],['饼干','Biscuit']];
-    let guest=null,disposed=false,lastContext=null,poseNonce=0;
+    let guest=null,disposed=false,lastContext=null,guestSerial=0;
     const make=(tag,cls)=>{const el=document.createElement(tag);if(cls)el.className=cls;return el;};
     const transform=p=>'translate3d('+(p.x*12.8)+'px,'+(p.y*7.2)+'px,0) scale('+(Scene.ROOM_LAYOUT ? .65 : (.76+p.y/500)*.88)+')';
-    function pose(name,replay=false){if(!guest)return;const c=lastContext,quiet=c.reducedMotion||c.lowPower||c.hidden;const asset=quiet?'clawd-static-base.svg':name;guest.wantedPose=name;if(guest.asset===asset&&(!replay||quiet))return;guest.asset=asset;guest.image.dataset.asset=asset;guest.image.src='../assets/avatars/'+asset+(replay&&!quiet?'?_t='+(++poseNonce):'');}
+    function pose(name,replay=false){
+      if(!guest)return;const c=lastContext;guest.wantedPose=name;guest.node.dataset.visitorPose=name;
+      const activity=({reading:'reading',planning:'planning',tidying:'building'})[name]||'visiting';
+      // This private decorative presentation never enters the observation store.
+      guest.performance.update({...guest.presentation,activity},{now:Date.now(),reducedMotion:c.reducedMotion,lowPower:c.lowPower,hidden:c.hidden,walking:Boolean(guest.motion)||guest.node.dataset.walking==='true'});
+      if(replay&&!c.reducedMotion&&!c.lowPower&&!c.hidden)guest.performance.cue('attention');
+    }
     function stopMotion(){if(!guest?.motion)return;const matrix=new DOMMatrixReadOnly(getComputedStyle(guest.node).transform);guest.point={x:matrix.m41/12.8,y:matrix.m42/7.2};guest.node.style.transform=transform(guest.point);guest.motion.cancel();guest.motion=null;guest.node.dataset.walking='false';}
     function clearProps(){for(const prop of world.querySelectorAll('[data-visitor-active]'))delete prop.dataset.visitorActive;}
-    function remove(){if(!guest)return;stopMotion();clearTimeout(guest.bubbleTimer);guest.node.remove();guest=null;clearProps();world.dataset.visitor='false';}
+    function remove(){if(!guest)return;stopMotion();clearTimeout(guest.bubbleTimer);guest.performance.destroy();guest.node.remove();guest=null;clearProps();world.dataset.visitor='false';}
     function copy(){if(!guest)return;const en=lastContext.language==='en';guest.title.textContent=guest.name[en?1:0];guest.badge.textContent=en?'VISITOR':'串门访客';guest.state.textContent=guest.leaving?(en?'Heading out':'下次再来'):en?'Just visiting':'随便逛逛';guest.button.setAttribute('aria-label',(en?'Decorative visitor ':'装饰访客 ')+guest.title.textContent+(en?'; click to say hello':'；点击打招呼'));if(guest.quote)guest.bubble.textContent=guest.quote[en?'en':'zh'];}
     function speak(zone){if(!guest||guest.leaving||lastContext.hidden)return;const quote=quotes.next(item=>item.zone===zone);if(!quote)return;guest.quote=quote;copy();guest.bubble.dataset.quoteId=quote.id;guest.bubble.dataset.show='true';clearTimeout(guest.bubbleTimer);guest.bubbleTimer=setTimeout(()=>{if(guest)guest.bubble.dataset.show='false';},6500);}
     function create(){
       const node=make('div','visitor'),button=make('button','actor-button'),body=make('span','character-body'),image=make('img'),plate=make('span','nameplate'),title=make('span','actor-title'),badge=make('span','visitor-badge'),state=make('span','actor-state'),bubble=make('span','actor-bubble'),trinket=make('span','visitor-trinket');
       button.type='button';image.alt='';image.draggable=false;bubble.setAttribute('aria-hidden','true');trinket.setAttribute('aria-hidden','true');
       body.append(image);plate.append(title,badge,state);button.append(body,plate,bubble,trinket);node.append(make('span','actor-shadow'),button);layer.append(node);
-      guest={node,button,image,title,badge,state,bubble,trinket,name:names[Math.floor(Math.random()*names.length)],point:{x:Scene.ZONES.exit.x,y:Scene.ZONES.exit.y},motion:null,generation:-1,stopSerial:-1,bubbleTimer:0,quote:null,asset:'',wantedPose:'clawd-mini-peek.svg',leaving:false,lastHello:0};
-      node.style.transform=transform(guest.point);world.dataset.visitor='true';copy();pose('clawd-mini-peek.svg');openDoor();
-      image.addEventListener('error',()=>{if(guest&&guest.asset!=='clawd-static-base.svg')pose('clawd-static-base.svg');});
-      button.addEventListener('click',()=>{if(!guest||guest.leaving||Date.now()-guest.lastHello<3000)return;guest.lastHello=Date.now();speak(guest.stop?.zone||'door');if(!guest.motion)pose('clawd-mini-happy.svg',true);});
+      const designs=root.OfficeAgentAppearance.catalog,design=root.OfficePublicArtwork.design(designs[Math.floor(Math.random()*designs.length)]);
+      const presentation={id:'decorative-visitor-'+(++guestSerial),provider:'decorative',status:'active',activity:'visiting'};
+      node.dataset.bodyDesign=design.id;node.dataset.bodyAppearance=design.id+':0';
+      image.dataset.asset=design.asset;image.src='../assets/avatars/'+design.asset;
+      const performance=root.OfficeCreaturePerformance.create({actorNode:node,body,image,session:presentation,design});
+      guest={node,button,image,title,badge,state,bubble,trinket,performance,presentation,name:names[Math.floor(Math.random()*names.length)],point:{x:Scene.ZONES.exit.x,y:Scene.ZONES.exit.y},motion:null,generation:-1,stopSerial:-1,bubbleTimer:0,quote:null,wantedPose:'looking',leaving:false,lastHello:0};
+      node.style.transform=transform(guest.point);world.dataset.visitor='true';copy();pose('looking');openDoor();
+      image.addEventListener('error',()=>{if(guest?.image===image)image.hidden=true;});
+      image.addEventListener('load',()=>{if(guest?.image===image&&image.naturalWidth>0)image.hidden=false;});
+      button.addEventListener('click',()=>{if(!guest||guest.leaving||Date.now()-guest.lastHello<3000)return;guest.lastHello=Date.now();speak(guest.stop?.zone||'door');if(!guest.motion)pose('delighted',true);});
     }
     async function travel(target,generation,stopSerial,leaving){
       stopMotion();const current=guest;if(!current)return;
@@ -32,7 +44,7 @@
       const finish=()=>{if(guest!==current||current.generation!==generation||current.stopSerial!==stopSerial)return false;current.point={x:target.x,y:target.y};current.node.style.transform=transform(current.point);current.node.style.zIndex=String(Math.round(target.y*10));current.node.dataset.walking='false';return true;};
       if(!lastContext.reducedMotion&&length>.65&&path.length>1){
         let traveled=0;const frames=path.map((point,index)=>{if(index)traveled+=Scene.distance(path[index-1],point);return{transform:transform(point),offset:traveled/length};});
-        current.node.dataset.walking='true';pose('clawd-static-base.svg');
+        current.node.dataset.walking='true';pose('looking');
         const motion=current.node.animate(frames,{duration:Math.max(360,Math.min(leaving?2400:6000,length*(leaving?34:65))),easing:'linear',fill:'forwards'});current.motion=motion;
         if(lastContext.hidden)motion.pause();
         try{await motion.finished;}catch{return;}
@@ -60,7 +72,7 @@
       }
       if(previous&&(previous.hidden!==lastContext.hidden||previous.reducedMotion!==lastContext.reducedMotion||previous.lowPower!==lastContext.lowPower)){
         if(guest.motion){if(lastContext.hidden)guest.motion.pause();else guest.motion.play();if(lastContext.reducedMotion){const target=guest.stop.point;stopMotion();travel(target,state.generation,state.stopSerial,false);}}
-        else pose(guest.wantedPose);
+        pose(guest.wantedPose);
         if(lastContext.hidden)guest.bubble.dataset.show='false';
       }
       if(state.stop&&guest.stopSerial!==state.stopSerial){guest.leaving=false;guest.generation=state.generation;guest.stopSerial=state.stopSerial;

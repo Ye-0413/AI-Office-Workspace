@@ -11,7 +11,11 @@
   <link rel="stylesheet" href="number-flip.css">
   <link rel="stylesheet" href="manual-questions.css">
   <link rel="stylesheet" href="avatar-performance.css">
+  <link rel="stylesheet" href="creature-performance.css">
+  <link rel="stylesheet" href="creature-activity.css">
   <link rel="stylesheet" href="avatar-fallback.css">
+  <link rel="stylesheet" href="appearance-picker.css">
+  <link rel="stylesheet" href="repertoire-gallery.css">
   <link rel="stylesheet" href="clone-motion.css">
   <link rel="stylesheet" href="family-appearance.css">
   <link rel="stylesheet" href="setup-assistant.css">
@@ -30,6 +34,16 @@
   <script defer src="../lib/attendance-model.js"></script>
   <script defer src="../lib/animation-director.js"></script>
   <script defer src="../lib/avatar-performance-model.js"></script>
+  <script defer src="../lib/agent-appearance.js"></script>
+  <script defer src="../lib/public-artwork.js"></script>
+  <script defer src="repertoire-folio.js"></script>
+  <script defer src="repertoire-ink.js"></script>
+  <script defer src="repertoire-moss.js"></script>
+  <script defer src="repertoire-thread.js"></script>
+  <script defer src="repertoire-glow.js"></script>
+  <script defer src="creature-repertoire.js"></script>
+  <script defer src="creature-activity.js"></script>
+  <script defer src="creature-performance.js"></script>
   <script defer src="avatar-performance.js"></script>
   <script defer src="avatar-fallback.js"></script>
   <script defer src="../lib/i18n-model.js"></script>
@@ -61,6 +75,8 @@
   <script defer src="station-arrival.js"></script>
   <script defer src="festival-stage.js"></script>
   <script defer src="theme-environment.js"></script>
+  <script defer src="repertoire-gallery.js"></script>
+  <script defer src="appearance-picker.js"></script>
   <script defer src="app.js"></script>
 </head>
 <body>
@@ -112,11 +128,11 @@
     <footer class="room-status">
       <div class="room-status-copy"><span id="status-dot" class="status-dot" aria-hidden="true"></span><span id="room-summary">正在打开办公室…</span><span id="signal-summary" class="signal-summary"></span></div>
       <div id="pagination" class="pagination" hidden><button id="page-prev" type="button" aria-label="上一组任务">←</button><span id="page-label"></span><button id="page-next" type="button" aria-label="下一组任务">→</button></div>
-      <button id="roster-button" class="roster-button" type="button" hidden>房间里的伙伴</button>
+      <button id="roster-button" class="roster-button" type="button" aria-haspopup="dialog" aria-controls="roster-dialog" aria-keyshortcuts="Meta+K Control+K" title="查找伙伴 · ⌘K / Ctrl+K" hidden>房间里的伙伴</button>
       <button id="attention-jump" type="button" class="attention-jump" hidden></button>
     </footer>
 
-    <aside id="inspector" class="inspector" aria-label="任务详情" hidden>
+    <aside id="inspector" class="inspector" aria-label="任务详情" aria-labelledby="inspect-title" tabindex="-1" hidden>
       <div class="inspector-main"><div class="inspector-heading"><span id="inspect-provider" class="provider-badge"></span><span id="inspect-nickname" class="inspect-nickname"></span><span id="inspect-location" class="inspect-location"></span><button type="button" id="inspect-helper" class="inspect-helper" hidden>临时帮手</button></div><h2 id="inspect-title"></h2><p id="inspect-summary"></p><div class="inspector-meta"><span id="inspect-state"></span><span id="inspect-signal"></span><span id="inspect-tools"></span></div></div>
       <div class="inspector-actions"><button id="greet-agent" type="button" class="button button-paper">打个招呼</button><button id="open-source" type="button" class="button button-warm">打开项目文件夹 ↗</button><span id="inspect-action-note">角色行动来自观察事件</span></div>
       <button id="close-inspector" type="button" class="close-inspector" aria-label="关闭任务详情">×</button>
@@ -137,7 +153,11 @@
     <dialog id="roster-dialog" class="office-dialog roster-dialog" aria-labelledby="roster-title">
       <div class="dialog-header"><div><span class="dialog-eyebrow">每项任务都有自己的位置</span><h2 id="roster-title">房间里的伙伴</h2></div><button type="button" class="dialog-close" data-close-dialog aria-label="关闭伙伴列表">×</button></div>
       <p class="dialog-intro">同一工具的独立 session 分别入驻。选择任务，可以在房间中找到它。</p>
+      <div class="roster-toolbar"><label class="sr-only" for="roster-search">搜索伙伴、任务、工具或项目</label><input id="roster-search" class="provider-search" type="search" placeholder="搜索昵称、任务、工具或项目…" autocomplete="off" spellcheck="false" aria-controls="roster-list" aria-describedby="roster-keyboard-hint"><button id="roster-attention" class="button button-paper" type="button" aria-pressed="false">只看需留意</button></div>
+      <div class="roster-result-bar"><span id="roster-count" role="status" aria-live="polite" aria-atomic="true"></span><button id="roster-reset" type="button" hidden>清除筛选</button></div>
+      <p id="roster-empty" class="roster-empty" hidden></p>
       <div id="roster-list" class="roster-list"></div>
+      <p id="roster-keyboard-hint" class="roster-keyboard-hint">↑ ↓ 选择 · Enter 查看 · Esc 清空搜索或关闭</p>
     </dialog>
 
     <dialog id="usage-history-dialog" class="office-dialog usage-history-dialog" aria-labelledby="usage-history-title" aria-describedby="usage-history-scope">
@@ -172,7 +192,7 @@
       <div class="dialog-header"><div><span class="dialog-eyebrow">把小房间放到喜欢的地方</span><h2 id="settings-title">房间偏好</h2></div><button type="button" class="dialog-close" data-close-dialog aria-label="关闭房间偏好">×</button></div>
       <div class="setting-row scene-time-setting"><div><label for="setting-sceneTime">香港的一天</label><span>依照香港时间变换天色，也可以预览喜欢的时段。</span></div><select id="setting-sceneTime"><option value="auto">跟随香港时间</option><option value="dawn">晨曦</option><option value="morning">上午</option><option value="afternoon">午后</option><option value="sunset">日落</option><option value="night">夜晚</option></select></div>
       <button id="day-reset" class="day-reset" type="button" hidden>回到此刻</button>
-      <div class="setting-row agent-size-setting"><div><label for="setting-agentScale">Agent 大小上限</label><span>所有 Agent 都会入场；拥挤时自动缩小，分身保持主 Agent 的 80%。</span></div><div class="agent-size-control"><output id="agent-scale-value" for="setting-agentScale">100%</output><input id="setting-agentScale" type="range" min="65" max="135" step="5" value="100"><button id="agent-size-refit" type="button" class="button button-paper">重新适配</button></div></div>
+      <div class="setting-row agent-size-setting"><div><label for="setting-agentScale">Agent 大小</label><span>角色与名字同步调整；人数变化不改变大小，分身保持较小比例。</span></div><div class="agent-size-control"><output id="agent-scale-value" for="setting-agentScale">100%</output><input id="setting-agentScale" type="range" min="65" max="135" step="5" value="100"><button id="agent-size-refit" type="button" class="button button-paper">重新排列</button></div></div>
       <div class="setting-row"><div><label for="setting-rain">窗外细雨</label><span>只改变环境，不代表任务状态。</span></div><input id="setting-rain" type="checkbox"></div>
       <div class="setting-row"><div><label for="setting-idleVisitor">闲时串门</label><span>安静时有访客来逛逛；真实任务入驻就让路。</span></div><input id="setting-idleVisitor" type="checkbox"></div>
       <div class="setting-row"><div><label for="setting-reducedMotion">减少动作</label><span>保留位置与状态，暂停角色循环及装饰动作。</span></div><input id="setting-reducedMotion" type="checkbox"></div>

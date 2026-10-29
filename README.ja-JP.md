@@ -1,3 +1,5 @@
+> **上流プロジェクトの参考アーカイブ**：このページは Clawd on Desk の説明を保存したもので、AI Office Workspace v0.24.0 の現行翻訳ではありません。本プロジェクトの [English](README.md) / [简体中文](README.zh-CN.md) と [Release](docs/releases/README.md) を参照してください。以下のダウンロード、対応OS、承認機能は上流プロジェクトのものです。
+
 <p align="center">
   <img src="assets/icon.png" width="128" alt="Clawd">
 </p>

@@ -57,7 +57,7 @@ const guard=setTimeout(()=>{console.error('Public lifecycle export timed out');a
 app.whenReady().then(async()=>{
  execFileSync('ffmpeg',['-version'],{stdio:'ignore'});fs.mkdirSync(out,{recursive:true});
  let source=fs.readFileSync(path.join(repo,'office/renderer/avatar-performance.js'),'utf8');
- const texture='href="../assets/avatars/${Model.ASSET}"',bitmap="const bitmap = body.querySelector('img');";
+ const texture='href="../assets/avatars/${designAsset}"',bitmap="const bitmap = body.querySelector('img');";
  assert.equal(source.split(texture).length,2);assert.equal(source.split(bitmap).length,2);
  // Only the resource adapter changes: detached, resource-free span provides the
  // bitmap fade API. All production joints, gait and finite FX are unmodified.

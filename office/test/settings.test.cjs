@@ -5,6 +5,59 @@ const fs=require('node:fs');
 const os=require('node:os');
 const path=require('node:path');
 const {createSettings}=require('../lib/settings.cjs');
+test('workshop creature preferences persist and reject unrecognized presentation values', t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'office-settings-appearance-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  fs.writeFileSync(path.join(dir, 'settings.json'), JSON.stringify({ language: 'en', lowPower: true }));
+  const settings = createSettings(dir);
+  assert.equal(settings.get().agentAppearance, 'mixed');
+  for (const agentAppearance of require('../lib/agent-appearance.js').MODES) {
+    settings.set({ agentAppearance });
+    const restored = createSettings(dir).get();
+    assert.equal(restored.agentAppearance, agentAppearance);
+    assert.equal(restored.language, 'en'); assert.equal(restored.lowPower, true);
+  }
+  for (const agentAppearance of ['', 'Claude', '../avatar.svg', null, {}, 1]) assert.throws(() => settings.set({ agentAppearance }), /appearance/);
+});
+test('saved original and geometric choices migrate read-only and retain every unrelated preference', t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'office-settings-creature-migration-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const file = path.join(dir, 'settings.json');
+  const migrations = Object.fromEntries(['original','orb','console','sprout','kite','prism','folio','ink','moss','thread','glow'].map(id => [id,'mixed']));
+  for (const [agentAppearance, expected] of Object.entries(migrations)) {
+    const saved = JSON.stringify({ agentAppearance, language: 'en', lowPower: true, agentScale: 1.15, selectedProject: '/My workshop' });
+    fs.writeFileSync(file, saved);
+    const settings = createSettings(dir);
+    assert.equal(settings.get().agentAppearance, expected);
+    assert.equal(settings.get().language, 'en');
+    assert.equal(settings.get().lowPower, true);
+    assert.equal(settings.get().agentScale, 1.15);
+    assert.equal(settings.get().selectedProject, '/My workshop');
+    assert.equal(fs.readFileSync(file, 'utf8'), saved, 'reading preferences does not write to disk');
+    settings.set({ sound: true });
+    assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).agentAppearance, expected);
+    assert.equal(createSettings(dir).get().agentAppearance, expected);
+  }
+});
+test('old clients can submit a previous choice and persist the canonical creature atomically', t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'office-settings-creature-client-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const settings = createSettings(dir), file = path.join(dir, 'settings.json');
+  settings.set({ agentAppearance: 'console', language: 'en' });
+  assert.equal(settings.get().agentAppearance, 'mixed');
+  const saved = fs.readFileSync(file, 'utf8');
+  for (const invalid of ['workshop-folio.png', 'creature', 'constructor', '__proto__', [], null]) {
+    assert.throws(() => settings.set({ agentAppearance: invalid, language: 'zh' }), /appearance/);
+    assert.equal(settings.get().language, 'en');
+    assert.equal(settings.get().agentAppearance, 'mixed');
+    assert.equal(fs.readFileSync(file, 'utf8'), saved);
+  }
+  settings.set({ agentAppearance: 'original' });
+  assert.equal(settings.get().agentAppearance, 'mixed', 'a retired original request cannot restore the old character');
+  assert.equal(JSON.parse(fs.readFileSync(file, 'utf8')).agentAppearance, 'mixed');
+  assert.equal(createSettings(dir).get().agentAppearance, 'mixed');
+  assert.equal(createSettings(dir).get().language, 'en');
+});
 test('preferences persist only recognized presentation settings',t=>{const dir=fs.mkdtempSync(path.join(os.tmpdir(),'office-settings-'));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));const s=createSettings(dir);assert.equal(s.get().rain,false);s.set({rain:true,selectedProject:'/Demo/office',displayId:23});const restored=createSettings(dir);assert.equal(restored.get().rain,true);assert.equal(restored.get().displayId,23);assert.throws(()=>s.set({approvalMode:'always'}));assert.throws(()=>s.set({night:'yes'}));assert.throws(()=>s.set({selectedProject:'x'.repeat(3000)}));const exported=s.get();exported.rain=false;assert.equal(s.get().rain,true);});
 test('agent size migrates to 100%, persists valid bounds and rejects invalid values atomically',t=>{
   const dir=fs.mkdtempSync(path.join(os.tmpdir(),'office-settings-scale-'));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));

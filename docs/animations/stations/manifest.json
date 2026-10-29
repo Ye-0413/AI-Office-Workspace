@@ -1,5 +1,14 @@
 {
   "version": "0.23.0",
+  "recordedVersion": "0.23.0",
+  "distributionVersion": "0.24.0",
+  "provenance": {
+    "status": "carried-forward",
+    "recording": "Existing 0.23.0 media retained byte-for-byte; no new native recording was made for this distribution.",
+    "scope": "Historical original neutral stand-ins and decorative program demonstrations. These files do not certify the current workshop creature appearance, size, navigation or live-session rendering.",
+    "currentWorkshopRenderingCertified": false,
+    "sourceChanges": []
+  },
   "scope": "Twelve original furniture glyph programs through the actual OfficeStationArrival controller, presented as independent offline endpoint fixtures. Transparent mounted synthetic actor geometry and active synthetic sessions only; no provider connection, room navigation, body contact or IK is demonstrated or certified.",
   "sampling": {
     "fps": 48,
@@ -16,12 +25,12 @@
   },
   "sourceHashes": {
     "office/lib/scene-model.js": "97c44d2d554a8fa923dc5c1547ffb72ae0b4b07bd6eb338c4fcba7ba98384ebf",
-    "office/lib/scene-traffic.js": "f6e5ee9259e3fec2bca35f011ad12612488b9d50a55fa149e8c5b9e7dea21224",
-    "office/lib/walking-layout.js": "542d2891b1697666d2695d9827b51d2ceb355077094efdbfff2a7fa00ef8f7da",
+    "office/lib/scene-traffic.js": "0b382f6be5d532ed4ed5dbcf651fbee304e39de10fcc49e0374b3ac4a4f2b63a",
+    "office/lib/walking-layout.js": "95e262bfb3132394819201771516c2682652a8a27607e6defecf40f2c4c1ae39",
     "office/lib/social-interactions.js": "37f4a7664472781a1bcb878babb436a8eab8ffb254f7a0e5b79a94da43cbf5c0",
     "office/renderer/station-arrival.js": "2b1741f9dc211cd9770e328496b2e3b119b2718179a248c7f19035a143551d0b",
     "office/renderer/station-arrival.css": "62701902956ee13310a52e148a588029299a560e2c54d65fa9ad804ffb181c96",
-    "office/scripts/render-station-previews.cjs": "8f334644a0385d0a3d7cb9129d2ba7f832445b593a5ab7424ef1be335d3eadf8"
+    "office/scripts/render-station-previews.cjs": "1fc4f36872ab9b8ce58666b1ca77c37fa947dd14e5174c4f67b93836f837e011"
   },
   "assets": [
     {
@@ -35,8 +44,8 @@
       "durationMs": 1500,
       "productionProgramDurationMs": 1400,
       "distinctPngFrames": 64,
-      "bytes": 839716,
-      "sha256": "1c58ab8874a103dc957292105bf2b295fbf9d21fe27c5dbfdd04ffa46e7cad38",
+      "bytes": 869855,
+      "sha256": "5971a6a454363c944b69b3d6db0a19402aa46f15d079fd7c469ab5ce687a2b5e",
       "programs": [
         {
           "program": "field-book",
@@ -103,8 +112,8 @@
       "durationMs": 1500,
       "productionProgramDurationMs": 1400,
       "distinctPngFrames": 64,
-      "bytes": 812107,
-      "sha256": "48c121ea6e9d224868a2fd7a5ff3c457b9232108a9b3b25df4a5ddfdc7299462",
+      "bytes": 823828,
+      "sha256": "1fd1494334ba18f3ba31419650676eecc05469437698c7f990afefe385c444a1",
       "programs": [
         {
           "program": "tea-scroll",
@@ -171,8 +180,8 @@
       "durationMs": 1500,
       "productionProgramDurationMs": 1400,
       "distinctPngFrames": 64,
-      "bytes": 943839,
-      "sha256": "be04e683e9a8be4ab35b997b6c2f68de08c9d073c26c51ac4a695f5caab25d7f",
+      "bytes": 945579,
+      "sha256": "1e15b7a73ab77a0ce81e1bc93407d4080e0fbceb7da629f4e5326606c27551fe",
       "programs": [
         {
           "program": "star-atlas",

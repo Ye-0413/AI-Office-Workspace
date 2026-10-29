@@ -134,8 +134,26 @@
       return api;
     }
 
+    // A history-pruned native record can return without repeating its parent
+    // metadata. Reuse only this ledger's observed direct link for the view;
+    // the incoming snapshot and source reducer remain untouched.
+    function presentationSessions(sessions) {
+      const rows = Array.isArray(sessions) ? sessions : [];
+      let projected = rows;
+      for (let index = 0; index < rows.length; index++) {
+        const session = rows[index];
+        if (!session || typeof session !== 'object' || validId(session.parentId)) continue;
+        const parentId = entries.get(session.id)?.parentId;
+        if (!validId(parentId) || parentId === session.id) continue;
+        if (projected === rows) projected = rows.slice();
+        projected[index] = { ...session, parentId };
+      }
+      return projected;
+    }
+
     const api = Object.freeze({
       update,
+      presentationSessions,
       stats: rootId => ({ ...(counts.get(rootId) || emptyStats()) }),
       rootFor: id => roots.get(id) || null,
       parentChain: id => chainFrom(entries, id),

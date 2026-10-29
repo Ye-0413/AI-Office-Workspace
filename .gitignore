@@ -81,6 +81,8 @@ docs/scenes/frames/
 !docs/releases/release-v1.1.0.md
 !docs/releases/release-v1.2.0.md
 !docs/releases/release-v1.3.0.md
+!docs/releases/README.md
+!docs/releases/release-v0.24.0.md
 
 # Temp files from testing
 .tmp_*
@@ -186,7 +188,14 @@ clawd-emoji-final/
 
 # Local studio outputs and restricted artwork (restore from an authorized local source)
 /dist-mini-office/
-/office/assets/avatars/
+/office/assets/avatars/*
+# Workshop creatures generated from the user's supplied concept; restored avatars stay ignored.
+!/office/assets/avatars/workshop-folio.png
+!/office/assets/avatars/workshop-ink.png
+!/office/assets/avatars/workshop-moss.png
+!/office/assets/avatars/workshop-thread.png
+!/office/assets/avatars/workshop-glow.png
+!/office/assets/avatars/workshop-prompts.json
 /office/assets/icon.png
 /office/assets/.local-artwork-*/
 .local-work/

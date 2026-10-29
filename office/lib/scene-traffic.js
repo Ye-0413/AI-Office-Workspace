@@ -54,6 +54,9 @@
     const actors = new Map(), requests = new Map();
     const active = new Map();
     let sequence = 0, revision = 0, cached = null, invalid = false, searchPending = false, yieldBudget = 0, yieldRequestAfter = null;
+    // Only nextBatch's synchronous proof may exempt a group that will leave
+    // together. Ordinary requests never imply that a parked body has moved.
+    let departureBatch = null;
 
     function rect(p, actor) {
       const b = bounds(p, actor);
@@ -109,7 +112,16 @@
     }
     function targetBlockers(r, target = r.target) {
       const moving = actors.get(r.id), destination = rect(target, moving);
-      if (passThrough) return reservedRects.filter(other => intersects(destination, other.bounds, 400 / world.width, 400 / world.height)).map(other => other.id);
+      if (passThrough) return [...actors.values()].filter(other => other.id !== r.id && !other.staged
+        && !active.has(other.id) && !departureBatch?.has(other.id)
+        && !(same(target, r.target) && r.overlapIds.includes(other.id))
+        && intersects(destination, rect(other.position, other), gapX, gapY)).map(other => other.id)
+        // A moving body may cross any current body, but its reserved final
+        // envelope cannot be promised to another independent arrival.
+        .concat([...active.values()].filter(other => other.id !== r.id
+          && !(same(target, r.target) && r.overlapIds.includes(other.id))
+          && intersects(destination, rect(other.target, actors.get(other.id)), gapX, gapY)).map(other => 'destination:' + other.id))
+        .concat(reservedRects.filter(other => intersects(destination, other.bounds, 400 / world.width, 400 / world.height)).map(other => other.id));
       return [...actors.values()].filter(other => other.id !== r.id && !other.staged && !(same(target, r.target) && r.overlapIds.includes(other.id))
         && intersects(destination, rect(other.position, other), gapX, gapY)).map(other => other.id)
         .concat(reservedRects.filter(other => intersects(destination, other.bounds, 400 / world.width, 400 / world.height)).map(other => other.id))
@@ -292,7 +304,7 @@
       const moving = actors.get(blocked.id), start = rect(moving.position, moving), target = rect(blocked.target, moving);
       if (reservedRects.some(other => sweptOverlap(start, start, other.bounds, 400 / world.width, 400 / world.height)
         || intersects(target, other.bounds, 400 / world.width, 400 / world.height))
-        || corridors(blocked.id).some(other => sweptOverlap(start, start, other.bounds, gapX, gapY)
+        || !passThrough && corridors(blocked.id).some(other => sweptOverlap(start, start, other.bounds, gapX, gapY)
           || intersects(target, other.bounds, gapX, gapY))) return null;
       const candidates = [...actors.values()].filter(actor => actor.id !== blocked.id && !actor.staged && actor.canYield && !requests.has(actor.id))
         .sort((a, b) => distance(a.position, actors.get(blocked.id).position) - distance(b.position, actors.get(blocked.id).position) || a.id.localeCompare(b.id));
@@ -378,6 +390,52 @@
       return chosen ? reserve(chosen) : searchPending ? { kind: 'wait', reason: 'searching' }
         : active.size ? { kind: 'wait', reason: 'reserved', by: active.values().next().value.id } : { kind: 'wait', reason: 'blocked' };
     }
+    function departureSelection(capacity) {
+      const ordered = [...requests.values()].filter(r => !active.has(r.id) && !r.cooperative)
+        .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+      for (const first of ordered) {
+        const batch = new Map([[first.id, first]]), pending = [first];
+        let possible = true;
+        // Close over only real requested departures. A stationary worker
+        // without a request must be protected or explicitly yield as before.
+        for (let index = 0; possible && index < pending.length; index++) {
+          for (const id of targetBlockers(pending[index]).sort()) {
+            if (batch.has(id)) continue;
+            const next = requests.get(id);
+            if (!next || active.has(id) || next.cooperative || batch.size >= capacity) { possible = false; break; }
+            batch.set(id, next); pending.push(next);
+          }
+        }
+        if (!possible) continue;
+        const candidates = [...batch.values()];
+        // Exempting starting positions never exempts the final placements.
+        // Named clone endpoints retain their existing explicit exception.
+        for (let a = 0; possible && a < candidates.length; a++) for (let b = a + 1; b < candidates.length; b++) {
+          const left = candidates[a], right = candidates[b];
+          if (!left.overlapIds.includes(right.id) && !right.overlapIds.includes(left.id)
+            && intersects(rect(left.target, actors.get(left.id)), rect(right.target, actors.get(right.id)), gapX, gapY)) { possible = false; break; }
+        }
+        if (!possible) continue;
+        let chosen;
+        departureBatch = new Set(batch.keys());
+        try { chosen = candidates.map(request => ({ request, path: findPath(request), temporary: false })); }
+        finally { departureBatch = null; }
+        if (chosen.every(item => item.path)) return chosen;
+      }
+      return null;
+    }
+    function nextBatch() {
+      if (!passThrough || invalid || active.size >= maxConcurrent || !requests.size) return [nextAny()];
+      const result = [];
+      while (active.size < maxConcurrent) {
+        const chosen = departureSelection(maxConcurrent - active.size);
+        if (!chosen) break;
+        for (const item of chosen) result.push(reserve(item));
+      }
+      // Existing holding/cycle proofs remain the fallback when an unrequested
+      // stationary worker must first vacate a final docking envelope.
+      return result.length ? result : [nextAny()];
+    }
     function finish(id, token, actualPoint) {
       id = String(id);
       const movement = active.get(id);
@@ -404,7 +462,7 @@
       const moves = [...active.values()].map(({ path, ...movement }) => ({ ...movement, target: { ...movement.target } }));
       return { active: moves[0] || null, activeMoves: moves, maxConcurrent, queued: requests.size, actors: actors.size, invalid };
     }
-    return Object.freeze({ sync, request, next, nextAny, finish, cancel, clear, state });
+    return Object.freeze({ sync, request, next, nextAny, nextBatch, finish, cancel, clear, state });
   }
   return Object.freeze({ createCoordinator });
 });

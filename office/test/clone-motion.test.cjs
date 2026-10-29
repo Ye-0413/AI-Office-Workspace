@@ -53,3 +53,41 @@ test('hidden, reduced, low-power and anchor removal cannot leave a suspended clo
 test('invalid boundaries fail before allocating visual owners',()=>{
   assert.throws(()=>Motion.burst(),/actual scene anchor/);const f=fixture();assert.throws(()=>Motion.burst({anchor:f.anchor,kind:'fake-result'}),/Unknown clone/);assert.deepEqual(f.anchor.children,[f.body]);
 });
+for(const [kind,readyAt]of [['split',300],['absorb',680]])test('ink '+kind+' buds or merges glossy drops at the existing finite boundary',async()=>{
+  const f=fixture();f.anchor.dataset.bodyDesign='ink';const before=f.truth();
+  const effect=Motion.burst({anchor:f.anchor,kind,ownerId:'codex:ink-helper'}),overlay=f.anchor.children[1];
+  assert.equal(overlay.dataset.creatureEffect,'ink');assert.equal(overlay.dataset.ownerId,'codex:ink-helper');
+  assert.equal(overlay.children.filter(part=>part.className==='clone-ink-puddle').length,1);
+  const drops=overlay.children.filter(part=>part.className==='clone-ink-drop');assert.equal(drops.length,5);
+  assert.equal(overlay.children.some(part=>/smoke|ring|curl|mote/.test(part.className)),false,'the liquid creature never emits the legacy smoke geometry');
+  assert.equal(f.images(),0,'the effect draws local liquid without duplicating a creature sprite');
+  const boundaries=f.animations.filter(animation=>animation.options.duration===readyAt);assert.equal(boundaries.length,1);assert.equal(boundaries[0].target.className,'clone-ink-core');
+  for(const animation of f.animations){
+    assert.ok(animation.options.duration>0&&animation.options.duration<=Motion.DURATION);
+    for(const frame of animation.frames)assert.deepEqual(Object.keys(frame).filter(key=>!['transform','opacity','offset','easing'].includes(key)),[]);
+  }
+  const dropMotions=f.animations.filter(animation=>drops.includes(animation.target));
+  const position=frame=>Number(frame.transform.match(/translate3d\(([-\d.]+)px/)[1]);
+  if(kind==='split'){
+    assert.ok(dropMotions.every(animation=>position(animation.frames[0])===0));
+    assert.ok(Math.max(...dropMotions.map(animation=>Math.abs(position(animation.frames.at(-1)))))>35,'separation grows outward from the real parent');
+  }else{
+    assert.ok(Math.max(...dropMotions.map(animation=>Math.abs(position(animation.frames[0]))))>35);
+    assert.ok(dropMotions.every(animation=>position(animation.frames.at(-1))===0),'returning drops merge into the parent puddle');
+  }
+  let ready='pending';effect.ready.then(value=>{ready=value;});
+  await f.advance(readyAt-1);assert.equal(ready,'pending');
+  await f.advance(readyAt);assert.equal(ready,true);assert.equal(f.anchor.children.length,2);
+  await f.advance(900);assert.equal(await effect.finished,true);assert.deepEqual(f.anchor.children,[f.body]);assert.equal(f.truth(),before);
+  assert.ok(f.observers.every(observer=>observer.disconnected));
+});
+test('ink effects stop cleanly on interruption and skip hidden or quiet scenes',async()=>{
+  for(const change of [f=>{f.document.hidden=true;f.document.dispatchEvent(new Event('visibilitychange'));},f=>{f.media.matches=true;f.media.dispatchEvent(new Event('change'));},f=>{f.room.dataset.lowPower='true';f.guard();},f=>{f.anchor.isConnected=false;f.guard();}]){
+    const f=fixture();f.anchor.dataset.bodyDesign='ink';const effect=Motion.burst({anchor:f.anchor});change(f);
+    assert.equal(await effect.ready,false);assert.equal(await effect.finished,false);assert.deepEqual(f.anchor.children,[f.body]);effect.cancel();
+  }
+  for(const options of [{reducedMotion:true},{lowPower:true},{hidden:true}]){
+    const f=fixture();f.anchor.dataset.bodyDesign='ink';const effect=Motion.burst({anchor:f.anchor,...options});
+    assert.equal(await effect.ready,true);assert.equal(await effect.finished,true);assert.equal(f.animations.length,0);assert.deepEqual(f.anchor.children,[f.body]);
+  }
+});

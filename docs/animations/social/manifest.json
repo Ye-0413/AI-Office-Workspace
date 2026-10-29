@@ -1,5 +1,14 @@
 {
   "version": "0.23.0",
+  "recordedVersion": "0.23.0",
+  "distributionVersion": "0.24.0",
+  "provenance": {
+    "status": "carried-forward",
+    "recording": "Existing 0.23.0 media retained byte-for-byte; no new native recording was made for this distribution.",
+    "scope": "Historical original neutral stand-ins and decorative program demonstrations. These files do not certify the current workshop creature appearance, size, navigation or live-session rendering.",
+    "currentWorkshopRenderingCertified": false,
+    "sourceChanges": []
+  },
   "scope": "Twelve actual OfficeAgentSocial choreographies with original static capsule stand-ins at fixed synthetic endpoints. No provider connection, observed AI fact, room navigation, body-contact or IK demonstration.",
   "sampling": {
     "fps": 48,

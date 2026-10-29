@@ -67,6 +67,24 @@ app.whenReady().then(async () => {
   assert.equal(await evaluate('metadataClocks.every((clocks,index)=>clocks.every((animation,slot)=>animation.currentTime>=beforeMetadataTimes[index][slot]-.01))'),true,'metadata never resets an existing animation playhead');
   const sameTimelines = await evaluate('items.map(item=>item.body.getAnimations({subtree:true}).map(animation=>animation.startTime))');
   assert.deepEqual(sameTimelines, original.map(item => item.timelines), 'metadata does not replay any CSS timeline');
+  const designContinuity=await evaluate(`(()=>{
+    const item=items[0],rig=item.body.querySelector('.ap-rig'),source=rig.querySelector('defs image');
+    const joints=[...rig.querySelectorAll('.ap-upper,.ap-eyes,.ap-arm,.ap-foot')],clocks=item.body.getAnimations({subtree:true});
+    const times=clocks.map(a=>a.currentTime),starts=clocks.map(a=>a.startTime),plan=item.performance.plan;
+    const observer=new MutationObserver(()=>{});observer.observe(rig,{subtree:true,attributes:true,childList:true});
+    const design={asset:'clawd-static-base.svg?design-fixture=1',torsoClip:'<path clip-rule="evenodd" d="M50 54h55v51H50ZM60 80v10h5V80ZM90 80v10h5V80Z"/>'};
+    const changed=item.performance.setDesign(design),first=observer.takeRecords();
+    const repeated=item.performance.setDesign({...design}),repeatedWrites=observer.takeRecords().length;
+    const consoleDesign={...design,eyePatch:'<path fill="#f1d5a6" d="M60 80h5v10h-5ZM90 80h5v10h-5Z"/>'};
+    const consoleChanged=item.performance.setDesign(consoleDesign),consoleTargets=observer.takeRecords().map(r=>r.target.tagName.toLowerCase());
+    const consolePatch=rig.querySelector('.ap-torso > g path').getAttribute('fill')==='#f1d5a6'&&!rig.querySelector('.ap-torso > g').hasAttribute('transform');
+    const consoleRepeated=item.performance.setDesign({...consoleDesign}),consoleRepeatedWrites=observer.takeRecords().length;
+    const same=rig===item.body.querySelector('.ap-rig')&&source===rig.querySelector('defs image')&&joints.every(n=>n.isConnected)
+      &&clocks.every((a,i)=>item.body.getAnimations({subtree:true}).includes(a)&&a.currentTime>=times[i]&&a.startTime===starts[i])&&item.performance.plan===plan;
+    item.performance.setDesign();observer.disconnect();
+    return{changed,repeated,repeatedWrites,consoleChanged,consoleTargets,consolePatch,consoleRepeated,consoleRepeatedWrites,same,targets:first.map(r=>r.target.tagName.toLowerCase())};
+  })()`);
+  assert.deepEqual(designContinuity,{changed:true,repeated:false,repeatedWrites:0,consoleChanged:true,consoleTargets:['g'],consolePatch:true,consoleRepeated:false,consoleRepeatedWrites:0,same:true,targets:['image','clippath','g','g']},'design and console screen changes preserve native DOM joints, playback objects, phases and the observed work plan');
   for (const kind of Object.values(Model.KINDS)) {
     const programs = original.filter(item => item.kind === kind);
     assert.equal(new Set(programs.map(item => item.signature)).size, Model.PROGRAMS[kind].length, kind + ' programs must use different actual joint choreography');

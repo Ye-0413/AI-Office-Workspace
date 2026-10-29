@@ -3,13 +3,15 @@
  * into this source, mutated, fetched, or exported. Props below are original. */
 (function (root, factory) {
   'use strict';
-  const api = factory(root.OfficeAvatarPerformanceModel);
+  const api = factory(root.OfficeAvatarPerformanceModel, root.OfficeCreaturePerformance, root.OfficePublicArtwork);
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.OfficeAvatarPerformance = api;
-})(typeof globalThis === 'object' ? globalThis : this, function (Model) {
+})(typeof globalThis === 'object' ? globalThis : this, function (Model, Creature, Artwork) {
   'use strict';
   let serial = 0;
   const SVG_NS = 'http://www.w3.org/2000/svg';
+  const NATIVE_EYE_PATCH = '<path fill="#de886d" d="M60 80h5v10h-5ZM90 80h5v10h-5Z"/>';
+  const DEFAULT_TORSO_CLIP = '<path clip-rule="evenodd" d="M50 70h55v35H50ZM60 80v10h5V80ZM90 80v10h5V80Z"/>';
   const reducedOwners = new WeakMap();
   function watchReduced(view, callback) {
     if (!view?.matchMedia) return { matches: () => false, destroy() {} };
@@ -127,7 +129,7 @@
     'error-set-down': `<g class="ap-scene-a">${paper(56,98,44,21)}<path fill="#b87857" d="M76 104h3v5h-3Zm0 7h3v2h-3Z"/></g>`
   });
 
-  function create({ actorNode, body, session = {}, clockRegistry } = {}) {
+  function createLegacy({ actorNode, body, session = {}, clockRegistry, design } = {}) {
     if (!Model) throw new Error('Avatar performance model must load before its renderer.');
     if (!actorNode || !body || !body.ownerDocument) throw new TypeError('An actor node and character body are required.');
     const document = body.ownerDocument;
@@ -144,7 +146,11 @@
     // remains an isolated <image>; no restricted SVG markup is embedded here.
     const crop = (name, content) => `<clipPath id="${id}-${name}">${content}</clipPath>`;
     const use = name => `<use href="#${id}-source" clip-path="url(#${id}-${name})"/>`;
-    svg.innerHTML = `<defs><image id="${id}-source" href="../assets/avatars/${Model.ASSET}" x="40" y="40" width="75" height="80"/>${crop('torso', '<path clip-rule="evenodd" d="M50 70h55v35H50ZM60 80v10h5V80ZM90 80v10h5V80Z"/>')}${crop('patch', '<path d="M60 72h5v5h-5ZM90 72h5v5h-5Z"/>')}${crop('eyes', '<path d="M60 80h5v10h-5ZM90 80h5v10h-5Z"/>')}${crop('left', '<path d="M40 85h10v10H40Z"/>')}${crop('right', '<path d="M105 85h10v10h-10Z"/>')}${crop('foot1', '<path d="M55 105h5v10h-5Z"/>')}${crop('foot2', '<path d="M65 105h5v10h-5Z"/>')}${crop('foot3', '<path d="M85 105h5v10h-5Z"/>')}${crop('foot4', '<path d="M95 105h5v10h-5Z"/>')}</defs><g class="ap-feet"><g class="ap-foot ap-foot-1">${use('foot1')}</g><g class="ap-foot ap-foot-2">${use('foot2')}</g><g class="ap-foot ap-foot-3">${use('foot3')}</g><g class="ap-foot ap-foot-4">${use('foot4')}</g></g><g class="ap-breath"><g class="ap-upper"><g class="ap-torso">${use('torso')}<g transform="translate(0 -64) scale(1 2)">${use('patch')}</g></g><g class="ap-eyes"><g class="ap-blink">${use('eyes')}</g></g><g class="ap-props-back"></g><g class="ap-props-transit"></g><g class="ap-arm ap-arm-left">${use('left')}</g><g class="ap-arm ap-arm-right">${use('right')}</g><g class="ap-props-front"></g></g></g>`;
+    let designAsset = design?.asset || Model.ASSET, designTorsoClip = design?.torsoClip || DEFAULT_TORSO_CLIP;
+    let designNative = designAsset !== Model.ASSET;
+    let designEyePatch = designNative ? design?.eyePatch || NATIVE_EYE_PATCH : use('patch');
+    svg.innerHTML = `<defs><image id="${id}-source" href="../assets/avatars/${designAsset}" x="40" y="40" width="75" height="80"/>${crop('torso', designTorsoClip)}${crop('patch', '<path d="M60 72h5v5h-5ZM90 72h5v5h-5Z"/>')}${crop('eyes', '<path d="M60 80h5v10h-5ZM90 80h5v10h-5Z"/>')}${crop('left', '<path d="M40 85h10v10H40Z"/>')}${crop('right', '<path d="M105 85h10v10h-10Z"/>')}${crop('foot1', '<path d="M55 105h5v10h-5Z"/>')}${crop('foot2', '<path d="M65 105h5v10h-5Z"/>')}${crop('foot3', '<path d="M85 105h5v10h-5Z"/>')}${crop('foot4', '<path d="M95 105h5v10h-5Z"/>')}</defs><g class="ap-feet"><g class="ap-foot ap-foot-1">${use('foot1')}</g><g class="ap-foot ap-foot-2">${use('foot2')}</g><g class="ap-foot ap-foot-3">${use('foot3')}</g><g class="ap-foot ap-foot-4">${use('foot4')}</g></g><g class="ap-breath"><g class="ap-upper"><g class="ap-torso">${use('torso')}<g${designNative ? '' : ' transform="translate(0 -64) scale(1 2)"'}>${designEyePatch}</g></g><g class="ap-eyes"><g class="ap-blink">${use('eyes')}</g></g><g class="ap-props-back"></g><g class="ap-props-transit"></g><g class="ap-arm ap-arm-left">${use('left')}</g><g class="ap-arm ap-arm-right">${use('right')}</g><g class="ap-props-front"></g></g></g>`;
+    const source = svg.querySelector('defs image'), torsoClip = svg.querySelector('#'+id+'-torso'), eyePatch = svg.querySelector('.ap-torso > g');
     const back = svg.querySelector('.ap-props-back');
     const breath = svg.querySelector('.ap-breath');
     const front = svg.querySelector('.ap-props-front');
@@ -169,7 +175,31 @@
     let visual = null, visualWorkKey = '', presence = 'inactive', presenceSerial = 0, hiddenWork = false;
     const fades = new Set(), paused = new Map();
     let frozen = [];
-    const joints = () => typeof svg.querySelectorAll === 'function' ? [...svg.querySelectorAll('.ap-upper,.ap-eyes,.ap-arm,.ap-foot')] : [];
+    // The joint elements live for this renderer's lifetime; props and source
+    // artwork can change without querying the same structural joints again.
+    let jointNodes = null;
+    const joints = () => jointNodes || (jointNodes = typeof svg.querySelectorAll === 'function' ? [...svg.querySelectorAll('.ap-upper,.ap-eyes,.ap-arm,.ap-foot')] : []);
+    function setDesign(design = null) {
+      if (destroyed) return false;
+      const asset = design?.asset || Model.ASSET, clip = design?.torsoClip || DEFAULT_TORSO_CLIP;
+      let changed = false;
+      if (asset !== designAsset) { source.setAttribute('href', '../assets/avatars/'+asset); designAsset = asset; changed = true; }
+      if (clip !== designTorsoClip) { torsoClip.innerHTML = clip; designTorsoClip = clip; changed = true; }
+      const native = asset !== Model.ASSET;
+      const patch = native ? design?.eyePatch || NATIVE_EYE_PATCH : use('patch');
+      if (patch !== designEyePatch) {
+        // Legacy artwork fills the eye cut-outs with a stretched plain patch.
+        // New shapes may have antennae or texture there; keep those features
+        // on the body and fill just the eye holes with the keyed base colour.
+        eyePatch.innerHTML = patch; designEyePatch = patch; changed = true;
+      }
+      if (native !== designNative) {
+        if (native) eyePatch.removeAttribute('transform');
+        else eyePatch.setAttribute('transform', 'translate(0 -64) scale(1 2)');
+        designNative = native; changed = true;
+      }
+      return changed;
+    }
     function releaseBridgeClocks(owner, resume = true) {
       if (!owner || bridgeClockOwner !== owner) return;
       bridgeClockOwner = null;
@@ -551,11 +581,13 @@
       // rotation resumes. The last visible interval may cross its deadline
       // during the OS minimize animation; hiding must not discard its clocks.
       const plan = hiddenWork && !options.hidden && base.animate && visualWorkKey === workKey
-        ? visual : Model.plan(session, { ...options, visibleElapsed });
+        ? visual : options.hidden || !base.active || visibleElapsed === 0 ? base : Model.plan(session, { ...options, visibleElapsed });
       const changed = !visual || visual.program !== plan.program || visual.kind !== plan.kind;
       const quiet = Boolean(options.reducedMotion || options.lowPower || options.hidden);
       const canFade = Boolean(view?.getComputedStyle && layer.animate && bitmap?.animate && !quiet);
-      const hiddenPlan = options.hidden && workBase.active ? Model.plan(session, { ...options, hidden: false, visibleElapsed }) : null;
+      // Eligibility is independent of the program's elapsed rotation. Hidden
+      // heartbeats still sample the shared clock, but need no extra plan/hash.
+      const hiddenPlan = options.hidden && workBase.active ? workBase : null;
       if (hiddenPlan?.animate && visual?.animate && visualWorkKey === workKey && !gait
         && (hiddenWork || presence === 'active' || presence === 'entering')
         && !layer.hidden && layer.dataset.animate === 'true' && view?.getComputedStyle && joints().length) {
@@ -589,6 +621,14 @@
         } else if (!last || last.active || presence !== 'inactive' || layer.dataset.animate !== 'false') settleInactive();
         if (!last || last.active) { actorNode.dataset.performance = 'none'; actorNode.dataset.performanceProgram = ''; }
         last = plan;
+        return plan;
+      }
+      // A settled quiet tableau has no playback owner to reconcile. Metadata
+      // heartbeats must not re-read opacity, rewrite presence, or cancel empty
+      // bridges for every actor while low power/reduced motion stays enabled.
+      if (!plan.animate && !changed && visual?.key === plan.key && last?.active && !last.animate
+        && presence === 'active' && !wasWalking && !frozen.length && !fades.size && !bridges.size) {
+        visual = plan; visualWorkKey = workKey; last = plan;
         return plan;
       }
       const resuming = Boolean(wasHidden || wasWalking || visual && presence !== 'active' && presence !== 'entering');
@@ -673,7 +713,40 @@
     // A single shared media listener cancels finite fades as well as CSS
     // choreography. No wall-time credit is inferred from this local UI event.
     systemMotion = watchReduced(view, () => update(session, { ...inheritedOptions, now: undefined }));
-    return Object.freeze({ update, locomotion, cue, destroy, get plan() { return last; } });
+    return Object.freeze({ update, setDesign, locomotion, cue, destroy, get plan() { return last; } });
+  }
+  // Public ownership stays with this handle when a user changes between the
+  // articulated original and painted creatures. The existing shared clock
+  // registry transfers visible work history; the actor/image/route stay put.
+  function create(options = {}) {
+    if (!Model) throw new Error('Avatar performance model must load before its renderer.');
+    let session = options.session || {}, inherited = {}, design = Artwork ? Artwork.design(options.design) : options.design || null, destroyed = false;
+    const clockRegistry = options.clockRegistry || Model.createClockRegistry({ limit: 1 });
+    const creature = value => value?.renderer === 'creature';
+    function construct(value) {
+      if (creature(value)) {
+        if (!Creature) throw new Error('Creature performance must load before selecting a painted creature.');
+        return Creature.create({ ...options, session, clockRegistry, design: value });
+      }
+      return createLegacy({ ...options, session, clockRegistry, design: value });
+    }
+    let renderer = construct(design);
+    return Object.freeze({
+      update(value = session, next = {}) { session = value; inherited = next; return renderer.update(value, next); },
+      setDesign(value = null) {
+        if (destroyed) return false;
+        if (Artwork) value = Artwork.design(value);
+        if (creature(value) === creature(design)) { design = value; return renderer.setDesign(value); }
+        renderer.update(session, { ...inherited, now: undefined, hidden: true }); renderer.destroy();
+        design = value; renderer = construct(design); renderer.update(session, { ...inherited, now: undefined });
+        return true;
+      },
+      locomotion(sample, owner) { return !destroyed && renderer.locomotion(sample, owner); },
+      cue(kind, next) { return !destroyed && renderer.cue(kind, next); },
+      retry(now) { return !destroyed && Boolean(renderer.retry?.(now)); },
+      destroy() { if (!destroyed) { destroyed = true; renderer.destroy(); } },
+      get plan() { return renderer.plan; }
+    });
   }
   return Object.freeze({ create });
 });

@@ -1,0 +1,87 @@
+'use strict';
+const { app, BrowserWindow, ipcMain } = require('electron');
+const assert = require('node:assert/strict'), fs = require('node:fs'), os = require('node:os'), path = require('node:path');
+const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'office-repertoire-gallery-'));
+app.setPath('userData', scratch); app.disableHardwareAcceleration();
+let win, settings = { language: 'zh', reducedMotion: false, lowPower: false, idleVisitor: false, sceneWeather: 'off' };
+const errors = [], writes = [], checks = [], wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+const run = source => win.webContents.executeJavaScript(source, true);
+async function until(source, label) { const end = Date.now() + 12000; while (Date.now() < end) { if (await run(source)) return; await wait(30); } throw Error(label+': '+JSON.stringify(await run(`({hidden:document.hidden,office:document.getElementById('office').dataset.hidden,open:document.querySelector('.repertoire-gallery').open,closest:document.querySelector('.repertoire-preview').closest('.office')?.id,layer:document.querySelector('.repertoire-preview .creature-performance')?.outerHTML.slice(0,260),clocks:(window.galleryClocks||[]).map(a=>({state:a.playState,name:a.animationName,part:a.effect?.target?.getAttribute('data-motion'),connected:a.effect?.target?.isConnected,time:a.currentTime})),current:document.querySelector('.repertoire-preview').getAnimations({subtree:true}).map(a=>({state:a.playState,name:a.animationName,part:a.effect?.target?.getAttribute('data-motion')}))})`))); }
+async function select(name, value) { await run(`{const field=document.querySelector('[name="repertoire-${name}"]');field.value=${JSON.stringify(value)};field.dispatchEvent(new Event('change',{bubbles:true}));}`); }
+const watchdog = setTimeout(() => app.exit(2), 45000);
+app.whenReady().then(async () => {
+  for (const [name, handler] of Object.entries({ snapshot: () => ({ mode: 'live', now: Date.now(), sessions: [], connections: [] }), settings: () => settings, 'set-settings': patch => (settings = { ...settings, ...patch }), displays: () => [] })) ipcMain.handle('office:' + name, (_, ...args) => handler(...args));
+  for (const name of ['connect', 'disconnect', 'answer-question', 'open-source', 'setup-initialize']) ipcMain.handle('office:' + name, () => { writes.push(name); return {}; });
+  ipcMain.on('office:renderer-error', (_, error) => errors.push(error));
+  win = new BrowserWindow({ width: 1280, height: 960, show: false, useContentSize: true, webPreferences: { preload: path.join(__dirname, '../preload.cjs'), sandbox: true, contextIsolation: true, nodeIntegration: false, backgroundThrottling: false } });
+  win.webContents.on('console-message', detail => { if (detail.level === 'error') errors.push(detail.message); });
+  await win.loadFile(path.join(__dirname, '../renderer/index.html'));
+  win.webContents.debugger.attach('1.3'); await win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
+  await until(`document.querySelector('.repertoire-gallery')`, 'The production settings must include a gallery');
+  assert.equal(await run(`document.querySelectorAll('.repertoire-preview .creature-performance').length`), 0, 'closed viewer has no renderer or work clocks');
+  await run(`document.getElementById('settings-button').click();document.querySelector('.repertoire-gallery').open=true;void 0`);
+  await until(`document.querySelector('.repertoire-preview .creature-performance')?.dataset.artState==='healthy'`, 'Opened preview must decode its actual atlas');
+  assert.equal(await run(`document.querySelector('[name="repertoire-state"]').options.length`), 11);
+  assert.equal(await run(`document.querySelector('[name="repertoire-variant"]').options.length`), 10);
+  assert.equal(await run(`document.querySelectorAll('.actors .actor[data-session-id]').length`), 0, 'preview cannot create a real observation');
+  const ids = new Set();
+  for (const species of ['folio', 'ink', 'moss', 'thread', 'glow']) {
+    await select('character', species);
+    await select('state', 'coding'); await select('variant', '9');
+    await until(`document.querySelector('.repertoire-preview .creature-performance')?.dataset.artState==='healthy'`, 'New material must decode');
+    const recipe = await run(`document.querySelector('.repertoire-preview .cp-activity').dataset.recipe`); ids.add(recipe);
+    assert.ok(recipe.startsWith(species + '-coding-'));
+    assert.equal(await run(`document.querySelector('.repertoire-preview .cp-activity').dataset.variant`), '9');
+    assert.equal(await run(`document.querySelectorAll('.repertoire-preview .creature-performance').length`), 1);
+  }
+  assert.equal(ids.size, 5);
+  await run(`document.querySelector('.repertoire-controls button:last-child').click()`);
+  assert.equal(await run(`document.querySelector('[name="repertoire-variant"]').value`), '0', 'next wraps at ten');
+  await run(`document.querySelector('.repertoire-controls button:first-child').click()`);
+  assert.equal(await run(`document.querySelector('[name="repertoire-variant"]').value`), '9');
+  await wait(300);
+  await run(`window.galleryClocks=document.querySelector('.repertoire-preview').getAnimations({subtree:true});document.querySelector('.repertoire-controls button:nth-child(2)').click();void 0`);
+  assert.equal(await run(`galleryClocks.length>0&&galleryClocks.every(a=>a.playState==='paused')`), true);
+  const held = await run(`galleryClocks.map(a=>a.currentTime)`); await wait(100);
+  assert.deepEqual(await run(`galleryClocks.map(a=>a.currentTime)`), held);
+  await run(`document.querySelector('.repertoire-controls button:nth-child(2)').click();void 0`);
+  await until(`galleryClocks.every(a=>a.playState==='running')`, 'Play must resume the exact paused objects');
+  checks.push('five materials, eleven states, ten variants; wrapped navigation; exact native pause/resume; no live actors');
+  win.webContents.send('office:snapshot', { mode: 'live', now: Date.now(), sessions: [], connections: [], windowVisibility: { hidden: true } });
+  await until(`galleryClocks.every(a=>a.playState==='paused')`, 'Native window visibility also owns the specimen outside the room DOM');
+  const nativeHeld = await run(`galleryClocks.map(a=>a.currentTime)`); await wait(100);
+  assert.deepEqual(await run(`galleryClocks.map(a=>a.currentTime)`), nativeHeld);
+  await run(`document.getElementById('language-button').click();void 0`);
+  await until(`document.documentElement.lang==='en'`, 'Background preference refresh completes');
+  win.webContents.send('office:snapshot', { mode: 'live', now: Date.now(), sessions: [], connections: [], windowVisibility: { hidden: false } });
+  await until(`galleryClocks.every(a=>a.playState==='running')`, 'Native show releases exactly its own hidden lease');
+  await run(`window.fixtureDocumentHidden=true;Object.defineProperty(document,'hidden',{configurable:true,get:()=>fixtureDocumentHidden});document.dispatchEvent(new Event('visibilitychange'));document.getElementById('language-button').click();void 0`);
+  await until(`document.documentElement.lang==='zh-CN'&&galleryClocks.every(a=>a.playState==='paused')`, 'Document hiding and preference refresh keep the same paused clocks');
+  await run(`delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));void 0`);
+  await until(`galleryClocks.every(a=>a.playState==='running')`, 'Background settings must not make document.hidden sticky on resume');
+  checks.push('native window and document visibility freeze the gallery, including a background language update, and resume exact clock objects');
+  await win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+  await until(`document.querySelector('.repertoire-controls button:nth-child(2)').disabled`, 'Reduced motion must disable playback');
+  assert.equal(await run(`document.querySelector('.repertoire-preview').getAnimations({subtree:true}).length`), 0);
+  await run(`document.getElementById('settings-dialog').close();document.getElementById('language-button').click();void 0`);
+  await until(`document.documentElement.lang==='en'`, 'English must apply');
+  await until(`document.querySelectorAll('.repertoire-preview .creature-performance').length===0`, 'Closing settings releases all specimen clocks');
+  await run(`document.getElementById('settings-button').click();document.querySelector('.repertoire-gallery').open=true;void 0`);
+  await until(`document.querySelector('.repertoire-preview .creature-performance')?.dataset.artState==='healthy'`, 'Reopen preserves choices and recreates exactly one specimen');
+  assert.equal(await run(`document.querySelector('[name="repertoire-character"]').value`), 'glow');
+  assert.doesNotMatch(await run(`document.querySelector('.repertoire-gallery').textContent`), /\p{Script=Han}/u);
+  await win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
+  await until(`!document.querySelector('.repertoire-controls button:nth-child(2)').disabled`, 'Media preference resumes available playback');
+  await select('state', 'building'); await select('variant', '3');
+  await run(`document.querySelector('.repertoire-gallery').scrollIntoView({block:'start',behavior:'instant'});void 0`);
+  await wait(350);
+  if (process.env.MINI_OFFICE_PREVIEW_DIR) {
+    fs.mkdirSync(process.env.MINI_OFFICE_PREVIEW_DIR, { recursive: true });
+    fs.writeFileSync(path.join(process.env.MINI_OFFICE_PREVIEW_DIR, 'workshop-motion-gallery.png'), (await win.webContents.capturePage()).toPNG());
+  }
+  await run(`document.getElementById('settings-dialog').close();void 0`);
+  await until(`document.querySelectorAll('.repertoire-preview .creature-performance').length===0`, 'Final close releases preview');
+  checks.push('reduced motion and bilingual controls; settings dismissal releases clocks; reopening retains the selection');
+  assert.deepEqual(errors, []); assert.deepEqual(writes, []);
+  console.log(JSON.stringify({ ok: true, checks, errors, writes }));
+}).catch(error => { console.error(error); process.exitCode = 1; }).finally(() => { clearTimeout(watchdog); win?.destroy(); fs.rmSync(scratch, { recursive: true, force: true }); app.exit(process.exitCode || 0); });

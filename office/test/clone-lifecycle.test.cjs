@@ -82,6 +82,47 @@ test('later observed ancestry reattributes a whole subtree instead of accumulati
   assert.equal(ledger.rootFor('nested'), root.id, 'partial metadata cannot erase a previously observed parent');
 });
 
+test('presentation repair copies only missing observed direct parents without mutating or inventing source records', () => {
+  const ledger = Clones.createLedger().update([root, child('middle'), child('nested', { parentId: 'middle' }), { id: 'self', parentId: 'self' }]);
+  const missing = Object.freeze({ id: 'middle', status: 'active', activity: 'coding' });
+  const nested = Object.freeze({ id: 'nested', status: 'active' });
+  const explicit = Object.freeze({ id: 'middle', parentId: 'new-positive-parent' });
+  const unknown = Object.freeze({ id: 'unknown', status: 'active' }), self = Object.freeze({ id: 'self' });
+  const rows = Object.freeze([root, missing, nested, explicit, unknown, self, null]);
+  const before = JSON.stringify(rows), projected = ledger.presentationSessions(rows);
+  assert.notEqual(projected, rows); assert.equal(projected.length, rows.length);
+  assert.notEqual(projected[1], missing); assert.deepEqual(projected[1], { ...missing, parentId: root.id });
+  assert.deepEqual(projected[2], { ...nested, parentId: 'middle' }, 'restore the immediate parent rather than skipping to the root');
+  assert.equal(projected[0], root); assert.equal(projected[3], explicit, 'an explicit positive parent takes precedence over retained history');
+  assert.equal(projected[4], unknown); assert.equal(projected[5], self); assert.equal(projected[6], null);
+  assert.equal(JSON.stringify(rows), before); assert.equal(Object.hasOwn(missing, 'parentId'), false);
+  const unchanged = Object.freeze([root, explicit, unknown, self, null]);
+  assert.equal(ledger.presentationSessions(unchanged), unchanged, 'an unchanged view allocates neither an array nor any record');
+  assert.deepEqual(ledger.presentationSessions(undefined), []);
+});
+
+test('a real normalized helper rehydrated after the default store history limit retains its observed parent in presentation only', () => {
+  let time = 10000;
+  const store = createSessionStore({ now: () => time, staleMs: 180000 }), ledger = Clones.createLedger();
+  store.onChange(rows => ledger.update(rows, time));
+  function emit(hook_event_name, session_id, extra = {}) {
+    const event = normalizeEvent('codex', { hook_event_name, session_id, ...extra }, { receivedAt: ++time, source: 'hook' });
+    assert.ok(event); assert.equal(store.ingest(event), true);
+  }
+  for (let index = 0; index < 100; index++) emit('UserPromptSubmit', 'root-' + index, { turn_id: 'root-turn-' + index });
+  emit('UserPromptSubmit', 'rehydrated-helper', { parent_thread_id: 'root-0', turn_id: 'child-turn-1' });
+  assert.equal(store.snapshot().find(session => session.id === 'codex:rehydrated-helper').parentId, 'codex:root-0');
+  emit('Stop', 'rehydrated-helper', { turn_id: 'child-turn-1' });
+  assert.equal(store.snapshot().some(session => session.id === 'codex:rehydrated-helper'), false, 'the idle child is genuinely evicted above the default 100-record target');
+  emit('UserPromptSubmit', 'rehydrated-helper', { turn_id: 'child-turn-2' });
+  const sourceRows = store.snapshot(), raw = sourceRows.find(session => session.id === 'codex:rehydrated-helper');
+  assert.equal(raw.parentId, undefined); assert.equal(ledger.rootFor(raw.id), 'codex:root-0');
+  const projected = ledger.presentationSessions(sourceRows), helper = projected.find(session => session.id === raw.id);
+  assert.equal(helper.parentId, 'codex:root-0'); assert.equal(helper.id, raw.id); assert.equal(helper.activity, raw.activity); assert.equal(helper.status, raw.status);
+  assert.equal(helper.events, raw.events, 'projection changes no event, lifecycle or work evidence');
+  assert.equal(raw.parentId, undefined); assert.equal(store.snapshot().find(session => session.id === raw.id).parentId, undefined, 'view repair does not mutate the reducer');
+});
+
 test('malformed input and cycles stay bounded and never invent an unrelated family', () => {
   const ledger = Clones.createLedger();
   ledger.update([null, {}, { id: 3 }, { id: 'a', parentId: 'b' }, { id: 'b', parentId: 'a' }, { id: 'self', parentId: 'self' }, root], NaN);

@@ -1,7 +1,7 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),{createHash}=require('node:crypto');
-const Model=require('../lib/avatar-performance-model.js');
+const Repertoire=require('../renderer/creature-repertoire.js');
 const repo=path.resolve(__dirname,'../..'),dir=path.join(repo,'docs/animations');
 function inspectGif(buffer){
  assert.match(buffer.toString('ascii',0,6),/^GIF8[79]a$/);assert.ok(buffer.length>=14);
@@ -19,28 +19,60 @@ function inspectGif(buffer){
  }
  assert.equal(trailer,true);assert.equal(at,buffer.length);return{width,height,frames,delay,loop,uniqueImages:images.size};
 }
-test('public gallery maps every current program to a real category GIF and Chinese title',()=>{
- const manifest=require('../../docs/animations/manifest.json'),labels=require('../../docs/animations/labels.json');
- const ids=Object.values(Model.PROGRAMS).flat();assert.deepEqual(Object.keys(labels).sort(),[...ids].sort());
- const sections=manifest.assets.filter(item=>item.file!=='overview.gif');assert.equal(sections.length,Object.keys(Model.KINDS).length);
- for(const [activity,kind]of Object.entries(Model.KINDS))assert.deepEqual(sections.find(item=>item.file===activity+'.gif')?.programs,Model.PROGRAMS[kind]);
- assert.equal(new Set(sections.flatMap(item=>item.programs)).size,ids.length);
- const overview=manifest.assets.find(item=>item.file==='overview.gif');assert.equal(overview.programs.length,11);
- for(const [name,hash]of Object.entries(manifest.sourceHashes))assert.equal(createHash('sha256').update(fs.readFileSync(path.join(repo,name))).digest('hex'),hash,'re-export GIFs after changing their source: '+name);
- assert.match(manifest.publicBody,/original capsule robot/);
+// Archived public recordings retain their actual recording version and
+// hashes. A distribution bump cannot pretend that old frames were captured
+// again. Any source drift needs an exact, reversible provenance certificate.
+function archivedSources(manifest){
+ assert.equal(manifest.version,manifest.recordedVersion);
+ assert.equal(manifest.distributionVersion,require('../package.json').version);
+ assert.equal(manifest.provenance.status,'carried-forward');assert.equal(manifest.provenance.currentWorkshopRenderingCertified,false);
+ assert.match(manifest.provenance.recording,/no (?:new native recording|re-recording)/i);
+ const changes=manifest.provenance.sourceChanges;
+ assert.equal(new Set(changes.map(change=>change.file)).size,changes.length);
+ for(const change of changes)assert.ok(manifest.sourceHashes[change.file]);
+ for(const[name,recorded]of Object.entries(manifest.sourceHashes)){
+  const current=fs.readFileSync(path.join(repo,name)),currentHash=createHash('sha256').update(current).digest('hex'),change=changes.find(change=>change.file===name);
+  if(!change){assert.equal(currentHash,recorded,name);continue;}
+  assert.equal(currentHash,change.currentSha256,name+' unreviewed source drift');assert.equal(recorded,change.recordedSha256);assert.ok(change.reason.length>20);
+  let reconstructed=current.toString('utf8');assert.ok(change.reconstructRecordedSource.length>0);
+  for(const patch of change.reconstructRecordedSource){assert.ok(patch.find.length>0);assert.equal(reconstructed.split(patch.find).length,2,name+' exact provenance patch');reconstructed=reconstructed.replace(patch.find,patch.replace);}
+  assert.equal(createHash('sha256').update(reconstructed).digest('hex'),recorded,name+' recorded source must reconstruct byte-for-byte');
+ }
+}
+test('public gallery records the current five-species, 550-recipe production library',()=>{
+ const manifest=require('../../docs/animations/manifest.json');
+ assert.equal(manifest.version,require('../package.json').version);
+ assert.deepEqual(manifest.catalog,{species:5,activities:11,variantsPerActivity:10,recipes:550});
+ const recipes=Object.values(Repertoire.catalog).flatMap(pack=>Object.values(pack.states).flat());assert.equal(recipes.length,550);assert.equal(new Set(recipes.map(recipe=>recipe.id)).size,550);
+ const sections=manifest.assets.filter(item=>item.file!=='overview.gif');assert.equal(sections.length,11);
+ for(const activity of Repertoire.ACTIVITIES){const expected=Repertoire.SPECIES.map(species=>Repertoire.recipes(species,activity)[0].id);assert.deepEqual(sections.find(item=>item.file===activity+'.gif')?.recipes,expected);}
+ const overview=manifest.assets.find(item=>item.file==='overview.gif');assert.equal(overview.recipes.length,5);
+ for(const [name,hash]of Object.entries(manifest.sourceHashes))assert.equal(createHash('sha256').update(fs.readFileSync(path.join(repo,name))).digest('hex'),hash,'re-export media after changing its source: '+name);
+ for(const species of Repertoire.SPECIES)assert.ok(manifest.sourceHashes['office/assets/avatars/workshop-'+species+'.png']);
+ assert.match(manifest.publicBody,/five original textured workshop creatures/);assert.match(manifest.scope,/synthetic/);assert.match(manifest.scope,/No local sessions/);
 });
-test('every published GIF is a complete looping animation rather than a still or broken image',()=>{
+test('every published workshop GIF is a changing, complete native recording',()=>{
  const manifest=require('../../docs/animations/manifest.json');assert.equal(manifest.assets.length,12);
- for(const item of manifest.assets){const buffer=fs.readFileSync(path.join(dir,item.file)),gif=inspectGif(buffer);assert.equal(buffer.length,item.bytes,item.file);assert.ok(buffer.length<5*1024*1024);assert.equal(gif.width,item.width);assert.equal(gif.height,item.height);assert.equal(gif.frames,item.frames,item.file);assert.equal(gif.frames,144);assert.ok(gif.uniqueImages>=24,item.file+' needs changing image data');assert.equal(gif.loop,0);assert.ok(Math.abs(gif.delay-1200)<=5,item.file+' duration '+gif.delay);}
+ for(const item of manifest.assets){const buffer=fs.readFileSync(path.join(dir,item.file)),gif=inspectGif(buffer);assert.equal(buffer.length,item.bytes,item.file);assert.equal(createHash('sha256').update(buffer).digest('hex'),item.sha256);assert.ok(buffer.length<1024*1024);assert.equal(gif.width,item.width);assert.equal(gif.height,item.height);assert.equal(gif.frames,item.frames,item.file);assert.equal(gif.frames,42);assert.ok(item.distinctPngFrames>=31);assert.ok(gif.uniqueImages>=31,item.file+' needs changing encoded pixels');assert.equal(gif.loop,0);assert.ok(Math.abs(gif.delay-item.durationMs/10)<=5,item.file+' duration '+gif.delay);}
 });
-test('README animation links resolve locally and explain the public preview appearance',()=>{
- for(const name of ['README.md','office/README.md','docs/animations/README.md']){
+test('README SVG is self-contained, animation-capable and paired with a native reduced-motion fallback',()=>{
+ const manifest=require('../../docs/animations/manifest.json'),demo=manifest.demo,svg=fs.readFileSync(path.join(dir,demo.file),'utf8');
+ assert.equal(Buffer.byteLength(svg),demo.bytes);assert.equal(createHash('sha256').update(svg).digest('hex'),demo.sha256);assert.ok(demo.bytes<3*1024*1024);
+ assert.doesNotMatch(svg,/<(?:script|foreignObject)\b|(?:href|src)=["'](?:https?:|file:)|url\(["']?(?:https?:|file:)/i);
+ assert.match(svg,/@keyframes recorded-/);assert.match(svg,/@media\(prefers-reduced-motion:reduce\)/);assert.match(svg,/data:image\/png;base64,/);assert.match(svg,/Synthetic demo sessions/);
+ assert.equal(demo.selfContained,true);assert.equal(demo.scripts,0);assert.equal(demo.externalResources,0);assert.equal(demo.imageContextVerified,true);assert.equal(demo.nativeFramesDiffer,true);assert.equal(demo.reducedFramesIdentical,true);
+ assert.deepEqual([...new Set(demo.recordedRecipes.map(item=>item.species))],Repertoire.SPECIES);assert.equal(demo.recordedRecipes.length,6);assert.equal(demo.recordedRecipes.find(item=>item.helper).species,'thread');assert.ok(demo.recordedRecipes.some(item=>!item.helper&&item.species==='thread'));
+ const png=fs.readFileSync(path.join(dir,demo.fallback));assert.equal(png.toString('hex',0,8),'89504e470d0a1a0a');assert.equal(png.readUInt32BE(16),1100);assert.equal(png.readUInt32BE(20),450);assert.ok(png.length>10000);
+});
+test('README media links resolve and identify the current original synthetic demonstration',()=>{
+ for(const name of ['README.md','README.zh-CN.md','office/README.md','docs/animations/README.md','docs/releases/release-v0.24.0.md']){
   const file=path.join(repo,name),source=fs.readFileSync(file,'utf8');
-  for(const match of source.matchAll(/!?\[[^\]]*\]\(([^)]+)\)/g)){
-   const target=match[1];if(/^(?:https?:|#)/.test(target))continue;
+  for(const match of source.matchAll(/!?\[[^\]]*\]\(([^)]+)\)|(?:src|srcset)=["']([^"']+)["']/g)){
+   const target=match[1]||match[2];if(/^(?:https?:|#|data:)/.test(target))continue;
    assert.ok(fs.existsSync(path.resolve(path.dirname(file),target.split('#')[0])),name+' broken link '+target);
   }
-  assert.match(source,/88/);assert.match(source,/原创示意/);
+  assert.match(source,/550/);assert.match(source,/原创|original/i);
+  if(name!=='office/README.md'){assert.match(source,/<picture>/);assert.match(source,/<source\b[^>]*media=["']\(prefers-reduced-motion: reduce\)["'][^>]*srcset=["'][^"']*workshop-demo\.png["']/);assert.match(source,/<img\b[^>]*src=["'][^"']*workshop-demo\.svg["']/);}
  }
 });
 
@@ -56,13 +88,12 @@ test('seasonal gallery covers every real theme with at least 31 distinct animate
  for(const [name,hash]of Object.entries(manifest.rooms.sourceHashes))assert.equal(createHash('sha256').update(fs.readFileSync(path.join(repo,name))).digest('hex'),hash,'re-export complete rooms after changing '+name);
 });
 
-test('lifecycle previews use current production gait/effects and at least 31 changing poses',()=>{
+test('archived lifecycle previews retain recorded provenance and at least 31 changing poses',()=>{
  const folder=path.join(dir,'lifecycle'),manifest=JSON.parse(fs.readFileSync(path.join(folder,'manifest.json')));
- assert.equal(manifest.version,require('../package.json').version);
+ archivedSources(manifest);
  assert.match(manifest.publicBody,/original capsule robot/);assert.equal(manifest.restrictedImageElements,0);assert.equal(manifest.blockedSpriteRequests,0);
  assert.deepEqual(manifest.assets.map(item=>item.file),['walking.gif','split.gif','absorb.gif']);
  assert.equal(Object.keys(manifest.sourceHashes).length,8);assert.ok(manifest.sourceHashes['office/lib/walk-timing.js']);
- for(const [name,hash]of Object.entries(manifest.sourceHashes))assert.equal(createHash('sha256').update(fs.readFileSync(path.join(repo,name))).digest('hex'),hash,'re-export lifecycle after changing '+name);
  for(const item of manifest.assets){const bytes=fs.readFileSync(path.join(folder,item.file)),gif=inspectGif(bytes);assert.equal(bytes.length,item.bytes);assert.equal(createHash('sha256').update(bytes).digest('hex'),item.sha256);assert.ok(bytes.length<5*1024*1024);assert.equal(gif.width,item.width);assert.equal(gif.height,item.height);assert.equal(gif.frames,item.frames);assert.ok(item.fps>=40);assert.ok(item.distinctPngFrames>=31);assert.ok(gif.uniqueImages>=31,item.file+' needs changing encoded image data');assert.equal(gif.loop,0);assert.ok(Math.abs(gif.delay-item.durationMs/10)<=5);}
  const walk=manifest.assets[0].walkingCertificate;assert.ok(walk);assert.equal(walk.inPlace,true);assert.equal(walk.roomNavigationCertified,false);assert.equal(walk.worldDistance,384);assert.equal(walk.plannedDurationMs,1800);assert.equal(walk.samplingDurationMs,2000);assert.equal(walk.stillTailMs,200);assert.ok(walk.encodedStillMs>=180);assert.equal(walk.worldStride,192);assert.equal(walk.completedStrideCycles,2);assert.equal(walk.controller,'OfficeAvatarPerformance.locomotion');assert.equal(walk.sameStrideAnimationObjects,true);assert.equal(walk.first.pathDistance,0);assert.equal(walk.first.worldSpeed,0);assert.equal(walk.last.pathDistance,384);assert.equal(walk.last.worldSpeed,0);assert.ok(Math.abs(walk.last.stridePhaseMs-1200)<.001);
 });
@@ -71,10 +102,9 @@ test('lifecycle previews use current production gait/effects and at least 31 cha
 test('station gallery certifies all twelve current furniture programs and actual complete looping media',()=>{
  const Station=require('../renderer/station-arrival.js'),Exporter=require('../scripts/render-station-previews.cjs');
  const folder=path.join(dir,'stations'),manifest=JSON.parse(fs.readFileSync(path.join(folder,'manifest.json')));
- assert.equal(manifest.version,require('../package.json').version);assert.equal(manifest.restrictedImageElements,0);assert.equal(manifest.unlistedResourceRequests,0);
+ archivedSources(manifest);assert.equal(manifest.restrictedImageElements,0);assert.equal(manifest.unlistedResourceRequests,0);
  assert.equal(manifest.sampling.continuousRoomPlaybackCertified,false);assert.equal(manifest.sampling.continuousOwnerLifetimeCertified,false);assert.match(manifest.scope,/synthetic/);assert.match(manifest.scope,/no provider connection/);
  assert.deepEqual(Object.keys(manifest.sourceHashes).sort(),[...Exporter.SOURCES].sort());
- for(const [name,hash]of Object.entries(manifest.sourceHashes))assert.equal(createHash('sha256').update(fs.readFileSync(path.join(repo,name))).digest('hex'),hash,'re-export station gallery after changing '+name);
  assert.deepEqual(manifest.assets.map(a=>a.venue),Object.keys(Station.PROGRAMS));
  for(const item of manifest.assets){
   const bytes=fs.readFileSync(path.join(folder,item.file)),gif=inspectGif(bytes);assert.equal(createHash('sha256').update(bytes).digest('hex'),item.sha256);assert.equal(bytes.length,item.bytes);assert.ok(bytes.length<5*1024*1024);
@@ -88,14 +118,13 @@ test('station gallery certifies all twelve current furniture programs and actual
 test('public pair gallery contains all twelve current programs and complete source-bound 48fps samples',()=>{
  const Social=require('../lib/social-interactions.js'),Export=require('../scripts/render-social-previews.cjs');
  const manifest=require('../../docs/animations/social/manifest.json');
- assert.equal(manifest.version,require('../package.json').version);
+ archivedSources(manifest);
  assert.equal(manifest.sampling.fps,48);assert.equal(manifest.sampling.frames,168);
  assert.equal(manifest.sampling.continuousOwnerLifetimeCertified,false);
  assert.equal(manifest.sampling.continuousRoomPlaybackCertified,false);
  assert.equal(manifest.sampling.avatarWorkClockCertified,false);
  assert.equal(manifest.restrictedImageElements,0);assert.equal(manifest.unlistedResourceRequests,0);
  assert.equal(manifest.assets.length,3);
- for(const[name,hash]of Object.entries(manifest.sourceHashes))assert.equal(createHash('sha256').update(fs.readFileSync(path.join(repo,name))).digest('hex'),hash,name);
  for(const asset of manifest.assets){
   assert.deepEqual(asset.programs.map(p=>p.id),Social.CATALOG[asset.venue].map(p=>p.id));
   const buffer=fs.readFileSync(path.join(dir,'social',asset.file)),gif=inspectGif(buffer),timing=Export.gifTiming(buffer);

@@ -225,7 +225,10 @@ test('a proven stationary doorway blocker yields, newcomer walks in, then blocke
   function run(reverse) {
     const traffic = Traffic.createCoordinator({ reservedRects, gap: Scene.ACTOR_GAP,
       legalPoint: (p, a) => Scene.legalActorPoint(p, { ...a, reservedRects }) });
-    const bodies = [actor('A', 60, 72), actor('B', 81, 45), actor('C', 30, 46), actor('D', 87, 78)];
+    // This isolates the cooperative scheduling proof from production label
+    // typography; larger room fixtures exercise the current measured bodies.
+    const bodies = [actor('A', 60, 72), actor('B', 81, 45), actor('C', 30, 46), actor('D', 87, 78)]
+      .map(body=>({...body,footprint:{left:112,right:120,top:118,bottom:92}}));
     const original = new Map(bodies.map(a => [a.id, { ...a.position }]));
     traffic.sync(reverse ? bodies.slice().reverse() : bodies);
     traffic.request('D', { x: 28, y: 80 });
@@ -252,7 +255,8 @@ test('a proven stationary doorway blocker yields, newcomer walks in, then blocke
 });
 test('a cancelled arrival still lets its cooperative blocker return; protected phases never yield', () => {
   const make = canYield => {
-    const traffic = Traffic.createCoordinator({ gap: Scene.ACTOR_GAP }), bodies = [actor('A', 60, 72, { canYield }), actor('B', 81, 45), actor('C', 30, 46), actor('D', 87, 78)];
+    const traffic = Traffic.createCoordinator({ gap: Scene.ACTOR_GAP }), bodies = [actor('A', 60, 72, { canYield }), actor('B', 81, 45), actor('C', 30, 46), actor('D', 87, 78)]
+      .map(body=>({...body,footprint:{left:112,right:120,top:118,bottom:92}}));
     traffic.sync(bodies); traffic.request('D', { x: 28, y: 80 }); return { traffic, bodies };
   };
   const blocked = make(false); assert.deepEqual(blocked.traffic.nextAny(), { kind: 'wait', reason: 'blocked' });
@@ -292,4 +296,59 @@ test('traffic passes explicit uniform scales through geometry and replans when t
     const from = large.path[leg - 1], to = large.path[leg], p = { x: from.x + (to.x - from.x) * step / 150, y: from.y + (to.y - from.y) * step / 150 };
     assert.equal(Scene.actorsOverlap(p, a, b.position, b, 1.99), false);
   }
+});
+
+test('pass-through travel crosses a parked body while retaining a distinct final dock', () => {
+  const traffic=coordinator({passThrough:true,maxConcurrent:8}),a=actor('a',15),b=actor('b',50,65,{canYield:false});
+  traffic.sync([a,b]);traffic.request(a.id,{x:85,y:65});
+  const [plan]=traffic.nextBatch();assert.equal(plan.kind,'move');assert.deepEqual(plan.path,[a.position,{x:85,y:65}]);
+  assert.ok(overlap(bounds({x:50,y:65},a),bounds(b.position,b)),'crossing is intentionally allowed');
+  assert.equal(overlap(bounds(plan.target,a),bounds(b.position,b)),false,'the working dock is clear');
+});
+
+test('pass-through protects a parked target without a departure request in ordinary and instant modes', () => {
+  for(const instant of [false,true]){
+    const traffic=coordinator({passThrough:true,maxConcurrent:8}),a=actor('a',15),b=actor('b',50,65,{canYield:false});
+    traffic.sync([a,b]);traffic.request(a.id,b.position,{instant});
+    assert.deepEqual(traffic.nextBatch(),[{kind:'wait',reason:'blocked'}]);assert.equal(traffic.state().activeMoves.length,0);
+  }
+});
+
+test('pass-through swaps reserve both genuine departures in one deterministic batch', () => {
+  function run(reverse){
+    const traffic=coordinator({passThrough:true,maxConcurrent:8}),a=actor('a',25),b=actor('b',75);
+    traffic.sync(reverse?[b,a]:[a,b]);traffic.request(a.id,b.position);traffic.request(b.id,a.position);
+    const plans=traffic.nextBatch();assert.deepEqual(plans.map(p=>p.id),['a','b']);assert.ok(plans.every(p=>p.kind==='move'&&!p.temporary));
+    assert.equal(traffic.state().activeMoves.length,2,'both final reservations are acquired atomically');
+    assert.equal(overlap(bounds(plans[0].target,a),bounds(plans[1].target,b)),false);
+    for(const plan of plans){assert.equal(traffic.finish(plan.id,plan.token,plan.target),true);}
+    assert.deepEqual(traffic.nextBatch(),[{kind:'idle'}]);return plans.map(p=>({id:p.id,path:p.path}));
+  }
+  assert.deepEqual(run(false),run(true));
+});
+
+test('pass-through batching preserves exclusive active destinations but not crossing corridors', () => {
+  const traffic=coordinator({passThrough:true,maxConcurrent:3}),bodies=[actor('a',15,45),actor('b',85,80),actor('c',50,80)];
+  traffic.sync(bodies);traffic.request('a',{x:85,y:45});const [first]=traffic.nextBatch();assert.equal(first.id,'a');
+  traffic.request('b',first.target);assert.equal(traffic.nextBatch()[0].kind,'wait','an active destination cannot be promised twice');
+  traffic.cancel('b',bodies[1].position);traffic.request('c',{x:50,y:20});
+  const [second]=traffic.nextBatch();assert.equal(second.kind,'move');assert.equal(second.id,'c');
+  assert.equal(overlap(bounds(first.target,bodies[0]),bounds(second.target,bodies[2])),false);
+});
+
+test('pass-through batches reject colliding final envelopes even when their centres differ', () => {
+  const traffic=coordinator({passThrough:true,maxConcurrent:8}),a=actor('a',15),b=actor('b',85,65,{canYield:false});
+  traffic.sync([a,b]);traffic.request('a',{x:49,y:65});traffic.request('b',{x:51,y:65});
+  const first=traffic.nextBatch();assert.equal(first.length,1);assert.equal(first[0].kind,'move');
+  assert.equal(traffic.nextBatch()[0].kind,'wait');
+});
+
+test('pass-through batches stay within available capacity and never start a partly invalid swap', () => {
+  const traffic=coordinator({passThrough:true,maxConcurrent:2,legalPoint:p=>p.x!==75}),a=actor('a',25),b=actor('b',75);
+  traffic.sync([a,b]);traffic.request('a',b.position);traffic.request('b',a.position);
+  const result=traffic.nextBatch();assert.ok(result.every(p=>p.kind==='wait'||p.temporary),'an illegal endpoint cannot produce a partial direct swap');
+  assert.ok(traffic.state().activeMoves.length<=2);
+  const ordinary=coordinator({passThrough:true,maxConcurrent:2});ordinary.sync([actor('a',10),actor('b',40),actor('c',70)]);
+  ordinary.request('a',{x:10,y:35});ordinary.request('b',{x:40,y:35});ordinary.request('c',{x:70,y:35});
+  assert.equal(ordinary.nextBatch().length,2);assert.equal(ordinary.state().activeMoves.length,2);assert.equal(ordinary.nextBatch()[0].reason,'reserved');
 });

@@ -1,250 +1,303 @@
 {
-  "version": "0.23.0",
-  "publicBody": "original capsule robot; no external sprite references",
-  "source": {
-    "model": "office/lib/avatar-performance-model.js",
-    "renderer": "office/renderer/avatar-performance.js",
-    "css": "office/renderer/avatar-performance.css"
+  "version": "0.24.0",
+  "publicBody": "five original textured workshop creatures: folio, ink, moss, thread, glow",
+  "scope": "Fixed synthetic demo observations, sampled from the actual production renderer. No local sessions or provider connection. Activity is not a success claim.",
+  "catalog": {
+    "species": 5,
+    "activities": 11,
+    "variantsPerActivity": 10,
+    "recipes": 550
   },
   "sourceHashes": {
-    "office/lib/avatar-performance-model.js": "d5744f06c34164ca6d6c71794ed5b4456aea83b0a08720e680a31a1f1910e9c3",
-    "office/renderer/avatar-performance.js": "bfea97a02466ddff0f7eefb8c7272a979caf90d47f83be9dcff55da4200f20db",
+    "office/lib/agent-appearance.js": "bab5d1ff2e0682256dcc27eabce75329608e141271ec961defb274271a895993",
+    "office/renderer/creature-performance.js": "fb2783e89572ec493bd2254b33403466316facc951f949b7d9fba95f89116046",
+    "office/renderer/creature-performance.css": "e3fd84b1a6aa3e29bb43237c452eb2a2564054a9697e0c00221b963dec33647f",
     "office/renderer/avatar-performance.css": "1b670613c713a856763e5686d0a00df9509efdd7c5d7d6042fd32b50313b256e",
-    "docs/animations/preview-body.js": "62d91da1250ba740843f29f9b69cd2ebb4a85a2c04e370a6b12be1a577a60ff6",
-    "office/scripts/render-animation-previews.cjs": "63b4059ca276eda72c74a89ad22dd8b34d064b8127483315f10d2ff3b17e846c"
+    "office/renderer/style.css": "aa60390bc61a9edc11b3436e141fe574b40c499c57e822e702fbd51b290c9eea",
+    "office/renderer/creature-activity.js": "6fa515ab4fcc84019e6b31ea39e0914234ae03d0c4c30da9039d4fdd6d576f08",
+    "office/renderer/creature-activity.css": "5895c140618cca60f6d27e86051dd26fed6e105f33498a6ce0dfdeda0b4985e3",
+    "office/renderer/creature-repertoire.js": "82c62a9d4cc8e60dfeae293ea5f1594d9a0ef5238b8644a83081df8ec10f522c",
+    "office/renderer/repertoire-folio.js": "ea4e4ee6afe6d4610980b2d02c22878f699a6765f2f62e13129807788cb22c97",
+    "office/renderer/repertoire-ink.js": "1ab46a48621e61eb32cebf9d7b013473aa4843620a0ef19016f6b7d3fef38096",
+    "office/renderer/repertoire-moss.js": "73b493ebf490086498af12bcb9fb397c84027f1c7ad94f7f009d8d51e459e992",
+    "office/renderer/repertoire-thread.js": "97fe920f97672124f0170ae2d111b563f209fc4c6e9a309ecf9f8c10246ff491",
+    "office/renderer/repertoire-glow.js": "80f37176764f4bc4204fda57a2e1a24b4e822d39986ef4e8fe4c2015ea22fec1",
+    "office/scripts/render-workshop-demo.cjs": "fff142597959f27bfeeb4c5274fecc95a1cc96175e353372965ad03305290513",
+    "office/assets/avatars/workshop-folio.png": "1b9348e6f59937557ed59570c439c1c4e8a1d6be2889283ffc27f4302c6e3055",
+    "office/assets/avatars/workshop-ink.png": "39ceb14fb03aa24ba6ebb50f57c37bb40de7b6061a5880d71ec5a66e8c8f8480",
+    "office/assets/avatars/workshop-moss.png": "659738d45edc65c00b49b0891887bc191382470252fefc253bd09a7757b6d6d2",
+    "office/assets/avatars/workshop-thread.png": "b0406fc504a1043bb90fe03a8ff4187f633a2e57a0a3780fa319609ce594198b",
+    "office/assets/avatars/workshop-glow.png": "dc4f6cb6e7f1fab428701d8ec6b9ff1b7597a9f00ea955c0ef4b4eb1ed6547d7"
   },
-  "previewTiming": "12-second synchronized cycles; application timing is unchanged",
+  "previewTiming": "GIFs phase-normalize the original native loops to a 4.2-second preview; SVG preserves each native animation duration and easing. Application timing is unchanged.",
   "assets": [
     {
       "file": "overview.gif",
-      "programs": [
-        "read-scroll",
-        "search-catalogue",
-        "plan-temple",
-        "code-debug",
-        "design-layout",
-        "test-cases",
-        "build-fit",
-        "run-log",
-        "wait-tray",
-        "ask-point-line",
-        "error-trace"
-      ],
-      "width": 1000,
-      "height": 718,
-      "frames": 144,
-      "fps": 12,
-      "seconds": 12,
-      "bytes": 2286474
+      "width": 1100,
+      "height": 450,
+      "frames": 42,
+      "fps": 10,
+      "durationMs": 4200,
+      "bytes": 244603,
+      "sha256": "083ad22a1573ded357e56c8892f2ad7873fd5862d479d552f33bee4c3fa72c25",
+      "distinctPngFrames": 42,
+      "recipes": [
+        "folio-reading-turn-leaf",
+        "ink-coding-drop-keys",
+        "moss-testing-load-beam",
+        "thread-building-corner-frame",
+        "glow-waiting-user-viewer-card"
+      ]
     },
     {
       "file": "reading.gif",
-      "programs": [
-        "read-turn",
-        "read-annotate",
-        "read-compare",
-        "read-scroll",
-        "read-outline",
-        "read-footnote",
-        "read-bookmark",
-        "read-diagram"
-      ],
-      "width": 1000,
-      "height": 508,
-      "frames": 144,
-      "fps": 12,
-      "seconds": 12,
-      "bytes": 1837271
+      "width": 1100,
+      "height": 450,
+      "frames": 42,
+      "fps": 10,
+      "durationMs": 4200,
+      "bytes": 265963,
+      "sha256": "0b601c048abf0780eddeaad080f1beca6fa1cc4d82778f3f1c38fa5d49f6d203",
+      "distinctPngFrames": 41,
+      "recipes": [
+        "folio-reading-turn-leaf",
+        "ink-reading-liquid-sheet",
+        "moss-reading-leaf-codex",
+        "thread-reading-knitted-pages",
+        "glow-reading-refracted-page"
+      ]
     },
     {
       "file": "searching.gif",
-      "programs": [
-        "search-sweep",
-        "search-index",
-        "search-compare",
-        "search-catalogue",
-        "search-map",
-        "search-clues",
-        "search-shelves",
-        "search-query"
-      ],
-      "width": 1000,
-      "height": 508,
-      "frames": 144,
-      "fps": 12,
-      "seconds": 12,
-      "bytes": 2014488
+      "width": 1100,
+      "height": 450,
+      "frames": 42,
+      "fps": 10,
+      "durationMs": 4200,
+      "bytes": 287060,
+      "sha256": "266877b07c1a8d0b5270665960c95507d214117d5248a5067686f1860fff3d3c",
+      "distinctPngFrames": 41,
+      "recipes": [
+        "folio-searching-card-drawer",
+        "ink-searching-probe-pools",
+        "moss-searching-leaf-index",
+        "thread-searching-basket-sort",
+        "glow-searching-scanning-fan"
+      ]
     },
     {
       "file": "planning.gif",
-      "programs": [
-        "plan-chin",
-        "plan-pencil",
-        "plan-map",
-        "plan-temple",
-        "plan-decompose",
-        "plan-sequence",
-        "plan-branches",
-        "plan-trace"
-      ],
-      "width": 1000,
-      "height": 508,
-      "frames": 144,
-      "fps": 12,
-      "seconds": 12,
-      "bytes": 1877035
+      "width": 1100,
+      "height": 450,
+      "frames": 42,
+      "fps": 10,
+      "durationMs": 4200,
+      "bytes": 267567,
+      "sha256": "4431184dfa288029fb252fd0163d87a4bf88d379bd0ec26611fd33a259d46d88",
+      "distinctPngFrames": 41,
+      "recipes": [
+        "folio-planning-branch-fold",
+        "ink-planning-braid-route",
+        "moss-planning-branch-junction",
+        "thread-planning-pin-route",
+        "glow-planning-orbit-layout"
+      ]
     },
     {
       "file": "coding.gif",
-      "programs": [
-        "code-burst",
-        "code-pointer",
-        "code-review",
-        "code-debug",
-        "code-refactor",
-        "code-terminal",
-        "code-patch",
-        "code-document"
-      ],
-      "width": 1000,
-      "height": 508,
-      "frames": 144,
-      "fps": 12,
-      "seconds": 12,
-      "bytes": 2080956
+      "width": 1100,
+      "height": 450,
+      "frames": 42,
+      "fps": 10,
+      "durationMs": 4200,
+      "bytes": 241581,
+      "sha256": "4c3727eaa9cb45e6891c473985f78d48e6a978a2a516ab908999c19d9dedbb3c",
+      "distinctPngFrames": 42,
+      "recipes": [
+        "folio-coding-paper-keys",
+        "ink-coding-drop-keys",
+        "moss-coding-root-keys",
+        "thread-coding-soft-keyboard",
+        "glow-coding-light-keys"
+      ]
     },
     {
       "file": "designing.gif",
-      "programs": [
-        "design-brush",
-        "design-swatches",
-        "design-ruler",
-        "design-layout",
-        "design-compass",
-        "design-type",
-        "design-trace",
-        "design-palette"
-      ],
-      "width": 1000,
-      "height": 508,
-      "frames": 144,
-      "fps": 12,
-      "seconds": 12,
-      "bytes": 1724882
+      "width": 1100,
+      "height": 450,
+      "frames": 42,
+      "fps": 10,
+      "durationMs": 4200,
+      "bytes": 242078,
+      "sha256": "f0f8d07eff0fe75f73af1aa414815beb7c4be877d35fe1add9386624de6d9448",
+      "distinctPngFrames": 40,
+      "recipes": [
+        "folio-designing-crease-guide",
+        "ink-designing-morph-disc",
+        "moss-designing-canopy-plan",
+        "thread-designing-contour-board",
+        "glow-designing-lens-composition"
+      ]
     },
     {
       "file": "testing.gif",
-      "programs": [
-        "test-measure",
-        "test-notes",
-        "test-inspect",
-        "test-cases",
-        "test-boundary",
-        "test-calibrate",
-        "test-reproduce",
-        "test-compare"
-      ],
-      "width": 1000,
-      "height": 508,
-      "frames": 144,
-      "fps": 12,
-      "seconds": 12,
-      "bytes": 1958777
+      "width": 1100,
+      "height": 450,
+      "frames": 42,
+      "fps": 10,
+      "durationMs": 4200,
+      "bytes": 231888,
+      "sha256": "a848141a652faa7f2ed7e659c49c76b4d802092eded773f68fd85d6c19d06c86",
+      "distinctPngFrames": 41,
+      "recipes": [
+        "folio-testing-bend-sample",
+        "ink-testing-drop-tension",
+        "moss-testing-load-beam",
+        "thread-testing-tension-gate",
+        "glow-testing-lens-alignment"
+      ]
     },
     {
       "file": "building.gif",
-      "programs": [
-        "build-wrench",
-        "build-align",
-        "build-blueprint",
-        "build-fit",
-        "build-sort",
-        "build-wire",
-        "build-rotate",
-        "build-stack"
-      ],
-      "width": 1000,
-      "height": 508,
-      "frames": 144,
-      "fps": 12,
-      "seconds": 12,
-      "bytes": 1772787
+      "width": 1100,
+      "height": 450,
+      "frames": 42,
+      "fps": 10,
+      "durationMs": 4200,
+      "bytes": 239222,
+      "sha256": "b30d36f727900f03f42a3d2acc892bc4934c4c40332095eb3152254aeb73b590",
+      "distinctPngFrames": 41,
+      "recipes": [
+        "folio-building-tab-slot",
+        "ink-building-pearl-stack",
+        "moss-building-clay-arch",
+        "thread-building-corner-frame",
+        "glow-building-lens-stack"
+      ]
     },
     {
       "file": "running.gif",
-      "programs": [
-        "run-watch",
-        "run-notes",
-        "run-keyboard",
-        "run-log",
-        "run-scroll",
-        "run-monitor",
-        "run-reference",
-        "run-trace"
-      ],
-      "width": 1000,
-      "height": 508,
-      "frames": 144,
-      "fps": 12,
-      "seconds": 12,
-      "bytes": 2041838
+      "width": 1100,
+      "height": 450,
+      "frames": 42,
+      "fps": 10,
+      "durationMs": 4200,
+      "bytes": 277957,
+      "sha256": "9502bbfce9ef7a27ee61e4d009994f89137b65ecf1cb6bafaafe144a4340bba3",
+      "distinctPngFrames": 42,
+      "recipes": [
+        "folio-running-paper-cam",
+        "ink-running-circulation-loop",
+        "moss-running-root-mill",
+        "thread-running-loom-carriage",
+        "glow-running-orbital-execution"
+      ]
     },
     {
       "file": "waiting-tool.gif",
-      "programs": [
-        "wait-chin",
-        "wait-listen",
-        "wait-console",
-        "wait-tray",
-        "wait-headset",
-        "wait-bookmark",
-        "wait-pencil-roll",
-        "wait-wrist"
-      ],
-      "width": 1000,
-      "height": 508,
-      "frames": 144,
-      "fps": 12,
-      "seconds": 12,
-      "bytes": 1587046
+      "width": 1100,
+      "height": 450,
+      "frames": 42,
+      "fps": 10,
+      "durationMs": 4200,
+      "bytes": 181905,
+      "sha256": "abafb8ff03ad1bfe38c32678621d772123442ca5e13cc268525c5ce321aa2347",
+      "distinctPngFrames": 42,
+      "recipes": [
+        "folio-waiting-tool-parked-wheel",
+        "ink-waiting-tool-still-circulation",
+        "moss-waiting-tool-parked-lever",
+        "thread-waiting-tool-parked-spool",
+        "glow-waiting-tool-parked-light"
+      ]
     },
     {
       "file": "waiting-user.gif",
-      "programs": [
-        "ask-raised",
-        "ask-card",
-        "ask-present",
-        "ask-point-line",
-        "ask-tilt-card",
-        "ask-pencil-rest",
-        "ask-open-folder",
-        "ask-hand-to-heart"
-      ],
-      "width": 1000,
-      "height": 508,
-      "frames": 144,
-      "fps": 12,
-      "seconds": 12,
-      "bytes": 1595120
+      "width": 1100,
+      "height": 450,
+      "frames": 42,
+      "fps": 10,
+      "durationMs": 4200,
+      "bytes": 211734,
+      "sha256": "09a7c1a022f957caf7fc8d65a0d66f4157ae86730b7a25429d0f22aff43e397f",
+      "distinctPngFrames": 42,
+      "recipes": [
+        "folio-waiting-user-offer-page",
+        "ink-waiting-user-offer-pearl",
+        "moss-waiting-user-leaf-card",
+        "thread-waiting-user-single-end",
+        "glow-waiting-user-viewer-card"
+      ]
     },
     {
       "file": "error.gif",
-      "programs": [
-        "error-scratch",
-        "error-review",
-        "error-magnify",
-        "error-trace",
-        "error-overlay",
-        "error-reference",
-        "error-mark-place",
-        "error-set-down"
-      ],
-      "width": 1000,
-      "height": 508,
-      "frames": 144,
-      "fps": 12,
-      "seconds": 12,
-      "bytes": 1946023
+      "width": 1100,
+      "height": 450,
+      "frames": 42,
+      "fps": 10,
+      "durationMs": 4200,
+      "bytes": 190522,
+      "sha256": "79e137dd2c5384e4911cb90f5986f2abb108f658035cff7e7908bc74635ac63b",
+      "distinctPngFrames": 41,
+      "recipes": [
+        "folio-error-jammed-fold",
+        "ink-error-leaking-channel",
+        "moss-error-broken-root",
+        "thread-error-locked-knot",
+        "glow-error-broken-light-track"
+      ]
     }
-  ]
+  ],
+  "demo": {
+    "file": "workshop-demo.svg",
+    "fallback": "workshop-demo.png",
+    "bytes": 1111176,
+    "sha256": "edc8724c4ba10fad3eeaaedaeea30e5813ef1d033ab172874aa6528865df1f3b",
+    "selfContained": true,
+    "scripts": 0,
+    "externalResources": 0,
+    "reducedMotion": true,
+    "nativeFramesDiffer": true,
+    "imageContextVerified": true,
+    "reducedFramesIdentical": true,
+    "reducedMotionFallback": "README picture source selects the static PNG; standalone SVG also honors the media preference",
+    "recordedRecipes": [
+      {
+        "species": "folio",
+        "activity": "reading",
+        "helper": false,
+        "recipe": "folio-reading-turn-leaf"
+      },
+      {
+        "species": "ink",
+        "activity": "coding",
+        "helper": false,
+        "recipe": "ink-coding-drop-keys"
+      },
+      {
+        "species": "moss",
+        "activity": "testing",
+        "helper": false,
+        "recipe": "moss-testing-load-beam"
+      },
+      {
+        "species": "thread",
+        "activity": "building",
+        "helper": false,
+        "recipe": "thread-building-corner-frame"
+      },
+      {
+        "species": "glow",
+        "activity": "waiting-user",
+        "helper": false,
+        "recipe": "glow-waiting-user-viewer-card"
+      },
+      {
+        "species": "thread",
+        "activity": "planning",
+        "helper": true,
+        "recipe": "thread-planning-pin-route"
+      }
+    ]
+  }
 }

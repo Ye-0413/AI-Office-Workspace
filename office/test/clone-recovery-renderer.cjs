@@ -32,8 +32,9 @@ app.whenReady().then(async()=>{
   assert.equal(await run(`originalRecoveryRoot.querySelector('.actor-state').textContent.includes('等分身')`),false);checks.push('same-ID main resumes and survives its formerly active child finishing');
   child=helper('grow');send([root,child]);await until(settled(child.id),'next helper must physically reach its station');
   await run(`window.growingHelper=${query(child.id)};void 0`);
-  await win.webContents.insertCSS('html[lang="en"] .actor .nameplate{width:230px!important;min-width:230px!important;max-width:230px!important}');
   const beforeWidth=await run(`growingHelper.querySelector('.nameplate').offsetWidth`);
+  const grownWidth=beforeWidth+32;
+  await win.webContents.insertCSS(`html[lang="en"] .actor .nameplate{width:${grownWidth}px!important;min-width:${grownWidth}px!important;max-width:${grownWidth}px!important}`);
   const end=stopped(child);send([root,end]);await until(`${query(child.id)}?.dataset.clonePhase==='returning'`,'helper must own its finite return');
   await pause(120);await run(`document.getElementById('language-button').click();void 0`);
   await until(`document.documentElement.lang==='en'`,'language switch must reach the real UI');

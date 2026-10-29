@@ -186,6 +186,11 @@ app.whenReady().then(async()=>{
  assert.equal(await run('stationTraces.length'),repeated,'metadata snapshots cannot restart a completed same-zone response');checks.push('repeated real snapshots preserve the same body and do not replay station decoration');
  const audit=await run('crowdAudit.finish()');assert.deepEqual(audit.violations,[]);checks.push(audit);
 
+ // Deliberately choose one fixed user size with room for both complete large
+ // envelopes at their own furniture. Open-floor overflow is valid production
+ // behavior, but must not stand in for a library/board endpoint in this audit.
+ await control('setting-agentScale',80);await until(settled(main.id),'the explicit 80% family size settles before the observed child enters');
+ assert.equal(await run(`Math.hypot(...(()=>{const m=new DOMMatrixReadOnly(getComputedStyle(${actor(main.id)}).transform);return[m.m11,m.m12]})())`),.8,'the fixture uses the actual chosen fixed scale');
  // The child enters through its observed physical parent, not the main door.
  const child=task('child','planning',main.id),childIndex=await run('stationTraces.length');send([main,child]);
  await until(`${actor(child.id)}?.dataset.walking==='true'`,'a real child must physically split and walk');
@@ -216,7 +221,7 @@ app.whenReady().then(async()=>{
  await control('setting-agentScale',65);await until(settled(main.id),'real shared-scale fit completes');
  win.setContentSize(800,450);await wait(300);
  const small=await changeActivity(main,'reading',{peers:[child]});main=small.session;checks.push({name:'English response remains visible and clear at 800x450 and 65%',...await completedCue(small.index)});
- for(const [id,value,activity]of [['festival-theme-select','winter','coding'],['venue-select','workshop','planning'],['setting-agentScale',100,'testing']]){
+ for(const [id,value,activity]of [['festival-theme-select','winter','coding'],['venue-select','workshop','planning'],['setting-agentScale',80,'testing']]){
   const step=await changeActivity(main,activity,{peers:[child]});main=step.session;
   await until(`stationTraces[${step.index}].rows.length>=8`,'a real furniture cue exists before context change');
   await control(id,value);await until(`stationTraces[${step.index}].done`,'context replaces only its finite decorative owner',1500);

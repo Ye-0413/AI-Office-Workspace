@@ -156,7 +156,7 @@ test('all ten dialogue contexts can be reached and normal roaming never repeats 
   assert.deepEqual([...zones].sort(), ['archive', 'bench', 'board', 'desk', 'door', 'front', 'library', 'plant', 'sofa', 'window']);
 });
 
-test('rare easter eggs have at least three ordinary stops between them and all poses are declared artwork', () => {
+test('rare easter eggs have at least three ordinary stops between them and use semantic presentation poses', () => {
   const { model, enter, tick } = fixture({ random: () => 0, arrivalDelayMs: 0,
     dwellMinMs: 1, dwellMaxMs: 1 });
   let state = enter(); const eggs = [];
@@ -165,15 +165,14 @@ test('rare easter eggs have at least three ordinary stops between them and all p
     model.arrived(state.stopSerial, state.generation); state = tick(1);
   }
   assert.deepEqual(eggs, [0, 4, 8]);
-  const manifest = require('../assets/avatars.manifest.json');
-  const declared = new Set(manifest.files.map(file => file.destination));
-  const avatars = path.join(__dirname, '../assets/avatars');
-  for (const filename of [...STOPS.flatMap(stop => stop.poses), ...EASTER_EGGS.map(egg => egg.pose)]) {
-    assert.ok(declared.has('avatars/' + filename), filename + ' must be declared in the tracked artwork manifest');
-    // Restricted artwork is optional in a source checkout. When restored
-    // locally, keep checking that every referenced pose is actually available.
-    if (fs.existsSync(avatars)) assert.ok(fs.statSync(path.join(avatars, filename)).isFile(), filename);
+  const poses = new Set(['reading','looking','planning','coffee','chatting','resting','greeting','tidying','dancing','magic','delighted','coffee-trick']);
+  for (const pose of [...STOPS.flatMap(stop => stop.poses), ...EASTER_EGGS.map(egg => egg.pose)]) {
+    assert.ok(poses.has(pose), pose + ' is a decorative action rather than an external artwork filename');
+    assert.ok(!/[./]/.test(pose));
   }
+  const artwork = require('../lib/public-artwork.js');
+  assert.equal(artwork.ASSETS.length, 5);
+  for (const asset of artwork.ASSETS) assert.ok(fs.statSync(path.join(__dirname, '../assets/avatars', asset)).isFile());
 });
 
 test('state snapshots are defensive, reset rejects callbacks, and invalid clocks/random do not corrupt timing', () => {

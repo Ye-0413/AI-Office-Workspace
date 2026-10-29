@@ -177,3 +177,13 @@ test('clone counters and endings have bilingual copy without rewriting their evi
   assert.equal(I18n.t('en', 'family.clonesSummary', {active:2,total:7}), '2 active clones · 7 total');
   for (const [zh,en] of [['分身出现','Clone appearing'],['结束分身。','Clone released.'],['分身暂歇。','Clone resting.']]) assert.equal(I18n.translate('en',zh),en);
 });
+
+test('manual size copy states that agent count never changes display size and keeps the saved slider range', () => {
+  const html = fs.readFileSync(path.join(__dirname, '../renderer/index.html'), 'utf8');
+  assert.match(html, /<label for="setting-agentScale">Agent 大小<\/label>/);
+  assert.doesNotMatch(html, /Agent 大小上限|拥挤时自动缩小|分身保持主 Agent 的 80%/);
+  assert.match(html, /id="setting-agentScale"[^>]*min="65"[^>]*max="135"[^>]*value="100"/);
+  assert.equal(I18n.translate('en', '角色与名字同步调整；人数变化不改变大小，分身保持较小比例。'), 'Scale characters and names together. Agent count never changes their size; helpers keep their smaller proportions.');
+  assert.equal(I18n.translate('en', '重新排列'), 'Rearrange');
+  assert.equal(I18n.translate('en', '已按当前大小重新排列。'), 'Rearranged using your current size.');
+});

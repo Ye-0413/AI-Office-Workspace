@@ -1,3 +1,5 @@
+> **Archivo de referencia del proyecto original**: esta página conserva la documentación de Clawd on Desk; no es una traducción actual de AI Office Workspace v0.24.0. Consulta [English](README.md) / [简体中文](README.zh-CN.md) y las [versiones de este proyecto](docs/releases/README.md). Las descargas, plataformas y funciones de aprobación de abajo pertenecen al proyecto original.
+
 <p align="center">
   <img src="assets/icon.png" width="128" alt="Clawd">
 </p>

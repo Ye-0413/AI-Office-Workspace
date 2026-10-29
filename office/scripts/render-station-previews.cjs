@@ -121,7 +121,7 @@ async function main() {
   try {
     execFileSync('ffmpeg',['-version'],{stdio:'ignore'});
     await app.whenReady();fs.mkdirSync(out,{recursive:true});
-    win=new BrowserWindow({width:SETTINGS.width,height:SETTINGS.height,useContentSize:true,show:true,focusable:false,webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true,backgroundThrottling:false}});
+    win=new BrowserWindow({width:SETTINGS.width,height:SETTINGS.height,useContentSize:true,enableLargerThanScreen:true,show:true,focusable:false,webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true,backgroundThrottling:false}});
     win.webContents.on('console-message',details=>{if(details.level==='error')errors.push(details.message);});
     let allowed=new Set(SOURCES.map(file=>path.join(repo,file)));
     win.webContents.session.webRequest.onBeforeRequest({urls:['file:///*','http://*/*','https://*/*']},(details,callback)=> {

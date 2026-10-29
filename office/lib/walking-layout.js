@@ -1,10 +1,11 @@
 /* Reachable furniture-side parking. Pure coordinates; never changes observations. */
 (function (root, factory) {
   'use strict';
-  const api = factory(typeof module === 'object' && module.exports ? require('./scene-model.js') : root.OfficeScene, typeof module === 'object' && module.exports ? require('./scene-traffic.js') : root.OfficeSceneTraffic);
+  const api = factory(typeof module === 'object' && module.exports ? require('./scene-model.js') : root.OfficeScene, typeof module === 'object' && module.exports ? require('./scene-traffic.js') : root.OfficeSceneTraffic, undefined,
+    () => (typeof module === 'object' && module.exports ? require('./size-stability.js') : root.OfficeSizeStability)?.ACTOR_FOOTPRINT);
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.OfficeWalkingLayout = api;
-})(typeof globalThis === 'object' ? globalThis : this, function createLayout(Scene, Traffic, entrance) {
+})(typeof globalThis === 'object' ? globalThis : this, function createLayout(Scene, Traffic, entrance, footprintDefaults) {
   'use strict';
   const W = Scene.WORLD.width, H = Scene.WORLD.height, EPS = 1e-7;
   const proofCache = new WeakMap();
@@ -20,7 +21,8 @@
   const THIRTEEN_PROFILE = Object.freeze({scale:.4,holding:{x:30.5,y:82},points:{library:[[8,44],[19,44]],board:[[43,44],[56,44],[69.05,53]],desk:[[40,84],[48.3,84]],bench:[[82,44],[93,44]],sofa:[[8,84],[19,84]],lobby:[[56.6,84],[64.9,84]]}});
   const CORRIDORS = Object.freeze((Scene.CORRIDORS || [[{x:31.5,y:44.5},{x:31.5,y:82}],[{x:73.5,y:44.5},{x:73.5,y:82}],[{x:31.5,y:78},{x:Math.min(82,ENTRY_POINT.x),y:ENTRY_POINT.y}],[{x:31.5,y:44.5},{x:73.5,y:44.5}]]).map(path=>Object.freeze(path.map(Object.freeze))));
   const OBSTACLES = Object.freeze(Scene.OBSTACLES.map(rect => Object.freeze({ ...rect })));
-  const gapForScale = scale => 2 + 10 * Math.max(0, Number(scale) || 0);
+  const defaultGapForScale = scale => 2 + 10 * Math.max(0, Number(scale) || 0);
+  const gapForScale = scale => fullFloorMode ? 2 : defaultGapForScale(scale);
   function rememberProof(seats,record){proofCache.set(seats,record);for(const seat of seats.values())proofBySeat.set(seat,record);}
   function freezePlain(value){if(value&&typeof value==='object'&&!Object.isFrozen(value)){for(const child of Object.values(value))freezePlain(child);Object.freeze(value);}return value;}
   function atScale(page,scale){
@@ -28,7 +30,7 @@
     if(Math.abs(scale-page.uniformScale)<EPS&&page.targetUniformScale)return page;
     const seats=new Map([...page.seats].map(([id,p])=>[id,{...p,uniformScale:scale,targetUniformScale}]));
     Object.defineProperties(seats,{fits:{value:true},unplacedIds:{value:[]}});
-    return{...page,seats,uniformScale:scale,targetUniformScale,gap:gapForScale(scale),readability:{canvasPixels:154*scale,paintedHeadPixels:55*scale,paintedSpanPixels:75*scale,nameplatePixels:220*scale,recommendedMinimumScale:.35,needsMoreSpace:scale<.35,expansionFactor:Math.max(1,.35/scale)}};
+    return{...page,seats,uniformScale:scale,targetUniformScale,gap:gapForScale(scale),readability:{canvasPixels:154*scale,paintedHeadPixels:55*scale,paintedSpanPixels:75*scale,nameplatePixels:264*scale,recommendedMinimumScale:.35,needsMoreSpace:scale<.35,expansionFactor:Math.max(1,.35/scale)}};
   }
   const area = (id, x1, y1, x2, y2, zh, en) => Object.freeze({ id, x1, y1, x2, y2, labelZh: zh, labelEn: en });
   // Side seats stay on the corresponding furniture's side of the workshop.
@@ -55,6 +57,8 @@
   const zoneArea = (p,zone) => (ZONE_AREAS[zone]||ZONE_AREAS.lobby).find(a=>inArea(p,a));
   // A full zone may lend neighbouring floor; the seat keeps its own work zone.
   const ALL_AREAS = Object.freeze([...new Map(Object.values(ZONE_AREAS).flat().map(a=>[a.id,a])).values()]);
+  const FLOOR_DOMAIN = Scene.ACTOR_DOMAIN || {x1:5,x2:95,y1:40.7,y2:86};
+  const FULL_FLOOR = area('open-floor',FLOOR_DOMAIN.x1,FLOOR_DOMAIN.y1,FLOOR_DOMAIN.x2,FLOOR_DOMAIN.y2,'开放工位','Open floor station');
   const spillAreas = zone => { const anchor=Scene.ZONES[zone]||Scene.ZONES.lobby,own=new Set((ZONE_AREAS[zone]||[]).map(a=>a.id)); return ALL_AREAS.filter(a=>!own.has(a.id)).sort((a,b)=>Math.hypot((a.x1+a.x2)/2-anchor.x,(a.y1+a.y2)/2-anchor.y)-Math.hypot((b.x1+b.x2)/2-anchor.x,(b.y1+b.y2)/2-anchor.y)||a.id.localeCompare(b.id)); };
   function legalPoint(point, actor={}) {
     return Scene.legalActorPoint(point,{...actor,uniformScale:scaleOf(actor),footprint:footprintOf(actor.footprint),layoutMode:'walking',reservedRects:actor.reservedRects||Scene.CLOCK_RESERVED});
@@ -126,22 +130,13 @@
   }
   function drainProof(ctx,scale,reservedRects,limit) {
     const moves=[],gap=gapForScale(scale);
-    for(let pass=0;pass<limit;pass++){
-      if(ctx.budget&&ctx.budget.drainCalls>=384)return null;
-      if(ctx.budget)ctx.budget.drainCalls++;
-      const move=ctx.traffic.nextAny();
-      if(move.kind==='idle')return moves;
-      if(move.kind==='arrived'){
-        if(ctx.afterArrival){if(ctx.afterArrival(move)===false)return null;ctx.sync();}
-        continue;
-      }
-      if(move.kind!=='move')return null;
-      if(ctx.validMove&&!ctx.validMove(move))return null;
+    function valid(move) {
+      if(ctx.validMove&&!ctx.validMove(move))return false;
       const actor=ctx.actors.get(move.id),f=actor.footprint;
       for(let i=1;i<move.path.length;i++){
         const from=move.path[i-1],to=move.path[i],a=pixel(from),b=pixel(to);
-        if(!(passThroughMode&&i===1||legalPoint(from,{...actor,reservedRects}))||!legalPoint(to,{...actor,reservedRects}))return null;
-        for(const r of reservedRects)if(Scene.segmentHitsRect(a,b,{x1:r.left-f.right*scale-4,x2:r.right+f.left*scale+4,y1:r.top-f.bottom*scale-4,y2:r.bottom+f.top*scale+4},0))return null;
+        if(!(passThroughMode&&i===1||legalPoint(from,{...actor,reservedRects}))||!legalPoint(to,{...actor,reservedRects}))return false;
+        for(const r of reservedRects)if(Scene.segmentHitsRect(a,b,{x1:r.left-f.right*scale-4,x2:r.right+f.left*scale+4,y1:r.top-f.bottom*scale-4,y2:r.bottom+f.top*scale+4},0))return false;
         if(!passThroughMode)for(const [id,other]of ctx.actors)if(id!==move.id&&!other.staged){
           // Real clone endpoint overlap is permitted only on its first/last
           // leg. The coordinator still owns the exact named exemption.
@@ -152,14 +147,35 @@
           const sourceExempt=i===1&&(ctx.sourceOverlapOrigins?source&&Math.abs(source.x-from.x)<.001&&Math.abs(source.y-from.y)<.001&&Scene.boundsOverlap(Scene.actorBounds(from,actor),r,gap):Scene.boundsOverlap(Scene.actorBounds(from,actor),r,0));
           const targetExempt=!ctx.sourceOverlapOrigins&&i===move.path.length-1&&Scene.boundsOverlap(Scene.actorBounds(to,actor),r,0);
           const exempt=ctx.overlaps?.get(move.id)?.has(id)&&(sourceExempt||targetExempt);
-          if(!exempt&&Scene.segmentHitsRect(a,b,{x1:r.left-f.right*scale-gap,x2:r.right+f.left*scale+gap,y1:r.top-f.bottom*scale-gap,y2:r.bottom+f.top*scale+gap},0))return null;
+          if(!exempt&&Scene.segmentHitsRect(a,b,{x1:r.left-f.right*scale-gap,x2:r.right+f.left*scale+gap,y1:r.top-f.bottom*scale-gap,y2:r.bottom+f.top*scale+gap},0))return false;
         }
-        if(OBSTACLES.some(r=>Scene.segmentHitsRect(from,to,r,.8)))return null;
+        if(OBSTACLES.some(r=>Scene.segmentHitsRect(from,to,r,.8)))return false;
       }
-      actor.position={...move.target};actor.staged=false;
-      if(!ctx.traffic.finish(move.id,move.token,move.target))return null;
-      if(ctx.afterFinish)ctx.afterFinish(move);
-      ctx.sync();moves.push(move);
+      return true;
+    }
+    for(let pass=0;pass<limit;pass++){
+      if(ctx.budget&&ctx.budget.drainCalls>=384)return null;
+      if(ctx.budget)ctx.budget.drainCalls++;
+      const batch=passThroughMode&&ctx.traffic.nextBatch?ctx.traffic.nextBatch():[ctx.traffic.nextAny()];
+      if(batch.length===1&&batch[0].kind==='idle')return moves;
+      if(batch.some(move=>!['move','arrived'].includes(move.kind)))return null;
+      // Target exchanges are one departure set. Validate against the same
+      // actual source snapshot, then complete every reserved member before
+      // syncing; a serial sync would resurrect a peer's vacated source.
+      if(batch.some(move=>move.kind==='move'&&!valid(move)))return null;
+      for(const move of batch)if(move.kind==='move'){
+        const actor=ctx.actors.get(move.id);actor.position={...move.target};actor.staged=false;
+      }
+      for(const move of batch){
+        if(move.kind==='arrived'){
+          if(ctx.afterArrival&&ctx.afterArrival(move)===false)return null;
+        }else{
+          if(!ctx.traffic.finish(move.id,move.token,move.target))return null;
+          if(ctx.afterFinish)ctx.afterFinish(move);
+          moves.push(move);
+        }
+      }
+      ctx.sync();
     }
     return null;
   }
@@ -351,9 +367,9 @@
     if(scale<maximum)for(let pass=0;pass<4&&budget.trials<12;pass++){const mid=(scale+upper)/2,candidate=prove(mid);if(candidate){scale=mid;proof=candidate;}else upper=mid;}
     return{...proof,trials:budget.trials};
   }
-  let passThroughMode=false,spillMode=false;
+  let passThroughMode=false,spillMode=false,fullFloorMode=false;
   function layoutWalking(present,options={}) {
-    passThroughMode=options.passThrough===true;spillMode=passThroughMode&&options.spillZones===true;
+    passThroughMode=options.passThrough===true;spillMode=passThroughMode&&options.spillZones===true;fullFloorMode=passThroughMode&&options.fullFloor===true;
     const fixedScale=options.fixedScale===true;
     const unique=new Map();for(const session of Array.isArray(present)?present:[])if(session&&typeof session.id==='string'&&session.id)unique.set(session.id,session);
     const visible=[...unique.values()].sort((a,b)=>a.id.localeCompare(b.id)),requestedScale=Scene.actorScale({x:0,y:0},{uniformScale:Math.max(.65,Math.min(1.35,Number(options.requestedScale)||1))});
@@ -385,7 +401,7 @@
     const transferScope={requestedScale,sizeCeiling,viewport:{...viewport},reservedRects:reservedRects.map(r=>({...r})),allowTransfers:options.allowTransfers!==false,transferEligibleIds:transferEligibleIds?[...transferEligibleIds].sort():null,participantsAutoYield:false,openingBusyIds:[...transferBusyIds].sort(),allowedOverlaps:[...(options.allowedOverlaps||[])].sort(),immovableIds:[...immovableIds].sort(),fixedHoldingIds:[...fixedHolding.keys()].sort(),openingDockPairs:[...openingDockPairs].map(p=>[...p]),closingDockPairs:[...closingDockPairs].map(p=>[...p]),finiteExitIds:[...finiteExitIds],cast:visible.map(s=>({id:s.id,parentId:s.parentId||null,workZone:workZones.get(s.id),activity:s.activity||null,status:s.status||null,turnId:s.turnId||null,provider:s.provider||null,attention:Boolean(s.attention),disconnected:Boolean(s.disconnected),closed:Boolean(s.closed),footprint:{...footprints.get(s.id)},canYield:!immovableIds.has(s.id),fixedPosition:fixedPositions.has(s.id)?{...fixedPositions.get(s.id)}:null}))};
     const transferSourceKey=scale=>JSON.stringify([transferScope,visible.filter(s=>validPoint(actualPositions.get(s.id))).map(s=>({id:s.id,x:actualPositions.get(s.id).x,y:actualPositions.get(s.id).y})),scale]);
     const transferSettingsKey=JSON.stringify([options.allowTransfers!==false,options.allowTransfers!==false?[...transferBusyIds].sort():null,transferEligibleIds?[...transferEligibleIds].sort():null,options.slotHints instanceof Map?[...slotHints].map(([id,p])=>[id,p.x,p.y,p.workZone||p.zone]).sort((a,b)=>a[0].localeCompare(b[0])):null,transferScope.cast.map(s=>[s.id,s.activity,s.status,s.turnId,s.attention,s.disconnected,s.closed])]);
-    const signature=JSON.stringify([passThroughMode,spillMode,fixedScale,transferSettingsKey,requestedScale,sizeCeiling,viewport,reservedRects,options.cooperative!==false,options.holdingOccupiedForProof!==false,[...immovableIds].sort(),[...closingDockPairs].sort(([a],[b])=>a.localeCompare(b)),[...openingDockPairs].sort(([a],[b])=>a.localeCompare(b)),openingDockPairs.size?openingBusyIds:null,[...finiteExitIds],finiteExitIds.size?[...(options.allowedOverlaps||[])].sort():null,closingDockPairs.size||openingDockPairs.size||finiteExitIds.size?visible.filter(s=>validPoint(current.get(s.id))).map(s=>[s.id,current.get(s.id).x,current.get(s.id).y]):null,[...fixedStale],[...fixedHolding],visible.map(s=>[s.id,s.parentId||'',workZones.get(s.id),footprints.get(s.id)])]);
+    const signature=JSON.stringify([passThroughMode,spillMode,fullFloorMode,fixedScale,transferSettingsKey,requestedScale,sizeCeiling,viewport,reservedRects,options.cooperative!==false,options.holdingOccupiedForProof!==false,[...immovableIds].sort(),[...closingDockPairs].sort(([a],[b])=>a.localeCompare(b)),[...openingDockPairs].sort(([a],[b])=>a.localeCompare(b)),openingDockPairs.size?openingBusyIds:null,[...finiteExitIds],finiteExitIds.size?[...(options.allowedOverlaps||[])].sort():null,closingDockPairs.size||openingDockPairs.size||finiteExitIds.size?visible.filter(s=>validPoint(current.get(s.id))).map(s=>[s.id,current.get(s.id).x,current.get(s.id).y]):null,[...fixedStale],[...fixedHolding],visible.map(s=>[s.id,s.parentId||'',workZones.get(s.id),footprints.get(s.id)])]);
     const residentGeometry=JSON.stringify([requestedScale,viewport,reservedRects,visible.map(s=>[s.id,s.parentId||null,footprints.get(s.id)])]);
     const targetSignature=seats=>JSON.stringify([...seats].map(([id,p])=>[id,p.x,p.y,p.workZone||p.zone,p.area,p.holdingPoint,p.targetUniformScale]).sort((a,b)=>a[0].localeCompare(b[0])));
     const ratio=(clearance,extent)=>extent>0?clearance/extent:clearance>=0?Infinity:-Infinity;
@@ -486,7 +502,7 @@
     let proofTrials=0;const PROOF_BUDGET=16;
     const transitionPositions=options.transitionPositions instanceof Map?options.transitionPositions:current;
     const samePoint=(a,b)=>a&&b&&Math.abs(a.x-b.x)<.001&&Math.abs(a.y-b.y)<.001;
-    const seatArea=(p,zone,id)=>zoneArea(p,zone)||(spillMode?ALL_AREAS.find(a=>inArea(p,a)):null)||(samePoint(p,fixedHolding.get(id))?{id:'held-clone-anchor',labelZh:'分身归位锚点',labelEn:'Clone return anchor'}:samePoint(p,fixedStale.get(id))?{id:'last-observed-position',labelZh:'最后观察位置',labelEn:'Last observed position'}:null);
+    const seatArea=(p,zone,id)=>zoneArea(p,zone)||(spillMode?ALL_AREAS.find(a=>inArea(p,a)):null)||(fullFloorMode&&inArea(p,FULL_FLOOR)?FULL_FLOOR:null)||(samePoint(p,fixedHolding.get(id))?{id:'held-clone-anchor',labelZh:'分身归位锚点',labelEn:'Clone return anchor'}:samePoint(p,fixedStale.get(id))?{id:'last-observed-position',labelZh:'最后观察位置',labelEn:'Last observed position'}:null);
     function deferEntrance(candidate,scale){
       const blockedByIds=[...fixedStale].filter(([id,p])=>validPoint(actualPositions.get(id))&&Scene.actorsOverlap(p,{uniformScale:scale,footprint:footprints.get(id)},ENTRY_POINT,{uniformScale:scale,footprint:envelope},gapForScale(scale))).map(([id])=>id);
       // This is a real occupied portal, not a general escape hatch for failed
@@ -516,16 +532,37 @@
       const pocket=pocketOrder.find(p=>legalPoint(p,{uniformScale:scale,footprint:envelope,reservedRects,viewport})&&!Scene.boundsOverlap(Scene.actorBounds(p,{uniformScale:scale,footprint:envelope}),entrance,gap+1)&&!visible.some(s=>{const old=fixedPositions.get(s.id)||previous.get(s.id);return validPoint(old)&&(fixedPositions.has(s.id)||zoneArea(old,workZones.get(s.id)))&&Scene.boundsOverlap(Scene.actorBounds(old,{uniformScale:scale,footprint:footprints.get(s.id)}),Scene.actorBounds(p,{uniformScale:scale,footprint:envelope}),gap+1);}))||(realCastOnly?ENTRY_POINT:null);
       if(!pocket)return null;
       if(!realCastOnly&&!passThroughMode&&(!fixedScale||visible.length!==1))occupied.push(Scene.actorBounds(pocket,{uniformScale:scale,footprint:envelope}));
-      if(visible.length>12)for(const [from,to]of CORRIDORS){const a=Scene.actorBounds(from,{uniformScale:scale,footprint:envelope}),b=Scene.actorBounds(to,{uniformScale:scale,footprint:envelope});occupied.push({left:Math.min(a.left,b.left),right:Math.max(a.right,b.right),top:Math.min(a.top,b.top),bottom:Math.max(a.bottom,b.bottom)});}
+      if(visible.length>12&&!fullFloorMode)for(const [from,to]of CORRIDORS){const a=Scene.actorBounds(from,{uniformScale:scale,footprint:envelope}),b=Scene.actorBounds(to,{uniformScale:scale,footprint:envelope});occupied.push({left:Math.min(a.left,b.left),right:Math.max(a.right,b.right),top:Math.min(a.top,b.top),bottom:Math.max(a.bottom,b.bottom)});}
       const prove=()=>{const proofSeats=new Map(seats),extra=new Map();if(options.holdingOccupiedForProof===false)extra.set(HOLDING,pocket);else proofSeats.set(HOLDING,pocket);const proofFootprints=new Map(footprints);proofFootprints.set(HOLDING,envelope);return reachability(proofSeats,proofFootprints,scale,envelope,reservedRects,viewport,extra);};
       const safe=(p,s)=>{if((fixedPositions.has(s.id)&&!samePoint(p,fixedPositions.get(s.id)))||!seatArea(p,workZones.get(s.id),s.id)||!legalPoint(p,{uniformScale:scale,footprint:footprints.get(s.id),reservedRects,viewport}))return false;const b=Scene.actorBounds(p,{uniformScale:scale,footprint:footprints.get(s.id)});return(fixedPositions.has(s.id)||fixedScale&&(visible.length===1||realCastOnly)||!Scene.boundsOverlap(b,entrance,gap+1))&&!occupied.some(r=>Scene.boundsOverlap(b,r,gap+1));};
       const remember=(s,p)=>{const a=seatArea(p,workZones.get(s.id),s.id);seats.set(s.id,{x:p.x,y:p.y,zone:workZones.get(s.id),area:a.id,areaLabelZh:a.labelZh,areaLabelEn:a.labelEn,...(fixedStale.has(s.id)?{fixedStale:true}:{}),...(fixedHolding.has(s.id)?{fixedHolding:true}:{})});occupied.push(Scene.actorBounds(p,{uniformScale:scale,footprint:footprints.get(s.id)}));};
+      function floorCandidates(session) {
+        const f=footprints.get(session.id),d=dimensions(scale,f,viewport),anchor=pixel(Scene.ZONES[workZones.get(session.id)]||Scene.ZONES.lobby);
+        if(d.left>d.right||d.top>d.bottom)return [];
+        const xs=new Set(),ys=new Set(),x=value=>xs.add(Math.max(d.left,Math.min(d.right,value))),y=value=>ys.add(Math.max(d.top,Math.min(d.bottom,value)));
+        x(d.left);x(d.right);x(anchor.x);y(d.top);y(d.bottom);y(anchor.y);
+        const dx=(f.left+f.right)*scale+gap+1,dy=(f.top+f.bottom)*scale+gap+1;
+        for(let value=d.left;value<=d.right+EPS;value+=dx)x(value);
+        for(let value=d.top;value<=d.bottom+EPS;value+=dy)y(value);
+        for(const bounds of occupied){
+          x(bounds.right+gap+1+f.left*scale);x(bounds.left-gap-1-f.right*scale);x(bounds.left+f.left*scale);x(bounds.right-f.right*scale);
+          y(bounds.bottom+gap+1+f.top*scale);y(bounds.top-gap-1-f.bottom*scale);y(bounds.top+f.top*scale);y(bounds.bottom-f.bottom*scale);
+        }
+        // Furniture forbids feet, while the clock reserves the complete visual
+        // envelope. Their edges are useful candidates without a dense pixel scan.
+        for(const r of OBSTACLES){x((r.x1-.81)*W/100);x((r.x2+.81)*W/100);y((r.y1-.81)*H/100);y((r.y2+.81)*H/100);}
+        for(const r of reservedRects){x(r.left-5-f.right*scale);x(r.right+5+f.left*scale);y(r.top-5-f.bottom*scale);y(r.bottom+5+f.top*scale);}
+        const result=[];for(const py of ys)for(const px of xs)result.push(percent({x:px,y:py}));
+        result.sort((a,b)=>variant===1?a.y-b.y||a.x-b.x:variant===2?b.y-a.y||a.x-b.x:variant===3?a.y-b.y||b.x-a.x:
+          Number(!zoneArea(a,workZones.get(session.id)))-Number(!zoneArea(b,workZones.get(session.id)))||Math.hypot(a.x*W/100-anchor.x,a.y*H/100-anchor.y)-Math.hypot(b.x*W/100-anchor.x,b.y*H/100-anchor.y)||a.y-b.y||a.x-b.x);
+        return result;
+      }
       for(const s of visible)if(fixedPositions.has(s.id)){const p=fixedPositions.get(s.id);if(!safe(p,s))return null;remember(s,p);}
       if(!reallocate)for(const s of visible)if(!seats.has(s.id)){const p=previous.get(s.id);if(validPoint(p)&&safe(p,s)&&(options.retainStations||(p.workZone||p.zone)===workZones.get(s.id)))remember(s,p);}
       const pending=visible.filter(s=>!seats.has(s.id));
-      pending.sort((a,b)=>(ZONE_AREAS[workZones.get(a.id)].reduce((sum,r)=>sum+(r.x2-r.x1)*(r.y2-r.y1),0)-ZONE_AREAS[workZones.get(b.id)].reduce((sum,r)=>sum+(r.x2-r.x1)*(r.y2-r.y1),0))||a.id.localeCompare(b.id));
+      pending.sort((a,b)=>{if(fullFloorMode){const af=footprints.get(a.id),bf=footprints.get(b.id);return(bf.left+bf.right)*(bf.top+bf.bottom)-(af.left+af.right)*(af.top+af.bottom)||a.id.localeCompare(b.id);}return(ZONE_AREAS[workZones.get(a.id)].reduce((sum,r)=>sum+(r.x2-r.x1)*(r.y2-r.y1),0)-ZONE_AREAS[workZones.get(b.id)].reduce((sum,r)=>sum+(r.x2-r.x1)*(r.y2-r.y1),0))||a.id.localeCompare(b.id);});
       const lists=new Map();
-      for(const s of pending){const zone=workZones.get(s.id);if(!lists.has(zone)){
+      for(const s of pending){const zone=workZones.get(s.id),listKey=fullFloorMode?s.id:zone;if(fullFloorMode)lists.set(listKey,floorCandidates(s));if(!lists.has(listKey)){
         const result=[],seen=new Set(),add=p=>{const k=p.x.toFixed(5)+'/'+p.y.toFixed(5);if(!seen.has(k)){seen.add(k);result.push(p);}};
         if(!cooperative&&visible.length<=6){const preferred=Scene.ZONES[zone];const outer=!Scene.ROOM_LAYOUT&&zone==='library'?{x:Math.max(5.2,(viewport.left+envelope.left*scale)/W*100),y:44.5}:!Scene.ROOM_LAYOUT&&zone==='bench'?{x:Math.min(94.8,(viewport.right-envelope.right*scale)/W*100),y:44.5}:null;if(outer)add(outer);else add({x:preferred.seats[0][0],y:preferred.seats[0][1]});}
         const width=(envelope.left+envelope.right)*scale,height=(envelope.top+envelope.bottom)*scale,xStep=(width+gap+4)*100/W,yStep=(2*(height+gap)+4)*100/H;
@@ -540,8 +577,8 @@
           for(const y of ys)for(const x of xs)addLocal({x,y});
           if(visible.length<=12)for(const y of [y2,(y1+y2)/2])for(const x of [x1,x2,(x1+x2)/2])addLocal({x,y});groups.push(local);
         }
-        if(cooperative){for(let i=0;i<Math.max(...groups.map(g=>g.length));i++)for(const group of groups)if(group[i])add(group[i]);}else for(const group of groups)for(const p of group)add(p);lists.set(zone,result);
-      }let target=null;for(const p of lists.get(zone)){if(!safe(p,s))continue;if(!cooperative&&visible.length<=12&&!(fixedScale&&visible.length===1)){seats.set(s.id,p);const reachable=prove();seats.delete(s.id);if(!reachable)continue;}target=p;break;}if(!target)return null;remember(s,target);}
+        if(cooperative){for(let i=0;i<Math.max(...groups.map(g=>g.length));i++)for(const group of groups)if(group[i])add(group[i]);}else for(const group of groups)for(const p of group)add(p);lists.set(listKey,result);
+      }let target=null;for(const p of lists.get(listKey)){if(!safe(p,s))continue;if(!fullFloorMode&&!cooperative&&visible.length<=12&&!(fixedScale&&visible.length===1)){seats.set(s.id,p);const reachable=prove();seats.delete(s.id);if(!reachable)continue;}target=p;break;}if(!target)return null;remember(s,target);}
       const deferred=deferEntrance({seats,pocket},scale);if(deferred)return realCastOnly?null:deferred;
       if(fixedScale&&visible.length===1){
         // One full-size body needs its own reversible entrance/exit route,
@@ -557,9 +594,17 @@
         // Every segment still uses the unchanged coordinator and full sweep.
         const transition=transitionProof(seats,footprints,scale,reservedRects,[],immovableIds,transitionPositions,options.allowedOverlaps,fixedPositions,true);
         if(!transition)return null;
+        if(fullFloorMode){
+          // Only observed exits own the portal. Requiring every future worker
+          // to finish at that one portal together would invent a docking
+          // collision even though today's complete stations and journeys fit.
+          const paths=new Map();for(const move of transition.moves)if(move.path&&samePoint(move.target,seats.get(move.id)))paths.set(move.id,move.path);
+          return{seats,paths,pocket,holdingPath:[],realCastOnly:true,transition,scheduledProof:{entry:transition}};
+        }
         const exits=finiteExitProof(new Set(seats.keys()),seats,footprints,scale,reservedRects,[],immovableIds,seats);
         if(!exits)return null;
         const paths=new Map();for(const move of transition.moves)if(move.path&&samePoint(move.target,seats.get(move.id)))paths.set(move.id,move.path);
+        for(const move of exits.moves)if(!paths.has(move.id)&&move.path&&samePoint(move.target,ENTRY_POINT))paths.set(move.id,move.path.slice().reverse());
         return{seats,paths,pocket,holdingPath:[],realCastOnly:true,transition,scheduledProof:{entry:transition,exit:exits}};
       }
       if(cooperative){if(proofTrials>=PROOF_BUDGET)return null;proofTrials++;const proof=cooperativeProof(seats,footprints,scale,envelope,reservedRects,pocket,immovableIds);return proof?proveTransition({seats,paths:proof.paths,pocket,holdingPath:proof.holdingPath,coordinated:proof},scale):null;}
@@ -638,17 +683,17 @@
 
     if(!visible.length)chosen={seats:new Map(),paths:new Map(),pocket:HOLDING_CANDIDATES[0],holdingPath:route(ENTRY_POINT,HOLDING_CANDIDATES[0],{uniformScale:scale,footprint:envelope,reservedRects})};
     for(let pass=0;!chosen&&pass<(fixedScale?1:48);pass++){
-      for(let variant=0;variant<(visible.length<=12?4:1)&&!chosen;variant++)chosen=place(scale,variant);
+      for(let variant=0;variant<(visible.length<=12||fullFloorMode?4:1)&&!chosen;variant++)chosen=place(scale,variant,false,false,fullFloorMode);
       if(!chosen&&!fixedScale){upper=scale;scale*=.82;}
     }
-    if(!chosen&&fixedScale&&!options.retainStations&&previous.size&&visible.length>1&&visible.length<=12&&!openingBusyIds.length&&[...immovableIds].every(id=>fixedPositions.has(id))){
+    if(!chosen&&fixedScale&&!options.retainStations&&previous.size&&visible.length>1&&(visible.length<=12||fullFloorMode)&&!openingBusyIds.length&&[...immovableIds].every(id=>fixedPositions.has(id))){
       // An unchanged resident's old seat is a preference, not a permanent
       // obstacle. Before deferring new work, retry bounded fresh assignments
       // for ordinary stations once finite owners release their routes.
       // Physical stale/held anchors remain fixed, and
       // every reassignment still needs complete access and actual transitions.
       if(options.cooperative!==false&&Traffic?.createCoordinator)for(let variant=0;variant<4&&!chosen&&proofTrials<PROOF_BUDGET;variant++)chosen=place(scale,variant,true,true);
-      for(let variant=0;variant<4&&!chosen;variant++)chosen=place(scale,variant,false,true);
+      for(let variant=0;variant<4&&!chosen;variant++)chosen=place(scale,variant,false,true,fullFloorMode);
     }
     if(!chosen&&fixedScale&&options.retainStations&&cached?.residentGeometry===residentGeometry&&cached.targets===targetSignature(previous)&&['cooperative','stationary','scheduled'].includes(cached.page.proofMode)&&Math.abs(cached.page.uniformScale-requestedScale)<EPS&&!returningDocks.length&&!openingDocks.length&&!finiteExitIds.size&&visible.every(s=>validPoint(transitionPositions.get(s.id)))){
       // A finite split or return can temporarily forbid a resident from
@@ -685,7 +730,7 @@
     const rootIdsBySession=new Map();for(const s of visible){const chain=[],seen=new Set();let p=s;while(p?.parentId&&unique.has(p.parentId)&&!seen.has(p.id)){seen.add(p.id);chain.push(p.id);p=unique.get(p.parentId);}const id=p&&seen.has(p.id)?[...chain,p.id].sort()[0]:p?.id||s.id;rootIdsBySession.set(s.id,id);}
     const seats=new Map(visible.map(s=>[s.id,{...chosen.seats.get(s.id),workZone:workZones.get(s.id),helper:Boolean(s.parentId),depth:1,uniformScale:scale,targetUniformScale:scale,requestedScale,holdingPoint:chosen.pocket,layoutMode:'walking'}]));
     Object.defineProperties(seats,{fits:{value:true},unplacedIds:{value:[]}});
-    const page={visible,seats,roots:visible.filter(s=>rootIdsBySession.get(s.id)===s.id),rootIdsBySession,requestedScale,uniformScale:scale,layoutMode:'walking',gap:gapForScale(scale),stageRect:null,page:0,pages:1,capacity:visible.length,helperCapacity:visible.filter(s=>s.parentId).length,hidden:0,helperOverflow:0,layoutFits:true,pathsById:chosen.paths,envelope,holdingPoints:chosen.singleBody||chosen.realCastOnly?[]:[chosen.pocket,...(chosen.yieldPoints||[])],holdingPaths:chosen.singleBody||chosen.realCastOnly?[]:[chosen.holdingPath],corridors:CORRIDORS,readability:{canvasPixels:154*scale,paintedHeadPixels:55*scale,paintedSpanPixels:75*scale,nameplatePixels:220*scale,recommendedMinimumScale:.35,needsMoreSpace:scale<.35,expansionFactor:Math.max(1,.35/scale)},venue:['workshop','teahouse','observatory'].includes(options.venue)?options.venue:'workshop',fitReason:scale<requestedScale-EPS?(scale<.18?'dense-furniture-side-fit':'reachable-furniture-side-fit'):'requested-size',cachedProof:false,proofMode:chosen.realCastOnly?'scheduled':chosen.coordinated?'cooperative':'stationary',proofTrials,coordinatedProof:chosen.coordinated||null,transitionProof:chosen.transition||null,scheduledProof:chosen.scheduledProof||null,transferCertificate:chosen.transferCertificate||null,transferProofAttempts:transferBudget.plans,transferDrainCalls:transferBudget.drainCalls};
+    const page={visible,seats,roots:visible.filter(s=>rootIdsBySession.get(s.id)===s.id),rootIdsBySession,requestedScale,uniformScale:scale,layoutMode:'walking',gap:gapForScale(scale),stageRect:null,page:0,pages:1,capacity:visible.length,helperCapacity:visible.filter(s=>s.parentId).length,hidden:0,helperOverflow:0,layoutFits:true,pathsById:chosen.paths,envelope,holdingPoints:chosen.singleBody||chosen.realCastOnly?[]:[chosen.pocket,...(chosen.yieldPoints||[])],holdingPaths:chosen.singleBody||chosen.realCastOnly?[]:[chosen.holdingPath],corridors:CORRIDORS,readability:{canvasPixels:154*scale,paintedHeadPixels:55*scale,paintedSpanPixels:75*scale,nameplatePixels:264*scale,recommendedMinimumScale:.35,needsMoreSpace:scale<.35,expansionFactor:Math.max(1,.35/scale)},venue:['workshop','teahouse','observatory'].includes(options.venue)?options.venue:'workshop',fitReason:scale<requestedScale-EPS?(scale<.18?'dense-furniture-side-fit':'reachable-furniture-side-fit'):'requested-size',cachedProof:false,proofMode:chosen.realCastOnly?'scheduled':chosen.coordinated?'cooperative':'stationary',proofTrials,coordinatedProof:chosen.coordinated||null,transitionProof:chosen.transition||null,scheduledProof:chosen.scheduledProof||null,transferCertificate:chosen.transferCertificate||null,transferProofAttempts:transferBudget.plans,transferDrainCalls:transferBudget.drainCalls};
     if(chosen.deferredEntrance){page.proofMode='deferred-entrance';page.fitReason='waiting-for-entrance';page.blockedByIds=chosen.deferredEntrance;page.transitionDeferred=true;page.holdingPaths=[];}
     page.targetUniformScale=scale;rememberProof(seats,{signature,targets:targetSignature(seats),page,residentGeometry:fixedScale?residentGeometry:null});return finishExit(finishOpening(page));
   }
@@ -698,7 +743,7 @@
   }
   function layoutForEntrance(entry) {
     const key=entry.x+':'+entry.y;
-    if(!entranceLayouts.has(key))entranceLayouts.set(key,createLayout(Scene,Traffic,entry));
+    if(!entranceLayouts.has(key))entranceLayouts.set(key,createLayout(Scene,Traffic,entry,footprintDefaults));
     return entranceLayouts.get(key);
   }
   // The saved size is a ceiling. First try the entire real cast at that size;
@@ -748,10 +793,84 @@
     return{...page,requestedScale:requested,overflowIds:[],hidden:0,helperOverflow:0,fitAll:true,
       entryPoint:{...ENTRY_POINT},fitReason:page.uniformScale<requested-EPS?'fit-all-agents':page.fitReason};
   }
+  // The user owns the physical size. Unlike the legacy ceiling fitter this
+  // entry point never retries a smaller scale or admits only part of the cast.
+  function layoutFullSizeWalking(present,options={}) {
+    const unique=new Map((Array.isArray(present)?present:[]).filter(s=>s&&typeof s.id==='string'&&s.id).map(s=>[s.id,s]));
+    const cast=[...unique.values()],requested=Math.max(.65,Math.min(1.35,Number(options.requestedScale)||1));
+    const defaults=footprintDefaults?.()||Scene.ACTOR_FOOTPRINT;
+    const footprints=new Map(cast.map(s=>[s.id,validFootprint(options.footprints?.get(s.id))?options.footprints.get(s.id):s.parentId?defaults.helper:defaults.root]));
+    const failure=cause=>{
+      const error=new RangeError('The full observed cast has no non-overlapping floor arrangement at the chosen fixed size');
+      error.code='FIXED_SIZE_CAPACITY';error.requestedScale=requested;error.actorIds=cast.map(s=>s.id);if(cause)error.cause=cause;return error;
+    };
+    const viewport=options.viewport||Scene.ACTOR_VIEWPORT,reservedRects=options.reservedRects||Scene.CLOCK_RESERVED;
+    const envelope=Object.fromEntries(['left','right','top','bottom'].map(key=>[key,Math.max(...(cast.length?cast.map(s=>footprints.get(s.id)[key]):[defaults.root[key]]))]));
+    // This is only a main's future entrance rendezvous. Actual resident feet,
+    // clone origins and finite return docks remain owned by currentPositions.
+    const d=dimensions(requested,envelope,viewport),entryCandidates=[ENTRY_POINT];
+    if(d.left<=d.right&&d.top<=d.bottom){
+      const source=pixel(ENTRY_POINT);
+      entryCandidates.push(percent({x:Math.max(d.left,Math.min(d.right,source.x)),y:Math.max(d.top,Math.min(d.bottom,source.y))}));
+      for(let y=d.top;y<=d.bottom+EPS;y+=18)for(let x=d.left;x<=d.right+EPS;x+=24)entryCandidates.push(percent({x,y}));
+    }
+    const entry=entryCandidates.filter(p=>legalPoint(p,{uniformScale:requested,footprint:envelope,reservedRects,viewport})).sort((a,b)=>Scene.distance(a,ENTRY_POINT)-Scene.distance(b,ENTRY_POINT)||a.y-b.y||a.x-b.x)[0];
+    if(!entry)throw failure();
+    if(Math.abs(entry.x-ENTRY_POINT.x)>EPS||Math.abs(entry.y-ENTRY_POINT.y)>EPS)return layoutForEntrance(entry).layoutFullSizeWalking(cast,options);
+    const strict={...options,footprints,requestedScale:requested,maximumScale:requested,fixedScale:true,passThrough:true,spillZones:true,cooperative:false,allowTransfers:false};
+    let page,cause;
+    for(const fullFloor of [false,true]){
+      try{
+        const candidate=layoutWalking(cast,{...strict,fullFloor,fitRealCast:fullFloor});
+        if(Math.abs(candidate.uniformScale-requested)>EPS||Math.abs((candidate.targetUniformScale||candidate.uniformScale)-requested)>EPS)throw failure();
+        page=candidate;break;
+      }catch(error){if(!(error instanceof RangeError))throw error;cause=error;}
+    }
+    if(!page)throw failure(cause);
+    return{...page,requestedScale:requested,uniformScale:requested,targetUniformScale:requested,fixedScale:true,fitAll:true,fullSize:true,
+      entryPoint:{...ENTRY_POINT},overflowIds:[],hidden:0,helperOverflow:0,fitReason:page.transitionDeferred?page.fitReason:'fixed-user-size'};
+  }
   // Keep every real resident in the geometry problem. New observations wait
   // outside when the selected size cannot safely fit them; no fact is dropped
   // from the caller's source/roster and no smaller proof is adopted.
   function layoutFixedWalking(present,options={}) {
+    if(options.fullSize===true){
+      const unique=new Map((Array.isArray(present)?present:[]).filter(s=>s&&typeof s.id==='string'&&s.id).map(s=>[s.id,s]));
+      const cast=[...unique.values()],previous=options.previousSeats instanceof Map?options.previousSeats:new Map();
+      const residentIds=options.residentIds instanceof Set?options.residentIds:new Set(previous.keys());
+      const admitted=cast.filter(s=>residentIds.has(s.id)),pending=cast.filter(s=>!residentIds.has(s.id));
+      let page;
+      try{page=layoutFullSizeWalking(admitted,options);}
+      catch(error){
+        if(error.code!=='FIXED_SIZE_CAPACITY')throw error;
+        // Hold the last displayed resident geometry when a new manual size
+        // has no proof. No body disappears and no old fit is relabelled as
+        // proof of that new size; the caller can report the pending request.
+        const scale=Number.isFinite(options.previousScale)&&options.previousScale>0?options.previousScale:
+          [...previous.values()].find(p=>Number.isFinite(p.uniformScale))?.uniformScale||Math.max(.65,Math.min(1.35,Number(options.requestedScale)||1));
+        const current=options.currentPositions instanceof Map?options.currentPositions:new Map();
+        const held=new Map(admitted.map(s=>{
+          const old=previous.get(s.id),actual=current.get(s.id),point=validPoint(old)?old:validPoint(actual)?actual:ENTRY_POINT;
+          return[s.id,{...point,zone:old?.zone||Scene.activitySpec(s).zone,workZone:old?.workZone||old?.zone||Scene.activitySpec(s).zone,
+            helper:Boolean(s.parentId),uniformScale:scale,targetUniformScale:scale,requestedScale:Number(options.requestedScale)||1,layoutMode:'walking'}];
+        }));
+        Object.defineProperties(held,{fits:{value:false},unplacedIds:{value:pending.map(s=>s.id)}});
+        const empty=layoutFullSizeWalking([],options);
+        return{...empty,visible:admitted,seats:held,uniformScale:scale,targetUniformScale:scale,roots:admitted.filter(s=>!s.parentId),capacity:admitted.length,
+          helperCapacity:admitted.filter(s=>s.parentId).length,layoutFits:false,layoutDeferred:true,pendingScale:Number(options.requestedScale)||1,
+          overflowIds:pending.map(s=>s.id),hidden:pending.length,helperOverflow:pending.filter(s=>s.parentId).length,
+          pathsById:new Map(),holdingPoints:[],holdingPaths:[],transitionProof:null,scheduledProof:null,proofMode:'retained-residents',fitReason:'fixed-size-residents-held'};
+      }
+      const depth=session=>{const seen=new Set();let at=session,count=0;while(at?.parentId&&!seen.has(at.id)){seen.add(at.id);count++;at=unique.get(at.parentId);}return count;};
+      for(const session of pending.sort((a,b)=>depth(a)-depth(b)||a.id.localeCompare(b.id))){
+        if(session.parentId&&unique.has(session.parentId)&&!admitted.some(s=>s.id===session.parentId))continue;
+        try{page=layoutFullSizeWalking(admitted.concat(session),{...options,previousSeats:page.seats,retainStations:true});admitted.push(session);}
+        catch(error){if(error.code!=='FIXED_SIZE_CAPACITY')throw error;}
+      }
+      const admittedIds=new Set(admitted.map(s=>s.id)),overflowIds=cast.filter(s=>!admittedIds.has(s.id)).map(s=>s.id);
+      return{...page,visible:admitted,overflowIds,hidden:overflowIds.length,helperOverflow:cast.filter(s=>overflowIds.includes(s.id)&&s.parentId).length,
+        fitReason:overflowIds.length?'waiting-for-fixed-size-floor':page.fitReason};
+    }
     // The legacy portal is sized for a 100% whole envelope. Larger manual
     // sizes use the room's existing doorway approach, with every proof bound
     // to that same anchor through an isolated geometry instance.
@@ -796,7 +915,7 @@
       fixedScale:true,entryPoint:{...ENTRY_POINT},fitReason:overflowIds.length?'waiting-for-floor-space':page.fitReason};
   }
   const sceneLayouts=new WeakMap();
-  function forScene(scene){if(scene===Scene)return api;if(!sceneLayouts.has(scene))sceneLayouts.set(scene,createLayout(scene,Traffic));return sceneLayouts.get(scene);}
-  const api=Object.freeze({layoutWalking,layoutAllWalking,layoutFixedWalking,forScene,gapForScale,legalPoint,route,ENTRY_POINT,OBSTACLES,ZONE_AREAS,ZONE_ANCHORS,HOLDING_CANDIDATES,CORRIDORS});
+  function forScene(scene){if(scene===Scene)return api;if(!sceneLayouts.has(scene))sceneLayouts.set(scene,createLayout(scene,Traffic,undefined,footprintDefaults));return sceneLayouts.get(scene);}
+  const api=Object.freeze({layoutWalking,layoutAllWalking,layoutFullSizeWalking,layoutFixedWalking,forScene,gapForScale:defaultGapForScale,legalPoint,route,ENTRY_POINT,OBSTACLES,ZONE_AREAS,ZONE_ANCHORS,HOLDING_CANDIDATES,CORRIDORS});
   return api;
 });

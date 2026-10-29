@@ -24,7 +24,7 @@ function fixture({documentHidden=false,actualQuietClones=false}={}){
   const session={id:'codex:visibility-real-identity',provider:'codex',status:'active',activity:'coding',turnId:'observed-one',parentId:'codex:observed-parent',lastEventAt:1700000000000};
   const animation={currentTime:5176,playState:'running'},node={dataset:{},style:{removeProperty(key){delete this[key];},opacity:'1',visibility:'visible',transform:'matrix(1,0,0,1,384,496.8)'},clock:animation};
   const actor={id:session.id,session,node,serial:19,cloneEffects:new Set(),delays:new Set(),bubble:{dataset:{}},position:{x:30,y:69},target:{x:30,y:69,zone:'desk'},wantedAsset:'clawd-static-base.svg',spec:{asset:'clawd-working-typing.svg'},performance:{clock:animation}};
-  const actors=new Map([[actor.id,actor]]),context={numberFlip:null,document,office,actors,settings:{},language:'zh',calls,Scene,Clones,
+  const actors=new Map([[actor.id,actor]]),context={numberFlip:null,appearancePicker:null,document,office,actors,settings:{},language:'zh',calls,Scene,Clones,
     trafficWaiters:new Map(),traffic:{cancel(){}},currentPosition:row=>({...row.position}),cloneBusy:row=>['splitting','returning','absorbing'].includes(row.clonePhase),endpointParent:()=>null,
     clonePhase:(row,phase)=>{row.clonePhase=phase;row.node.dataset.clonePhase=phase;},
     getComputedStyle:node=>({opacity:node.style.opacity,transform:node.style.transform}),clearTimeout(){},queueTraffic(){},needsOpeningRefresh:()=>false,queueLayoutRefresh(){},

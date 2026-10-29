@@ -1,0 +1,11 @@
+/* Five material repertoires. The visible observation selects the state;
+   WAAPI animates only transform/opacity on bounded, anchored SVG pieces. */
+.cp-activity{fill:var(--ca-base);stroke:var(--ca-edge);stroke-width:.8;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+.cp-activity .cv-presence,.cp-activity .cv-response,.cp-activity [data-motion]{transform-box:fill-box;transform-origin:center center}
+.cp-activity .cv-outgoing{pointer-events:none}
+.cp-activity .cv-detail{fill:none;stroke:var(--ca-edge);stroke-width:.55;opacity:.72}
+.cp-activity .cv-shine{fill:none;stroke:var(--ca-light);stroke-width:.8;opacity:.7}
+.cp-activity .cv-board{fill:var(--ca-base)}
+/* JavaScript cancels WAAPI when this preference changes; the retained first
+   keyframes are a legible still tableau, including request and fault props. */
+@media(prefers-reduced-motion:reduce){.cp-activity *{animation:none!important;transition:none!important}}

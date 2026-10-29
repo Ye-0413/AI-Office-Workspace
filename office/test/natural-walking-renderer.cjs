@@ -5,7 +5,9 @@ const assert = require('node:assert/strict'), fs = require('node:fs'), os = requ
 const { installAudit } = require('./support/walking-native-audit.cjs');
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'office-natural-walk-'));
 app.setPath('userData', profile); app.disableHardwareAcceleration();
-let win, settings = { language: 'zh', agentScale: 1, reducedMotion: false, lowPower: false, idleVisitor: false, sceneTheme: 'spring', sceneWeather: 'off' };
+// This fixture isolates the internal articulated foot Animation objects;
+// the public picker always offers painted creatures, covered separately.
+let win, settings = { language: 'zh', agentAppearance: 'mixed', agentScale: 1, reducedMotion: false, lowPower: false, idleVisitor: false, sceneTheme: 'spring', sceneWeather: 'off' };
 let snapshot = { mode: 'live', now: Date.now(), connections: [], sessions: [] };
 const checks = [], errors = [], traces = [], wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 const task = (id, activity, parentId) => ({ id: 'codex:natural-' + id, provider: 'codex', sessionId: 'natural-' + id, parentId, status: 'active', activity, activeTools: 1, lastEventAt: Date.now(), events: [], projectPath: '/fixture/natural-walk' });
@@ -39,11 +41,35 @@ function captureWalk(id) {
   });
 }
 const median = values => values.slice().sort((a, b) => a - b)[Math.floor(values.length / 2)];
+// Solve the actual native keyframe curve independently of WalkTiming. This
+// proves the sampled compositor uses its advertised curve and that a short
+// segment still stops at a corner, even when +/-60ms includes its next sprint.
+function nativeCurve(easing) {
+  if (easing === 'linear') return { at: u => u, startSlope: 1, endSlope: 1 };
+  const match = /^cubic-bezier\(([^)]+)\)$/.exec(easing);
+  assert.ok(match, 'physical native easing is an inspectable cubic');
+  const [x1, y1, x2, y2] = match[1].split(',').map(Number);
+  const cubic = (t, a, b) => 3 * (1 - t) ** 2 * t * a + 3 * (1 - t) * t * t * b + t ** 3;
+  return { startSlope: y1 / x1, endSlope: (1 - y2) / (1 - x2), at(u) {
+    let low = 0, high = 1;
+    for (let i = 0; i < 40; i++) { const t = (low + high) / 2; if (cubic(t, x1, x2) < u) low = t; else high = t; }
+    return cubic((low + high) / 2, y1, y2);
+  } };
+}
+
 function assess(trace, label, distanceGait) {
   assert.equal(trace.identity, true, 'one original body, rig, image, body motion and gait loop must survive');
   assert.ok(trace.rows.length >= 31);
   assert.ok(new Set(trace.rows.map(r => r.x.toFixed(2) + '/' + r.y.toFixed(2))).size >= 31);
   const legs = trace.keys.slice(1).map((b, i) => ({ a: trace.keys[i], b, from: trace.keys[i].offset * trace.duration, to: b.offset * trace.duration }));
+  const curves = trace.keys.map(key => nativeCurve(key.easing));
+  let maximumCurveError = 0;
+  for (const row of trace.rows) {
+    const leg = legs.find(leg => leg.to > leg.from && row.t <= leg.to) || legs.findLast(leg => leg.to > leg.from);
+    const index = legs.indexOf(leg), u = Math.max(0, Math.min(1, (row.t - leg.from) / (leg.to - leg.from))), progress = curves[index].at(u);
+    maximumCurveError = Math.max(maximumCurveError, Math.hypot(row.x - leg.a.x - (leg.b.x - leg.a.x) * progress, row.y - leg.a.y - (leg.b.y - leg.a.y) * progress));
+  }
+  assert.ok(maximumCurveError < .08, 'every actual compositor sample follows its native physical time law: ' + maximumCurveError);
   const speeds = trace.rows.slice(1).flatMap((b, i) => { const a = trace.rows[i], dt = b.t - a.t; return dt > 4 ? [{ t: (a.t + b.t) / 2, speed: Math.hypot(b.x - a.x, b.y - a.y) / dt * 1000 }] : []; });
   const peak = Math.max(...speeds.map(r => r.speed));
   const start = speeds.filter(r => r.t < Math.min(100, legs[0].to / 6)).map(r => r.speed);
@@ -56,8 +82,14 @@ function assess(trace, label, distanceGait) {
   for (let i = 1; i < trace.keys.length - 1; i++) {
     const a = trace.keys[i - 1], b = trace.keys[i], c = trace.keys[i + 1], ux = b.x - a.x, uy = b.y - a.y, vx = c.x - b.x, vy = c.y - b.y;
     if (!Math.hypot(ux, uy) || !Math.hypot(vx, vy) || Math.abs(ux * vy - uy * vx) < .001 && ux * vx + uy * vy > 0) continue;
-    const t = b.offset * trace.duration, nearby = speeds.filter(r => Math.abs(r.t - t) < 60).map(r => r.speed);
-    assert.ok(nearby.length >= 3 && median(nearby) < peak * .25, 'each original real corner slows before changing direction'); turns.push({ t, medianSpeed: median(nearby) });
+    const before = legs[i - 1], after = legs[i];
+    const incoming = Math.hypot(ux, uy) / (before.to - before.from) * 1000 * curves[i - 1].endSlope;
+    const outgoing = Math.hypot(vx, vy) / (after.to - after.from) * 1000 * curves[i].startSlope;
+    assert.ok(Math.abs(incoming) < .001 && Math.abs(outgoing) < .001, 'each native physical corner has zero incoming and outgoing velocity');
+    const t = b.offset * trace.duration, window = Math.min(60, (before.to - before.from) / 12, (after.to - after.from) / 12);
+    const nearby = speeds.filter(r => Math.abs(r.t - t) < window).map(r => r.speed);
+    assert.ok(nearby.length >= 3 && median(nearby) < peak * .25, 'each original real corner slows before changing direction: ' + JSON.stringify({ t, window, nearby, peak }));
+    turns.push({ t, window, medianSpeed: median(nearby), incomingSpeed: incoming, outgoingSpeed: outgoing });
   }
   if (distanceGait) {
     assert.equal(trace.loopObserved, true, 'actual entity walking uses the original four-foot rig');
@@ -68,18 +100,24 @@ function assess(trace, label, distanceGait) {
     }
     assert.ok(ratios.length >= 31);
     assert.ok(Math.abs(median(ratios) - 600 / 192) < .08, 'same-instance foot phase follows actual path distance rather than an unrelated fixed clock');
-    checks.push({ label, frames: trace.rows.length, peak, initialSpeed: median(start), finalSpeed: median(end), turns, gaitMsPerWorldPixel: median(ratios), distance });
-  } else checks.push({ label, frames: trace.rows.length, peak, initialSpeed: median(start), finalSpeed: median(end), turns });
+    checks.push({ label, frames: trace.rows.length, peak, initialSpeed: median(start), finalSpeed: median(end), turns, maximumCurveError, gaitMsPerWorldPixel: median(ratios), distance });
+  } else checks.push({ label, frames: trace.rows.length, peak, initialSpeed: median(start), finalSpeed: median(end), turns, maximumCurveError });
 }
 const guard = setTimeout(() => { console.error('Natural walk fixture timed out'); app.exit(1); }, 180000);
 app.whenReady().then(async () => {
   for (const [name, handler] of Object.entries({ snapshot: () => snapshot, settings: () => settings, 'set-settings': patch => (settings = { ...settings, ...patch }), displays: () => [] })) ipcMain.handle('office:' + name, (_, ...args) => handler(...args));
   ipcMain.on('office:renderer-error', (_, error) => errors.push(error));
-  win = new BrowserWindow({ width: 1280, height: 720, useContentSize: true, show: true, focusable: false, webPreferences: { preload: path.join(__dirname, '../preload.cjs'), sandbox: true, contextIsolation: true, nodeIntegration: false, backgroundThrottling: false } });
+  win = new BrowserWindow({ width: 1280, height: 720, useContentSize: true, enableLargerThanScreen: true, show: true, focusable: false, webPreferences: { preload: path.join(__dirname, '../preload.cjs'), sandbox: true, contextIsolation: true, nodeIntegration: false, backgroundThrottling: false } });
   win.webContents.on('console-message', details => { if (details.level === 'error') errors.push(details.message); });
   win.webContents.on('render-process-gone', (_, details) => errors.push('renderer gone: ' + details.reason));
+  // Intercept only the model export in this isolated fixture, before app.js
+  // constructs its registry. Public code exposes no legacy-body preference.
+  await bounded(win.loadURL('about:blank'), 'initial renderer target');
+  win.webContents.debugger.attach('1.3');
+  await bounded(win.webContents.debugger.sendCommand('Page.enable'), 'internal rig page target');
+  await bounded(win.webContents.debugger.sendCommand('Page.addScriptToEvaluateOnNewDocument', { source: `(()=>{Object.defineProperty(window,'OfficePublicArtwork',{configurable:true,get:()=>undefined,set:()=>{}});let model;Object.defineProperty(window,'OfficeAgentAppearance',{configurable:true,get:()=>model,set:value=>{model={...value,createAllocator:()=>null,forSession:()=>null};}});})()` }), 'internal rig fixture hook');
   await bounded(win.loadFile(path.join(__dirname, '../renderer/index.html')), 'production page');
-  win.webContents.debugger.attach('1.3'); await bounded(win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] }), 'ordinary motion');
+  await bounded(win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] }), 'ordinary motion');
   await run('(' + installAudit.toString() + ')()');
   let main = task('main', 'reading');
   await run(`crowdAudit.begin('actual natural door entry',${JSON.stringify([main.id])},[])`); send([main]);

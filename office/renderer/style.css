@@ -251,29 +251,29 @@
 
 /* Spend the transparent crop margin on the character, around its real feet.
    The existing paper width already reserves every enlarged work object. */
-.actor .character-body{--avatar-presentation-scale:1.5;overflow:visible}
+.actor .character-body{--avatar-presentation-scale:1.8;overflow:visible}
 .character-body>img{transform:scale(var(--avatar-presentation-scale,1));transform-origin:calc(77.5px + 154px * .22580646) calc(115px + 129px * .65384616)}
 .character-body>img[data-asset="clawd-static-base.svg"]{width:75px;height:80px;left:40px;top:40px;transform-origin:37.5px 75px}
 /* Scale the held note about the same floor point as its walking wrist. */
-.actor[data-locomotion="true"] .actor-prop[data-carry="true"]{left:78.25px;top:-45.25px;transform:translate3d(-28.5px,0,0) scale(1.5) rotate(8deg)}
+.actor[data-locomotion="true"] .actor-prop[data-carry="true"]{left:78.25px;top:-45.25px;transform:translate3d(-28.5px,0,0) scale(1.8) rotate(8deg)}
 
 /* One bounded paper label: identifiers never compete with the family token. */
 .office[data-flat="true"] .actor .nameplate,
-.office[data-flat="true"] .actor[data-helper="true"] .nameplate{display:grid;grid-template-columns:minmax(0,1fr) max-content 21px;grid-template-rows:25px 15px 14px;column-gap:4px;row-gap:2px;align-items:center;align-content:center;padding:0 8px 1px;top:139px;width:220px;min-width:220px;max-width:220px;height:63px}
+.office[data-flat="true"] .actor[data-helper="true"] .nameplate{display:grid;grid-template-columns:minmax(0,1fr) max-content 25px;grid-template-rows:30px 18px 17px;column-gap:5px;row-gap:3px;align-items:center;align-content:center;padding:0 10px 1px;top:139px;width:264px;min-width:264px;max-width:264px;height:76px}
 .office[data-flat="true"] .actor .actor-title,
-.office[data-flat="true"] .actor[data-helper="true"] .actor-title{grid-column:1;grid-row:1;display:block;min-width:0;width:100%;max-width:none;font-size:24px;line-height:25px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.office[data-flat="true"] .actor .actor-relation{grid-column:1/-1;grid-row:2;min-width:0;width:100%;max-width:none;font-size:13px;line-height:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.office[data-flat="true"] .actor[data-helper="true"] .actor-title{grid-column:1;grid-row:1;display:block;min-width:0;width:100%;max-width:none;font-size:29px;line-height:30px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.office[data-flat="true"] .actor .actor-relation{grid-column:1/-1;grid-row:2;min-width:0;width:100%;max-width:none;font-size:16px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .office[data-flat="true"] .actor .actor-subline,
-.office[data-flat="true"] .actor[data-helper="true"] .actor-subline{grid-column:1/-1;grid-row:3;display:flex;min-width:0;width:100%;max-width:none;justify-content:center;font-size:12px;line-height:14px}
-.office[data-flat="true"] .actor .actor-provider{font-size:12px}
+.office[data-flat="true"] .actor[data-helper="true"] .actor-subline{grid-column:1/-1;grid-row:3;display:flex;min-width:0;width:100%;max-width:none;justify-content:center;font-size:14px;line-height:17px}
+.office[data-flat="true"] .actor .actor-provider{font-size:14px}
 .office[data-flat="true"] .actor .family-badge{position:static;grid-column:2;grid-row:1;align-self:center;justify-self:end}
-.office[data-flat="true"] .actor .actor-keepsake{position:relative;right:auto;top:auto;grid-column:3;grid-row:1;align-self:center;justify-self:center}
+.office[data-flat="true"] .actor .actor-keepsake{position:relative;right:auto;top:auto;grid-column:3;grid-row:1;align-self:center;justify-self:center;width:25px;height:25px;font-size:16px}
 /* Density is an observed cast fact, never a response to the solved scale. */
 .office[data-flat="true"][data-nameplate-mode="compact"] .actor .nameplate,
-.office[data-flat="true"][data-nameplate-mode="compact"] .actor[data-helper="true"] .nameplate{grid-template-rows:30px 18px;row-gap:3px}
+.office[data-flat="true"][data-nameplate-mode="compact"] .actor[data-helper="true"] .nameplate{grid-template-rows:36px 22px;row-gap:4px}
 .office[data-flat="true"][data-nameplate-mode="compact"] .actor .actor-title,
-.office[data-flat="true"][data-nameplate-mode="compact"] .actor[data-helper="true"] .actor-title{font-size:26px;line-height:30px}
-.office[data-flat="true"][data-nameplate-mode="compact"] .actor .actor-relation{font-size:14px;line-height:18px}
+.office[data-flat="true"][data-nameplate-mode="compact"] .actor[data-helper="true"] .actor-title{font-size:31px;line-height:36px}
+.office[data-flat="true"][data-nameplate-mode="compact"] .actor .actor-relation{font-size:17px;line-height:22px}
 .office[data-flat="true"][data-nameplate-mode="compact"] .actor .actor-subline,
 .office[data-flat="true"][data-nameplate-mode="compact"] .actor[data-helper="true"] .actor-subline{display:none}
 
@@ -291,3 +291,21 @@
 @media(prefers-reduced-motion:reduce){.actor .actor-bubble{scale:1;translate:0 0}.actor .actor-mark{animation:none}}
 /* Clones are compact companions: body and plate shrink together around the feet. */
 .actor[data-helper="true"] .actor-button{scale:.82;transform-origin:88px 129px}
+
+/* Finding a real observed identity stays immediate, including by keyboard. */
+.roster-toolbar{display:flex;align-items:center;gap:10px}
+.roster-toolbar .provider-search{margin:0;min-width:0;flex:1;min-height:38px}
+.roster-toolbar .button{min-height:38px;white-space:nowrap}
+.roster-toolbar .button[aria-pressed="true"]{background:#d9dfc4;border-color:#7e8b62;color:#46563b;box-shadow:inset 0 0 0 1px #7e8b6244}
+.roster-result-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:37px;color:#806a49;font-size:11px}
+#roster-reset{padding:5px 0;border:0;border-bottom:1px solid #a58c64;background:transparent;color:#6d5635;font-size:11px}
+.roster-empty{padding:26px 15px;margin:4px 0 12px;border:1px dashed #bfa77e;border-radius:7px;color:#806a49;text-align:center;line-height:1.6}
+.roster-keyboard-hint{font-size:10px;color:#8b7657;line-height:1.6;margin:12px 0 0}
+.roster-row{flex-shrink:0;scroll-margin-block:7px}
+.roster-row[data-selected="true"]{background:#e3e6ce;border-color:#819163;box-shadow:inset 0 0 0 1px #81916344}
+.roster-dialog :is(button,input):focus-visible,.inspector:focus-visible,.inspector button:focus-visible{outline:3px solid #80643a;outline-offset:3px}
+.roster-list{padding:4px;overscroll-behavior:contain;scrollbar-gutter:stable}
+.close-inspector{width:32px;height:32px;top:5px;right:5px}
+.actor[data-selected="true"] .actor-arrival{opacity:1;border-color:#ffe3a3;border-width:2px;box-shadow:0 0 0 3px #f6d38d26}
+@media(hover:hover) and (pointer:fine){.roster-row:hover{background:#f5e3be;border-top-color:#b39763;border-right-color:#b39763;border-bottom-color:#b39763}.roster-row[data-selected="true"]:hover{background:#d9e0c1}}
+@media(max-width:800px){.roster-toolbar{gap:7px}.roster-toolbar .button{font-size:11px;padding:7px}.roster-list{max-height:45vh}.roster-keyboard-hint{font-size:9px}}

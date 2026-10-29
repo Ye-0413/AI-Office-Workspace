@@ -6,6 +6,9 @@ function fn(name){const start=source.search(new RegExp('  (?:async )?function '+
 function harness(language,patch={},oldPhrase='修改代码'){
  const motion={currentTime:331.5},props={marker:'same props'},node={dataset:{},style:{setProperty(){},removeProperty(){}}},actor={id:'codex:body',session:{id:'codex:body',provider:'codex',status:'active',activity:'coding'},spec:Scene.activitySpec({activity:'coding',status:'active'}),node,button:{setAttribute(){}},title:{},relation:{},provider:{dataset:{}},state:{textContent:I18n.translate(language==='en'?'zh':'en',oldPhrase)},serial:4,performance:{motion,props},motion:null,yielding:false,completing:false,...patch};let posed=0;
  const context={language,I18n,Scene,Director,office:{dataset:{nameplateMode:'full'}},actors:new Map([[actor.id,actor]]),selectedSession:'',familyGraph:{info:new Map(),byId:new Map()},cloneLedger:{rootFor:id=>id,stats:()=>({active:0,total:0})},paletteRegistry:{forRoot:()=>({color:'#abc'})},trafficWaiters:new Map(),cloneBusy:a=>['splitting','returning','absorbing'].includes(a.clonePhase),displayName:()=>language==='en'?'Cloud Runner':'踏云',cloneSummary:()=>language==='en'?'Main agent':'主Agent',transitCaption:()=>{},setPose:()=>posed++};
+ // Shape synchronization has native coverage; these isolated fixtures verify
+ // canonical lifecycle captions without rebuilding presentation controllers.
+ context.syncActorDesign=()=>{};
  vm.createContext(context);vm.runInContext("function tr(value){return I18n.translate(language,String(value??''))}function text(node,value){node.textContent=tr(value)}"+fn('completedCloneReturn')+(source.includes('  function lifecycleCaption(')?fn('lifecycleCaption'):'')+fn('nameplateRelation')+fn('updateActorLabel'),context);
  return{actor,context,motion,props,posed:()=>posed,update:()=>context.updateActorLabel(actor)};
 }

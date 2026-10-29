@@ -8,23 +8,23 @@
   'use strict';
 
   const STOPS = Object.freeze([
-    { zone: 'library', point: { x: 19, y: 44 }, prop: 'book', poses: ['clawd-idle-reading.svg', 'clawd-idle-look.svg'] },
-    { zone: 'board', point: { x: 47, y: 43 }, prop: 'note', poses: ['clawd-idle-look.svg', 'clawd-working-thinking.svg'] },
-    { zone: 'bench', point: { x: 81, y: 45 }, prop: 'coffee', poses: ['clawd-coffee-hand.svg', 'clawd-idle-bubble.svg'] },
-    { zone: 'desk', point: { x: 48, y: 72 }, prop: 'note', poses: ['clawd-idle-look.svg', 'clawd-idle-living.svg'] },
-    { zone: 'sofa', point: { x: 16, y: 79 }, prop: 'coffee', poses: ['clawd-coffee-hand.svg', 'clawd-idle-yawn.svg', 'clawd-idle-reading.svg'] },
-    { zone: 'window', point: { x: 7, y: 44 }, prop: 'none', poses: ['clawd-idle-look.svg', 'clawd-idle-bubble.svg'] },
-    { zone: 'plant', point: { x: 30, y: 44 }, prop: 'plant', poses: ['clawd-idle-look.svg', 'clawd-mini-peek.svg'] },
-    { zone: 'door', point: { x: 92.5, y: 82 }, prop: 'none', poses: ['clawd-mini-peek.svg', 'clawd-react-right.svg'] },
-    { zone: 'archive', point: { x: 84, y: 80 }, prop: 'book', poses: ['clawd-working-sweeping.svg', 'clawd-idle-reading.svg'] },
-    { zone: 'front', point: { x: 49, y: 84 }, prop: 'none', poses: ['clawd-idle-living.svg', 'clawd-headphones-groove.svg'] },
+    { zone: 'library', point: { x: 19, y: 44 }, prop: 'book', poses: ['reading', 'looking'] },
+    { zone: 'board', point: { x: 47, y: 43 }, prop: 'note', poses: ['looking', 'planning'] },
+    { zone: 'bench', point: { x: 81, y: 45 }, prop: 'coffee', poses: ['coffee', 'chatting'] },
+    { zone: 'desk', point: { x: 48, y: 72 }, prop: 'note', poses: ['looking', 'resting'] },
+    { zone: 'sofa', point: { x: 16, y: 79 }, prop: 'coffee', poses: ['coffee', 'resting', 'reading'] },
+    { zone: 'window', point: { x: 7, y: 44 }, prop: 'none', poses: ['looking', 'chatting'] },
+    { zone: 'plant', point: { x: 30, y: 44 }, prop: 'plant', poses: ['looking', 'looking'] },
+    { zone: 'door', point: { x: 92.5, y: 82 }, prop: 'none', poses: ['looking', 'greeting'] },
+    { zone: 'archive', point: { x: 84, y: 80 }, prop: 'book', poses: ['tidying', 'reading'] },
+    { zone: 'front', point: { x: 49, y: 84 }, prop: 'none', poses: ['resting', 'dancing'] },
   ].map(stop => Object.freeze({ ...stop, point: Object.freeze(stop.point), poses: Object.freeze(stop.poses) })));
   const EASTER_EGGS = Object.freeze([
-    Object.freeze({ id: 'tiny-magic', pose: 'clawd-working-wizard.svg', prop: 'spark' }),
-    Object.freeze({ id: 'heart-shaped-cloud', pose: 'clawd-heart-eyes.svg', prop: 'heart' }),
-    Object.freeze({ id: 'happy-discovery', pose: 'clawd-happy.svg', prop: 'spark' }),
-    Object.freeze({ id: 'secret-dance', pose: 'clawd-headphones-groove.svg', prop: 'music' }),
-    Object.freeze({ id: 'coffee-trick', pose: 'clawd-coffee-head-flip.svg', prop: 'coffee' }),
+    Object.freeze({ id: 'tiny-magic', pose: 'magic', prop: 'spark' }),
+    Object.freeze({ id: 'heart-shaped-cloud', pose: 'delighted', prop: 'heart' }),
+    Object.freeze({ id: 'happy-discovery', pose: 'delighted', prop: 'spark' }),
+    Object.freeze({ id: 'secret-dance', pose: 'dancing', prop: 'music' }),
+    Object.freeze({ id: 'coffee-trick', pose: 'coffee-trick', prop: 'coffee' }),
   ]);
   const duration = (value, fallback) => Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : fallback;
   const randomUnit = random => {

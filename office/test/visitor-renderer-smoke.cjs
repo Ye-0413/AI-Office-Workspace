@@ -10,7 +10,7 @@ app.setPath('userData', dataDir);
 app.disableHardwareAcceleration();
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 const output = process.env.MINI_OFFICE_VISITOR_STRESS_REPORT || path.resolve(__dirname, '../../../../work/visitor-stress-0.3.0.json');
-const checks = [], errors = [];
+const checks = [], errors = [], requestedArtwork = [];
 let win;
 const evaluate = source => win.webContents.executeJavaScript(source, true);
 async function check(name, fn) { await fn(); checks.push(name); }
@@ -32,8 +32,14 @@ app.whenReady().then(async () => {
     webPreferences: { preload: path.join(__dirname, '..', 'preload.cjs'),
       contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false } });
   win.webContents.on('render-process-gone', (_event, detail) => errors.push(detail.reason));
-  win.webContents.session.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*'] }, (details, done) => {
-    errors.push('Unexpected network: ' + details.url); done({ cancel: true });
+  win.webContents.session.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*', 'file://*/*'] }, (details, done) => {
+    if (/^https?:/.test(details.url)) { errors.push('Unexpected network: ' + details.url); done({ cancel: true }); return; }
+    const pathname = decodeURIComponent(new URL(details.url).pathname);
+    if (pathname.includes('/assets/avatars/')) {
+      const asset = path.basename(pathname); requestedArtwork.push(asset);
+      if (!require('../lib/public-artwork.js').ASSETS.includes(asset)) { errors.push('Unexpected character resource: ' + asset); done({ cancel: true }); return; }
+    }
+    done({});
   });
   await win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html')); await wait(250);
   await evaluate(`window.stressCreate=(random=0)=>{
@@ -48,14 +54,22 @@ app.whenReady().then(async () => {
     window.stress.controller.tick();return true;
   };window.stressRead=()=>{const node=window.stress.layer.querySelector('.visitor');return{exists:!!node,zone:node?.dataset.zone,walking:node?.dataset.walking,pose:node?.querySelector('img').dataset.asset,motion:node?.getAnimations().map(a=>a.playState)||[],transform:node?getComputedStyle(node).transform:null};};void(0)`);
 
-  await check('real fixture and disabled original guest keep decorative tests outside observed sessions', async () => {
+  await check('real fixture and disabled decorative guest keep decorative tests outside observed sessions', async () => {
     assert.equal(await evaluate(`document.querySelectorAll('.actor').length`), 1);
     assert.equal(await evaluate(`document.querySelectorAll('.visitor').length`), 0);
+  });
+  await check('the public adapter keeps missing and rejected designs original without changing observed sessions', async () => {
+    const state = await evaluate(`(()=>{const actor=document.createElement('div'),body=document.createElement('span'),image=document.createElement('img');body.className='character-body';body.append(image);actor.append(body);document.getElementById('world').append(actor);const session={id:'private-presentation-check',parentId:'untouched-parent',provider:'claude-code',activity:'coding',status:'active'},before=JSON.stringify(session);const controller=OfficeAvatarPerformance.create({actorNode:actor,body,image,session});controller.update(session,{reducedMotion:true});const layer=body.querySelector('.creature-performance'),source=body.querySelector('defs image');const first=source.getAttribute('href');controller.setDesign({id:'ink',asset:'clawd-static-base.svg'});const second=source.getAttribute('href');controller.setDesign(null);const restored=source.getAttribute('href'),clip=body.querySelector('clipPath rect');const result={first,second,restored,cell:[clip.getAttribute('width'),clip.getAttribute('height')],sheet:[source.getAttribute('width'),source.getAttribute('height')],same:before===JSON.stringify(session),legacy:!!body.querySelector('.ap-torso'),observed:document.querySelectorAll('.actor[data-session-id]').length};controller.destroy();actor.remove();return result;})()`);
+    assert.equal(state.first, '../assets/avatars/workshop-folio.png'); assert.equal(state.second, '../assets/avatars/workshop-ink.png'); assert.equal(state.restored, state.first);
+    assert.deepEqual(state.cell, ['80','80']); assert.deepEqual(state.sheet, ['240','160']);
+    assert.equal(state.same, true); assert.equal(state.legacy, false); assert.equal(state.observed, 1);
   });
   await check('a visible route starts, pauses while hidden, and work revokes hidden guest without late callbacks', async () => {
     await evaluate(`stressCreate();void(0)`); await wait(120);
     let state = await evaluate(`stressRead()`);
     assert.equal(state.exists, true); assert.equal(state.walking, 'true'); assert.deepEqual(state.motion, ['running']);
+    assert.equal(await evaluate(`!!stress.layer.querySelector('.creature-performance')&&!stress.layer.querySelector('.ap-torso')`), true);
+    assert.match(state.pose, /^workshop-(folio|ink|moss|thread|glow)\.png$/);
     await evaluate(`stress.context.hidden=true;stress.controller.tick();void(0)`); await wait(30);
     state = await evaluate(`stressRead()`); assert.deepEqual(state.motion, ['paused']);
     const transform = state.transform; await wait(160);
@@ -80,7 +94,7 @@ app.whenReady().then(async () => {
     await evaluate(`stress.context.reducedMotion=true;stress.controller.tick();void(0)`); await wait(80);
     let state = await evaluate(`stressRead()`);
     assert.equal(state.exists, true); assert.equal(state.walking, 'false');
-    assert.equal(state.pose, 'clawd-static-base.svg'); assert.deepEqual(state.motion, []);
+    assert.match(state.pose, /^workshop-(folio|ink|moss|thread|glow)\.png$/); assert.deepEqual(state.motion, []);
     await evaluate(`stress.context.reducedMotion=false;stress.controller.tick();stress.context.enabled=false;stress.controller.tick();void(0)`);
     await wait(2600); state = await evaluate(`stressRead()`); assert.equal(state.exists, false);
     await wait(250); assert.equal((await evaluate(`stressRead()`)).exists, false);
@@ -101,7 +115,8 @@ app.whenReady().then(async () => {
   });
   await evaluate(`stress.controller.destroy();void(0)`);
   assert.deepEqual(errors, []);
-  const report = { ok: true, nativeElectron: process.versions.electron, platform: process.platform, checks, rendererErrors: errors };
+  assert.ok(requestedArtwork.length > 0);
+  const report = { ok: true, nativeElectron: process.versions.electron, platform: process.platform, checks, requestedArtwork: [...new Set(requestedArtwork)], rendererErrors: errors };
   fs.mkdirSync(path.dirname(output), { recursive: true }); fs.writeFileSync(output, JSON.stringify(report, null, 2) + '\n');
   console.log(JSON.stringify(report, null, 2)); win.destroy(); app.quit();
 }).catch(error => {

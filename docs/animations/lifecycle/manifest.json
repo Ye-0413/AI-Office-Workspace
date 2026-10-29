@@ -1,16 +1,51 @@
 {
   "version": "0.23.0",
+  "recordedVersion": "0.23.0",
+  "distributionVersion": "0.24.0",
+  "provenance": {
+    "status": "carried-forward",
+    "recording": "Existing 0.23.0 media retained byte-for-byte; no new native recording was made for this distribution.",
+    "scope": "Historical original neutral stand-ins and decorative program demonstrations. These files do not certify the current workshop creature appearance, size, navigation or live-session rendering.",
+    "currentWorkshopRenderingCertified": false,
+    "sourceChanges": [
+      {
+        "file": "office/renderer/avatar-performance.js",
+        "recordedSha256": "28ab066e224016c090961f98b7d44293cc8d2b30c160fb3825fa899ce6da46d9",
+        "currentSha256": "c5bcaf7261b559fbc867fee04e9294ac0bf2155f755dc9eab46d667213ad7c0c",
+        "reason": "The only changes introduce an optional OfficePublicArtwork boundary for the public application. This standalone historical exporter never loads that global, so it still takes the identical legacy-neutral renderer branch. The four unique inverse replacements below reconstruct the exact recorded source bytes.",
+        "executionContext": "Standalone resource-free lifecycle page: AvatarPerformanceModel, WalkTiming, neutral renderer adapter, CloneMotion and PreviewBody only. OfficePublicArtwork and the painted Creature renderer are absent.",
+        "reconstructRecordedSource": [
+          {
+            "find": "factory(root.OfficeAvatarPerformanceModel, root.OfficeCreaturePerformance, root.OfficePublicArtwork)",
+            "replace": "factory(root.OfficeAvatarPerformanceModel, root.OfficeCreaturePerformance)"
+          },
+          {
+            "find": "function (Model, Creature, Artwork)",
+            "replace": "function (Model, Creature)"
+          },
+          {
+            "find": "design = Artwork ? Artwork.design(options.design) : options.design || null",
+            "replace": "design = options.design || null"
+          },
+          {
+            "find": "        if (Artwork) value = Artwork.design(value);\n",
+            "replace": ""
+          }
+        ]
+      }
+    ]
+  },
   "publicBody": "original capsule robot with four visible feet; resource-free detached span adapts bitmap fade API; no external sprite references",
   "scope": "production distance-synchronised four-foot joint motion at a fixed screen anchor and clone effect overlays; does not certify room navigation, world foot locking or body collision; those are verified separately in native fixtures",
   "sourceHashes": {
     "office/lib/avatar-performance-model.js": "d5744f06c34164ca6d6c71794ed5b4456aea83b0a08720e680a31a1f1910e9c3",
     "office/lib/walk-timing.js": "2a0fb10aad03e13bea46faafaae86c4922cf54858abf842704b35a38720b3049",
-    "office/renderer/avatar-performance.js": "bfea97a02466ddff0f7eefb8c7272a979caf90d47f83be9dcff55da4200f20db",
+    "office/renderer/avatar-performance.js": "28ab066e224016c090961f98b7d44293cc8d2b30c160fb3825fa899ce6da46d9",
     "office/renderer/avatar-performance.css": "1b670613c713a856763e5686d0a00df9509efdd7c5d7d6042fd32b50313b256e",
-    "office/renderer/clone-motion.js": "6e05a742e6d03b29d1016d5aa925a0d12f894f0826b2f6b26f3921605bd80c6c",
-    "office/renderer/clone-motion.css": "d6e8a048276af3359e316262f25bb2c59e8429a50dafad5442840eabea30bb78",
+    "office/renderer/clone-motion.js": "28eff9dea40c5d0b737697e3e1d9b9ecf04435423f41eb836646e99bf17f95e7",
+    "office/renderer/clone-motion.css": "05260fcb4dacfd64b2f269a0e2cdb9ddc882bc51ed9a05954fc1588cd10589e8",
     "docs/animations/preview-body.js": "62d91da1250ba740843f29f9b69cd2ebb4a85a2c04e370a6b12be1a577a60ff6",
-    "office/scripts/render-lifecycle-previews.cjs": "f7858fb314f8246930d7079c462b688eafc4b2171b81f6645860a4d8497666fb"
+    "office/scripts/render-lifecycle-previews.cjs": "2824abb004acb4689f2ca8ba570445bf0a0d916a08d4d4d53e75484821a619dc"
   },
   "assets": [
     {
@@ -22,8 +57,8 @@
       "fps": 48,
       "durationMs": 2000,
       "distinctPngFrames": 86,
-      "bytes": 293574,
-      "sha256": "538f68f4ab8cd53537f06c248e38df8f0bdd9cd5b0f514abf4abc4e1a2b597ac",
+      "bytes": 293610,
+      "sha256": "f41d26aed55fc22fcc43def7ec86d16e7ffca875be46be9b5291b4d8a0ddf5cb",
       "walkingCertificate": {
         "inPlace": true,
         "roomNavigationCertified": false,

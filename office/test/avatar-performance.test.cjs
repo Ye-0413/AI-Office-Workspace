@@ -91,22 +91,64 @@ test('all 88 programs are reachable in real activities and rotate only on suppli
 
 function rendererFixture(options = {}) {
   let writes = 0;
+  const created=[];
   const document = { createElement: () => node(), createElementNS: () => node() };
   function node() {
     const children = new Map();
     const classes = new Set();
-    return { ownerDocument: document, dataset: new Proxy({}, { set(target, key, value) { writes += 1; target[key] = value; return true; } }),
+    const value={ ownerDocument: document, dataset: new Proxy({}, { set(target, key, value) { writes += 1; target[key] = value; return true; } }),
       classList: { toggle(key, enabled) { writes += 1; enabled ? classes.add(key) : classes.delete(key); }, remove(key) { writes += 1; classes.delete(key); }, contains: key => classes.has(key) },
-      style: { setProperty() { writes += 1; } }, setAttribute() { writes += 1; }, append(child) { writes += 1; this.child = child; }, remove() { this.removed = true; },
+      style: { setProperty() { writes += 1; } }, setAttribute(name,value) { writes += 1; (this.attrs ||= new Map()).set(name,value); }, removeAttribute(name) { writes += 1; this.attrs?.delete(name); }, append(child) { writes += 1; this.child = child; }, remove() { this.removed = true; },
       querySelector(selector) { if (!children.has(selector)) children.set(selector, node()); return children.get(selector); },
       set innerHTML(value) { writes += 1; this.markup = value; }, get innerHTML() { return this.markup; } };
+    created.push(value);return value;
   }
   const context = vm.createContext({ OfficeAvatarPerformanceModel: Model });
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../renderer/avatar-performance.js'), 'utf8'), context);
   const actorNode = node(), body = node();
   const renderer = context.OfficeAvatarPerformance.create({ actorNode, body, ...options });
-  return { renderer, actorNode, body, writes: () => writes };
+  return { renderer, actorNode, body, created, writes: () => writes };
 }
+
+test('appearance changes update only the existing local source and torso clip while identical designs do no work',()=>{
+  const clip='<path clip-rule="evenodd" d="M50 54h55v51H50ZM60 80v10h5V80ZM90 80v10h5V80Z"/>';
+  const design={asset:'native-orb.svg',torsoClip:clip};
+  const f=rendererFixture({design}),rig=f.created.find(node=>node.markup?.includes('<defs><image'));
+  assert.ok(rig.innerHTML.includes('href="../assets/avatars/native-orb.svg"'));
+  assert.ok(rig.innerHTML.includes(clip));
+  assert.ok(rig.innerHTML.includes('<path fill="#de886d" d="M60 80h5v10h-5ZM90 80h5v10h-5Z"/>'));
+  assert.ok(!rig.innerHTML.includes('translate(0 -64) scale(1 2)'),'native textures and antennae are not stretched into the eye patch');
+  const value=fixture('reading'),plan=f.renderer.update(value,{now:0}),layer=f.body.child,before=f.writes();
+  assert.equal(f.renderer.setDesign({...design}),false);assert.equal(f.writes(),before);
+  assert.equal(f.renderer.setDesign({asset:'native-sprout.svg',torsoClip:clip}),true);
+  assert.equal(f.writes(),before+1,'a file change writes only the original image href');
+  assert.equal(rig.querySelector('defs image').attrs.get('href'),'../assets/avatars/native-sprout.svg');
+  assert.equal(f.renderer.plan,plan);assert.equal(f.body.child,layer);
+  assert.equal(f.renderer.setDesign(),true);
+  assert.equal(f.writes(),before+5,'restoring the default changes only source, crop and the unanimated legacy eye patch');
+  assert.equal(rig.querySelector('defs image').attrs.get('href'),'../assets/avatars/'+Model.ASSET);
+  assert.equal(rig.querySelector('.ap-torso > g').attrs.get('transform'),'translate(0 -64) scale(1 2)');
+  assert.match(rig.querySelector('.ap-torso > g').innerHTML,/<use href="#ap-\d+-source" clip-path="url\(#ap-\d+-patch\)"\/>/);
+  f.renderer.destroy();const destroyedWrites=f.writes();
+  assert.equal(f.renderer.setDesign(design),false);assert.equal(f.writes(),destroyedWrites);
+});
+
+test('native screen eye patches follow their own surface colour through creation and native-to-native changes',()=>{
+  const patch='<path fill="#f1d5a6" d="M60 80h5v10h-5ZM90 80h5v10h-5Z"/>';
+  const design={asset:'native-console.svg',eyePatch:patch},f=rendererFixture({design});
+  const rig=f.created.find(node=>node.markup?.includes('<defs><image'));
+  assert.ok(rig.innerHTML.includes(patch),'console creation fills eye cut-outs with its screen colour');
+  const value=fixture('coding'),plan=f.renderer.update(value,{now:0}),before=f.writes();
+  assert.equal(f.renderer.setDesign({...design}),false);assert.equal(f.writes(),before);
+  assert.equal(f.renderer.setDesign({asset:design.asset}),true);
+  assert.equal(f.writes(),before+1,'the same image can restore the default native patch without replacing a joint');
+  assert.match(rig.querySelector('.ap-torso > g').innerHTML,/fill="#de886d"/);
+  assert.equal(f.renderer.setDesign(design),true);assert.equal(f.writes(),before+2);
+  assert.equal(rig.querySelector('.ap-torso > g').innerHTML,patch);
+  assert.equal(f.renderer.plan,plan);
+  assert.equal(rig.querySelector('.ap-torso > g').attrs?.has('transform')||false,false);
+  f.renderer.destroy();
+});
 
 test('renderer keeps timelines and the articulated rig stable over identical native snapshots', () => {
   const { renderer, actorNode, body, writes } = rendererFixture();
@@ -129,6 +171,21 @@ test('renderer keeps timelines and the articulated rig stable over identical nat
   assert.equal(body.classList.contains('has-avatar-performance'), false);
   assert.equal(body.child.removed, true);
   assert.equal(actorNode.dataset.performance, undefined);
+});
+
+test('settled quiet metadata reuses the same tableau without further DOM writes',()=>{
+  for(const preference of ['lowPower','reducedMotion']){
+    const f=rendererFixture(),value=fixture('planning');
+    const first=f.renderer.update(value,{now:0,[preference]:true}),before=f.writes();
+    for(let index=1;index<=100;index++){
+      const current=f.renderer.update({...value,title:'metadata '+index},{now:index*100,[preference]:true});
+      assert.equal(current.key,first.key);assert.equal(current.animate,false);
+    }
+    assert.equal(f.writes(),before,preference+' metadata keeps exact existing pose and presence');
+    f.renderer.update(fixture('reading'),{now:20000,[preference]:true});
+    assert.ok(f.writes()>before,'a real observed activity still updates the quiet tableau');
+    f.renderer.destroy();
+  }
 });
 
 test('local visible-time rotation pauses through hidden, walking and quiet periods without per-actor timers', () => {

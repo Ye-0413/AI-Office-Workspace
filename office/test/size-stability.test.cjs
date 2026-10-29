@@ -43,3 +43,25 @@ test('the real walking allocator respects a sub-slider ceiling without losing bo
   const next = Walking.layoutWalking(cast.slice(0, 2), { requestedScale: 1, maximumScale: .4, previousSeats: page.seats, currentPositions: settled });
   assert.ok(next.uniformScale <= .4 + 1e-7); assert.ok(next.targetUniformScale <= .4 + 1e-7);
 });
+
+test('the enlarged presentation keeps the 65.6 percent clone body and reserves visible paint above the canvas', () => {
+  const root = { id: 'display-main' }, helper = { id: 'display-child', parentId: root.id };
+  const nested = { id: 'display-nested', parentId: helper.id };
+  assert.equal(Stability.PRESENTATION_SCALE / 1.5, 1.2);
+  assert.equal(Stability.CLONE_FRAME_RATIO, .82);
+  assert.ok(Math.abs(Stability.bodyRatio(helper) * Stability.CLONE_FRAME_RATIO - .656) < 1e-12);
+  const main = Stability.bodyFootprint(root), child = Stability.bodyFootprint(helper);
+  assert.equal(main.top, 144, 'the 80px sprite rises 144px above its real feet at the new base size');
+  assert.ok(main.top > 129, 'a transparent layout canvas alone cannot measure the enlarged paint');
+  assert.ok(Math.abs((child.left + child.right) / (main.left + main.right) - .656) < 1e-12);
+  assert.deepEqual(Stability.bodyFootprint(nested), child, 'nesting never compounds the clone shrink');
+  assert.ok(child.bottom > 0, 'the helper frame pivot and held prop overhang remain in the proof');
+  for (const [name, value] of [['root', main], ['helper', child]]) {
+    for (const edge of ['left', 'right', 'top', 'bottom']) {
+      assert.ok(Number.isFinite(value[edge]) && value[edge] > 0);
+      assert.ok(Stability.ACTOR_FOOTPRINT[name][edge] >= value[edge] + 6, name + ' fallback covers its paint and motion margin');
+    }
+  }
+  assert.deepEqual(root, { id: 'display-main' });
+  assert.deepEqual(helper, { id: 'display-child', parentId: 'display-main' });
+});

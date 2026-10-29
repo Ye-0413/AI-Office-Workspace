@@ -1,0 +1,13 @@
+.appearance-setting{padding:16px 0;border-bottom:1px solid #8f77542e}
+.appearance-setting h3{margin:0 0 6px;font-size:14px;color:#59462f;font-weight:650}
+.appearance-setting>p{margin:0 0 12px;max-width:52ch;color:#756144;font-size:11px;line-height:1.65}
+.appearance-creatures{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.appearance-card{position:relative;display:flex;min-width:0;min-height:242px;align-items:center;flex-direction:column;gap:7px;padding:7px 12px 13px;border:1px solid #bba47b8a;border-radius:5px;background:linear-gradient(155deg,#fff9e875,#f0e3c52b);color:#5a4935;text-align:left}
+.appearance-preview{position:relative;display:block;flex:none;overflow:hidden;pointer-events:none}
+.appearance-pose-preview{width:min(100%,140px);aspect-ratio:1}
+.appearance-pose-preview img{position:absolute;display:block;left:0;top:0;max-width:none;max-height:none;object-fit:fill;pointer-events:none;user-select:none;-webkit-user-drag:none}
+.appearance-option-copy{display:flex;min-width:0;width:100%;flex-direction:column;gap:5px}
+.appearance-option-label{display:block;font-size:13px;font-weight:650;line-height:1.3;letter-spacing:.005em}
+.appearance-option-role{display:block;color:#725f43;font-size:10px;line-height:1.3}
+.appearance-option-description{display:block;color:#756144;font-size:10px;line-height:1.6;font-weight:400}
+@media (max-width:360px){.appearance-card{padding-left:8px;padding-right:8px;min-height:225px}.appearance-pose-preview{width:120px;max-width:100%}}

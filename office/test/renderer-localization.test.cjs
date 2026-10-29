@@ -28,16 +28,18 @@ function titles(c,title){
  return{inspector:c.nodes.get('inspect-title').textContent,roster:c.copy.children[1].textContent,aria:c.actor.button.attributes['aria-label']};
 }
 
-test('English room counts and quiet signals retain every identity without a capacity waiting label',()=>{
+test('English room counts retain every identity and accurately distinguish a pending physical dock',()=>{
  const c=context();const n=summary(c,{roots:12,helpers:1,quiet:2,scale:1,requested:1,overflow:9});
- assert.equal(n.textContent,'12 independent tasks · 1 temporary helper · 2 signals not updated');
+ assert.equal(n.textContent,'12 independent tasks · 1 temporary helper · 2 signals not updated · 9 awaiting a work dock');
+ assert.equal(c.office.dataset.overflowCount,'9');
  assert.equal(n.dataset.baseSummary,n.textContent);assert.doesNotMatch(n.textContent,/\p{Script=Han}/u);
  assert.equal(summary(c,{roots:1,quiet:1}).textContent,'1 independent task · 1 signal not updated');
  assert.equal(summary(c,{helpers:2}).textContent,'0 independent tasks · 2 temporary helpers');
 });
 
 test('Chinese, unfitted English and empty room copy keep accurate counts and scale boundaries',()=>{
- const zh=context('zh');assert.equal(summary(zh,{roots:12,helpers:1,quiet:2,scale:1,overflow:9}).textContent,'12 项独立任务 · 1 位临时帮手 · 2 项信号暂未更新');
+ const zh=context('zh');assert.equal(summary(zh,{roots:12,helpers:1,quiet:2,scale:1,overflow:9}).textContent,'12 项独立任务 · 1 位临时帮手 · 2 项信号暂未更新 · 9 位等候工位');
+ assert.equal(zh.office.dataset.overflowCount,'9');
  assert.equal(summary(zh).textContent,'实时办公室 · 等待任务入驻');
  const en=context();assert.equal(summary(en).textContent,'Live office · Waiting for tasks');
  assert.equal(summary(en,{roots:1,scale:1,requested:1}).textContent,'1 independent task');

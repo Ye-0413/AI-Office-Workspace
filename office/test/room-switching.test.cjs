@@ -144,7 +144,7 @@ function relocation(){
   const actors=new Map(sessions.map((session,i)=>[session.id,{id:session.id,session,position:{x:20+i*20,y:65},node:{dataset:{},style:{}},image:{},performance:{clock:492.4},workSince:123456,helper:Boolean(session.parentId)}]));
   const room=Rooms.get('orbital-bridge'),seats=new Map(sessions.map((s,i)=>[s.id,{x:40+i*15,y:70,zone:i?'board':'library'}]));
   const fitted={seats,uniformScale:.8,entryPoint:{x:48,y:78},visible:sessions},calls=[],frames=[];
-  const base={},nextScene={},layout={layoutAllWalking:cast=>{calls.push(['fit',...cast.map(s=>s.id)]);return fitted;}};
+  const base={},nextScene={},layout={layoutFullSizeWalking:cast=>{calls.push(['fit',...cast.map(s=>s.id)]);return fitted;}};
   const c={activeRoom:Rooms.get('rain-courtyard'),actors,BaseScene:base,BaseWalkingLayout:{forScene:scene=>{assert.equal(scene,nextScene);return layout;}},Scene:base,WalkingLayout:{},traffic:{},settings:{agentScale:1.25},actorFootprints:new Map(),CLOCK_RESERVED:[],office:{dataset:{}},destroyed:false,finite:false,returning:false,
     hasFiniteClone:()=>c.finite,cloneAwaitingReturn:()=>c.returning,window:{OfficeRoomDesigns:{createScene:(scene,r)=>{assert.equal(scene,base);assert.equal(r,room);return nextScene;}}},
     cancelPhysicalRoutes:()=>calls.push(['cancel-routes']),makeTraffic:()=>({fresh:true}),actorTransform:(p,helper)=>JSON.stringify({p,helper}),updateRoomSigns:()=>calls.push(['signs']),visitor:{tick:()=>calls.push(['visitor'])},render:()=>calls.push(['render']),requestAnimationFrame:fn=>frames.push(fn)};
@@ -163,4 +163,13 @@ test('actual room relocation keeps observed objects, source facts, parentage and
 test('actual room relocation waits for active journeys, entry, departure and clone return owners without mutations',()=>{
   const changes=[h=>h.c.finite=true,h=>h.c.returning=true,...['motion','entryPending','departing'].map(key=>h=>h.actors.values().next().value[key]=true)];
   for(const change of changes){const h=relocation();change(h);const positions=[...h.actors.values()].map(a=>JSON.stringify(a.position));assert.equal(h.commit(),false);assert.equal(h.calls.length,0);assert.deepEqual([...h.actors.values()].map(a=>JSON.stringify(a.position)),positions);assert.equal(h.c.office.dataset.roomDesign,undefined);}
+});
+
+
+test('a room that cannot yet preserve the chosen size leaves every real body and the current floor untouched',()=>{
+  const h=relocation(),previousRoom=h.c.activeRoom,positions=[...h.actors.values()].map(a=>({...a.position}));
+  h.c.BaseWalkingLayout.forScene=()=>({layoutFullSizeWalking(){const error=new RangeError('fixed size');error.code='FIXED_SIZE_CAPACITY';throw error;}});
+  assert.equal(h.commit(),false);assert.equal(h.c.activeRoom,previousRoom);assert.deepEqual(h.calls,[]);
+  assert.deepEqual([...h.actors.values()].map(a=>a.position),positions);
+  assert.equal(h.c.settings.agentScale,1.25);assert.equal(h.c.office.dataset.roomChanging,undefined);
 });

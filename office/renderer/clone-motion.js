@@ -1,4 +1,4 @@
-/* Finite original smoke choreography. Only the caller moves/fades real bodies. */
+/* Finite local clone choreography. Only the caller moves/fades real bodies. */
 (function(root,factory){
   'use strict';const api=factory();
   if(typeof module==='object'&&module.exports)module.exports=api;else root.OfficeCloneMotion=api;
@@ -32,8 +32,30 @@
       const timed=frames.map((frame,index)=>index<frames.length-1?{easing,...frame}:frame);
       const motion=element.animate(timed,{duration,easing:'linear',fill:'both'});motions.push(motion);return motion;
     }
+    let readyMotion;
+    if(anchor.dataset?.bodyDesign==='ink'){
+      node.className+=' clone-ink-effect';node.dataset.creatureEffect='ink';
+      const puddle=part('clone-ink-puddle'),core=part('clone-ink-core');
+      // The little core owns the same ready boundary as the legacy focus.
+      // The puddle and droplets keep their own finite trailing phase.
+      readyMotion=run(core,kind==='split'
+        ?[{opacity:0,transform:'scale(.95,.9)'},{opacity:.9,transform:'scale(1.08,1.12)',offset:.64},{opacity:0,transform:'scale(1.14,.92)'}]
+        :[{opacity:0,transform:'scale(1.08,.94)'},{opacity:.82,transform:'scale(1,1.12)',offset:.68},{opacity:0,transform:'scale(1.12,.92)'}],READY[kind],EASE_OUT);
+      run(puddle,kind==='split'
+        ?[{opacity:0,transform:'scale(.94,.9)'},{opacity:.88,transform:'scale(1.06,1.08)',offset:.22},{opacity:.84,transform:'scale(1.13,.96)',offset:.58},{opacity:0,transform:'scale(1.18,.9)'}]
+        :[{opacity:0,transform:'scale(1.1,.92)'},{opacity:.7,transform:'scale(1.04,1)',offset:.2},{opacity:.94,transform:'scale(1.15,1.12)',offset:.72},{opacity:0,transform:'scale(1.06,.94)'}],DURATION,EASE_OUT);
+      const drops=[[-53,-16,11],[-29,-40,14],[2,-51,9],[29,-38,13],[53,-15,10]];
+      for(const [index,[x,y,size]]of drops.entries()){
+        const drop=part('clone-ink-drop');drop.style.left=(-size/2)+'px';drop.style.top=(-12-size/2)+'px';drop.style.width=size+'px';drop.style.height=(size*1.22)+'px';
+        const pose=(dx,dy,sx=1,sy=1,angle=0)=>`translate3d(${dx}px,${dy}px,0) rotate(${angle}deg) scale(${sx},${sy})`;
+        const angle=x*.35,stagger=index*.012;
+        run(drop,kind==='split'
+          ?[{opacity:0,transform:pose(0,0,.95,.9)},{opacity:.84,transform:pose(x*.22,y*.25,.96,1.12,angle*.2),offset:.16+stagger},{opacity:.98,transform:pose(x*.82,y*.93,1.02,1.08,angle*.8),offset:.38+stagger},{opacity:.86,transform:pose(x,y,1.04,.95,angle),offset:.68},{opacity:0,transform:pose(x*.98,y+14,.96,.9,angle*.8)}]
+          :[{opacity:0,transform:pose(x,y+4,.96,.9,angle)},{opacity:.94,transform:pose(x,y,.96,1.08,angle),offset:.14+stagger},{opacity:.98,transform:pose(x*.5,y*.6,.94,1.16,angle*.5),offset:.48+stagger},{opacity:.9,transform:pose(x*.06,-3,1.08,.82,0),offset:.72},{opacity:.24,transform:pose(0,0,1.13,.9),offset:.84},{opacity:0,transform:pose(0,2,1.04,.92)}]);
+      }
+    }else{
     const focus=part('clone-focus'),ring=part('clone-ring'),second=part('clone-ring clone-ring-inner');
-    const readyMotion=run(focus,kind==='split'
+    readyMotion=run(focus,kind==='split'
       ?[{opacity:0,transform:'scale(.95)'},{opacity:.7,transform:'scale(1)',offset:.65},{opacity:0,transform:'scale(1.04)'}]
       :[{opacity:0,transform:'scale(1.06)'},{opacity:.55,transform:'scale(1)',offset:.7},{opacity:.18,transform:'scale(.96)'}],READY[kind],EASE_OUT);
     const ringFrames=kind==='split'
@@ -63,6 +85,7 @@
       run(mote,kind==='split'
         ?[{opacity:0,transform:'translate3d(0px,4px,0) rotate(0deg)'},{opacity:0,offset:.3},{opacity:.7,transform:'translate3d(0px,0px,0) rotate(15deg)',offset:.46+index*.025},{opacity:0,transform:out}]
         :[{opacity:0,transform:out},{opacity:.6,transform:out,offset:.26+index*.02},{opacity:.7,transform:'translate3d(0px,0px,0) rotate(15deg)',offset:.74},{opacity:0,transform:'translate3d(0px,4px,0) rotate(0deg)'}],DURATION,EASE_OUT);
+    }
     }
     anchor.append(node);
     document.addEventListener?.('visibilitychange',guard);media?.addEventListener?.('change',guard);

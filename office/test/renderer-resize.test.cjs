@@ -31,7 +31,7 @@ function fixture(){
   }
   const context={Scene,office,$:id=>{assert.equal(id,'world-frame');return frame;},window,ResizeObserver,
     document:{removeEventListener(){}},actors,seats,uniformScale:.4,destroyed:false,
-    numberFlip:null,refreshVisibility(){},onStationArrival(){},usageHistory:null,setupAssistant:null,manualQuestions:{dispose(){calls.questionsDisposed=(calls.questionsDisposed||0)+1;}},
+    numberFlip:null,appearancePicker:{destroy(){calls.galleryDisposed=(calls.galleryDisposed||0)+1;}},refreshVisibility(){},onStationArrival(){},usageHistory:null,setupAssistant:null,manualQuestions:{dispose(){calls.questionsDisposed=(calls.questionsDisposed||0)+1;}},
     visitor:{destroy(){}},stationArrival:null,social:null,venueStage:null,festivalStage:null,themeEnvironment:null,
     scenery:{destroy(){}},performanceClocks:{clear(){}},unsubscribe:null,
     clockTimer:0,secondsTimer:0,navigationTimer:0,frameTimer:0,admissionFrame:0,trafficTimer:0,doorTimer:0,
@@ -73,6 +73,7 @@ test('actual beforeunload removes only the owned window resize callback and disc
   h.window.dispatch('beforeunload');
   assert.equal(h.c.destroyed,true);assert.equal(h.observer.disconnected,true);assert.equal(h.calls.clearedActors,1);
   assert.equal(h.calls.questionsDisposed,1,'the production-owned question controller is disposed with the renderer');
+  assert.equal(h.calls.galleryDisposed,1,'the specimen gallery releases its independent animation owners');
   assert.equal(h.removed.filter(r=>r.type==='resize'&&r.callback===h.c.refreshScale).length,1,'remove the exact registered production function');
   assert.deepEqual([...h.listeners.get('resize')],[h.external],'an external window listener must remain untouched');
   const before=h.frame.style.transform;h.office.clientWidth=800;h.office.clientHeight=450;

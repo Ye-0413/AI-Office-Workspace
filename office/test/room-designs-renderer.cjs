@@ -6,7 +6,7 @@ const {fileURLToPath,pathToFileURL}=require('node:url');
 const Rooms=require('../lib/room-designs.js');
 const profile=fs.mkdtempSync(path.join(os.tmpdir(),'office-room-designs-'));
 app.setPath('userData',profile);app.disableHardwareAcceleration();
-let win,settings={language:'en',agentScale:1.25,roomDesign:'rain-courtyard',sceneVenue:'workshop',sceneTheme:'auto',
+let win,settings={language:'en',agentScale:.8,roomDesign:'rain-courtyard',sceneVenue:'workshop',sceneTheme:'auto',
   sceneWeather:'off',sceneTime:'afternoon',idleVisitor:false,reducedMotion:false,lowPower:false};
 let snapshot={mode:'live',now:Date.now(),sessions:[],connections:[]};
 const errors=[],reports=[],wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -25,13 +25,15 @@ async function choose(id){
 }
 function audit(){
   const world=document.getElementById('world').getBoundingClientRect(),fx=1280/world.width,fy=720/world.height;
-  const room=OfficeRoomDesigns.get(document.getElementById('office').dataset.roomDesign);
+  const room=OfficeRoomDesigns.get(document.getElementById('office').dataset.roomDesign),requested=Number(document.getElementById('setting-agentScale').value)/100;
   const rows=[...document.querySelectorAll('.actor[data-session-id]')].map(node=>{
     const m=new DOMMatrixReadOnly(getComputedStyle(node).transform),point={x:m.m41/12.8,y:m.m42/7.2};
+    const scale=Math.hypot(m.m11,m.m12),origin=node.getBoundingClientRect(),paint=OfficeSizeStability.bodyFootprint({parentId:node.dataset.helper==='true'?'fixture-main':null});
     const parts=['.character-body','.nameplate'].map(selector=>node.querySelector(selector).getBoundingClientRect());
-    return{id:node.dataset.sessionId,point,bounds:{left:Math.min(...parts.map(r=>r.left)),right:Math.max(...parts.map(r=>r.right)),top:Math.min(...parts.map(r=>r.top)),bottom:Math.max(...parts.map(r=>r.bottom))}};
+    parts.push({left:origin.left-paint.left*scale/fx,right:origin.left+paint.right*scale/fx,top:origin.top-paint.top*scale/fy,bottom:origin.top+paint.bottom*scale/fy});
+    return{id:node.dataset.sessionId,point,scale,bounds:{left:Math.min(...parts.map(r=>r.left)),right:Math.max(...parts.map(r=>r.right)),top:Math.min(...parts.map(r=>r.top)),bottom:Math.max(...parts.map(r=>r.bottom))}};
   });
-  return{room:room.id,count:rows.length,
+  return{room:room.id,count:rows.length,exactSize:rows.every(row=>Math.abs(row.scale-requested)<1e-6),
     // CSS pixel matrices round fractional percentage anchors; tolerate only
     // that numerical noise (less than one thousandth of a world pixel).
     legal:rows.every(r=>r.point.x>=room.floor.x1-1e-5&&r.point.x<=room.floor.x2+1e-5&&r.point.y>=room.floor.y1-1e-5&&r.point.y<=room.floor.y2+1e-5&&!room.obstacles.some(o=>r.point.x>o.x1-.8+1e-5&&r.point.x<o.x2+.8-1e-5&&r.point.y>o.y1-.8+1e-5&&r.point.y<o.y2+.8-1e-5)),
@@ -66,24 +68,24 @@ app.whenReady().then(async()=>{
     const before=await run('roomArrivals.length');
     await run(`window.roomClockSample=${actors}.map(n=>{const rig=n.querySelector('.ap-rig');return{node:n,rig,program:n.dataset.performanceProgram,clocks:rig.getAnimations({subtree:true}).filter(a=>typeof a.animationName==='string'&&a.effect.getTiming().iterations===Infinity).map(a=>({animation:a,time:a.currentTime}))};});void 0`);
     await choose(room.id);await until(visible(2),'both identities survive '+room.id);
-    const result=await run('('+audit.toString()+')()');assert.equal(result.legal,true,JSON.stringify(result));assert.equal(result.inside,true);assert.equal(result.overlaps,false);
+    const result=await run('('+audit.toString()+')()');assert.equal(result.legal,true,JSON.stringify(result));assert.equal(result.inside,true);assert.equal(result.overlaps,false);assert.equal(result.exactSize,true,'every room retains the exact 80% manual scale');
     assert.equal(await run(`${actors}.every(n=>{const old=roomBodies.get(n.dataset.sessionId);return old.node===n&&old.body===n.querySelector('.character-body')&&old.image===n.querySelector('.character-body>img')&&old.rig===n.querySelector('.ap-rig')&&old.name===n.querySelector('.actor-title').textContent;})`),true,'room changes preserve every actual body and name');
     assert.equal(await run('roomArrivals.length'),before,'geometry cannot fabricate work arrivals');
     assert.equal(await run(`roomClockSample.every(row=>row.program!==row.node.dataset.performanceProgram||row.clocks.length>0&&row.clocks.every(c=>row.rig.getAnimations({subtree:true}).includes(c.animation)&&c.animation.currentTime>=c.time-.2))`),true,'scenery changes retain the running original CSS work clocks');
-    assert.equal(settings.agentScale,1.25);reports.push(result);
+    assert.equal(settings.agentScale,.8);reports.push(result);
   }
   await run(`(()=>{const n=document.getElementById('setting-reducedMotion');n.checked=true;n.dispatchEvent(new Event('change',{bubbles:true}));})()`);
   await run(`document.getElementById('language-button').click()`);
-  await until(`document.documentElement.lang==='zh-CN'`,'the dense full-catalog run uses Chinese labels');
-  const crowd=[main,child,...Array.from({length:98},(_,i)=>task('codex:room-crowd-'+i,['reading','planning','testing','coding'][i%4]))];
-  send(crowd);await until(visible(100),'all one hundred identities enter',60000);
+  await until(`document.documentElement.lang==='zh-CN'`,'the fixed-size full-catalog run uses Chinese labels');
+  const cast=[main,child,task('codex:room-third','testing')];
+  send(cast);await until(visible(3),'three observed identities enter at the fixed 80% size',60000);
   for(const room of Rooms.CATALOG){
-    await choose(room.id);await until(visible(100),'all one hundred remain visible in '+room.id);
-    const result=await run('('+audit.toString()+')()');assert.equal(result.legal,true,JSON.stringify(result));assert.equal(result.inside,true);assert.equal(result.overlaps,false);
+    await choose(room.id);await until(visible(3),'all three retain their fixed size in '+room.id);
+    const result=await run('('+audit.toString()+')()');assert.equal(result.legal,true,JSON.stringify(result));assert.equal(result.inside,true);assert.equal(result.overlaps,false);assert.equal(result.exactSize,true,'every room retains the exact 80% manual scale');
     assert.equal(await run(`document.getElementById('office').dataset.overflowCount`),'0');
-    assert.equal(settings.agentScale,1.25);reports.push({...result,positions:undefined});
+    assert.equal(settings.agentScale,.8);reports.push({...result,positions:undefined});
   }
-  assert.deepEqual(errors,[]);console.log(JSON.stringify({ok:true,rooms:Rooms.CATALOG.length,normalMotion:2,dense:100,bodyIdentitiesPreserved:true,reports,errors}));
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({ok:true,rooms:Rooms.CATALOG.length,normalMotion:2,fixedSizeCast:3,manualScale:.8,bodyIdentitiesPreserved:true,reports,errors}));
 }).catch(async error=>{console.error(error);process.exitCode=1;
   try{fs.writeFileSync('/tmp/mini-office-room-designs-failure.png',(await win.webContents.capturePage()).toPNG());}catch(_){}
 }).finally(()=>{clearTimeout(guard);win?.destroy();fs.rmSync(profile,{recursive:true,force:true});app.exit(process.exitCode||0);});

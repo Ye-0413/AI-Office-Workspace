@@ -1,3 +1,5 @@
+> **업스트림 참고 문서 보관본**: 이 페이지는 Clawd on Desk 문서이며 AI Office Workspace v0.24.0의 현재 번역이 아닙니다. 이 프로젝트의 [English](README.md) / [简体中文](README.zh-CN.md) 및 [Release](docs/releases/README.md)를 확인하세요. 아래 다운로드, 플랫폼 및 승인 기능 설명은 업스트림 프로젝트에 해당합니다.
+
 <p align="center">
   <img src="assets/icon.png" width="128" alt="Clawd">
 </p>

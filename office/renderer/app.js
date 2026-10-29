@@ -21,11 +21,11 @@
   const actorsLayer = $('actors');
   const actors = new Map();
   const presentationReentries = new Map();
-  const NAMEPLATE_METRICS_VERSION = 3;
+  const NAMEPLATE_METRICS_VERSION = 4;
   const archivedTurns = new Map();
   // Older observation bridges without roomDesign retain their legacy room.
   // Current native settings explicitly supply daily rotation by default.
-  const settingsDefaults = { rain: false, night: false, sceneTime: 'auto', sceneVenue: 'workshop', sceneTheme: 'auto', sceneWeather: 'auto', roomDesign: 'legacy', agentScale: 1, reducedMotion: false, lowPower: false, idleVisitor: true, sound: false, selectedProject: '', language: 'zh' };
+  const settingsDefaults = { rain: false, night: false, sceneTime: 'auto', sceneVenue: 'workshop', sceneTheme: 'auto', sceneWeather: 'auto', roomDesign: 'legacy', agentAppearance: 'mixed', agentScale: 1, reducedMotion: false, lowPower: false, idleVisitor: true, sound: false, selectedProject: '', language: 'zh' };
   let settings = { ...settingsDefaults };
   let deferredPhysicalScale = null;
   const sizeStability = window.OfficeSizeStability.create({ requestedScale: settings.agentScale });
@@ -34,14 +34,16 @@
   const usageHistory = window.OfficeUsageHistory?.create({ bridge, getLanguage: () => language });
   const manualQuestions = window.OfficeManualQuestions?.create({ bridge, language });
   const setupAssistant = window.OfficeSetupAssistant?.create({ bridge, getLanguage: () => language });
+  const appearancePicker = window.OfficeAppearancePicker?.create({ container: $('settings-dialog') });
   const scenery = window.OfficeDayScenery.create({ office, world, layer: $('window-scenery') });
   const attendanceModel = Attendance.createAttendance();
   const cloneLedger = Clones.createLedger();
   const restedClones = new Set();
   const paletteRegistry = Family.createPaletteRegistry();
+  const companionRegistry = window.OfficeAgentAppearance?.createAllocator();
   const CLOCK_RESERVED = Scene.CLOCK_RESERVED;
   let ENTRY_POINT = { x: 87, y: 78, zone: 'exit' };
-  const makeTraffic = () => Traffic.createCoordinator({ reservedRects: CLOCK_RESERVED, obstacles: WalkingLayout.OBSTACLES, gap: scale => WalkingLayout.gapForScale(scale), limit: 256, maxConcurrent: 8, passThrough: true, yieldBatchSize: 1,
+  const makeTraffic = () => Traffic.createCoordinator({ reservedRects: CLOCK_RESERVED, obstacles: WalkingLayout.OBSTACLES, gap: scale => currentPage.gap ?? WalkingLayout.gapForScale(scale), limit: 256, maxConcurrent: 8, passThrough: true, yieldBatchSize: 1,
     route: (from, to, actor) => walkingRoute(from, to, actor),
     holdingPoints: () => currentPage.holdingPoints,
     legalPoint: (point, actor) => WalkingLayout.legalPoint(point, { ...actor, reservedRects: CLOCK_RESERVED }) });
@@ -63,6 +65,8 @@
   let selectedProject = '';
   let roomSelectionExplicit = false;
   let selectedSession = '';
+  let inspectorReturnFocus = null;
+  let rosterRenderKey = '';
   let page = 0;
   let seats = new Map();
   let uniformScale = 1;
@@ -131,7 +135,14 @@
     const nextScene=room?window.OfficeRoomDesigns.createScene(BaseScene,room):BaseScene;
     const nextLayout=room?BaseWalkingLayout.forScene(nextScene):BaseWalkingLayout;
     const cast=[...actors.values()].map(a=>a.session);
-    const fitted=nextLayout.layoutAllWalking(cast,{passThrough:true,requestedScale:settings.agentScale,footprints:actorFootprints,reservedRects:CLOCK_RESERVED});
+    let fitted;
+    try { fitted=nextLayout.layoutFullSizeWalking(cast,{passThrough:true,requestedScale:settings.agentScale,footprints:actorFootprints,reservedRects:CLOCK_RESERVED}); }
+    catch (error) {
+      // Scenery may wait for a physical slot; it never resizes or removes a
+      // resident just to commit a different floor beneath existing work.
+      if (error.code === 'FIXED_SIZE_CAPACITY') return false;
+      throw error;
+    }
     cancelPhysicalRoutes();
     Scene=nextScene;WalkingLayout=nextLayout;activeRoom=room;traffic=makeTraffic();
     currentPage=fitted;seats=fitted.seats;uniformScale=fitted.uniformScale;fitting=false;
@@ -231,12 +242,14 @@
   function keepsakeIcon(session) { return ({teacup:'♨',paperboat:'⛵',bookmark:'▤',lantern:'✧',leaf:'❧',pebble:'◇',bell:'♧',pencil:'✎',shell:'⌁',star:'✦',acorn:'♧',ribbon:'⋈'})[persona(session).keepsake] || '✦'; }
   function reduced() { return settings.reducedMotion || mediaReduce.matches; }
   function quietSprites() { return reduced() || settings.lowPower || sceneHidden(); }
-  function assetURL(name, replay) { return '../assets/avatars/' + name + (replay ? '?_t=' + (++spriteNonce) : ''); }
+  function assetURL(name, replay) { return '../assets/avatars/' + (window.OfficePublicArtwork ? window.OfficePublicArtwork.asset(name) : name) + (replay ? '?_t=' + (++spriteNonce) : ''); }
   function setPose(actor, name, replay = false) {
     const performanceSession = actor.visualWorkActivity ? { ...actor.session, activity: actor.visualWorkActivity } : actor.session;
     const performance = actor.performance && actor.performance.update(performanceSession, { now: Date.now(), reducedMotion: reduced(), lowPower: settings.lowPower, hidden: sceneHidden() || actor.entryPending, walking: Boolean(actor.motion) || actor.node.dataset.walking === 'true', reaction: false, departing: actor.departing, stale: actor.spec.stale });
     actor.fallback?.retry();
-    const asset = quietSprites() ? 'clawd-static-base.svg' : performance && performance.active ? performance.asset : name;
+    actor.performance?.retry?.();
+    const wantedAsset = actor.design?.asset || (quietSprites() ? 'clawd-static-base.svg' : performance && performance.active ? performance.asset : name);
+    const asset = window.OfficePublicArtwork ? window.OfficePublicArtwork.asset(wantedAsset) : wantedAsset;
     actor.wantedAsset = name;
     const recoverBitmap = actor.image.hidden && actor.image.complete;
     if (actor.currentAsset === asset && !replay && !recoverBitmap) return;
@@ -600,6 +613,8 @@
           }
         }
         node.remove();
+        const painted = window.OfficeSizeStability.bodyFootprint(session);
+        for (const key of ['left', 'right', 'top', 'bottom']) footprint[key] = Math.max(footprint[key], painted[key]);
         // Covers the walking body's 3px/1deg bob, focus/shadow edges and
         // the one-pixel family hand outline, throughout each reserved walk.
         footprint = Object.fromEntries(Object.entries(footprint).map(([key,value]) => [key, Math.ceil(value) + 6]));
@@ -690,81 +705,118 @@
         }
       }
     }
-    const reservation = traffic.nextAny();
-    if (reservation.kind === 'wait') {
-      for (const { actor } of trafficWaiters.values()) {
-        actor.node.dataset.traffic = 'queued';
-        transitCaption(actor);
+    const reservations = traffic.nextBatch?.() || [traffic.nextAny()];
+    // A swap reserves every departing member together. Validate the whole
+    // batch before starting any leg so an obsolete actor cannot strand its
+    // partner at a destination whose old occupant never actually departs.
+    if (reservations.length > 1 && reservations.some(reservation => {
+      if (!['move', 'arrived'].includes(reservation.kind)) return false;
+      const actor = actors.get(reservation.id), pending = trafficWaiters.get(reservation.id);
+      return !actor || actor.entryPending && !actor.stagedEntry
+        || actor.stagedEntry && (!pending || pending.serial !== actor.serial)
+        || transferOwner && (transferOwner.phase !== 'running' || !transferOwner.certificate.steps[transferOwner.index].drainIds.includes(actor.id));
+    })) {
+      if (transferOwner) revokeTransfer('obsolete-batch');
+      for (const reservation of reservations) {
+        const actor = actors.get(reservation.id), pending = trafficWaiters.get(reservation.id);
+        if (!actor) {
+          traffic.cancel(reservation.id);
+          if (pending) { trafficWaiters.delete(reservation.id); pending.resolve(false); }
+          continue;
+        }
+        // Cancelling the reservation alone leaves navigation.target looking
+        // satisfied even though its body never departed. Release the same
+        // physical owner as a refit, then retry its still-current intent from
+        // its actual feet. Unadmitted bodies must lose their staged flag so
+        // nextEntryCandidate can prove their source again.
+        const navigation = actor.navigation || actor.resumeNavigation
+          || { kind: actor.entryPending ? 'entry' : 'station', target: actor.target };
+        const flags = { departing: actor.departing, returnReason: actor.returnReason, clonePhase: actor.clonePhase,
+          cloneTarget: actor.node.dataset.cloneTarget, cloneReason: actor.node.dataset.cloneReason };
+        cancelAction(actor);
+        Object.assign(actor, flags); clonePhase(actor, flags.clonePhase);
+        if (flags.cloneTarget) actor.node.dataset.cloneTarget = flags.cloneTarget;
+        if (flags.cloneReason) actor.node.dataset.cloneReason = flags.cloneReason;
+        actor.resumeNavigation = navigation; actor.navigation = null;
       }
-      if (reservation.reason === 'blocked' || reservation.reason === 'invalid-scene') trackTrafficBlock();
-      else clearTrafficBlock();
-    } else if (reservation.kind === 'arrived' || reservation.kind === 'move') {
-      clearTrafficBlock();
-      const id = reservation.id, actor = actors.get(id), pending = trafficWaiters.get(id);
-      if (!actor || actor.entryPending && !actor.stagedEntry) { traffic.cancel(id); return; }
-      let splitEffect = null;
-      if (actor.stagedEntry) {
-        if (!pending || pending.serial !== actor.serial) { traffic.cancel(id); return; }
-        actor.stagedEntry = false; actor.entryPending = false;
-        actor.node.style.visibility = '';
-        actor.node.style.opacity = '1';
-        actor.entranceActive = !actor.helper; observedIds.add(actor.id);
-        if (actor.helper && actor.node.dataset.cloneOrigin) splitEffect = cloneEffect(actor, cloneAncestor(actor) || actor, 'split');
-        else if (!actor.helper) openDoor();
-        updateEntranceLane();
-        progressed = true;
-      }
-      if (reservation.kind === 'arrived') {
-        trafficWaiters.delete(id); actor.node.dataset.traffic = 'arrived';
-        actor.yielding = false;
-        if (pending) pending.resolve(true); else finishAtStation(actor);
-        queueTransferContinuation();
-        progressed = true;
-      } else {
-        trafficWaiters.delete(id);
-        const serial = actor.serial;
-        const routeOwner = actor.routeReservation = { token: reservation.token, serial, transferOwner };
-        if (transferOwner && (transferOwner.phase !== 'running' || !transferOwner.certificate.steps[transferOwner.index].drainIds.includes(id))) { revokeTransfer('unexpected-mover'); return; }
-        actor.cloneCharge = Boolean(splitEffect && !quietSprites());
-        actor.node.dataset.cloneCharge = String(actor.cloneCharge);
-        if (reservation.yielding) actor.yielding = true;
-        const travel = async () => {
-          if (actor.cloneCharge) await splitEffect.ready;
-          if (actor.serial !== serial || actor.routeReservation !== routeOwner || destroyed) return false;
-          actor.cloneCharge = false; actor.node.dataset.cloneCharge = 'false'; queueNavigation();
-          return animateWalk(actor, reservation.path, serial, pending?.carrying, reservation.instant, reservation.yielding);
-        };
-        travel().then(ok => {
-          if (actor.routeReservation === routeOwner) actor.routeReservation = null;
-          traffic.finish(id, reservation.token, currentPosition(actor));
-          if (ok && actor.serial === serial && !reservation.temporary) actor.yielding = false;
-          if (pending && ok && reservation.temporary) {
-            trafficWaiters.set(id, pending);
-            actor.node.dataset.traffic = 'queued';
-          } else if (pending) pending.resolve(ok);
-          if (!pending && ok) {
-            if (reservation.temporary) {
-              actor.node.dataset.traffic = 'yielding';
-              transitCaption(actor, true);
-            } else finishAtStation(actor);
-          }
+      resumeNavigation(); queueTraffic(); return;
+    }
+    for (const reservation of reservations) {
+      if (reservation.kind === 'wait') {
+        for (const { actor } of trafficWaiters.values()) {
+          actor.node.dataset.traffic = 'queued';
+          transitCaption(actor);
+        }
+        if (reservation.reason === 'blocked' || reservation.reason === 'invalid-scene') trackTrafficBlock();
+        else clearTrafficBlock();
+      } else if (reservation.kind === 'arrived' || reservation.kind === 'move') {
+        clearTrafficBlock();
+        const id = reservation.id, actor = actors.get(id), pending = trafficWaiters.get(id);
+        if (!actor || actor.entryPending && !actor.stagedEntry) { traffic.cancel(id); return; }
+        let splitEffect = null;
+        if (actor.stagedEntry) {
+          if (!pending || pending.serial !== actor.serial) { traffic.cancel(id); return; }
+          actor.stagedEntry = false; actor.entryPending = false;
+          actor.node.style.visibility = '';
+          actor.node.style.opacity = '1';
+          actor.entranceActive = !actor.helper; observedIds.add(actor.id);
+          if (actor.helper && actor.node.dataset.cloneOrigin) splitEffect = cloneEffect(actor, cloneAncestor(actor) || actor, 'split');
+          else if (!actor.helper) openDoor();
+          updateEntranceLane();
+          progressed = true;
+        }
+        if (reservation.kind === 'arrived') {
+          trafficWaiters.delete(id); actor.node.dataset.traffic = 'arrived';
+          actor.yielding = false;
+          if (pending) pending.resolve(true); else finishAtStation(actor);
           queueTransferContinuation();
-          renderHelperLinks();
-          if (ok && (currentPage.exitOwnerIds?.length || [...actors.values()].some(child => child.helper && child.entryPending))) queueLayoutRefresh(true);
-          queueTraffic();
-        }).catch(error => {
-          if (actor.serial !== serial || actors.get(actor.id) !== actor) { pending?.resolve(false); return; }
-          if (actor.routeReservation === routeOwner) actor.routeReservation = null;
-          actor.cloneCharge = false; actor.node.dataset.cloneCharge = 'false'; traffic.cancel(id, currentPosition(actor)); actor.yielding = false;
-          pending?.resolve(false); showError(error); queueNavigation(); queueTraffic();
-        });
-        progressed = true;
-      }
-    } else clearTrafficBlock();
+          progressed = true;
+        } else {
+          trafficWaiters.delete(id);
+          const serial = actor.serial;
+          const routeOwner = actor.routeReservation = { token: reservation.token, serial, transferOwner };
+          if (transferOwner && (transferOwner.phase !== 'running' || !transferOwner.certificate.steps[transferOwner.index].drainIds.includes(id))) { revokeTransfer('unexpected-mover'); return; }
+          actor.cloneCharge = Boolean(splitEffect && !quietSprites());
+          actor.node.dataset.cloneCharge = String(actor.cloneCharge);
+          if (reservation.yielding) actor.yielding = true;
+          const travel = async () => {
+            if (actor.cloneCharge) await splitEffect.ready;
+            if (actor.serial !== serial || actor.routeReservation !== routeOwner || destroyed) return false;
+            actor.cloneCharge = false; actor.node.dataset.cloneCharge = 'false'; queueNavigation();
+            return animateWalk(actor, reservation.path, serial, pending?.carrying, reservation.instant, reservation.yielding);
+          };
+          travel().then(ok => {
+            if (actor.routeReservation === routeOwner) actor.routeReservation = null;
+            traffic.finish(id, reservation.token, currentPosition(actor));
+            if (ok && actor.serial === serial && !reservation.temporary) actor.yielding = false;
+            if (pending && ok && reservation.temporary) {
+              trafficWaiters.set(id, pending);
+              actor.node.dataset.traffic = 'queued';
+            } else if (pending) pending.resolve(ok);
+            if (!pending && ok) {
+              if (reservation.temporary) {
+                actor.node.dataset.traffic = 'yielding';
+                transitCaption(actor, true);
+              } else finishAtStation(actor);
+            }
+            queueTransferContinuation();
+            renderHelperLinks();
+            if (ok && (currentPage.exitOwnerIds?.length || [...actors.values()].some(child => child.helper && child.entryPending))) queueLayoutRefresh(true);
+            queueTraffic();
+          }).catch(error => {
+            if (actor.serial !== serial || actors.get(actor.id) !== actor) { pending?.resolve(false); return; }
+            if (actor.routeReservation === routeOwner) actor.routeReservation = null;
+            actor.cloneCharge = false; actor.node.dataset.cloneCharge = 'false'; traffic.cancel(id, currentPosition(actor)); actor.yielding = false;
+            pending?.resolve(false); showError(error); queueNavigation(); queueTraffic();
+          });
+          progressed = true;
+        }
+      } else clearTrafficBlock();
+    }
     // A blocked room sleeps until a movement completes, a request changes or
     // a real snapshot arrives. Do not burn a permanent polling loop at rest.
     if (progressed) { renderHelperLinks(); updateProps(); }
-    if (reservation.reason === 'searching' || traffic.state().active || progressed && (traffic.state().queued || trafficWaiters.size || [...actors.values()].some(actor => actor.entryPending))) queueTraffic();
+    if (reservations.some(reservation => reservation.reason === 'searching') || traffic.state().active || progressed && (traffic.state().queued || trafficWaiters.size || [...actors.values()].some(actor => actor.entryPending))) queueTraffic();
   }
   function currentPosition(actor) {
     if (actor.motion) {
@@ -811,7 +863,7 @@
   }
   function cloneEffect(actor, anchor, kind) {
     if (quietSprites() || !anchor) return null;
-    const effect = window.OfficeCloneMotion.burst({ anchor: anchor.node, kind, ownerId: actor.id, asset: assetURL('clawd-static-base.svg') });
+    const effect = window.OfficeCloneMotion.burst({ anchor: anchor.node, kind, ownerId: actor.id });
     actor.cloneEffects.add(effect);
     effect.finished.finally(() => actor.cloneEffects.delete(effect));
     if (kind === 'split' && anchor !== actor) effect.ready.then(() => {
@@ -963,21 +1015,34 @@
   function queueNavigation() {
     clearTimeout(navigationTimer); navigationTimer = 0;
     if (destroyed || fitting) return;
-    let next = Infinity;
-    const now = performance.now();
-    const pinnedDocks = pinnedDockIds();
-    if (transferOwner?.phase === 'pending') {
-      if (transferOwner.due <= now) queueTransferContinuation();
-      else next = transferOwner.due;
+    // Every due intent in this navigation turn must reach Traffic before its
+    // first reservation. Otherwise a reciprocal station change looks like a
+    // parked blocker merely because the second request has not been submitted.
+    const previousBatch = queueNavigation.batch;
+    const batch = queueNavigation.batch = { pumpRequested: false };
+    try {
+      let next = Infinity;
+      const now = performance.now();
+      const pinnedDocks = pinnedDockIds();
+      if (transferOwner?.phase === 'pending') {
+        if (transferOwner.due <= now) queueTransferContinuation();
+        else next = transferOwner.due;
+      }
+      for (const actor of actors.values()) if (actor.pendingStation && !actor.entryPending && !actor.departing && !actor.holdingFamily) {
+        if (pinnedDocks.has(actor.id) || actor.pendingStation.transferOwner === transferOwner && transferOwner) continue;
+        if (actor.pendingStation.due <= now) {
+          const seat = actor.pendingStation.seat; actor.pendingStation = null;
+          settle(actor, seat, true).catch(showError);
+        } else next = Math.min(next, actor.pendingStation.due);
+      }
+      if (Number.isFinite(next)) navigationTimer = setTimeout(() => { navigationTimer = 0; queueNavigation(); }, Math.max(0, next - performance.now()));
+    } finally {
+      queueNavigation.batch = previousBatch;
+      if (batch.pumpRequested) {
+        if (previousBatch) previousBatch.pumpRequested = true;
+        else pumpTraffic();
+      }
     }
-    for (const actor of actors.values()) if (actor.pendingStation && !actor.entryPending && !actor.departing && !actor.holdingFamily) {
-      if (pinnedDocks.has(actor.id) || actor.pendingStation.transferOwner === transferOwner && transferOwner) continue;
-      if (actor.pendingStation.due <= now) {
-        const seat = actor.pendingStation.seat; actor.pendingStation = null;
-        settle(actor, seat, true).catch(showError);
-      } else next = Math.min(next, actor.pendingStation.due);
-    }
-    if (Number.isFinite(next)) navigationTimer = setTimeout(() => { navigationTimer = 0; queueNavigation(); }, Math.max(0, next - performance.now()));
   }
   function requestStation(actor, seat, urgent = false) {
     actor.target = seat;
@@ -1089,7 +1154,11 @@
     if (!traffic.request(actor.id, target, { instant: reduced() || sceneHidden(), overlapIds })) return false;
     actor.node.dataset.traffic = 'queued';
     transitCaption(actor);
-    return new Promise(resolve => { trafficWaiters.set(actor.id, { actor, target, serial, carrying, resolve }); pumpTraffic(); });
+    return new Promise(resolve => {
+      trafficWaiters.set(actor.id, { actor, target, serial, carrying, resolve });
+      if (queueNavigation.batch) queueNavigation.batch.pumpRequested = true;
+      else pumpTraffic();
+    });
   }
   async function animateWalk(actor, path, serial, carrying = false, instant = false, yielding = false) {
     if (actor.serial !== serial) return false;
@@ -1456,7 +1525,7 @@
     button.type = 'button';
     button.setAttribute('aria-pressed', 'false');
     const body = element('span', 'character-body');
-    body.style.setProperty('--avatar-presentation-scale', String(1.5 * window.OfficeSizeStability.bodyRatio(session)));
+    body.style.setProperty('--avatar-presentation-scale', String(window.OfficeSizeStability.PRESENTATION_SCALE * window.OfficeSizeStability.bodyRatio(session)));
     const image = element('img');
     image.alt = '';
     image.draggable = false;
@@ -1478,12 +1547,19 @@
     presentationReentries.delete(session.id);
     node.style.visibility = 'hidden'; node.style.opacity = '1';
     node.dataset.clonePhase = actor.clonePhase;
-    actor.performance = window.OfficeAvatarPerformance.create({ actorNode: node, body, image, session, clockRegistry: performanceClocks });
+    actor.design = companionFor(session);
+    node.dataset.bodyDesign = actor.design?.id || 'original';
+    node.dataset.bodyAppearance = actor.design?.appearanceKey || actor.design?.id || 'original';
+    node.dataset.bodyVariant = String(actor.design?.variantIndex || 0);
+    actor.performance = window.OfficeAvatarPerformance.create({ actorNode: node, body, image, session, clockRegistry: performanceClocks, design: actor.design });
     actor.appearance = window.OfficeFamilyAppearance.create({ actorNode: node, body, image });
     node.style.transform = actorTransform(actor.position, actor.helper);
     node.style.zIndex = '10';
     image.addEventListener('error', () => {
       if (destroyed || actors.get(actor.id) !== actor) return;
+      // Workshop sheets have a local, single-frame fallback owned by their
+      // renderer. Swapping in a legacy sheet would corrupt its 3×2 crop.
+      if (actor.design?.renderer === 'creature') { image.hidden = true; return; }
       if (actor.currentAsset !== 'clawd-static-base.svg') { actor.currentAsset = 'clawd-static-base.svg'; image.dataset.asset = 'clawd-static-base.svg'; image.src = assetURL('clawd-static-base.svg'); }
       else { image.hidden = true; showError(language === 'en' ? 'Character artwork is temporarily unavailable. A backup body is shown while observation continues.' : '角色素材暂未加载，已显示备用身体；后续更新会重试，任务仍在观察。'); }
     });
@@ -1496,14 +1572,14 @@
         image.hidden = false;
         // The articulated body has its own external image reference. Retry
         // that reference too, rather than revealing an empty animated rig.
-        if (recovering) body.querySelector('.ap-rig defs image')?.setAttribute('href', assetURL(window.OfficeAvatarPerformanceModel.ASSET, true));
+        if (recovering) body.querySelector('.ap-rig defs image')?.setAttribute('href', assetURL(actor.design?.asset || window.OfficeAvatarPerformanceModel.ASSET, true));
       }
     });
     button.addEventListener('click', () => selectSession(actor.id));
     button.addEventListener('dblclick', () => react(actor));
     button.addEventListener('keydown', (event) => { if (event.key === ' ' && event.shiftKey) { event.preventDefault(); react(actor); } });
     updateActorLabel(actor);
-    actor.fallback = window.OfficeAvatarFallback?.create({ actorNode: node, body, image });
+    actor.fallback = actor.design?.renderer === 'creature' ? null : window.OfficeAvatarFallback?.create({ actorNode: node, body, image });
     actors.set(session.id, actor);
     observedIds.add(actor.id);
     setPose(actor, actor.spec.asset);
@@ -1523,8 +1599,45 @@
     }
     return '';
   }
+  function companionRoot(session) {
+    const knownRoot = cloneLedger.rootFor(session.id);
+    if (knownRoot) return knownRoot;
+    // Even before a parent is observed, its reported identity anchors all of
+    // its helpers. Retain that evidence across incomplete metadata snapshots.
+    const chain = cloneLedger.parentChain(session.id), missingAncestor = chain[chain.length - 1];
+    if (missingAncestor && !familyGraph.byId.has(missingAncestor)) return missingAncestor;
+    return window.OfficeAgentAppearance?.resolveRoot(session, { sessions: familyGraph.byId })
+      || familyGraph.info.get(session.id)?.rootId || session.id;
+  }
+  function companionFor(session) {
+    const design = companionRegistry ? companionRegistry.forRoot(companionRoot(session))
+      : window.OfficeAgentAppearance?.forSession(session, { sessions: familyGraph.byId, mode: settings.agentAppearance }) || null;
+    return window.OfficePublicArtwork ? window.OfficePublicArtwork.design(design) : design;
+  }
+  function syncActorDesign(actor) {
+    const design = companionFor(actor.session);
+    if ((actor.design?.appearanceKey || actor.design?.id || 'original') === (design?.appearanceKey || design?.id || 'original')) return;
+    const changedFormat = actor.design?.renderer !== design?.renderer;
+    const changedAsset = actor.design?.asset !== design?.asset;
+    // Keep the actual actor, position and accumulated work clocks. A switch
+    // between artwork formats changes only its internal presentation rig.
+    actor.fallback?.destroy(); actor.fallback = null;
+    actor.design = design;
+    actor.node.dataset.bodyDesign = design?.id || 'original';
+    actor.node.dataset.bodyAppearance = design?.appearanceKey || design?.id || 'original';
+    actor.node.dataset.bodyVariant = String(design?.variantIndex || 0);
+    actor.performance?.setDesign(design);
+    if (changedFormat && actor.appearance) {
+      actor.appearance.destroy();
+      actor.appearance = window.OfficeFamilyAppearance.create({ actorNode: actor.node, body: actor.body, image: actor.image });
+    }
+    if (changedFormat || changedAsset) actor.currentAsset = '';
+    setPose(actor, actor.wantedAsset || actor.spec.asset);
+    actor.fallback = design?.renderer === 'creature' ? null : window.OfficeAvatarFallback?.create({ actorNode: actor.node, body: actor.body, image: actor.image });
+  }
   function updateActorLabel(actor) {
     const session = actor.session;
+    syncActorDesign(actor);
     const spec = Scene.activitySpec(session);
     actor.node.dataset.helper = String(Boolean(session.parentId));
     actor.node.dataset.attention = String(Scene.needsAttention(session));
@@ -1572,6 +1685,7 @@
     const pose = ['teacup','bookmark','leaf'].includes(p.keepsake) ? 'clawd-aegyo-shy.svg' : ['paperboat','lantern','bell'].includes(p.keepsake) ? 'clawd-react-double.svg' : 'clawd-react-double-jump.svg';
     setPose(actor, pose, true);
     if (!quietSprites()) {
+      if (actor.design?.renderer === 'creature') actor.performance?.cue?.('wave');
       const arm = actor.body.querySelector('.ap-arm-right');
       if (arm) {
         const wave = arm.animate([{ transform: 'translate(0px,0px) rotate(0deg)' },
@@ -1602,7 +1716,7 @@
     actors.delete(id);
     updateEntranceLane();
     renderHelperLinks();
-    if (selectedSession === id) { selectedSession = ''; $('inspector').hidden = true; }
+    if (selectedSession === id) closeInspector();
     refreshQuietPresentation();
     if (releasedSlot) queueLayoutRefresh(true);
     if (actor.helper) queueDeferredResize();
@@ -1613,7 +1727,7 @@
     const quiet = snapshot.mode === 'live' && attendance.present.length === 0 && actors.size === 0;
     office.dataset.quiet = String(quiet);
     $('empty-state').hidden = !quiet;
-    if (quiet) { selectedSession = ''; $('inspector').hidden = true; }
+    if (quiet && selectedSession) closeInspector();
     visitor.tick();
   }
   function clearActors({ readmission = false } = {}) {
@@ -1667,6 +1781,16 @@
     return !Scene.isClosed(session) && !session.disconnected && session.status !== 'stale'
       && (Clones.isActive(session) || ['active', 'waiting'].includes(session.status) && session.activity !== 'idle');
   }
+  function refreshActorSession(actor, session) {
+    actor.session = session;
+    actor.spec = Scene.activitySpec(session);
+    actor.helper = Boolean(session.parentId);
+    const ratio = String(window.OfficeSizeStability.bodyRatio(session));
+    if (actor.node.dataset.bodyRatio !== ratio) {
+      actor.node.dataset.bodyRatio = ratio;
+      actor.body?.style.setProperty('--avatar-presentation-scale', String(window.OfficeSizeStability.PRESENTATION_SCALE * Number(ratio)));
+    }
+  }
   function reconcileActors() {
     const sessionMap = new Map(snapshot.sessions.map(session => [session.id, session]));
     const visibleIds = new Set(currentPage.visible.map(session => session.id));
@@ -1679,7 +1803,7 @@
     if (scaleChanged) for (const actor of actors.values()) actor.node.style.transform = actorTransform(actor.position, actor.helper);
     for (const actor of [...actors.values()]) if (!visibleIds.has(actor.id)) {
       const next = sessionMap.get(actor.id);
-      actor.session = next || actor.session; actor.spec = Scene.activitySpec(actor.session);
+      refreshActorSession(actor, next || actor.session);
       // A retained real ancestor still shows current ledger facts and language.
       // Refresh only its label; its physical holding/exit owner is unchanged.
       updateActorLabel(actor);
@@ -1708,9 +1832,7 @@
       let actor = actors.get(session.id);
       if (!actor) { makeActor(session, seat); continue; }
       const old = actor.session, previousTurn = actor.lastTurnAt;
-      actor.session = session; actor.spec = Scene.activitySpec(session); actor.helper = Boolean(session.parentId);
-      actor.body?.style.setProperty('--avatar-presentation-scale', String(1.5 * window.OfficeSizeStability.bodyRatio(session)));
-      actor.node.dataset.bodyRatio = String(window.OfficeSizeStability.bodyRatio(session));
+      refreshActorSession(actor, session);
       resumeActiveActor(actor);
       actor.target = seat;
       updateActorLabel(actor);
@@ -1786,18 +1908,37 @@
       if (archive.dataset.count !== count) archive.dataset.count = count;
     });
   }
-  function selectSession(id) {
+  function closeInspector({ restoreFocus = true } = {}) {
+    const hadFocus = $('inspector').contains(document.activeElement);
+    const previous = inspectorReturnFocus;
+    selectedSession = '';
+    $('inspector').hidden = true;
+    inspectorReturnFocus = null;
+    for (const actor of actors.values()) updateActorLabel(actor);
+    renderHelperLinks();
+    if (!restoreFocus || !hadFocus) return;
+    const preferred = previous?.node?.isConnected ? previous.node : actors.get(previous?.id)?.button;
+    const target = preferred && !preferred.disabled && preferred.getClientRects().length ? preferred : !$('roster-button').hidden ? $('roster-button') : $('settings-button');
+    target.focus({ preventScroll: true });
+  }
+  function selectSession(id, { returnFocus } = {}) {
     const session = snapshot.sessions.find((item) => item.id === id);
     if (!session) return;
+    if (!$('inspector').contains(document.activeElement)) {
+      const active = returnFocus || document.activeElement;
+      inspectorReturnFocus = { node: active && active !== document.body ? active : actors.get(id)?.button, id };
+    }
     selectedSession = id;
     $('inspector').hidden = false;
     for (const actor of actors.values()) updateActorLabel(actor);
     renderInspector();
+    renderHelperLinks();
+    $('inspector').focus({ preventScroll: true });
   }
   function renderInspector() {
     if (!selectedSession || $('inspector').hidden) return;
     const session = snapshot.sessions.find((item) => item.id === selectedSession);
-    if (!session) { $('inspector').hidden = true; return; }
+    if (!session) { closeInspector(); return; }
     const spec = Scene.activitySpec(session);
     const actor = actors.get(session.id);
     $('inspect-provider').dataset.provider = String(session.provider).toLowerCase();
@@ -1882,12 +2023,41 @@
     $('connections-button').setAttribute('aria-label', '连接 AI 工具，' + watching + ' 个正在观察');
   }
   function renderRoster() {
-    const fragment = document.createDocumentFragment();
     const sessions = snapshot.sessions.filter((session) => !Scene.isClosed(session) && Scene.inRoom(session, selectedProject));
-    for (const session of Family.build(sessions).ordered) {
+    const query = $('roster-search').value.trim().toLocaleLowerCase(language);
+    const attentionOnly = $('roster-attention').getAttribute('aria-pressed') === 'true';
+    const visible = Family.build(sessions).ordered.filter(session => {
+      if (attentionOnly && !Scene.needsAttention(session)) return false;
+      const parent = familyGraph.byId.get(session.parentId);
+      return !query || [displayName(session), session.title, Scene.providerName(session.provider), session.provider, session.projectPath,
+        session.sessionId, session.id, session.subagentId, parent && displayName(parent)].filter(Boolean).join(' ').toLocaleLowerCase(language).includes(query);
+    });
+    const count = language === 'en' ? `${visible.length} of ${sessions.length} agents` : `${visible.length} / ${sessions.length} 位伙伴`;
+    if ($('roster-count').textContent !== count) $('roster-count').textContent = count;
+    $('roster-reset').hidden = !query && !attentionOnly;
+    $('roster-empty').hidden = visible.length > 0;
+    const emptyCopy = language === 'en' ? 'No matching agents. Try another name, task, tool or project.' : '没有找到伙伴，试试其他昵称、任务、工具或项目。';
+    if ($('roster-empty').textContent !== emptyCopy) $('roster-empty').textContent = emptyCopy;
+    // Snapshot heartbeats must not replace a focused row or reset its scroll.
+    const renderKey = JSON.stringify([language, selectedSession, visible.map(session => [session.id, displayName(session), session.title, session.parentId,
+      session.provider, session.activity, session.status, session.disconnected, Scene.needsAttention(session), attendance.retired.includes(session.id),
+      restedClones.has(session.id), cloneSummary(session), paletteRegistry.forRoot(cloneLedger.rootFor(session.id) || familyGraph.info.get(session.id)?.rootId || session.id).color,
+      session.parentId && displayName(familyGraph.byId.get(session.parentId) || session)])]);
+    if (rosterRenderKey === renderKey) return;
+    rosterRenderKey = renderKey;
+    const list = $('roster-list');
+    const focused = document.activeElement.closest?.('.roster-row');
+    const focusedId = focused?.dataset.sessionId;
+    const focusedIndex = focused ? [...list.children].indexOf(focused) : -1;
+    const scrollTop = list.scrollTop;
+    const fragment = document.createDocumentFragment();
+    for (const session of visible) {
       const spec = Scene.activitySpec(session);
       const row = element('button', 'roster-row');
       row.type = 'button';
+      row.dataset.sessionId = session.id;
+      row.dataset.selected = String(session.id === selectedSession);
+      row.setAttribute('aria-pressed', String(session.id === selectedSession));
       row.dataset.attention = String(Scene.needsAttention(session));
       const family = familyGraph.info.get(session.id);
       row.style.setProperty('--family-color', paletteRegistry.forRoot(cloneLedger.rootFor(session.id) || family?.rootId || session.id).color);
@@ -1898,10 +2068,15 @@
       if (parent) { const relation = element('span','roster-relation'); relation.textContent = '↳ ' + I18n.t(language,'identity.parent',{name:displayName(parent)}); copy.append(relation); }
       else if (!session.parentId) { const relation = element('span','roster-relation'); relation.textContent = cloneSummary(session); relation.title = I18n.t(language, 'family.clonesHint'); copy.append(relation); }
       row.append(copy, element('span', 'roster-state', (attendance.retired.includes(session.id) || restedClones.has(session.id) ? tr(spec.stale ? '信号中断 · 保留在名单' : session.parentId ? '分身暂歇' : '门外休息') : tr(spec.label)) + ' →'));
-      row.addEventListener('click', () => { $('roster-dialog').close(); selectSession(session.id); });
+      row.addEventListener('click', () => { $('roster-dialog').close(); selectSession(session.id, { returnFocus: $('roster-button') }); });
       fragment.append(row);
     }
-    $('roster-list').replaceChildren(fragment);
+    list.replaceChildren(fragment);
+    list.scrollTop = scrollTop;
+    if (focusedId) {
+      const rows = [...list.children];
+      (rows.find(row => row.dataset.sessionId === focusedId) || rows[Math.min(focusedIndex, rows.length - 1)] || $('roster-search')).focus({ preventScroll: true });
+    }
   }
   function hasFiniteClone() {
     return [...actors.values()].some(actor => actor.helper && ['splitting', 'returning', 'absorbing'].includes(actor.clonePhase));
@@ -1932,6 +2107,11 @@
     office.dataset.sizePending = String(deferredPhysicalScale !== null);
     office.dataset.mode = snapshot.mode;
     cloneLedger.update(snapshot.sessions, Date.now());
+    // A pruned provider record may return without its optional parent field.
+    // Restore only the ledger's already observed link in a local view copy so
+    // layout, size, labels and clone routing agree without changing the source.
+    const familySessions = cloneLedger.presentationSessions?.(snapshot.sessions);
+    if (familySessions && familySessions !== snapshot.sessions) snapshot = { ...snapshot, sessions: familySessions };
     for (const session of snapshot.sessions) if (hasBodyActivity(session)) restedClones.delete(session.id);
     attendance = attendanceModel.update(snapshot.sessions);
     // A lost signal supplies no exit or clone-completion evidence. Unload
@@ -1964,6 +2144,10 @@
     const bodyIds = new Set(presentBodies.map(session => session.id));
     const retiringBodies = [...actors.values()].filter(actor => !bodyIds.has(actor.id) && !restedClones.has(actor.id)).map(actor => snapshot.sessions.find(session => session.id === actor.id) || actor.session);
     const layoutBodies = presentBodies.concat(retiringBodies);
+    // Reserve a complete appearance for each real family until its last body
+    // leaves. A closed root still walking out must not share its appearance
+    // with an arriving main; nested helpers use that same root reservation.
+    companionRegistry?.update([...new Set(layoutBodies.concat([...actors.values()].map(actor => actor.session)).map(companionRoot))]);
     // Presentation is decided from observed cast, including actual retirees,
     // before either the real plate or its probe is measured. Never key this
     // mode to a solver's output scale: that would feed font changes back into fit.
@@ -1975,12 +2159,18 @@
     if (transferOwner) currentPage = { ...currentPage, visible: presentBodies };
     else {
       const options = sceneOptions(layoutBodies, finiteExitIds(presentBodies));
-      currentPage = WalkingLayout.layoutAllWalking(layoutBodies, options);
+      try { currentPage = WalkingLayout.layoutFullSizeWalking(layoutBodies, options); }
+      catch (error) {
+        if (error.code !== 'FIXED_SIZE_CAPACITY') throw error;
+        // Keep the user's size and every admitted resident if a transient
+        // clone dock or changed floor cannot yet admit a new observation.
+        currentPage = WalkingLayout.layoutFixedWalking(layoutBodies, { ...options, fullSize: true });
+      }
       currentPage.visible = presentBodies.filter(session => currentPage.seats.has(session.id));
       if (currentPage.transferCertificate && !acceptTransfer(currentPage.transferCertificate, layoutBodies)) {
         // An unequipped/quiet/changed physical cast cannot execute a certificate.
         // Ask for the ordinary proof instead of issuing its two blocked goals.
-        currentPage = WalkingLayout.layoutAllWalking(layoutBodies, { ...options, allowTransfers: false });
+        currentPage = WalkingLayout.layoutFullSizeWalking(layoutBodies, { ...options, allowTransfers: false });
         currentPage.visible = presentBodies.filter(session => currentPage.seats.has(session.id));
       }
       currentPage.routeGeometry = { paths: currentPage.pathsById, scale: currentPage.uniformScale,
@@ -2016,7 +2206,9 @@
     office.dataset.readability = crowded ? 'crowded' : 'readable';
     if (crowded) summary += ' · ' + I18n.t(language, 'room.crowded', { percent: Math.max(1, Math.round(uniformScale * 100)) });
     if (deferredPhysicalScale !== null) summary += language === 'en' ? ' · size change after clone transition' : ' · 等分身过渡完成后调整大小';
-    office.dataset.overflowCount = '0';
+    const waitingForDock = currentPage.overflowIds?.length || 0;
+    office.dataset.overflowCount = String(waitingForDock);
+    if (waitingForDock) summary += language === 'en' ? ' · ' + waitingForDock + ' awaiting a work dock' : ' · ' + waitingForDock + ' 位等候工位';
     $('room-summary').textContent = summary;
     $('room-summary').dataset.baseSummary = summary;
     const stats = snapshot.activityStats;
@@ -2100,6 +2292,7 @@
     const previousLanguage = language;
     language = settings.language === 'en' ? 'en' : 'zh';
     applyLanguage();
+    appearancePicker?.update({ value: settings.agentAppearance, language, reducedMotion: reduced(), lowPower: settings.lowPower, hidden: nativeWindowHidden });
     office.dataset.rain = String(settings.rain);
     scenery.update(settings, language);
     office.dataset.reducedMotion = String(reduced());
@@ -2152,9 +2345,13 @@
   }
   function openDialog(id) {
     const dialog = $(id);
-    if (!dialog.open) dialog.showModal();
+    const opening = !dialog.open;
+    if (opening) dialog.showModal();
     if (id === 'connections-dialog') renderConnections();
-    if (id === 'roster-dialog') renderRoster();
+    if (id === 'roster-dialog') {
+      renderRoster();
+      if (opening) $('roster-search').focus({ preventScroll: true });
+    }
     if (id === 'settings-dialog') refreshDisplays();
   }
   async function refreshDisplays() {
@@ -2181,10 +2378,45 @@
   $('agent-size-refit').addEventListener('click', () => {
     sizeStability.request(settings.agentScale);
     cancelPhysicalRoutes(); reflowPending = true; render();
-    text($('settings-result'), '已按当前偏好重新适配。');
+    text($('settings-result'), '已按当前大小重新排列。');
   });
   $('day-reset').addEventListener('click', () => { $('setting-sceneTime').focus(); saveSettings({ sceneTime: 'auto' }); });
   $('roster-button').addEventListener('click', () => openDialog('roster-dialog'));
+  $('roster-search').addEventListener('input', renderRoster);
+  $('roster-search').addEventListener('search', renderRoster);
+  $('roster-attention').addEventListener('click', () => {
+    $('roster-attention').setAttribute('aria-pressed', String($('roster-attention').getAttribute('aria-pressed') !== 'true'));
+    renderRoster();
+  });
+  $('roster-reset').addEventListener('click', () => {
+    $('roster-search').value = '';
+    $('roster-attention').setAttribute('aria-pressed', 'false');
+    renderRoster();
+    $('roster-search').focus({ preventScroll: true });
+  });
+  $('roster-dialog').addEventListener('cancel', event => {
+    if (!$('roster-search').value) return;
+    event.preventDefault();
+    $('roster-search').value = '';
+    renderRoster();
+    $('roster-search').focus({ preventScroll: true });
+  });
+  $('roster-dialog').addEventListener('keydown', event => {
+    if (event.isComposing || event.altKey || event.ctrlKey || event.metaKey) return;
+    const rows = [...$('roster-list').children];
+    const index = rows.indexOf(document.activeElement);
+    const inSearch = event.target === $('roster-search');
+    if ((!inSearch && index < 0) || !rows.length) return;
+    let next;
+    if (event.key === 'ArrowDown') next = rows[Math.min(index + 1, rows.length - 1)];
+    else if (event.key === 'ArrowUp') next = rows[index <= 0 ? rows.length - 1 : index - 1];
+    else if (!inSearch && event.key === 'Home') next = rows[0];
+    else if (!inSearch && event.key === 'End') next = rows[rows.length - 1];
+    if (!next) return;
+    event.preventDefault();
+    next.focus({ preventScroll: true });
+    next.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+  });
   $('greet-agent').addEventListener('click', () => { const actor = actors.get(selectedSession); if (actor) react(actor); });
   $('inspect-helper').addEventListener('click', () => { const id = $('inspect-helper').dataset.parentId; if (id) selectSession(id); });
   $('dismiss-error').addEventListener('click', () => { $('error-message').hidden = true; });
@@ -2194,7 +2426,7 @@
   $('attention-jump').addEventListener('click', () => jumpAttention(false));
   $('page-prev').addEventListener('click', () => { page = Math.max(0, page - 1); selectedSession = ''; $('inspector').hidden = true; clearActors(); render(); });
   $('page-next').addEventListener('click', () => { page = Math.min(currentPage.pages - 1, page + 1); selectedSession = ''; $('inspector').hidden = true; clearActors(); render(); });
-  $('close-inspector').addEventListener('click', () => { selectedSession = ''; $('inspector').hidden = true; for (const actor of actors.values()) updateActorLabel(actor); });
+  $('close-inspector').addEventListener('click', () => closeInspector());
   $('open-source').addEventListener('click', () => attempt(async () => {
     const id = selectedSession;
     if (!id) return;
@@ -2215,12 +2447,18 @@
     if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dialog.close();
   });
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && !document.querySelector('dialog[open]')) { selectedSession = ''; $('inspector').hidden = true; for (const actor of actors.values()) updateActorLabel(actor); }
+    if (event.defaultPrevented || event.isComposing) return;
+    if (event.key.toLowerCase() === 'k' && (event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && !document.querySelector('dialog[open]')) {
+      event.preventDefault();
+      openDialog('roster-dialog');
+    }
+    if (event.key === 'Escape' && !document.querySelector('dialog[open]') && !$('inspector').hidden) { event.preventDefault(); closeInspector(); }
   });
   function refreshVisibility() {
     numberFlip?.sync();
     if (sceneHidden()) revokeTransfer('hidden');
     office.dataset.hidden = String(sceneHidden());
+    appearancePicker?.update({ language, reducedMotion: reduced(), lowPower: settings.lowPower, hidden: nativeWindowHidden });
     for (const actor of [...actors.values()]) {
       settleQuietCloneEffects(actor);
       if (actors.has(actor.id)) setPose(actor, actor.wantedAsset || actor.spec.asset);
@@ -2265,6 +2503,7 @@
     destroyed = true;
     window.removeEventListener('resize', refreshScale);
     document.removeEventListener('visibilitychange', refreshVisibility);
+    appearancePicker?.destroy();
     usageHistory?.dispose();
     numberFlip?.destroy();
     manualQuestions?.dispose();

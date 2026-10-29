@@ -1,3 +1,5 @@
+> **上游參考歸檔**：本頁保留 Clawd on Desk 的說明，並非 AI Office Workspace v0.24.0 的當前翻譯。請閱本項目 [English](README.md)／[简体中文](README.zh-CN.md) 與 [Release](docs/releases/README.md)。本頁的下載、平台及審批功能說明屬於上游項目。
+
 <p align="center">
   <img src="assets/icon.png" width="128" alt="Clawd">
 </p>

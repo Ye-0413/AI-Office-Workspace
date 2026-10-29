@@ -22,6 +22,10 @@
     const rig = body.querySelector('.ap-rig'), source = rig?.querySelector('defs image');
     if (!image || !source?.id) throw new TypeError('Create the existing performance rig and bitmap before its fallback.');
     const document = body.ownerDocument, view = document.defaultView;
+    // Native designs fill their eye cut-outs with an unanimated surface path.
+    // The failure capsule needs its own orange surface there; legacy artwork
+    // has a <use> instead and keeps its existing source-reference ownership.
+    const eyePatch = rig.querySelector('.ap-torso > g > path'), eyePatchFill = eyePatch?.getAttribute('fill');
     const fallbackId = 'office-native-body-' + (++serial);
     const native = document.createElementNS(NS, 'g');
     native.id = fallbackId; native.setAttribute('class', 'avatar-fallback-source'); native.innerHTML = NATIVE_BODY;
@@ -51,8 +55,14 @@
     // This is one local resource probe, never a polling or timer loop.
     const probe = document.createElement?.('img');
     image.classList.add('avatar-fallback-managed');
-    const mirrors = new Map(), rigFades = new Map(), bitmapFades = new Map();
+    const mirrors = new Map(), rigFades = new Set(), bitmapFades = new Set();
     const attribute = (node, name, value) => { if (node.getAttribute(name) !== value) node.setAttribute(name, value); };
+    function paintEyePatch(native) {
+      if (!eyePatch) return;
+      const fill = native ? '#de886d' : eyePatchFill;
+      if (fill !== null) attribute(eyePatch, 'fill', fill);
+      else if (eyePatch.getAttribute('fill') !== null) eyePatch.removeAttribute('fill');
+    }
     const style = (node, name, value) => { if (node.style.getPropertyValue(name) !== value) node.style.setProperty(name, value); };
     const read = (node, property, fallback = 1) => {
       const computed = view?.getComputedStyle?.(node);
@@ -60,26 +70,32 @@
       const number = parseFloat(value || node.style.getPropertyValue(property)); return Number.isFinite(number) ? number : fallback;
     };
     const office = actorNode.closest?.('.office');
-    const quiet = () => Boolean(document.hidden || office?.dataset.reducedMotion === 'true' || office?.dataset.lowPower === 'true' || view?.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+    const motionQuery = view?.matchMedia?.('(prefers-reduced-motion: reduce)');
+    const quiet = () => Boolean(document.hidden || office?.dataset.hidden === 'true' || office?.dataset.reducedMotion === 'true' || office?.dataset.lowPower === 'true' || motionQuery?.matches);
     function cancelFades(group) {
-      for (const [motion, { node, property }] of group) { const value = read(node, property); motion.cancel(); style(node, property, String(value)); }
+      for (const motion of group) motion.cancel();
       group.clear();
     }
     function fade(group, node, property, from, to) {
       style(node, property, String(to));
       if (quiet() || typeof node.animate !== 'function') return;
       const motion = node.animate([{ [property]: String(from) }, { [property]: String(to) }], { duration: 220, easing: 'cubic-bezier(.23,1,.32,1)' });
-      group.set(motion, { node, property });
+      group.add(motion);
       motion.finished.catch(() => {}).then(() => { if (group.has(motion)) { group.delete(motion); motion.cancel(); } });
     }
     function paintRig(immediate = false) {
       const mode = rigHealth === 'healthy' ? 'external' : 'native';
       if (mode === rigMode && !immediate) return;
-      const before = references.map(({ use, backup }) => ({ main: read(use,'opacity'), backup: read(backup,'opacity',0) }));
+      paintEyePatch(mode === 'native');
+      // Immediate/quiet handoffs already have exact target alphas. Reading
+      // every cropped use first would synchronously resolve styles for a pose
+      // that is about to be discarded, including initial missing artwork.
+      const immediateMode = immediate || quiet() || !rigMode;
+      const before = immediateMode ? null : references.map(({ use, backup }) => ({ main: read(use,'opacity'), backup: read(backup,'opacity',0) }));
       cancelFades(rigFades); const epoch = ++rigEpoch;
       for (let i=0;i<references.length;i++) {
-        const { use, backup, href } = references[i], from = before[i];
-        if (immediate || quiet() || !rigMode) {
+        const { use, backup, href } = references[i], from = before?.[i];
+        if (immediateMode) {
           attribute(use,'href',mode === 'external' ? href : '#'+fallbackId);
           style(use,'opacity','1'); style(backup,'opacity','0');
         } else if (mode === 'external') {
@@ -102,10 +118,11 @@
     function paintBitmap(immediate = false) {
       const mode = bitmapHealth === 'healthy' ? 'external' : 'native';
       if (mode === bitmapMode && !immediate) return;
-      const from = { main: read(image,'--avatar-art-alpha',bitmapMode === 'external' ? 1 : 0), base: read(base,'opacity'), outgoing: read(outgoing,'opacity',0) };
+      const immediateMode = immediate || quiet() || !bitmapMode;
+      const from = immediateMode ? null : { main: read(image,'--avatar-art-alpha',bitmapMode === 'external' ? 1 : 0), base: read(base,'opacity'), outgoing: read(outgoing,'opacity',0) };
       cancelFades(bitmapFades); const epoch = ++bitmapEpoch;
       attribute(bitmap,'data-active','true');
-      if (immediate || quiet() || !bitmapMode) {
+      if (immediateMode) {
         style(image,'--avatar-art-alpha',mode === 'external' ? '1' : '0');
         style(base,'opacity',mode === 'external' ? '0' : '1'); style(outgoing,'opacity','0');
       } else if (mode === 'external') {
@@ -129,13 +146,16 @@
       if (!bitmapFades.size) attribute(bitmap,'data-active',String(mode!=='external'));
     }
     function clearMirrors() { for (const motion of mirrors.values()) motion.cancel(); mirrors.clear(); }
+    let lastImageOpacity = image.style.getPropertyValue('opacity');
     function syncOpacity() {
+      const target = image.style.getPropertyValue('opacity');
+      lastImageOpacity = target;
       if (bitmapHealth === 'healthy' && !bitmapFades.size) { clearMirrors(); return; }
       // The bitmap's inline target plus its own finite WAAPI opacity fade are
       // mirrored, never its CSS clock or the rig's original animations.
-      const target = image.style.getPropertyValue('opacity');
       if (target) style(bitmap, 'opacity', target);
       else if (view?.getComputedStyle) style(bitmap, 'opacity', view.getComputedStyle(image).opacity);
+      if (quiet()) { clearMirrors(); return; }
       const live = new Set((image.getAnimations?.() || []).filter(motion => motion.effect?.getKeyframes?.().some(frame => frame.opacity !== undefined)));
       for (const [original, copy] of mirrors) if (!live.has(original)) { copy.cancel(); mirrors.delete(original); }
       if (typeof bitmap.animate !== 'function') return;
@@ -169,13 +189,27 @@
     source.addEventListener('error', rigError); source.addEventListener('load', rigLoad);
     const observer = view?.MutationObserver ? new view.MutationObserver(records => {
       if (destroyed) return;
-      if (records.some(record => record.target === image && record.attributeName === 'src')) bitmapHealth = image.complete && image.naturalWidth > 0 ? 'healthy' : 'pending';
-      if (records.some(record => record.target === source && ['href','xlink:href'].includes(record.attributeName))) rigHealth = 'pending';
-      sync();
+      let relevant = false;
+      for (const record of records) {
+        if (record.target === image) {
+          if (record.attributeName === 'src') { bitmapHealth = image.complete && image.naturalWidth > 0 ? 'healthy' : 'pending'; relevant = true; }
+          // Our own health alpha also writes image.style. Only a changed
+          // presence target needs new opacity mirroring; do not observe our
+          // health bookkeeping a second time.
+          else if (record.attributeName !== 'style' || image.style.getPropertyValue('opacity') !== lastImageOpacity) relevant = true;
+        } else if (record.target === source && ['href','xlink:href'].includes(record.attributeName)) { rigHealth = 'pending'; relevant = true; }
+        else if (record.target === body || record.target === office) relevant = true;
+      }
+      if (relevant) sync();
     }) : null;
-    observer?.observe(body, { subtree: true, attributes: true, attributeFilter: ['src','href','xlink:href','style','class','hidden'] });
+    // These are the resource and presence owners. A subtree observer also
+    // wakes for every joint freeze/thaw, family tint and our own backing uses.
+    observer?.observe(image, { attributes: true, attributeFilter: ['src','style','class','hidden'] });
+    observer?.observe(source, { attributes: true, attributeFilter: ['href','xlink:href'] });
+    observer?.observe(body, { attributes: true, attributeFilter: ['class'] });
     if (office) observer?.observe(office,{attributes:true,attributeFilter:['data-reduced-motion','data-low-power','data-hidden']});
     document.addEventListener?.('visibilitychange',sync);
+    motionQuery?.addEventListener?.('change',sync);
     sync();
     if (probe) {
       let url;try{url=new URL(trustedHref,document.baseURI||document.URL);}catch(_){}
@@ -190,7 +224,7 @@
       url.searchParams.set('mini-office-art-retry',String(++retrySerial));source.setAttribute('href',url.href);return true;
     }, state: () => ({ destroyed, bitmap: bitmapHealth, rig: rigHealth, mirrors: mirrors.size, healing:rigFades.size+bitmapFades.size }), destroy() {
       if (destroyed) return; destroyed = true;
-      observer?.disconnect();document.removeEventListener?.('visibilitychange',sync);clearMirrors();cancelFades(rigFades);cancelFades(bitmapFades);rigEpoch++;bitmapEpoch++;
+      observer?.disconnect();document.removeEventListener?.('visibilitychange',sync);motionQuery?.removeEventListener?.('change',sync);clearMirrors();cancelFades(rigFades);cancelFades(bitmapFades);rigEpoch++;bitmapEpoch++;
       if(probe){probe.removeEventListener('load',probeLoad);probe.removeEventListener('error',probeError);probe.removeAttribute('src');}
       image.removeEventListener('error', bitmapError); image.removeEventListener('load', bitmapLoad);
       source.removeEventListener('error', rigError); source.removeEventListener('load', rigLoad);
@@ -199,6 +233,7 @@
         if(opacity)use.style.setProperty('opacity',opacity);else use.style.removeProperty('opacity');
         backup.remove();
       }
+      paintEyePatch(false);
       image.classList.remove('avatar-fallback-managed');
       if(initialHealthAlpha)image.style.setProperty('--avatar-art-alpha',initialHealthAlpha);else image.style.removeProperty('--avatar-art-alpha');
       native.remove(); bitmap.remove();
