@@ -10,9 +10,7 @@ const { spawnSync } = require('node:child_process');
 const { createHash } = require('node:crypto');
 
 if (process.argv[2] !== '--packaged-flow-child') {
-  const appPath = path.resolve(process.argv[2] || path.join(__dirname, '../../dist-mini-office/mac-arm64/AI Mini Office.app'));
-  const executable = path.join(appPath, 'Contents/MacOS/AI Mini Office');
-  const archive = path.join(appPath, 'Contents/Resources/app.asar');
+  const { executable, archive } = require('./packaged-app.cjs').resolvePackagedApp(process.argv[2]);
   const child = spawnSync(executable, [__filename, '--packaged-flow-child', archive], {
     env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
     encoding: 'utf8', timeout: 90000, maxBuffer: 2 * 1024 * 1024,

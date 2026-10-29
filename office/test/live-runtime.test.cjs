@@ -21,6 +21,7 @@ async function startMain(t, { now, dataDir: requestedDataDir } = {}) {
   Object.assign(app, {
     isPackaged: false, setName(name) { this.name = name; },
     requestSingleInstanceLock: () => true, getPath: () => dataDir,
+    setPath(name, value) { assert.equal(name, 'userData'); assert.equal(value, dataDir); },
     getVersion: () => 'test', whenReady: () => Promise.resolve(), isHidden: () => false, quit() {},
   });
   class BrowserWindow extends EventEmitter {
@@ -52,7 +53,7 @@ async function startMain(t, { now, dataDir: requestedDataDir } = {}) {
   };
   const sandbox = {
     __dirname: path.dirname(mainFile), console,
-    process: { env: {}, platform: process.platform, arch: process.arch, execPath: process.execPath },
+    process: { env: { MINI_OFFICE_DATA_DIR: dataDir }, platform: process.platform, arch: process.arch, execPath: process.execPath },
     setInterval(callback, delay) { const id = ++timerId; timers.set(id, { callback, delay }); return id; },
     clearInterval: id => timers.delete(id),
     setTimeout(callback, delay) { const id = ++timerId; timers.set(id, { callback, delay }); return id; },

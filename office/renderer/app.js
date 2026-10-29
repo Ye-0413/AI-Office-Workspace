@@ -225,7 +225,7 @@
     $('error-message').hidden = false;
   }
   async function call(method, ...args) {
-    if (!bridge || typeof bridge[method] !== 'function') throw new Error('桌面连接尚未就绪，请重新打开小小工作室。');
+    if (!bridge || typeof bridge[method] !== 'function') throw new Error('桌面连接尚未就绪，请重新打开 AI Work Space。');
     const result = await bridge[method](...args);
     if (result && (result.ok === false || result.status === 'error')) throw new Error(result.error || result.message || '操作未完成，请稍后重试。');
     return result;

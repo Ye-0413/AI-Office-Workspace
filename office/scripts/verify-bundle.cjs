@@ -5,11 +5,10 @@ const os=require('node:os');
 const {isDeepStrictEqual}=require('node:util');
 const {execFileSync}=require('node:child_process');
 const asar=require('@electron/asar');
-const appPath=path.resolve(process.argv[2]||path.join(__dirname,'../../dist-mini-office/mac-arm64/AI Mini Office.app'));
-const plist=JSON.parse(execFileSync('/usr/bin/plutil',['-convert','json','-o','-',path.join(appPath,'Contents/Info.plist')],{encoding:'utf8'}));
+const {appPath,plist,executable,archive}=require('./packaged-app.cjs').resolvePackagedApp(process.argv[2]);
 if(plist.CFBundleIdentifier!=='local.ai-mini-office')throw new Error('Incorrect application identity');
-const executable=path.join(appPath,'Contents/MacOS',plist.CFBundleExecutable);fs.accessSync(executable,fs.constants.X_OK);
-const archive=path.join(appPath,'Contents/Resources/app.asar');
+if(plist.CFBundleDisplayName!==require('../package.json').build.productName)throw new Error('Incorrect application display name');
+fs.accessSync(executable,fs.constants.X_OK);
 function matchesSource(name){
   const source=fs.readFileSync(path.join(__dirname,'..',name)),built=asar.extractFile(archive,name);
   if(name==='node_modules/@iarna/toml/package.json'){

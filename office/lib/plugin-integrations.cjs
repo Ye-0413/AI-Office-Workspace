@@ -64,10 +64,10 @@ function readSource(appRoot, relative) {
 function owned(target) {
   directory(target); if (!stat(target)) return null;
   const record = JSON.parse(read(path.join(target, '.mini-office-owned.json')));
-  if (record.owner !== OWNER || record.version !== 1 || !object(record.files)) throw new Error('Existing plugin is not owned by Mini Office; preserved');
+  if (record.owner !== OWNER || record.version !== 1 || !object(record.files)) throw new Error('Existing plugin is not owned by AI Work Space; preserved');
   const names = Object.keys(record.files);
   if (names.length < 2 || names.some(name => !/^[a-z0-9][a-z0-9.-]*$/i.test(name))) throw new Error('Invalid plugin ownership manifest; preserved');
-  for (const name of names) if (sha(read(path.join(target, name))) !== record.files[name]) throw new Error('Plugin was changed outside Mini Office; preserved');
+  for (const name of names) if (sha(read(path.join(target, name))) !== record.files[name]) throw new Error('Plugin was changed outside AI Work Space; preserved');
   if (fs.readdirSync(target).some(name => !names.includes(name) && name !== '.mini-office-owned.json')) throw new Error('Plugin contains external files; preserved');
   return record;
 }
@@ -189,7 +189,7 @@ function values(options, target) {
   const pkg = { name: options.provider === 'deepseek-harness' ? DSH_PACKAGE : ID, version: '1.0.0', private: true, type: 'module', main: `./${target.entry}`, exports: { '.': `./${target.entry}` } };
   if (options.provider === 'openclaw') {
     pkg.openclaw = { extensions: ['./index.mjs'] };
-    result['openclaw.plugin.json'] = Buffer.from(JSON.stringify({ id: ID, name: 'AI Mini Office', activation: { onStartup: true }, configSchema: { type: 'object', additionalProperties: false, properties: {} } }));
+    result['openclaw.plugin.json'] = Buffer.from(JSON.stringify({ id: ID, name: 'AI Work Space', activation: { onStartup: true }, configSchema: { type: 'object', additionalProperties: false, properties: {} } }));
   }
   if (options.provider === 'deepseek-harness') {
     pkg.dsh = { bundle: { patch: './cordis.patch.yml' } };
@@ -261,7 +261,7 @@ async function mutatePlugin(options, install) {
         throw error;
       } finally { if (staged && stat(staged)) fs.rmSync(staged, { recursive: true }); }
     }
-    return { status: 'ok', provider: options.provider, installed: install, targets: results, detail: install ? inspectPlugin(normalized).detail : 'Removed only Mini Office owned plugin files and registrations.' };
+    return { status: 'ok', provider: options.provider, installed: install, targets: results, detail: install ? inspectPlugin(normalized).detail : 'Removed only AI Work Space owned plugin files and registrations.' };
   } catch (error) { return { status: 'error', provider: options.provider, installed: inspectPlugin(options).installed, targets: results, message: error.code === 'EEXIST' ? 'Another plugin operation is in progress; retry later.' : error.message }; }
   finally { if (lockFd !== undefined) try { const identity = fs.fstatSync(lockFd); fs.closeSync(lockFd); const current = stat(lock); if (current && current.ino === identity.ino && current.dev === identity.dev && !current.isSymbolicLink()) fs.unlinkSync(lock); } catch {} }
 }

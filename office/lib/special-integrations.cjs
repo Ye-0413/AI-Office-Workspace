@@ -94,12 +94,12 @@ function mergeCrew(options,before,install){
  const value=json(before);if(value.hooks!==undefined&&!Array.isArray(value.hooks))throw new Error('KiroCrew hook store must contain an array; preserved');
  const owned=entry=>object(entry)&&EVENTS.kirocrew.some(event=>entry.event===event&&entry.command===command(options,'kirocrew',event));
  const hooks=(value.hooks||[]).filter(entry=>!owned(entry));
- if(install)for(const event of EVENTS.kirocrew)hooks.push({id:`mini-office-${event}`,name:`AI Mini Office — ${event}`,event,matcher:'',matcher_mode:'glob',command:command(options,'kirocrew',event),skills:[],timeout:2,enabled:true});
+ if(install)for(const event of EVENTS.kirocrew)hooks.push({id:`mini-office-${event}`,name:`AI Work Space — ${event}`,event,matcher:'',matcher_mode:'glob',command:command(options,'kirocrew',event),skills:[],timeout:2,enabled:true});
  if(install||value.hooks)value.hooks=hooks;
  return JSON.stringify(value,null,2)+'\n';
 }
 function miniFiles(options){
- const manifest={name:'ai-mini-office-state',displayName:'AI Mini Office',version:'1.0.0',description:'Passive local AI activity observer',hooks:['hooks/hooks.json']};
+ const manifest={name:'ai-mini-office-state',displayName:'AI Work Space',version:'1.0.0',description:'Passive local AI activity observer',hooks:['hooks/hooks.json']};
  for(const field of ['dataDir','electronPath','appRoot'])absolute(options[field]);
  const hooks={};for(const event of EVENTS.minimax)hooks[event]=[{hooks:[{type:'command',command:'/usr/bin/env',args:[`MINI_OFFICE_DATA_DIR=${options.dataDir}`,'ELECTRON_RUN_AS_NODE=1',options.electronPath,path.join(options.appRoot,'hooks','observe.cjs'),'--provider','minimax','--event',event,'--mini-office-observer-v1'],timeout:2}]}];
  const files={'.claude-plugin/plugin.json':JSON.stringify(manifest,null,2)+'\n','hooks/hooks.json':JSON.stringify({hooks},null,2)+'\n'};
@@ -126,7 +126,7 @@ function inspectSpecial(options){
     :EVENTS['kiro-cli'].some(event=>Array.isArray(value.hooks?.[event])&&value.hooks[event].some(entry=>entry?.command===command(options,'kiro-cli',event)));
    installed=Boolean(found)&&installed;
   }
-  return{available:targets.some(target=>stat(path.dirname(target.file||target.target))),installed,targetPaths:targets.map(target=>target.file||target.target),detail:installed?options.provider==='kiro-cli'?'Passive hooks installed. Built-in Kiro agents require switching to the generated mini-office agent. Real events confirm activation.':'Passive observer installed; start a new client session. Real events confirm activation.':'Connect adds only Mini Office activity observers; native approvals and foreign hooks stay in place.'};
+  return{available:targets.some(target=>stat(path.dirname(target.file||target.target))),installed,targetPaths:targets.map(target=>target.file||target.target),detail:installed?options.provider==='kiro-cli'?'Passive hooks installed. Built-in Kiro agents require switching to the generated mini-office agent. Real events confirm activation.':'Passive observer installed; start a new client session. Real events confirm activation.':'Connect adds only AI Work Space activity observers; native approvals and foreign hooks stay in place.'};
  }catch(error){return{available:false,installed:false,detail:error.message};}
 }
 function kiroTemplate(options){
@@ -173,7 +173,7 @@ async function mutateSpecial(options,install){
      if(backup){fs.rmSync(backup,{recursive:true});backup=null;}
     }finally{if(stage&&stat(stage))fs.rmSync(stage,{recursive:true});if(backup&&!stat(target.target))fs.renameSync(backup,target.target);}
    }
-   return{status:'ok',provider:options.provider,installed:install,detail:install?inspectSpecial(options).detail:'Removed only Mini Office owned observation hooks.'};
+   return{status:'ok',provider:options.provider,installed:install,detail:install?inspectSpecial(options).detail:'Removed only AI Work Space owned observation hooks.'};
   };
   if(options.provider==='kirocrew'){
    const file=rawTargets(options)[0].file,dir=path.dirname(file);directory(dir,true);

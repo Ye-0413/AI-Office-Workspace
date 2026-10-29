@@ -70,20 +70,21 @@ credit working time.
 The reducer still labels a source with no fresh evidence for three minutes as
 stale; it does not complete the turn or discard pending calls/waits. Visual
 attendance gives an already-present disconnected body twenty further seconds
-of grace, then removes only that body before fitting the remaining cast. The
+of grace, then removes only that body and releases its floor position. The
 original identity, parent relationship, state and event history stay in the
 roster. An initially stale row stays in the roster immediately. New observed
 work returns the same identity; clearing a stale flag without newer evidence
 does not. A currently active descendant protects its real ancestor anchors.
 No exit, clone-completion or success event is emitted for a lost signal.
 
-The all-active cast still fits on one floor without hiding identities. Below
-the fitter's recommended 35% scale the room shows an explicit bilingual size
-notice and directs the user to readable roster details. It never overwrites
-the saved size ceiling. `electron test/signal-loss-renderer.cjs` covers a dense
-55-body cast, expiration of 52 lost signals, readable recovery of the original
-three active bodies, roster retention, same-identity recovery and live-child
-ancestry. The fixture uses isolated synthetic observations, not a live client.
+Signal loss does not resize the remaining bodies or labels. The room keeps the
+chosen manual size and reuses released positions for observations awaiting a
+safe work dock; every observed identity remains available in the roster.
+[`attendance-model.test.cjs`](../test/attendance-model.test.cjs) covers signal-loss
+grace, same-identity recovery, preservation of observed state and live-child
+ancestry with isolated synthetic observations. The former 55-body renderer
+fixture assumes the retired automatic-fitting policy and does not establish
+current fixed-size room capacity. See [fixed-size admission](#fixed-agent-size-and-floor-admission).
 
 [`session-usage-monitor.cjs`](../lib/session-usage-monitor.cjs) imports Codex
 and Claude Code accounting independently from the live reducer.
@@ -223,30 +224,41 @@ reconnect in the connection panel or one-click Initialize, followed by the
 host's normal plugin reload/new-session path. Startup starts the local runtime
 channel but does not rewrite host configuration.
 
-## Full-room fitting and the saved size ceiling
+<a id="full-room-fitting-and-the-saved-size-ceiling"></a>
 
-The Agent size slider selects a maximum of **65%–135%**. The room first tries
-the entire observed cast at that size. If it cannot fit, the bounded full-cast
-allocator reduces the shared display scale, retaining every identity, complete
-nameplate, parent link, furniture-side seat and safe walking envelope on one
-screen. It never allocates a partial cast, capacity waiting room or extra page.
-The saved maximum remains unchanged by arrivals, departures, metadata or window
-resizing. Full names and relationships remain available in the roster and
-inspector. Roots and clones share the fit; clone artwork stays **80%** of root
-artwork, including nested clones.
+## Fixed Agent size and floor admission
 
-Ordinary traffic coordination still owns each real entry, split, return,
-yield and exit. Automatic fitting retains existing bodies and actual feet;
-current geometry, clock clearance and named clone endpoint overlaps are
-revalidated. A manual maximum change during a finite clone transition is saved
-immediately and applied after that transition safely finishes. A geometry-only
-readmission does not fabricate a work event or arrival response.
+The Agent size slider selects a fixed manual size of **65%–135%** for bodies
+and nameplates. Agent counts, arrivals, departures, empty rooms and ordinary
+metadata refreshes never shrink or enlarge them. At 100%, main artwork uses a
+1.8 presentation scale; helpers use 1.44 inside an additional 82% frame, giving
+a visible body ratio of **65.6%** of a main. The smaller frame also scales the
+helper's nameplate. Nested helpers use the same helper ratio rather than
+shrinking again at each generation. Full names and real parent relationships
+remain available in the roster and inspector.
 
-The fixed-size allocator remains available for compatibility fixtures; the
-production renderer uses the full-cast allocator. Model coverage includes
-100 mixed real identities, and the native production-page fixture verifies
-24 normal-motion and 100 reduced-motion identities without overflow, clipping,
-body/nameplate overlaps or changes to the saved maximum.
+The production renderer first tries the entire observed cast at the chosen
+size. Moving agents may pass through one another, while furniture and the clock
+reservation still constrain their routes. Settled work positions keep the
+complete painted-body and nameplate envelopes separate. **Rearrange** computes
+new destinations at the current size; it does not change the size or task state.
+
+If the current floor or a clone transition cannot safely admit another body,
+the fixed-size fallback preserves existing residents and shows an explicit
+count of agents **awaiting a work dock**. Those identities remain in the roster
+and can enter when space becomes available. This does not establish unlimited
+room capacity, and no smaller automatic scale is substituted. Existing actual
+feet and the real entry, split, return and exit transitions remain authoritative.
+A manual size change during a finite clone transition is saved immediately and
+applied after that transition finishes safely. Geometry-only readmission does
+not fabricate a work event or arrival response.
+
+[`agent-size-policy-renderer.cjs`](../test/agent-size-policy-renderer.cjs) checks
+the production page with two, four and then two feasible identities: fixed
+100% size, the smaller family helper, passing bodies during real station swaps,
+separate final work docks, stable metadata refreshes and explicit 110%/100%
+manual changes. These are isolated renderer fixtures. Legacy dense-cast fitting
+fixtures do not certify the capacity of the current larger fixed-size bodies.
 
 ## Evidence boundaries
 

@@ -4,9 +4,8 @@ const path=require('node:path');
 const os=require('node:os');
 const {spawnSync}=require('node:child_process');
 const assert=require('node:assert/strict');
-const appPath=path.resolve(process.argv[2]||path.join(__dirname,'../../dist-mini-office/mac-arm64/AI Mini Office.app'));
-const executable=path.join(appPath,'Contents/MacOS/AI Mini Office');
-const script=path.join(appPath,'Contents/Resources/app.asar/hooks/observe.cjs');
+const {executable,archive}=require('./packaged-app.cjs').resolvePackagedApp(process.argv[2]);
+const script=path.join(archive,'hooks/observe.cjs');
 const dataDir=fs.mkdtempSync(path.join(os.tmpdir(),'mini-office-packaged-hook-'));
 try{
   const child=spawnSync(executable,[script,'--provider','codex','--event','PreToolUse','--mini-office-observer-v1'],{env:{...process.env,ELECTRON_RUN_AS_NODE:'1',MINI_OFFICE_DATA_DIR:dataDir},input:JSON.stringify({session_id:'packaged-smoke-only',turn_id:'smoke-turn',tool_use_id:'smoke-call',tool_name:'Bash',tool_input:{command:'npm test'},cwd:dataDir}),encoding:'utf8',timeout:10000});

@@ -19,8 +19,12 @@ const {getProvider}=require('./lib/provider-catalog.cjs');
 const {withNativeLock}=require('./lib/native-lock.cjs');
 const {createWindowVisibility}=require('./lib/window-visibility.cjs');
 
-app.setName('AI Mini Office');
-if(process.env.MINI_OFFICE_DATA_DIR){fs.mkdirSync(process.env.MINI_OFFICE_DATA_DIR,{recursive:true,mode:0o700});app.setPath('userData',path.resolve(process.env.MINI_OFFICE_DATA_DIR));}
+// Keep the legacy profile and single-instance lock when branding changes.
+// Electron caches userData, so setName alone cannot preserve this path.
+app.setName('AI Work Space');
+const dataDir=process.env.MINI_OFFICE_DATA_DIR?path.resolve(process.env.MINI_OFFICE_DATA_DIR):path.join(app.getPath('appData'),'AI Mini Office');
+fs.mkdirSync(dataDir,{recursive:true,mode:0o700});
+app.setPath('userData',dataDir);
 if(!app.requestSingleInstanceLock()){app.quit();}
 else {
 let win=null,windowVisibility=null,settings,liveStore,activityStats,usageLog,usageApi,tokenStore,tokenMonitor,additionalMonitor,manualQuestions,setupManager,monitor,bridge,pruneTimer=null,refreshTimer=null,ready=false,providerMutation=false;
@@ -34,7 +38,7 @@ function current(){
 function combinedTokenStatus(){const basic=tokenMonitor.status(),extra=additionalMonitor.status(),error=[basic.error,extra.error].filter(Boolean).join('; ');return{...basic,providers:[...new Set([...basic.providers,...extra.providers])],sources:extra.sources,bytesRead:basic.bytesRead+extra.bytesRead,lastScanAt:Math.max(basic.lastScanAt||0,extra.lastScanAt||0)||null,importing:basic.completedScans===0||extra.completedScans===0||basic.pendingFiles>0||extra.pendingFiles>0,...(error?{error}:{})};}
 function broadcast(){if(win&&!win.isDestroyed()&&ready)win.webContents.send('office:snapshot',current());}
 function observe(event){return liveStore.ingest(event);}
-function applySettings(){if(win&&!win.isDestroyed()){win.setAlwaysOnTop(settings.get().alwaysOnTop);win.setTitle(settings.get().language==='en'?'Little Studio':'小小工作室');refreshMenu();}}
+function applySettings(){if(win&&!win.isDestroyed()){win.setAlwaysOnTop(settings.get().alwaysOnTop);win.setTitle('AI Work Space');refreshMenu();}}
 function refreshMenu(){const en=settings.get().language==='en';const label=(zh,english)=>en?english:zh;Menu.setApplicationMenu(Menu.buildFromTemplate([{label:app.name,submenu:[{role:'about'},{type:'separator'},{label:label('显示办公室','Show studio'),click:()=>win.show()},{type:'separator'},{role:'quit'}]},{label:label('编辑','Edit'),submenu:[{role:'undo'},{role:'redo'},{type:'separator'},{role:'cut'},{role:'copy'},{role:'paste'},{role:'selectAll'}]},{label:label('显示','View'),submenu:[{role:'togglefullscreen'},{role:'minimize'},{role:'zoom'}]}]));}
 function moveToDisplay(id){const display=screen.getAllDisplays().find(d=>d.id===id);if(!display)throw new Error('显示器已断开');const area=display.workArea;win.setFullScreen(false);win.setBounds({x:area.x,y:area.y,width:Math.min(1280,area.width),height:Math.min(720,area.height)});settings.set({displayId:id});win.show();return{id:display.id};}
 function bind(name,handler){ipcMain.handle('office:'+name,(event,...args)=>{if(!win||event.sender!==win.webContents)throw new Error('Unexpected IPC sender');return handler(...args);});}
@@ -64,7 +68,7 @@ app.whenReady().then(async()=>{
   bridge=createObserverBridge({dataDir:app.getPath('userData'),appRoot:__dirname,electronPath:process.execPath,withNativeLock,onEvent:observe});
   setupManager=createSetupManager({getConnections:()=>bridge.getConnections(),connect:provider=>bridge.connect(provider),onChange:broadcast});
   liveStore.onChange(()=>broadcast());
-  win=new BrowserWindow({width:1280,height:720,minWidth:800,minHeight:450,title:'AI Mini Office',backgroundColor:'#251d17',titleBarStyle:'hiddenInset',autoHideMenuBar:true,webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,webSecurity:true}});
+  win=new BrowserWindow({width:1280,height:720,minWidth:800,minHeight:450,title:'AI Work Space',backgroundColor:'#251d17',titleBarStyle:'hiddenInset',autoHideMenuBar:true,webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,webSecurity:true}});
   windowVisibility=createWindowVisibility({window:win,watch:true,getAppHidden:()=>process.platform==='darwin'?app.isHidden():false,onChange:()=>broadcast()});
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   win.webContents.on('will-navigate',event=>event.preventDefault());
@@ -97,7 +101,7 @@ app.whenReady().then(async()=>{
   pruneTimer=setInterval(()=>{liveStore.prune();usageLog.reconcile(liveStore.snapshot());broadcast();},5000);
   refreshTimer=setInterval(()=>broadcast(),2000);
   win.on('closed',()=>{windowVisibility?.dispose();win=null;});
-}).catch(error=>{console.error('[AI Mini Office]',error);app.quit();});
+}).catch(error=>{console.error('[AI Work Space]',error);app.quit();});
 app.on('window-all-closed',()=>app.quit());
 app.on('before-quit',()=>{ready=false;windowVisibility?.dispose();if(pruneTimer)clearInterval(pruneTimer);if(refreshTimer)clearInterval(refreshTimer);monitor?.stop();tokenMonitor?.stop();additionalMonitor?.stop();tokenStore?.close();manualQuestions?.stop();bridge?.stop();usageLog?.close();activityStats?.close();});
 }

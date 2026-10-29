@@ -5,8 +5,8 @@ const assert = require('node:assert/strict');
 const { spawnSync } = require('node:child_process');
 
 if (process.argv[2] !== '--usage-child') {
-  const appPath = path.resolve(process.argv[2] || path.join(__dirname, '../../dist-mini-office/mac-arm64/AI Mini Office.app'));
-  const child = spawnSync(path.join(appPath,'Contents/MacOS/AI Mini Office'), [__filename,'--usage-child',path.join(appPath,'Contents/Resources/app.asar')], {
+  const { executable, archive } = require('./packaged-app.cjs').resolvePackagedApp(process.argv[2]);
+  const child = spawnSync(executable, [__filename,'--usage-child',archive], {
     env:{...process.env,ELECTRON_RUN_AS_NODE:'1'},encoding:'utf8',timeout:20000,maxBuffer:1024*1024
   });
   if (child.stdout) process.stdout.write(child.stdout);

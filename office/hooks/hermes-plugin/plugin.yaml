@@ -1,7 +1,7 @@
 name: ai-mini-office
 version: "1.0.1"
-description: "Passive local activity observation for AI Mini Office."
-author: "AI Mini Office"
+description: "Passive local activity observation for AI Work Space."
+author: "AI Work Space"
 hooks:
   - on_session_start
   - on_session_reset

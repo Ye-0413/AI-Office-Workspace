@@ -1,16 +1,16 @@
 # Originality, provenance & rights / 原创、来源与权利声明
 
-This statement describes the project-specific creative work in **AI Office Workspace / AI Mini Office** and the material it builds on. It records provenance; it does not claim that the entire repository was written or drawn from scratch, or replace any existing license or notice.
+This statement describes the project-specific creative work in **AI Work Space** (formerly AI Office Workspace / AI Mini Office) and the material it builds on. It records provenance; it does not claim that the entire repository was written or drawn from scratch, or replace any existing license or notice.
 
-本声明说明 **AI Office Workspace／小小工作室** 的项目创作与所沿用的材料，用于记录来源；不宣称整个仓库的代码或美术均从零创作，也不替代既有许可证及第三方声明。
+本声明说明 **AI Work Space**（原 AI Office Workspace／AI Mini Office／小小工作室）的项目创作与所沿用的材料，用于记录来源；不宣称整个仓库的代码或美术均从零创作，也不替代既有许可证及第三方声明。
 
 ## Five workshop companions / 五只工坊伙伴
 
-Folio／纸团、Ink／墨豆、Moss／苔盒、Thread／线团 and Glow／灯籽 are credited to **AI Office Workspace contributors**, with **user-supplied concepts + AI-assisted image generation + project implementation**. The five materials and visual reference came from the user; this provenance does not certify the rights in every external reference.
+Folio／纸团、Ink／墨豆、Moss／苔盒、Thread／线团 and Glow／灯籽 are credited to **AI Work Space contributors** (formerly credited as AI Office Workspace contributors), with **user-supplied concepts + AI-assisted image generation + project implementation**. The five materials and visual reference came from the user; this provenance does not certify the rights in every external reference.
 
 The self-contained [Workshop artwork notice](office/assets/WORKSHOP-ARTWORK-NOTICE.md) ships with the app and is the authoritative project record for these five characters' creation and retained rights. It links the exact prompts and explains the separation between raster artwork and AGPL rendering/motion code. This page refers to that record rather than duplicating it.
 
-五只工坊伙伴署名 **AI Office Workspace contributors**，准确来源为 **用户概念＋AI 辅助图像生成＋项目实现**。五种材质与视觉参考由用户提供；该来源记录不替全部外部参考证明权属。
+五只工坊伙伴署名 **AI Work Space contributors**（原署名 AI Office Workspace contributors），准确来源为 **用户概念＋AI 辅助图像生成＋项目实现**。五种材质与视觉参考由用户提供；该来源记录不替全部外部参考证明权属。
 
 可随应用独立分发的[工坊角色美术声明](office/assets/WORKSHOP-ARTWORK-NOTICE.md)是这五只角色的项目创作与保留权利记录，内含完整提示及位图美术与 AGPL 渲染／动作代码的边界。本页引用该记录，避免复制后出现版本不一致。
 

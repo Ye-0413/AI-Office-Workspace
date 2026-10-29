@@ -1,10 +1,10 @@
 # Workshop artwork notice / 工坊角色美术声明
 
-**Project contribution credit / 项目创作署名：AI Office Workspace contributors.**
+**Project contribution credit / 项目创作署名：AI Work Space contributors** (formerly credited as / 原署名 AI Office Workspace contributors).
 
-This notice accompanies the five workshop characters in AI Office Workspace / AI Mini Office: **Folio／纸团, Ink／墨豆, Moss／苔盒, Thread／线团 and Glow／灯籽**. It records their creation process and the existing artwork policy. It does not replace the source-code license or grant a new artwork license.
+This notice accompanies the five workshop characters in AI Work Space (formerly AI Office Workspace / AI Mini Office): **Folio／纸团, Ink／墨豆, Moss／苔盒, Thread／线团 and Glow／灯籽**. It records their creation process and the existing artwork policy. It does not replace the source-code license or grant a new artwork license.
 
-本声明随 AI Office Workspace／小小工作室的五只角色分发：**纸团 Folio、墨豆 Ink、苔盒 Moss、线团 Thread、灯籽 Glow**。它记录创作过程与既有美术政策，不替代源码许可证，也不新增美术授权。
+本声明随 AI Work Space（原 AI Office Workspace／AI Mini Office／小小工作室）的五只角色分发：**纸团 Folio、墨豆 Ink、苔盒 Moss、线团 Thread、灯籽 Glow**。它记录创作过程与既有美术政策，不替代源码许可证，也不新增美术授权。
 
 ## Creation and scope / 创作与范围
 
@@ -42,8 +42,8 @@ The app's source code remains **AGPL-3.0-only** under its [LICENSE](../LICENSE).
 
 ## Credits and project record / 署名与项目记录
 
-AI Office Workspace preserves and adapts Clawd on Desk foundations and third-party contributions. See the packaged [upstream notices](../UPSTREAM-NOTICE.md), including the CC Switch attribution. This project-specific notice is not a claim that the whole repository is original.
+AI Work Space preserves and adapts Clawd on Desk foundations and third-party contributions. See the packaged [upstream notices](../UPSTREAM-NOTICE.md), including the CC Switch attribution. This project-specific notice is not a claim that the whole repository is original.
 
-AI Office Workspace 保留并改编 Clawd on Desk 基础与第三方贡献；详见随应用提供的[上游与第三方声明](../UPSTREAM-NOTICE.md)，其中包含 CC Switch 署名。本项目美术声明不表示整个仓库均为原创。
+AI Work Space 保留并改编 Clawd on Desk 基础与第三方贡献；详见随应用提供的[上游与第三方声明](../UPSTREAM-NOTICE.md)，其中包含 CC Switch 署名。本项目美术声明不表示整个仓库均为原创。
 
 [Full project originality statement / 项目整体原创声明](https://github.com/Ye-0413/AI-Office-Workspace/blob/main/ORIGINALITY.md) · [Project home / 项目首页](https://github.com/Ye-0413/AI-Office-Workspace)

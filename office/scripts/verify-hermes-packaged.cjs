@@ -10,9 +10,9 @@ const path=require('node:path');
 const {spawnSync}=require('node:child_process');
 
 if(process.argv[2]!=='--hermes-packaged-child') {
-  const appPath=path.resolve(process.argv[2]||path.join(__dirname,'../../dist-mini-office/mac-arm64/AI Mini Office.app'));
+  const {executable,archive}=require('./packaged-app.cjs').resolvePackagedApp(process.argv[2]);
   const report=path.resolve(process.argv[3]||path.join(__dirname,'../../.local-work/hermes-packaged-report.json'));
-  const result=spawnSync(path.join(appPath,'Contents/MacOS/AI Mini Office'),[__filename,'--hermes-packaged-child',path.join(appPath,'Contents/Resources/app.asar'),report],{
+  const result=spawnSync(executable,[__filename,'--hermes-packaged-child',archive,report],{
     env:{...process.env,ELECTRON_RUN_AS_NODE:'1'},encoding:'utf8',timeout:30000,maxBuffer:1024*1024,
   });
   if(result.stdout)process.stdout.write(result.stdout);

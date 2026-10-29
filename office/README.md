@@ -1,4 +1,8 @@
-# AI Mini Office / 小小工作室
+# AI Work Space
+
+**Observe your agent team collaboration in your spare display**
+
+在闲置屏幕上，观察你的 Agent 团队协作。
 
 **v0.24.0 · The workshop companions / 工坊伙伴**
 
@@ -6,9 +10,31 @@ A local macOS studio for watching real, independent AI sessions inhabit a little
 
 [Download v0.24.0](https://github.com/Ye-0413/AI-Office-Workspace/releases/tag/v0.24.0) · [Release notes / 版本说明](../docs/releases/release-v0.24.0.md) · [English project home](../README.md) · [简体中文首页](../README.zh-CN.md) · [Originality / 原创声明](../ORIGINALITY.md)
 
+## Watch the studio / 观看演示
+
+<a href="https://github.com/Ye-0413/AI-Office-Workspace/releases/download/v0.24.0/AI-Work-Space-brand-40s.mp4">
+  <picture>
+    <source media="(prefers-reduced-motion: reduce)" srcset="../docs/media/ai-work-space-preview.jpg">
+    <img src="../docs/media/ai-work-space-preview.gif" width="1100" alt="AI Work Space 真实工作室视频预览 / real studio video preview">
+  </picture>
+</a>
+
+点击预览观看或下载品牌短片。Click the preview to watch or download the brand film.
+
+- [40 秒品牌短片 / 40-second brand film](https://github.com/Ye-0413/AI-Office-Workspace/releases/download/v0.24.0/AI-Work-Space-brand-40s.mp4)
+- [60 秒功能演示 / 60-second product tour](https://github.com/Ye-0413/AI-Office-Workspace/releases/download/v0.24.0/AI-Work-Space-product-tour-60s.mp4)
+- [20 秒竖版短片 / 20-second vertical teaser](https://github.com/Ye-0413/AI-Office-Workspace/releases/download/v0.24.0/AI-Work-Space-social-20s-vertical.mp4)
+- [12 秒静音循环 / 12-second silent loop](https://github.com/Ye-0413/AI-Office-Workspace/releases/download/v0.24.0/AI-Work-Space-loop-12s-silent.mp4)
+
+真实 v0.24.0 App 录屏，后期使用 AI Work Space 品牌与中英双语文案；动作图鉴镜头已标注为演示。Recorded in the real v0.24.0 app, with updated AI Work Space titles, bilingual captions and labeled Motion gallery demonstrations. [录制说明与来源 / Recording details & credits](../docs/media/README.md).
+
 This release introduces five material companions and 550 performances, larger bodies and names, and fixed manual sizing. The verified platform is **macOS 13+ on Apple Silicon / arm64**. Current packages use local ad-hoc signing and are **not Apple-notarized**. Install the DMG or ZIP from the Release page; installed users do not need Node.js.
 
 本次发布包括五只材质伙伴、550 套动作、更大的身体与名字，以及不随人数变化的固定手动大小。可验证平台为 **macOS 13+、Apple Silicon／arm64**；当前安装包采用本地 ad-hoc 签名，**尚未经过 Apple 公证**。从 Release 下载 DMG 或 ZIP，安装后无需另装 Node.js。
+
+Published v0.24.0 packages still contain **AI Mini Office.app**. New builds from the current source use **AI Work Space.app**; existing release files retain their original names.
+
+已发布的 v0.24.0 安装包仍包含 **AI Mini Office.app**；当前源码的新构建使用 **AI Work Space.app**，已有 Release 文件保留原名。
 
 Current builds use the manually selected Agent size for both bodies and nameplates. Changes in Agent count do not shrink them. Helpers retain a smaller body and label frame, moving characters may cross through each other, and settled positions keep their full body and nameplate envelopes separate. Local session accounting now covers seven AI tools, with Daily Token and Weekly usage on the homepage. Supported OpenCode and MiMo questions can receive an explicit manual answer through their native question API. Chinese nicknames remain 155 complete mythological names from the Shan Hai Jing, and the social library retains twelve pair choreographies. Active session families survive history-capacity pressure, and passive metadata cannot break an existing in-process usage interval.
 
@@ -40,7 +66,15 @@ Daily room uses a stable Hong Kong date schedule: six different everyday interio
 
 五只工坊伙伴各有 11 类状态，每类 10 套材质动作，共 **550 套**。在应用的「房间偏好 → 工坊伙伴 → 动作图鉴」可逐一选择、播放或暂停。演示与真实会话分开。
 
-![五只工坊伙伴与同族分身的离线生产动作示意](../docs/animations/workshop-demo.svg)
+<details>
+<summary>展开离线动作预览 / Expand the offline animation preview</summary>
+
+<picture>
+  <source media="(prefers-reduced-motion: reduce)" srcset="../docs/animations/workshop-demo.png">
+  <img src="../docs/animations/workshop-demo.svg" width="1100" alt="五只工坊伙伴与同族分身的离线生产动作示意">
+</picture>
+
+</details>
 
 [当前活动预览与演示范围](../docs/animations/README.md) · [静态预览](../docs/animations/workshop-demo.png)。公开演示采用生产渲染模块的离线原生采样，以合成会话展示，不是用户实时任务截图。完整 550 套在应用图鉴内查看。
 
@@ -53,6 +87,8 @@ Daily room uses a stable Hong Kong date schedule: six different everyday interio
 此入口复用各工具已有的配置写入机制：保留用户设置与其它 hooks、按需备份、检查文件锁和未知格式，不改变审批策略、不发送 AI 消息。配置完成与真正收到活动分开显示；Codex 的 hooks 信任确认、部分工具的新会话或重启要求，会保留在逐项详情里。无法安全写入的配置会报告失败，不会覆盖修复。
 
 ## Agent 外观与快捷操作
+
+[认识五位伙伴：外形、性格与动作故事](../README.zh-CN.md#五位伙伴五种性格) · [Meet the five companions](../README.md#meet-the-workshop) · [支持的 AI 工具与功能](../README.zh-CN.md#支持哪些-ai-工具)
 
 每个主 Agent 家族随机分配五只工坊伙伴之一：**纸团**（奶油白折纸）、**墨豆**（深蓝墨滴）、**苔盒**（陶土与苔藓）、**线团**（珊瑚色毛线）、**灯籽**（透明琥珀与暖光）。Claude 也使用新角色。分身继承主身的造型与配色，体型更小；同一场景中每个主 Agent 的「造型＋配色」唯一。先分配五种原色造型，超过五个家族时复用造型并添加配色变体。在场家族不随新成员加入或离开而换外观，离场过渡结束前仍保留其外观名额。名牌家族色与编号继续区分真实身份和父子关系。用途说明是角色性格设定，不会改变工具能力或任务分配。
 
@@ -122,7 +158,7 @@ Token 覆盖 **Codex、Claude Code、Gemini CLI、Pi、OMP、Kimi Code 与 OpenC
 
 ## 本地体验
 
-打开构建产物中的 **AI Mini Office.app**；使用 DMG 时先将应用拖进「应用程序」，再打开并连接 AI 工具。房间使用「实时观察」：本地只读会话日志与已连接的 hooks／插件提供真实活动，每个独立 session 保持自己的身份，子 Agent 来自真实父子关系。角色使用固定的手动大小，人数变化不会自动缩小身体或名字；移动允许相互穿行，最终工作位置按身体和名牌的完整包络分开安排。空房间不会自动生成模拟任务。
+打开当前源码构建的 **AI Work Space.app**（已发布的 v0.24.0 下载仍为 **AI Mini Office.app**）；使用 DMG 时先将应用拖进「应用程序」，再打开并连接 AI 工具。房间使用「实时观察」：本地只读会话日志与已连接的 hooks／插件提供真实活动，每个独立 session 保持自己的身份，子 Agent 来自真实父子关系。角色使用固定的手动大小，人数变化不会自动缩小身体或名字；移动允许相互穿行，最终工作位置按身体和名牌的完整包络分开安排。空房间不会自动生成模拟任务。
 
 没有伙伴在场时，初始界面只展示完整的空工作室和右上角控制区。连接与偏好从右上角打开为木框纸色面板；语言切换也在同一区域。历史闲置任务不会触发中央欢迎卡片。真实伙伴全部离场、空闲 8 秒后，会有一位明确标记的装饰访客来串门：在 10 个角落随机停留，翻书、喝咖啡、看看植物，偶尔变个小魔术。500 条独立撰写的中英双语气泡按区域轮换，真实工作出现即让路；逛约两分半后离开，过一会儿再来。可在右上角偏好中关闭「闲时串门」。访客不会加入任务数、伙伴列表或真实事件记录。
 

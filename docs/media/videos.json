@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "product": "AI Work Space",
+  "tagline": "Observe your agent team collaboration in your spare display",
+  "capture": {
+    "type": "actual-app-window",
+    "appVersion": "0.24.0",
+    "capturedBeforeBrandRename": true,
+    "sourceSize": [
+      1236,
+      690
+    ],
+    "sourceFps": 30,
+    "note": "Actual app-window recordings captured before the rename. The editorial frame and titles use AI Work Space. Native captured UI remains unaltered except usage figures are masked when visible. Motion gallery sequences are labeled demonstrations; live observed sessions retain their real parent–helper relationships.",
+    "outputNote": "1080p editorial compositions from 1236×690 source footage; not native 1080p source capture.",
+    "music": "Original procedural instrumental score; no external samples. First three films include AAC audio; the studio loop is silent."
+  },
+  "videos": [
+    {
+      "file": "AI-Work-Space-brand-40s.mp4",
+      "title": {
+        "zh": "品牌短片",
+        "en": "Brand film"
+      },
+      "url": "https://github.com/Ye-0413/AI-Office-Workspace/releases/download/v0.24.0/AI-Work-Space-brand-40s.mp4",
+      "durationSeconds": 39.866667,
+      "width": 1920,
+      "height": 1080,
+      "fps": 30,
+      "silent": false,
+      "bytes": 5408772,
+      "sha256": "952c194784085371e3b3bca5321db230cfbe252cd38086fa0fd88abb5b79c639"
+    },
+    {
+      "file": "AI-Work-Space-product-tour-60s.mp4",
+      "title": {
+        "zh": "功能演示",
+        "en": "Product tour"
+      },
+      "url": "https://github.com/Ye-0413/AI-Office-Workspace/releases/download/v0.24.0/AI-Work-Space-product-tour-60s.mp4",
+      "durationSeconds": 59.866667,
+      "width": 1920,
+      "height": 1080,
+      "fps": 30,
+      "silent": false,
+      "bytes": 6702275,
+      "sha256": "cdb4ff9ae6e238019ad2df29504b89534284bd21a08439dabd1fe8e654c49bf4"
+    },
+    {
+      "file": "AI-Work-Space-social-20s-vertical.mp4",
+      "title": {
+        "zh": "竖版短片",
+        "en": "Vertical social teaser"
+      },
+      "url": "https://github.com/Ye-0413/AI-Office-Workspace/releases/download/v0.24.0/AI-Work-Space-social-20s-vertical.mp4",
+      "durationSeconds": 19.933333,
+      "width": 1080,
+      "height": 1920,
+      "fps": 30,
+      "silent": false,
+      "bytes": 2816654,
+      "sha256": "fe05fb13e36d3e26e065938f40206e030959b9bed479af697e337e42bd4c8ed6"
+    },
+    {
+      "file": "AI-Work-Space-loop-12s-silent.mp4",
+      "title": {
+        "zh": "静音循环",
+        "en": "Silent studio loop"
+      },
+      "url": "https://github.com/Ye-0413/AI-Office-Workspace/releases/download/v0.24.0/AI-Work-Space-loop-12s-silent.mp4",
+      "durationSeconds": 12.0,
+      "width": 1920,
+      "height": 1080,
+      "fps": 30,
+      "silent": true,
+      "bytes": 1485707,
+      "sha256": "549f1e3680c8bca66bfd96cc4a52d57226f9ac8c1cd36116f4586a4c40ee4419"
+    }
+  ],
+  "previews": [
+    {
+      "file": "ai-work-space-preview.gif",
+      "bytes": 1498862,
+      "sha256": "377444ad656005f51fccdd55db78b6b5dce9658ef4ee78adb19d5928e41403cb"
+    },
+    {
+      "file": "ai-work-space-preview.jpg",
+      "bytes": 156914,
+      "sha256": "ef13af8eaa12e603fb8e18ef3ac0668cda075c14d11f025f9c9ef59dcbb7c389"
+    },
+    {
+      "file": "ai-work-space-brand.jpg",
+      "bytes": 166072,
+      "sha256": "bbe11387ba21ba363e4083b6dcbff4e4a412af2ac3053c6a6b5399cfd900ae56"
+    }
+  ]
+}

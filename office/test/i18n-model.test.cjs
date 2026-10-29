@@ -8,7 +8,10 @@ const I18n = require('../lib/i18n-model.js');
 const Scene = require('../lib/scene-model.js');
 
 test('stable keys select supported locales and leave missing keys explicit', () => {
-  assert.equal(I18n.t('en-US', 'app.name'), 'AI Mini Office');
+  for (const locale of ['zh', 'zh-CN', 'en', 'en-US']) {
+    assert.equal(I18n.t(locale, 'app.name'), 'AI Work Space');
+    assert.equal(I18n.t(locale, 'app.title'), 'AI Work Space');
+  }
   assert.equal(I18n.t('EN_gb', 'settings.title'), 'Room preferences');
   for (const locale of ['zh', 'zh-CN', 'zh-TW', 'fr', null]) assert.equal(I18n.t(locale, 'settings.title'), '房间偏好');
   assert.equal(I18n.t('en', 'not.a.known.key'), 'not.a.known.key');
@@ -113,7 +116,7 @@ test('the browser UMD module loads without DOM, Electron, Node or side effects',
   vm.runInContext(source, context, { timeout: 1000 });
   assert.deepEqual(Object.keys(context), ['OfficeI18n']);
   assert.equal(context.OfficeI18n.translate('en', '运行测试'), 'Running tests');
-  assert.equal(context.OfficeI18n.t('zh', 'app.name'), '小小工作室');
+  assert.equal(context.OfficeI18n.t('zh', 'app.name'), 'AI Work Space');
 });
 
 test('connection details switch both directions while preserving restart and profile requirements',()=>{
@@ -126,9 +129,9 @@ test('connection details switch both directions while preserving restart and pro
     ['请先初始化工具的 profile，再连接。','Initialize the host profile before connecting.'],
     ['已安装只读插件；请开始新的工具会话加载插件，以实际事件确认连接。','Passive plugin installed; start a new host session to load it. Actual events confirm the connection.'],
     ['已安装只读观察器；请开始新的客户端会话，以实际事件确认生效。','Passive observer installed; start a new client session. Real events confirm activation.'],
-    ['连接仅添加工作室的活动观察器，保留原生审批和其他 hooks。','Connect adds only Mini Office activity observers; native approvals and foreign hooks stay in place.'],
+    ['连接仅添加工作室的活动观察器，保留原生审批和其他 hooks。','Connect adds only AI Work Space activity observers; native approvals and foreign hooks stay in place.'],
     ['KiroCrew 正在使用配置；请结束网关后重试','KiroCrew is using the configuration. Stop its gateway and try again'],
-    ['已移除本应用拥有的插件文件与注册项。','Removed only Mini Office owned plugin files and registrations.'],
+    ['已移除本应用拥有的插件文件与注册项。','Removed only AI Work Space owned plugin files and registrations.'],
     ['被动观察配置；仅收到真实事件后确认客户端生效','Passive observation configured; incoming events confirm the client is active']
   ];
   for(const [zh,en]of cases){assert.equal(I18n.translate('en',zh),en);assert.equal(I18n.translate('zh-CN',en),zh);assert.equal(I18n.translate('en',en),en);assert.equal(I18n.translate('zh',zh),zh);}
@@ -163,7 +166,7 @@ test('diagnostic paths retain their exact bytes and unknown paths/task content/b
   const suffix='/Users/example/我的  项目/Planning · 代码工位.json';
   const zh='配置不是普通文件，已保留：'+suffix,en='Configuration is not a regular file and was preserved: '+suffix;
   assert.equal(I18n.translate('en',zh),en);assert.equal(I18n.translate('zh',en),zh);
-  const literals=[suffix,'Hermes Agent','AI Mini Office','Planning','Sunbeam Truffle','我的任务 · Passive plugin installed; start a new host session to load it. Actual events confirm the connection.',
+  const literals=[suffix,'Hermes Agent','AI Work Space','Planning','Sunbeam Truffle','我的任务 · Passive plugin installed; start a new host session to load it. Actual events confirm the connection.',
     'Fix this: Plugin ownership changed before commit; preserved','配置不是普通文件，已保留：relative/path','Configuration is not a regular file and was preserved: '+ '/'.repeat(4097),
     'Hook '+ 'A'.repeat(5000)+' has an unknown structure; original preserved'];
   for(const literal of literals)for(const language of ['en','zh'])assert.equal(I18n.translate(language,literal),literal);

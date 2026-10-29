@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "0.23.0",
+  "version": "0.24.0",
   "scope": "33 complete original room paintings: six everyday interiors and all 27 holiday occasions. Public static capsule markers and optional production geometry overlays only.",
   "rooms": [
     {
@@ -351,7 +351,7 @@
     "certifiesArbitraryCrowdReadability": false
   },
   "sourceHashes": {
-    "office/package.json": "f5fcfc844518b45693869acc8e9383ced59d578147241c7b6b2bcbc4d11d659b",
+    "office/package.json": "a287d5bbaa9f4eaa0418ef2570d85620cf35019d9137bf00e20793ac6106cceb",
     "office/lib/room-calendar.js": "a35fa84a2194d1b3ef8ffdabd0e70f684f038bda7c76f2ee3c094fcab810762a",
     "office/lib/festival-model.js": "364e8df83764d494fd707302d865688abdc27f1fb350dd2c19e7c8a636d66c77",
     "office/lib/festival-studies.js": "0787c8d4a3af218a2d379be877283d121354a84d76b6e897b1066c62454b4489",
@@ -359,12 +359,12 @@
     "office/lib/room-designs.js": "395b009cd9f35fb8166e7fadda504e94b3682c1ce58345632c1f23d4e3a985e4",
     "office/lib/room-holiday-designs.js": "1aa463cd8657226e1aafd684d654a952f259ec40fe0d95d3ca3107ec93069f78",
     "office/lib/scene-model.js": "97c44d2d554a8fa923dc5c1547ffb72ae0b4b07bd6eb338c4fcba7ba98384ebf",
-    "office/lib/walking-layout.js": "542d2891b1697666d2695d9827b51d2ceb355077094efdbfff2a7fa00ef8f7da",
-    "office/lib/scene-traffic.js": "f6e5ee9259e3fec2bca35f011ad12612488b9d50a55fa149e8c5b9e7dea21224",
-    "office/lib/size-stability.js": "1edc0c91b79b90159eaf6019458a4e303b919ac0a31d0b2af02bf675a28d395e",
-    "office/renderer/style.css": "c0e37be167b377e38f5ac7bc9be1bf601a0bed93997b2dcb460fafc0c9c5ee17",
+    "office/lib/walking-layout.js": "95e262bfb3132394819201771516c2682652a8a27607e6defecf40f2c4c1ae39",
+    "office/lib/scene-traffic.js": "0b382f6be5d532ed4ed5dbcf651fbee304e39de10fcc49e0374b3ac4a4f2b63a",
+    "office/lib/size-stability.js": "9d23a1383fbca20b239130e17a75df5e914cc8f5383c0cb0cf00374088f0931e",
+    "office/renderer/style.css": "aa60390bc61a9edc11b3436e141fe574b40c499c57e822e702fbd51b290c9eea",
     "office/scripts/sync-room-designs.cjs": "7bb38e1675a6bae56fc430979e370690b769b71ebc968dd2e4971940acba90ad",
-    "office/scripts/render-room-gallery.cjs": "a3a7cb8799d6f04d2d17447364530366b67a76d5641f8fc359372a5cfa1cde95",
+    "office/scripts/render-room-gallery.cjs": "47fc50f75a3432734094726aea351726a4340db4255b24b5ac6e0f26ed39fd1f",
     "office/assets/scenes/rooms/generation.json": "3d94abc1daa13bd12c44b5fceecf47fbbf53946a6cb1d47377b2238e7bf1f497",
     "office/design/room-profiles/newyear.json": "15ab5d569db329450fa131a339c14f4c42b52ae8f134d1d1d4d86c63e064a49e",
     "office/design/room-profiles/lunarnewyear.json": "0527dca36c0a8a36f9fd9d93650d6fd5dab9339463dffde79085be92f2a4bfaa",
@@ -396,7 +396,7 @@
   },
   "html": {
     "file": "index.html",
-    "sha256": "46c9ecc33a6987e67c757153f1b6eb47f440d145ee27296ac1545270c77a1dd6",
-    "bytes": 113821
+    "sha256": "11a7673cd968d2da21c93668a9de3acab0563b12e72425d88ac20a28f204796f",
+    "bytes": 113790
   }
 }

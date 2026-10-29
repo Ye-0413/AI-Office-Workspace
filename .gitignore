@@ -22,6 +22,12 @@ docs/**
 docs/scenes/frames/
 !docs/animations/
 !docs/animations/**
+!docs/media/
+!docs/media/README.md
+!docs/media/videos.json
+!docs/media/ai-work-space-preview.gif
+!docs/media/ai-work-space-preview.jpg
+!docs/media/ai-work-space-brand.jpg
 !docs/rooms/
 !docs/rooms/README.md
 !docs/rooms/index.html

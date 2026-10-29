@@ -1,10 +1,10 @@
 {
   "name": "ai-mini-office",
   "version": "0.24.0",
-  "description": "A tiny living office for observing local AI agent sessions.",
+  "description": "Observe your agent team collaboration in your spare display",
   "main": "main.cjs",
   "type": "commonjs",
-  "author": "AI Mini Office contributors",
+  "author": "AI Work Space contributors",
   "license": "AGPL-3.0-only",
   "scripts": {
     "start": "electron .",
@@ -33,8 +33,8 @@
   },
   "build": {
     "appId": "local.ai-mini-office",
-    "productName": "AI Mini Office",
-    "copyright": "AI Mini Office",
+    "productName": "AI Work Space",
+    "copyright": "AI Work Space",
     "directories": {
       "output": "../dist-mini-office"
     },
@@ -151,7 +151,7 @@
       "identity": "-",
       "hardenedRuntime": false,
       "minimumSystemVersion": "13.0",
-      "artifactName": "AI-Mini-Office-${version}-${arch}.${ext}",
+      "artifactName": "AI-Work-Space-${version}-${arch}.${ext}",
       "target": [
         {
           "target": "dir",
