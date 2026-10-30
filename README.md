@@ -205,3 +205,15 @@ Start with the [development guide](office/README.md); run `npm --prefix office t
 [Originality & provenance](ORIGINALITY.md) · [Third-party notices](NOTICE.md) · [App credits](office/UPSTREAM-NOTICE.md) · [Release index](docs/releases/README.md)
 
 English / [简体中文](README.zh-CN.md) document this project; other language READMEs preserve upstream content.
+
+## Star History
+
+<p align="center">
+  <a href="https://www.star-history.com/?repos=Ye-0413%2FAI-Office-Workspace&amp;type=date">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=Ye-0413/AI-Office-Workspace&amp;type=Date&amp;theme=dark">
+      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=Ye-0413/AI-Office-Workspace&amp;type=Date">
+      <img src="https://api.star-history.com/svg?repos=Ye-0413/AI-Office-Workspace&amp;type=Date" width="800" alt="AI Work Space GitHub Star history over time">
+    </picture>
+  </a>
+</p>

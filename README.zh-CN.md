@@ -205,3 +205,15 @@ npm --prefix office run build:mac
 [原创与来源](ORIGINALITY.md) · [第三方声明](NOTICE.md) · [应用致谢](office/UPSTREAM-NOTICE.md) · [发布记录](docs/releases/README.md)
 
 [English](README.md) / 简体中文为本项目文档，其他语言 README 保留上游内容。
+
+## Star 增长趋势
+
+<p align="center">
+  <a href="https://www.star-history.com/?repos=Ye-0413%2FAI-Office-Workspace&amp;type=date">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=Ye-0413/AI-Office-Workspace&amp;type=Date&amp;theme=dark">
+      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=Ye-0413/AI-Office-Workspace&amp;type=Date">
+      <img src="https://api.star-history.com/svg?repos=Ye-0413/AI-Office-Workspace&amp;type=Date" width="800" alt="AI Work Space GitHub Star 数量随时间变化的折线图">
+    </picture>
+  </a>
+</p>
