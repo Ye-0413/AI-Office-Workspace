@@ -6,6 +6,7 @@
 <p align="center"><strong>Observe your agent team collaboration in your spare display</strong></p>
 <p align="center"><a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a></p>
 <p align="center">
+  <a href="https://github.com/Ye-0413/AI-Office-Workspace/stargazers"><img src="https://img.shields.io/github/stars/Ye-0413/AI-Office-Workspace?style=flat-square&logo=github&label=Stars&labelColor=3C3730&color=8B6E4D" alt="GitHub Star 数量"></a>
   <a href="https://github.com/Ye-0413/AI-Office-Workspace/releases/tag/v0.24.0"><img src="https://img.shields.io/badge/release-v0.24.0-8B6E4D?style=flat-square&labelColor=3C3730" alt="发布版本 v0.24.0"></a>
   <a href="#quick-start"><img src="https://img.shields.io/badge/macOS-13%2B%20%C2%B7%20arm64-8B6E4D?style=flat-square&labelColor=3C3730" alt="macOS 13 或更新版本，Apple Silicon arm64"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/code-AGPL--3.0--only-8B6E4D?style=flat-square&labelColor=3C3730" alt="源码许可 AGPL-3.0-only"></a>
