@@ -19,7 +19,7 @@ test('strict whole-cast layout uses the current complete large envelopes without
   const cast=[...roots(2),task('helper',{parentId:'root-0'}),task('nested',{parentId:'helper'})],truth=JSON.stringify(cast);
   const page=Walking.layoutFullSizeWalking(cast,{requestedScale:1,maximumScale:.4});audit(page,cast,1);
   assert.equal(JSON.stringify(cast),truth);assert.equal(page.rootIdsBySession.get('nested'),'root-0');
-  assert.equal(page.readability.nameplatePixels,264);
+  assert.equal(page.readability.nameplatePixels,176);
   const larger=Walking.layoutFullSizeWalking(cast.slice(0,2),{requestedScale:1.1,maximumScale:.4});audit(larger,cast.slice(0,2),1.1);
 });
 

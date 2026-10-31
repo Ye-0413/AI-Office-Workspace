@@ -68,14 +68,21 @@ app.whenReady().then(async () => {
 
   const retired = roots[3], freed = allocated.get(retired.id);
   await publish(observed.map(session => session.id === retired.id ? { ...session, closed: true, status: 'closed', activity: 'idle', activeTools: 0, turnCompletedAt: Date.now() } : session));
+  await until(`document.querySelector('[data-session-id="${retired.id}"]')?.dataset.standby==='true'`, 'An ended main retains its real appearance while standing by');
+  assert.equal((await rows()).find(row => row.id === retired.id).key, freed);
+  const arrival = task('codex:family-arrival-trigger', { activity: 'reading' });
+  await publish([...observed, arrival]);
   await until(`!document.querySelector('[data-session-id="${retired.id}"]')`, 'A retiring family must release its slot only after the real body leaves');
+  await ready(9);
   const replacement = task('codex:family-replacement', { activity: 'reading' });
-  await publish([...observed.filter(session => session.id !== retired.id), replacement]); await ready(9);
+  await publish([...observed.filter(session => session.id !== retired.id).map(session => session.id === arrival.id ? { ...session, closed: true, status: 'closed', activity: 'idle', activeTools: 0, turnCompletedAt: Date.now() } : session), replacement]);
+  await until(`!document.querySelector('[data-session-id="${arrival.id}"]')`, 'Another fresh worker lets the temporary arriving family leave');
+  await publish(observed.filter(session => session.id !== arrival.id)); await ready(9);
   records = await rows(); assertFamilies(records);
   assert.equal(records.find(row => row.id === replacement.id).key, freed, 'a departed base slot can be reused');
   for (const row of records.filter(row => !row.helper && row.id !== replacement.id)) assert.equal(row.key, allocated.get(row.id));
   assert.equal(new Set(records.filter(row => !row.helper).map(row => row.key)).size, 6);
-  checks.push('a base appearance is reused after its unencumbered owner physically departs, without changing any other live family');
+  checks.push('an ended main keeps its appearance while standing by; a fresh observed root triggers its physical exit and the released base is reused without changing another live family');
 
   await run(`window.resumedHelperBody=document.querySelector('[data-session-id="${helpers[0].id}"]');window.resumedHelperRig=resumedHelperBody.querySelector('.ap-rig');window.resumedHelperSource=resumedHelperRig.querySelector('defs image');void 0`);
   await publish(observed.filter(session => session.id !== helpers[0].id));
@@ -116,17 +123,17 @@ app.whenReady().then(async () => {
   assert.ok(calls.every(patch => Object.keys(patch).every(key => ['language', 'reducedMotion', 'lowPower'].includes(key))));
 
   // The preceding six-family scene has already certified overflow colour,
-  // retirement, health and clocks. Close its unrelated fixture families before
-  // the separate late-ancestry scene, retaining the exact parent/helper bodies.
+  // retirement, health and clocks. Its unrelated families stand by until the
+  // next real observations arrive, retaining the exact parent/helper bodies.
   const ancestryIds = new Set([roots[0].id, roots[4].id, ...helpers.map(helper => helper.id)]);
   await publish(observed.map(session => ancestryIds.has(session.id) ? session : { ...session, status: 'closed', closed: true, activity: 'idle', activeTools: 0, turnCompletedAt: Date.now() }));
-  await until(`document.querySelectorAll('.actor[data-session-id]').length===5`, 'Unrelated fixture families physically depart before the independent late-ancestry scene');
-  await publish(observed.filter(session => ancestryIds.has(session.id))); await ready(5);
+  const waitingIds = observed.filter(session => !ancestryIds.has(session.id)).map(session => session.id);
+  await until(`${JSON.stringify(waitingIds)}.every(id=>document.querySelector('[data-session-id="'+id+'"]')?.dataset.standby==='true')`, 'Completed unrelated families wait visibly for new activity');
 
   const unseenParent = task('codex:family-unseen-parent', { activity: 'planning' });
   const orphans = [task('codex:family-unseen-one', { parentId: unseenParent.id }), task('codex:family-unseen-two', { parentId: unseenParent.id })];
   const lateChild = task('codex:family-late-link', { activity: 'reading' });
-  await publish([...observed, ...orphans, lateChild]); await ready(8);
+  await publish([...observed.filter(session => ancestryIds.has(session.id)), ...orphans, lateChild]); await ready(8);
   const beforeParent = await rows(), orphanKey = beforeParent.find(row => row.id === orphans[0].id).key;
   assert.equal(beforeParent.find(row => row.id === orphans[1].id).key, orphanKey, 'reported siblings share their unseen true parent immediately');
   assert.ok(!beforeParent.filter(row => !row.helper && row.id !== lateChild.id).some(row => row.key === orphanKey), 'the unseen family reserves its own appearance');

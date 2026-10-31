@@ -12,7 +12,7 @@ const signalFunction=between('  function updateSignalSummary()','  function acto
 function node(id='',className=''){return{id,className,textContent:'',dataset:{},children:[],attributes:{},append(...children){this.children.push(...children);},setAttribute(key,value){this.attributes[key]=value;}};}
 function context(language='en'){
  const nodes=new Map([['room-summary',node('room-summary')],['signal-summary',node('signal-summary')],['inspect-title',node('inspect-title')]]);
- const c=vm.createContext({language,I18n,$:id=>nodes.get(id),document:{createElement:()=>node()},actors:new Map(),snapshot:{sessions:[]},attendance:{signalLost:[]},office:{dataset:{}},currentPage:{overflowIds:[]},bodyIds:new Set(),deferredPhysicalScale:null,Scene:{timestamp:()=>0,providerName:()=> 'Codex'},timeAgo:()=>'',displayName:()=> 'Fixed alias',fullRelation:'1 active clone · 1 total',spec:{label:'构思方案'}});
+ const c=vm.createContext({language,I18n,$:id=>nodes.get(id),document:{createElement:()=>node()},actors:new Map(),snapshot:{sessions:[]},attendance:{signalLost:[]},office:{dataset:{}},currentPage:{overflowIds:[]},bodyIds:new Set(),standbyCount:0,deferredPhysicalScale:null,Scene:{timestamp:()=>0,providerName:()=> 'Codex'},timeAgo:()=>'',displayName:()=> 'Fixed alias',fullRelation:'1 active clone · 1 total',spec:{label:'构思方案'}});
  vm.runInContext(copyFunctions+elementFunction+signalFunction,c);c.nodes=nodes;return c;
 }
 function summary(c,{roots=0,helpers=0,quiet=0,scale=1,requested=1,overflow=0}={}){

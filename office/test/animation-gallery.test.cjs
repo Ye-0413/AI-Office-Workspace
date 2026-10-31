@@ -27,7 +27,10 @@ function archivedSources(manifest){
  assert.equal(manifest.distributionVersion,require('../package.json').version);
  assert.equal(manifest.provenance.status,'carried-forward');assert.equal(manifest.provenance.currentWorkshopRenderingCertified,false);
  assert.match(manifest.provenance.recording,/no (?:new native recording|re-recording)/i);
- const changes=manifest.provenance.sourceChanges;
+ recordedSources(manifest);
+}
+function recordedSources(manifest){
+ const changes=manifest.provenance?.sourceChanges||[];
  assert.equal(new Set(changes.map(change=>change.file)).size,changes.length);
  for(const change of changes)assert.ok(manifest.sourceHashes[change.file]);
  for(const[name,recorded]of Object.entries(manifest.sourceHashes)){
@@ -47,7 +50,27 @@ test('public gallery records the current five-species, 550-recipe production lib
  const sections=manifest.assets.filter(item=>item.file!=='overview.gif');assert.equal(sections.length,11);
  for(const activity of Repertoire.ACTIVITIES){const expected=Repertoire.SPECIES.map(species=>Repertoire.recipes(species,activity)[0].id);assert.deepEqual(sections.find(item=>item.file===activity+'.gif')?.recipes,expected);}
  const overview=manifest.assets.find(item=>item.file==='overview.gif');assert.equal(overview.recipes.length,5);
- for(const [name,hash]of Object.entries(manifest.sourceHashes))assert.equal(createHash('sha256').update(fs.readFileSync(path.join(repo,name))).digest('hex'),hash,'re-export media after changing its source: '+name);
+ recordedSources(manifest);
+ if(manifest.provenance){
+  assert.equal(manifest.provenance.status,'preserved-recording');assert.equal(manifest.provenance.currentNameplateLayoutCertified,false);
+  assert.match(manifest.provenance.recording,/no new native recording/i);
+  assert.ok(manifest.provenance.sourceChanges.length>=1&&manifest.provenance.sourceChanges.length<=2);
+  const change=manifest.provenance.sourceChanges.find(item=>item.file==='office/renderer/style.css');assert.ok(change);
+  for(const item of manifest.provenance.sourceChanges)assert.ok(['office/renderer/style.css','office/renderer/creature-performance.js'].includes(item.file));
+  const standby=manifest.provenance.sourceChanges.find(item=>item.file==='office/renderer/creature-performance.js');
+  if(standby){assert.equal(manifest.provenance.currentStandbyRenderingCertified,false);assert.deepEqual(standby.reconstructRecordedSource,[{find:"    if (options.standby) return options.standbyPhase === 'play' ? 'idle' : 'resting';\n",replace:''}]);}
+
+  // The unchanged exporter has cards and a helper, without a live room or
+  // nameplate. Only those absent room selectors may carry source drift.
+  const exporter=fs.readFileSync(path.join(repo,'office/scripts/render-workshop-demo.cjs'),'utf8');
+  assert.doesNotMatch(exporter,/className\s*=\s*['"](?:office|actor|nameplate)\b/);
+  assert.doesNotMatch(exporter,/class=['"](?:office|actor|nameplate)\b/);
+  assert.doesNotMatch(exporter,/\bstandby(?:Phase)?\s*:/);
+  for(const patch of change.reconstructRecordedSource)for(const css of [patch.find,patch.replace]){
+   const rules=css.replace(/\/\*[\s\S]*?\*\//g,'').trim().split('}').filter(rule=>rule.trim());assert.ok(rules.length>0);
+   for(const rule of rules){const [selectors,body]=rule.split('{');assert.ok(body);for(const selector of selectors.split(','))assert.match(selector.trim(),/^\.office\[data-flat="true"\](?:\[data-nameplate-mode="compact"\])? \.actor(?:\[| |$)/);}
+  }
+ }
  for(const species of Repertoire.SPECIES)assert.ok(manifest.sourceHashes['office/assets/avatars/workshop-'+species+'.png']);
  assert.match(manifest.publicBody,/five original textured workshop creatures/);assert.match(manifest.scope,/synthetic/);assert.match(manifest.scope,/No local sessions/);
 });

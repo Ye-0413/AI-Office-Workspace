@@ -2,6 +2,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const Rooms=require('../lib/room-designs.js'),Venues=require('../lib/venue-model.js');
+const Scene=require('../lib/scene-model.js'),Walking=require('../lib/walking-layout.js'),Size=require('../lib/size-stability.js');
 const source=fs.readFileSync(path.join(__dirname,'../renderer/venue-stage.js'),'utf8');
 const application=fs.readFileSync(path.join(__dirname,'../renderer/app.js'),'utf8');
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
@@ -172,4 +173,30 @@ test('a room that cannot yet preserve the chosen size leaves every real body and
   assert.equal(h.commit(),false);assert.equal(h.c.activeRoom,previousRoom);assert.deepEqual(h.calls,[]);
   assert.deepEqual([...h.actors.values()].map(a=>a.position),positions);
   assert.equal(h.c.settings.agentScale,1.25);assert.equal(h.c.office.dataset.roomChanging,undefined);
+});
+
+test('room relocation uses the bounded adaptive capacity and preserves real bodies when five mains need ninety percent',()=>{
+  const h=relocation(),target=Rooms.get('halloween'),sessions=Array.from({length:5},(_,i)=>({id:'main-'+i,provider:'codex',status:'active',activity:'coding',turnId:'real-turn-'+i}));
+  h.actors.clear();
+  for(const session of sessions)h.actors.set(session.id,{id:session.id,session,position:{x:30,y:60},node:{dataset:{},style:{}},image:{},performance:{clock:492.4},workSince:123456,helper:false});
+  Object.assign(h.c,{BaseScene:Scene,BaseWalkingLayout:Walking,window:{OfficeRoomDesigns:Rooms},settings:{agentScale:1.35},actorFootprints:new Map(sessions.map(s=>[s.id,Size.ACTOR_FOOTPRINT.root])),CLOCK_RESERVED:Scene.CLOCK_RESERVED});
+  const layout=Walking.forScene(Rooms.createScene(Scene,target));
+  assert.throws(()=>layout.layoutFullSizeWalking(sessions,{requestedScale:1.35}),error=>error.code==='FIXED_SIZE_CAPACITY','the target room cannot fit this cast at the full manual size');
+  const before=[...h.actors.values()].map(actor=>({actor,node:actor.node,performance:actor.performance,session:actor.session,facts:JSON.stringify(actor.session),clock:actor.performance.clock}));
+  assert.equal(h.c.commitRoomArtwork({layout:target}),true);
+  assert.equal(h.c.activeRoom,target);assert.equal(h.c.uniformScale,1.35*.9);assert.equal(h.c.currentPage.manualScale,1.35);assert.equal(h.c.settings.agentScale,1.35);
+  assert.deepEqual(h.c.currentPage.overflowIds,[]);
+  for(const row of before){const actor=h.actors.get(row.actor.id);assert.equal(actor,row.actor);assert.equal(actor.node,row.node);assert.equal(actor.performance,row.performance);assert.equal(actor.session,row.session);assert.equal(actor.performance.clock,row.clock);assert.equal(JSON.stringify(actor.session),row.facts);assert.deepEqual(plain(actor.position),h.c.currentPage.seats.get(actor.id));}
+  assert.ok(h.calls.some(call=>call[0]==='render'),'the committed matching floor is rendered');
+});
+
+test('room relocation cannot exceed the one-step capacity floor or discard bodies to commit a partial fit',()=>{
+  const h=relocation(),target=Rooms.get('halloween'),sessions=Array.from({length:6},(_,i)=>({id:'main-'+i,provider:'codex',status:'active',activity:'coding'}));
+  h.actors.clear();
+  for(const session of sessions)h.actors.set(session.id,{id:session.id,session,position:{x:30,y:60},node:{dataset:{},style:{}},image:{},performance:{clock:492.4},helper:false});
+  Object.assign(h.c,{BaseScene:Scene,BaseWalkingLayout:Walking,window:{OfficeRoomDesigns:Rooms},settings:{agentScale:1.35},actorFootprints:new Map(sessions.map(s=>[s.id,Size.ACTOR_FOOTPRINT.root])),CLOCK_RESERVED:Scene.CLOCK_RESERVED});
+  const previous=h.c.activeRoom,before=[...h.actors.values()].map(actor=>({actor,position:{...actor.position}}));
+  assert.equal(h.c.commitRoomArtwork({layout:target}),false);assert.equal(h.c.activeRoom,previous);assert.equal(h.c.settings.agentScale,1.35);
+  assert.deepEqual(h.calls,[],'a partial adaptive fit cannot commit geometry or mutate body owners');
+  for(const row of before){assert.equal(h.actors.get(row.actor.id),row.actor);assert.deepEqual(row.actor.position,row.position);}
 });

@@ -233,3 +233,76 @@ test('removed rows emit one visual departure and retired attendance memory is bo
   const state = model.state('new-39'); state.phase = 'tampered'; assert.equal(model.state('new-39').phase, 'present');
   model.clear(); assert.equal(model.size(), 0); assert.deepEqual(model.update([idle('history', 100)]).present, []);
 });
+
+test('standby policy retains observed idle and closed mains without adding work or cold historical bodies',()=>{
+ let time=1000;const model=createAttendance({keepIdle:true,now:()=>time});
+ const history=task('old',{closed:true,status:'closed'});model.update([task('main'),history]);
+ time=2000;const closed=Object.freeze(task('main',{status:'closed',closed:true,activity:'idle',lastEventAt:time}));
+ let result=model.update([closed,history]);assert.deepEqual(result.standby,['main']);assert.deepEqual(result.present,[closed]);assert.deepEqual(result.leaving,[]);
+ time=1000000;result=model.update([closed,history]);assert.deepEqual(result.standby,['main']);assert.deepEqual(result.leaving,[]);assert.equal(closed.status,'closed');
+ result=model.update([]);assert.deepEqual(result.standby,['main']);assert.equal(result.present[0],closed,'pruning the source does not erase a retained visual standby body');
+});
+
+test('new independent work releases standby mains while ordinary metadata does not',()=>{
+ let time=1000;const model=createAttendance({keepIdle:true,now:()=>time});model.update([task('main'),task('busy')]);
+ time=2000;const stopped=idle('main',time);model.update([stopped,task('busy')]);
+ time=3000;let result=model.update([stopped,task('busy',{lastEventAt:time,events:[{event:'metadata',at:time}]})]);assert.deepEqual(result.standby,['main']);
+ const newRoot=task('new',{lastEventAt:time,events:[{event:'turn-start',at:time}]});result=model.update([stopped,task('busy'),newRoot]);assert.deepEqual(result.leaving,['main']);assert.deepEqual(result.standby,[]);
+ result=model.update([stopped,newRoot]);assert.ok(!result.present.some(s=>s.id==='main'),'repeated idle does not revive an evicted standby');
+});
+
+test('same-identity genuine resumption releases other standbys and keeps its own original identity',()=>{
+ let time=1000;const model=createAttendance({keepIdle:true,now:()=>time});model.update([task('one'),task('two')]);
+ time=2000;const one=idle('one',time),two=idle('two',time);model.update([one,two]);
+ time=3000;const metadata=task('one',{lastEventAt:time,events:[{event:'metadata',at:time}]});let result=model.update([metadata,two]);assert.deepEqual(result.leaving,[],'metadata alone never requests standby eviction');
+ model.update([one,two]);time=4000;const resumed=task('one',{lastEventAt:time,events:[{event:'turn-start',at:time}]});result=model.update([resumed,two]);assert.deepEqual(result.leaving,['two']);assert.equal(result.present[0],resumed);assert.deepEqual(result.standby,[]);
+});
+
+test('standby uncertainty remains signal loss and helpers still finish their normal lifecycle',()=>{
+ let time=1000;const model=createAttendance({keepIdle:true,signalGraceMs:20,now:()=>time});model.update([task('main'),task('child',{parentId:'main'})]);
+ time=2000;const stopped=idle('main',time),ended=task('child',{parentId:'main',closed:true,status:'closed',lastEventAt:time});let result=model.update([stopped,ended]);assert.deepEqual(result.standby,['main']);assert.deepEqual(result.leaving,['child']);
+ const stale={...stopped,status:'stale',disconnected:true,lastEventAt:3000,events:[{event:'metadata',at:3000}]};time=3000;result=model.update([stale]);assert.deepEqual(result.standby,[]);time+=20;result=model.update([stale]);assert.deepEqual(result.signalLost,['main']);assert.deepEqual(result.present,[]);
+});
+
+test('a standby ancestor releases only after its actual active descendants stop',()=>{
+ let time=1000;const model=createAttendance({keepIdle:true,now:()=>time});model.update([task('parent'),task('child',{parentId:'parent'})]);
+ time=2000;const parent=task('parent',{closed:true,status:'closed',lastEventAt:time}),child=task('child',{parentId:'parent',lastEventAt:time});model.update([parent,child]);
+ const arrival=task('new',{lastEventAt:++time});let result=model.update([parent,child,arrival]);assert.ok(result.present.includes(parent),'real child retains its original ancestor anchor');
+ const ended={...child,status:'closed',closed:true};result=model.update([parent,ended,arrival]);assert.ok(result.leaving.includes('parent'));assert.equal(parent.closed,true);
+});
+
+test('timer-only stale presentation retains a confirmed standby but cannot turn silent active work into standby',()=>{
+ let time=1000;const model=createAttendance({keepIdle:true,signalGraceMs:20,now:()=>time});model.update([task('done'),task('silent')]);
+ time=2000;const stopped=idle('done',time,{turnCompletedAt:time,events:[{event:'turn-end',at:time}]});model.update([stopped,task('silent')]);
+ time=300000;const doneStale={...stopped,status:'stale',activity:'unknown',disconnected:true},silentStale=task('silent',{status:'stale',activity:'unknown',disconnected:true});
+ let result=model.update([doneStale,silentStale]);assert.deepEqual(result.standby,['done']);assert.ok(result.present.includes(doneStale));time+=20;result=model.update([doneStale,silentStale]);assert.deepEqual(result.standby,['done']);assert.deepEqual(result.signalLost,['silent']);
+ assert.equal(doneStale.status,'stale');assert.equal(doneStale.disconnected,true,'standby never rewrites the observer source');
+ result=model.update([doneStale,silentStale,task('new',{lastEventAt:++time})]);assert.ok(result.leaving.includes('done'));
+});
+
+test('a new real helper releases unrelated standby mains while preserving its actual standby ancestor',()=>{
+ let time=1000;const model=createAttendance({keepIdle:true,now:()=>time});model.update([task('parent'),task('other')]);
+ time=2000;const parent=idle('parent',time),other=idle('other',time);model.update([parent,other]);
+ const helper=task('helper',{parentId:'parent',lastEventAt:++time,events:[{event:'turn-start',at:time}]});let result=model.update([parent,other,helper]);
+ assert.deepEqual(result.leaving,['other']);assert.ok(result.present.includes(parent));assert.deepEqual(result.standby,['parent']);
+ result=model.update([parent,other,{...helper,closed:true,status:'closed'}]);assert.deepEqual(result.standby,['parent'],'the child arrival never requested its own ancestor to leave after return');
+});
+
+test('a coalesced first active packet retains its genuine fresh work boundary even when metadata is last',()=>{
+ let time=1000;const model=createAttendance({keepIdle:true,now:()=>time});model.update([task('standby')]);
+ time=2000;const stopped=idle('standby',time);model.update([stopped]);
+ time=3000;const metadataOnly=task('metadata-only',{lastEventAt:time,events:[{event:'metadata',at:time}]});
+ let result=model.update([stopped,metadataOnly]);assert.deepEqual(result.standby,['standby']);assert.deepEqual(result.leaving,[]);
+ const imported=task('imported',{lastEventAt:time,events:[{event:'turn-start',at:500},{event:'metadata',at:time}]});
+ result=model.update([stopped,metadataOnly,imported]);assert.deepEqual(result.standby,['standby'],'old history plus recent metadata never invents an arrival');
+ const packet=task('fresh',{lastEventAt:time,events:[{event:'turn-start',at:time-10},{event:'metadata',at:time}]});
+ result=model.update([stopped,metadataOnly,imported,packet]);assert.deepEqual(result.leaving,['standby']);assert.ok(result.present.includes(packet));
+ result=model.update([stopped,metadataOnly,imported,packet]);assert.deepEqual(result.leaving,[],'the accepted packet cannot replay an arrival');
+});
+
+test('another native turn on an already active identity does not invent a newly activated worker',()=>{
+ let time=1000;const model=createAttendance({keepIdle:true,now:()=>time});model.update([task('rest'),task('busy',{turnId:'one'})]);
+ time=2000;const stopped=idle('rest',time);model.update([stopped,task('busy',{turnId:'one'})]);
+ const continuing=task('busy',{turnId:'two',lastEventAt:++time,events:[{event:'turn-start',at:time}]});
+ const result=model.update([stopped,continuing]);assert.deepEqual(result.standby,['rest']);assert.deepEqual(result.leaving,[]);
+});

@@ -5,7 +5,7 @@ const candidates=source.slice(source.indexOf('  function nextEntryCandidate('),s
 const pins=source.slice(source.indexOf('  function pinnedDockIds('),source.indexOf('  function syncTraffic('));
 function harness(){
  const actors=new Map(),parent={id:'root',session:{id:'root',status:'active'},entryPending:false,spec:{}},first={id:'z-first',session:{id:'z-first',parentId:'root',status:'active'},helper:true,entryPending:true,spec:{}},second={id:'a-second',session:{id:'a-second',parentId:'root',status:'active'},helper:true,entryPending:true,spec:{}};
- actors.set(parent.id,parent);const context={actors,Scene:{isClosed:s=>s.status==='closed'},cloneLedger:{parentChain:()=>[]},cloneAncestor:a=>actors.get(a.session.parentId),cloneBusy:()=>false,currentPage:{},uniformScale:1,currentPosition:a=>a.position};
+ actors.set(parent.id,parent);const context={actors,attendance:{standby:[]},Scene:{isClosed:s=>s.status==='closed'},cloneLedger:{parentChain:()=>[]},cloneAncestor:a=>actors.get(a.session.parentId),cloneBusy:()=>false,currentPage:{},uniformScale:1,currentPosition:a=>a.position};
  vm.createContext(context);vm.runInContext(candidates+pins,context);return{context,parent,first,second,actors,pairs:incoming=>Array.from(context.openingDockPairs(incoming),pair=>Array.from(pair))};
 }
 test('a not-yet-created real helper and the actual pump select exactly the same observed parent and insertion-order owner',()=>{

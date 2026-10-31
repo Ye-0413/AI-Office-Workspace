@@ -21,7 +21,7 @@
   const actorsLayer = $('actors');
   const actors = new Map();
   const presentationReentries = new Map();
-  const NAMEPLATE_METRICS_VERSION = 4;
+  const NAMEPLATE_METRICS_VERSION = 5;
   const archivedTurns = new Map();
   // Older observation bridges without roomDesign retain their legacy room.
   // Current native settings explicitly supply daily rotation by default.
@@ -36,7 +36,7 @@
   const setupAssistant = window.OfficeSetupAssistant?.create({ bridge, getLanguage: () => language });
   const appearancePicker = window.OfficeAppearancePicker?.create({ container: $('settings-dialog') });
   const scenery = window.OfficeDayScenery.create({ office, world, layer: $('window-scenery') });
-  const attendanceModel = Attendance.createAttendance();
+  const attendanceModel = Attendance.createAttendance({ keepIdle: true });
   const cloneLedger = Clones.createLedger();
   const restedClones = new Set();
   const paletteRegistry = Family.createPaletteRegistry();
@@ -136,7 +136,9 @@
     const nextLayout=room?BaseWalkingLayout.forScene(nextScene):BaseWalkingLayout;
     const cast=[...actors.values()].map(a=>a.session);
     let fitted;
-    try { fitted=nextLayout.layoutFullSizeWalking(cast,{passThrough:true,requestedScale:settings.agentScale,footprints:actorFootprints,reservedRects:CLOCK_RESERVED}); }
+    try { fitted=(nextLayout.layoutAdaptiveWalking || nextLayout.layoutFullSizeWalking)(cast,{passThrough:true,requestedScale:settings.agentScale,footprints:actorFootprints,reservedRects:CLOCK_RESERVED});
+      if (fitted.overflowIds?.length) return false;
+    }
     catch (error) {
       // Scenery may wait for a physical slot; it never resizes or removes a
       // resident just to commit a different floor beneath existing work.
@@ -163,9 +165,48 @@
   }
 
   function tr(value) { return I18n.translate(language, String(value == null ? '' : value)); }
+  function nameplateState(session, value) {
+    const en = language === 'en', phrase = String(value || '');
+    const canonical = [
+      ['等分身归位', 'Awaiting clones'], ['分身出现', 'Appearing'],
+      ['结束分身', 'Returning'], ['分身暂歇', 'Returning'],
+      ['会话已结束', 'Ended'], ['这一轮已歇下', 'Idle']
+    ].find(([zh]) => phrase === zh || phrase === tr(zh));
+    if (canonical) {
+      if (canonical[0] === '这一轮已歇下' && session && Scene.activitySpec(session).stale) return en ? 'Signal lost' : '信号中断';
+      return en ? canonical[1] : canonical[0];
+    }
+    if (!session) return phrase;
+    if (/一个工具出了问题|One tool had a problem/.test(phrase)) return en ? 'Tool error' : '工具出错';
+    if (/这次工具已中断|This tool was interrupted/.test(phrase)) return en ? 'Tool interrupted' : '工具已中断';
+    if (/这次工具返回成功|This tool returned successfully/.test(phrase)) return en ? 'Tool succeeded' : '工具返回成功';
+    if (/结果还需确认|Result needs checking/.test(phrase)) return en ? 'Result unconfirmed' : '结果待确认';
+    if (/^刚刚|^Just /.test(phrase)) {
+      const recent = /代码|code/.test(phrase) ? ['刚改代码', 'Just edited'] : /测试|test/.test(phrase) ? ['刚运行测试', 'Just tested']
+        : /构建|build/.test(phrase) ? ['刚运行构建', 'Just built'] : /检索|search/.test(phrase) ? ['刚检索资料', 'Just searched']
+        : /翻阅|read/.test(phrase) ? ['刚读取资料', 'Just read'] : ['刚执行工具', 'Just ran a tool'];
+      return recent[en ? 1 : 0];
+    }
+    const spec = Scene.activitySpec(session);
+    if (spec.stale) return en ? 'Signal lost' : '信号中断';
+    if (spec.closed) return en ? 'Ended' : '会话已结束';
+    if (session.activity === 'error') return en ? 'Error' : '遇到问题';
+    if (Scene.needsAttention(session)) return /审批|approval/i.test(phrase) ? en ? 'Approval needed' : '等待审批' : en ? 'Waiting for you' : '等你回复';
+    const activity = {
+      reading: ['读资料', 'Reading'], searching: ['检索中', 'Searching'], planning: ['思考中', 'Thinking'],
+      coding: ['写代码', 'Coding'], designing: ['设计中', 'Designing'], building: ['构建中', 'Building'],
+      testing: ['测试中', 'Testing'], running: ['运行工具', 'Running tool'], 'waiting-tool': ['等工具返回', 'Waiting for tools'],
+      idle: ['这一轮已歇下', 'Idle'], unknown: ['观察中', 'Observing']
+    }[session.activity] || ['观察中', 'Observing'];
+    return activity[en ? 1 : 0];
+  }
   function text(element, value) {
     const literal = element.id === 'inspect-title' || element.id === 'inspect-session-id' || /(?:^|\s)(?:roster-task|project-option)(?:\s|$)/.test(element.className || '');
-    const next = literal ? String(value == null ? '' : value) : tr(value);
+    let next = literal ? String(value == null ? '' : value) : tr(value);
+    if (element.dataset?.sessionId && /(?:^|\s)actor-state(?:\s|$)/.test(element.className || '')) {
+      const session = actors.get(element.dataset.sessionId)?.session || snapshot.sessions.find(session => session.id === element.dataset.sessionId);
+      next = element.dataset.standby === 'true' ? language === 'en' ? 'Standby' : '待机' : nameplateState(session, next);
+    }
     if (element.id === 'today-total' && typeof numberFlip !== 'undefined' && numberFlip) numberFlip.update(element, next);
     else element.textContent = next;
   }
@@ -193,7 +234,7 @@
     if (content != null) text(node, content);
     return node;
   }
-  function nameplateMode(count) { return count >= 12 ? 'compact' : 'full'; }
+  function nameplateMode() { return 'readable'; }
   function createActorPlate(session) {
     // Both the live body and its measurement probe use this exact structure.
     const plate = element('span', 'nameplate');
@@ -202,6 +243,7 @@
     const subline = element('span', 'actor-subline');
     const provider = element('span', 'actor-provider');
     const state = element('span', 'actor-state');
+    state.dataset.sessionId = session.id;
     subline.append(provider, state);
     const keepsake = element('span', 'actor-keepsake', keepsakeIcon(session));
     keepsake.setAttribute('aria-hidden', 'true');
@@ -211,6 +253,10 @@
   function nameplateRelation(session, parent, mode = 'full') {
     if (parent) return I18n.t(language, 'identity.parent', { name: displayName(parent) });
     if (session.parentId) return tr('子任务 · 父任务未在场');
+    if (mode === 'readable') {
+      const { active, total } = cloneLedger.stats(session.id);
+      return total || active ? language === 'en' ? 'Clones ' + active + '/' + total : '分身 ' + active + ' · 共 ' + total : '';
+    }
     return I18n.t(language, mode === 'compact' ? 'family.clonesSummaryCompact' : 'family.clonesSummary', cloneLedger.stats(session.id));
   }
   function nameplateFamilyBadgeText(session) {
@@ -245,7 +291,8 @@
   function assetURL(name, replay) { return '../assets/avatars/' + (window.OfficePublicArtwork ? window.OfficePublicArtwork.asset(name) : name) + (replay ? '?_t=' + (++spriteNonce) : ''); }
   function setPose(actor, name, replay = false) {
     const performanceSession = actor.visualWorkActivity ? { ...actor.session, activity: actor.visualWorkActivity } : actor.session;
-    const performance = actor.performance && actor.performance.update(performanceSession, { now: Date.now(), reducedMotion: reduced(), lowPower: settings.lowPower, hidden: sceneHidden() || actor.entryPending, walking: Boolean(actor.motion) || actor.node.dataset.walking === 'true', reaction: false, departing: actor.departing, stale: actor.spec.stale });
+    const performance = actor.performance && actor.performance.update(performanceSession, { now: Date.now(), reducedMotion: reduced(), lowPower: settings.lowPower, hidden: sceneHidden() || actor.entryPending, walking: Boolean(actor.motion) || actor.node.dataset.walking === 'true', reaction: false, departing: actor.departing, stale: actor.spec.stale, standby: actor.node.dataset.standby === 'true', standbyPhase: actor.node.dataset.standbyMotion });
+    actor.standbyAnimation?.update({ standby: actor.node.dataset.standby === 'true', hidden: sceneHidden() || actor.entryPending, reducedMotion: reduced(), lowPower: settings.lowPower, walking: Boolean(actor.motion) || actor.node.dataset.walking === 'true', departing: actor.departing, attention: Scene.needsAttention(actor.session), stale: actor.spec.stale });
     actor.fallback?.retry();
     actor.performance?.retry?.();
     const wantedAsset = actor.design?.asset || (quietSprites() ? 'clawd-static-base.svg' : performance && performance.active ? performance.asset : name);
@@ -294,7 +341,7 @@
     const ordered = staged ? [staged] : candidates;
     for (const actor of ordered) {
       const session = sessions?.get(actor.id) || actor.session;
-      if (Scene.isClosed(session)) continue;
+      if (Scene.isClosed(session) && !attendance.standby?.includes(session.id)) continue;
       const parent = actor.helper ? cloneAncestor(actor) : null;
       if (parent?.entryPending || parent?.motion || parent?.navigation || parent?.yielding || parent?.routeReservation || parent?.resumeNavigation) continue;
       // A not-yet-reserved source never pins a parent's queued real journey.
@@ -341,10 +388,11 @@
       const owned = actor.navigation?.kind === 'exit' || actor.resumeNavigation?.kind === 'exit';
       const idle = session && !session.disconnected && session.status === 'idle'
         && (!session.activity || session.activity === 'idle') && !session.attention && !(Number(session.activeTools) > 0);
+      const standbyReleased = typeof attendanceModel !== 'undefined' && attendanceModel.state?.(actor.id)?.reason === 'standby-released';
       // Attendance has already retired this admitted body. A vanished source,
       // confirmed close/idle, or its still-owned exit is finite evidence;
       // uncertainty alone cannot invent a trip to the door.
-      if (owned || !session || Scene.isClosed(session) || idle) exits.add(actor.id);
+      if (owned || !session || Scene.isClosed(session) || idle || standbyReleased) exits.add(actor.id);
     }
     return exits;
   }
@@ -577,7 +625,7 @@
       const labels = [...new Set([tr(Scene.activitySpec(session).label), tr(Director.plan(session, { now: Date.now(), language }).label),
         tr('会话已结束'), tr('这一轮已歇下'), tr(session.parentId ? '结束分身' : '等分身归位'),
         actors.get(session.id)?.state.textContent].filter(Boolean))];
-      const name = displayName(session), provider = tr(session.provider === 'claude-code' ? 'Claude' : Scene.providerName(session.provider));
+      const name = displayName(session), provider = tr(session.provider === 'claude-code' ? 'Claude' : Scene.providerName(session.provider)).replace(/ \(experimental\)$/, '');
       const badgeText = nameplateFamilyBadgeText(session);
       const key = JSON.stringify([NAMEPLATE_METRICS_VERSION, mode, Boolean(session.parentId), language, name, relation, provider, badgeText, labels]);
       let footprint = footprintCache.get(key);
@@ -588,6 +636,7 @@
         node.dataset.helper = String(Boolean(session.parentId)); node.dataset.hasFamily = 'true'; node.dataset.selected = 'true';
         node.dataset.error = String(session.activity === 'error'); node.dataset.attention = String(Scene.needsAttention(session));
         node.dataset.stale = String(Boolean(Scene.activitySpec(session).stale));
+        node.dataset.hasRelation = String(Boolean(relation));
         node.style.cssText = 'visibility:hidden;pointer-events:none;transform:translate3d(0,0,0)';
         const button = element('button', 'actor-button'), body = element('span', 'character-body');
         const { plate, title, relation: relationNode, subline, provider: providerNode, state } = createActorPlate(session);
@@ -600,7 +649,7 @@
         const origin = node.getBoundingClientRect();
         footprint = { left: 0, right: 0, top: 0, bottom: 0 };
         for (const label of labels) {
-          state.textContent = label;
+          state.textContent = nameplateState(session, label);
           for (const part of [body, plate, ...plate.children, ...subline.children]) {
             const rect = part.getBoundingClientRect();
             // display:none descendants have a viewport-zero rect, not a
@@ -852,7 +901,14 @@
       && !session.disconnected && session.status !== 'stale' && !session.attention && !(Number(session.activeTools) > 0);
   }
   function completedCloneReturn(reason) { return reason === 'ended' || reason === 'completed'; }
-  function clonePhase(actor, phase) { actor.clonePhase = phase; actor.node.dataset.clonePhase = phase; queueDeferredResize(); }
+  function clonePhase(actor, phase) {
+    const finite = ['splitting', 'returning', 'absorbing'].includes(actor.clonePhase);
+    actor.clonePhase = phase; actor.node.dataset.clonePhase = phase; queueDeferredResize();
+    // Adaptive sizing also waits for finite owners, even when no manual
+    // preference change is pending. Their real completion releases that
+    // hold and retries the common size without needing another AI event.
+    if (finite && phase === 'working') queueLayoutRefresh(true);
+  }
   function cloneAncestor(actor) {
     const chain = cloneLedger.parentChain(actor.id);
     const rootId = cloneLedger.rootFor(actor.id);
@@ -1501,20 +1557,32 @@
       if (!current || Scene.isClosed(current) || idle) depart(child, !current || !Scene.isClosed(current)).catch(showError);
     }
     if (relatedClones(actor).length || currentPage.visible.some(session => cloneLedger.parentChain(session.id).includes(actor.id))) { holdForClones(actor); return; }
+    // A retired main crosses the door and immediately leaves. Its endpoint
+    // is not another parked work station: requiring space for all retirees
+    // and the arriving cast together can otherwise prevent either from
+    // moving. Walking bodies may cross, while the static route still checks
+    // furniture, the clock and the complete body/nameplate viewport bounds.
+    const retirement = currentPage.fullSize === true
+      ? WalkingLayout.retiringRoute(currentPosition(actor), { ...actorGeometry(actor), reservedRects: CLOCK_RESERVED, entryPoint: ENTRY_POINT })
+      : null;
+    if (currentPage.fullSize === true && !retirement) return;
     const proof = currentPage.exitProof;
-    if (actor.holdingFamily && !currentPage.exitOwnerIds?.includes(actor.id)) { queueLayoutRefresh(true); return; }
-    if (currentPage.exitOwnerIds?.includes(actor.id)
+    if (!retirement && actor.holdingFamily && !currentPage.exitOwnerIds?.includes(actor.id)) { queueLayoutRefresh(true); return; }
+    if (!retirement && currentPage.exitOwnerIds?.includes(actor.id)
       && (!proof || !proof.removedIds.includes(actor.id) || Math.abs(proof.scale - uniformScale) > .00001)) return;
     actor.holdingFamily = false; actor.node.dataset.cloneHold = 'false';
     const serial = cancelAction(actor); actor.departing = true;
-    actor.navigation = { kind: 'exit', inactive, target: ENTRY_POINT };
+    const target = retirement?.entryPoint || ENTRY_POINT;
+    actor.navigation = { kind: 'exit', inactive, target };
     text(actor.state, inactive ? '这一轮已歇下' : '会话已结束');
     if (actor.entryPending) { removeActor(actor.id); return; }
-    if (!await move(actor, ENTRY_POINT, serial)) return;
+    const arrived = retirement ? await animateWalk(actor, retirement.path, serial) : await move(actor, target, serial);
+    if (!arrived) return;
     if (actor.serial !== serial || actors.get(actor.id) !== actor || destroyed) return;
-    actualArrival(actor, ENTRY_POINT, serial, 'exit');
+    actualArrival(actor, target, serial, 'exit');
     openDoor();
     if (actor.serial === serial) removeActor(actor.id);
+    if (retirement) queueLayoutRefresh(true);
   }
   function makeActor(session, seat) {
     const node = element('div', 'actor');
@@ -1552,6 +1620,8 @@
     node.dataset.bodyAppearance = actor.design?.appearanceKey || actor.design?.id || 'original';
     node.dataset.bodyVariant = String(actor.design?.variantIndex || 0);
     actor.performance = window.OfficeAvatarPerformance.create({ actorNode: node, body, image, session, clockRegistry: performanceClocks, design: actor.design });
+    actor.standbyAnimation = window.OfficeStandbyAnimation?.create({ actorNode: node, body,
+      onPhaseChange: () => { if (actors.get(actor.id) === actor && !destroyed) setPose(actor, actor.wantedAsset || 'clawd-static-base.svg'); } });
     actor.appearance = window.OfficeFamilyAppearance.create({ actorNode: node, body, image });
     node.style.transform = actorTransform(actor.position, actor.helper);
     node.style.zIndex = '10';
@@ -1639,6 +1709,8 @@
     const session = actor.session;
     syncActorDesign(actor);
     const spec = Scene.activitySpec(session);
+    actor.node.dataset.standby = String(Boolean(typeof attendance !== 'undefined' && attendance.standby?.includes(session.id)));
+    if (actor.state.dataset) actor.state.dataset.standby = actor.node.dataset.standby;
     actor.node.dataset.helper = String(Boolean(session.parentId));
     actor.node.dataset.attention = String(Scene.needsAttention(session));
     actor.node.dataset.error = String(session.activity === 'error');
@@ -1659,15 +1731,18 @@
     actor.node.dataset.activeClones = String(counts.active);
     actor.node.dataset.totalClones = String(counts.total);
     actor.relation.textContent = nameplateRelation(session, parent, office.dataset.nameplateMode || 'full');
+    actor.node.dataset.hasRelation = String(Boolean(actor.relation.textContent));
     const fullRelation = nameplateRelation(session, parent);
     actor.relation.title = fullRelation + (session.parentId ? '' : ' · ' + I18n.t(language, 'family.clonesHint'));
-    text(actor.provider, session.provider === 'claude-code' ? 'Claude' : Scene.providerName(session.provider));
+    text(actor.provider, (session.provider === 'claude-code' ? 'Claude' : Scene.providerName(session.provider)).replace(/ \(experimental\)$/, ''));
+    actor.provider.title = Scene.providerName(session.provider);
     const lifecycle = lifecycleCaption(actor);
     if (lifecycle) text(actor.state, lifecycle);
     else if (actor.motion && !actor.departing) text(actor.state, Director.plan(session, { now: Date.now(), language }).label || spec.label);
     else if (!actor.motion && !actor.yielding && !trafficWaiters.has(actor.id) && !actor.completing && !actor.departing && !cloneBusy(actor)) text(actor.state, spec.label);
     if (actor.yielding) transitCaption(actor, true);
     if (trafficWaiters.has(actor.id)) transitCaption(actor);
+    actor.standbyAnimation?.update({ standby: actor.node.dataset.standby === 'true', hidden: sceneHidden() || actor.entryPending, reducedMotion: reduced(), lowPower: settings.lowPower, walking: Boolean(actor.motion) || actor.node.dataset.walking === 'true', departing: actor.departing, attention: Scene.needsAttention(session), stale: spec.stale });
     actor.button.setAttribute('aria-label', displayName(session) + ' · ' + Scene.providerName(session.provider) + ' · ' + String(session.title || tr('未命名任务')) + ' · ' + fullRelation + '，' + tr(spec.label) + '。' + tr('单击查看详情，双击打招呼。'));
     actor.button.setAttribute('aria-pressed', String(session.id === selectedSession));
   }
@@ -1710,6 +1785,7 @@
     cancelAction(actor, { dispose: true });
     clearTimeout(actor.bubbleTimer);
     actor.fallback?.destroy();
+    actor.standbyAnimation?.destroy();
     if (actor.performance) { actor.performance.update(actor.session, { now: Date.now(), hidden: true }); actor.performance.destroy(); }
     if (actor.appearance) actor.appearance.destroy();
     actor.node.remove();
@@ -1729,11 +1805,12 @@
     $('empty-state').hidden = !quiet;
     if (quiet && selectedSession) closeInspector();
     visitor.tick();
+    for (const actor of actors.values()) actor.standbyAnimation?.update({ standby: actor.node.dataset.standby === 'true', hidden: sceneHidden() || actor.entryPending, reducedMotion: reduced(), lowPower: settings.lowPower, walking: Boolean(actor.motion) || actor.node.dataset.walking === 'true', departing: actor.departing, attention: Scene.needsAttention(actor.session), stale: actor.spec.stale });
   }
   function clearActors({ readmission = false } = {}) {
     if (!readmission) presentationReentries.clear();
     else {
-      const currentIds = new Set(snapshot.sessions.filter(session => !Scene.isClosed(session)).map(session => session.id));
+      const currentIds = new Set(snapshot.sessions.filter(session => !Scene.isClosed(session)).map(session => session.id).concat(typeof attendance === 'undefined' ? [] : attendance.standby || []));
       for (const id of presentationReentries.keys()) if (!currentIds.has(id)) presentationReentries.delete(id);
       for (const actor of actors.values()) {
         if (currentIds.has(actor.id) && (!actor.entryPending || actor.presentationReentry)) {
@@ -1833,6 +1910,16 @@
       if (!actor) { makeActor(session, seat); continue; }
       const old = actor.session, previousTurn = actor.lastTurnAt;
       refreshActorSession(actor, session);
+      if (!actor.helper && actor.departing && !hasBodyActivity(session)
+        && currentPage.visible.some(child => cloneLedger.parentChain(child.id).includes(actor.id))) {
+        // A late descendant also brings its ended ancestor back into the
+        // visible layout. Cancel the old exit at the actual rendered foot;
+        // restoring an anchor never reopens the native parent's session.
+        actor.departing = false; holdForClones(actor);
+        moveHolding(actor, seat).catch(showError);
+        updateActorLabel(actor);
+        continue;
+      }
       resumeActiveActor(actor);
       actor.target = seat;
       updateActorLabel(actor);
@@ -2142,8 +2229,12 @@
     $('room-switcher').hidden = true;
     const presentBodies = attendance.present.filter(session => !restedClones.has(session.id) || hasBodyActivity(session));
     const bodyIds = new Set(presentBodies.map(session => session.id));
+    const exitingMains = finiteExitIds(presentBodies);
+    // Main departures retain their real bodies until the door crossing, but
+    // no longer consume a stationary work dock. Actual descendants and their
+    // required ancestor anchors remain in the geometry until they return.
     const retiringBodies = [...actors.values()].filter(actor => !bodyIds.has(actor.id) && !restedClones.has(actor.id)).map(actor => snapshot.sessions.find(session => session.id === actor.id) || actor.session);
-    const layoutBodies = presentBodies.concat(retiringBodies);
+    const layoutBodies = presentBodies.concat(retiringBodies.filter(session => !exitingMains.has(session.id)));
     // Reserve a complete appearance for each real family until its last body
     // leaves. A closed root still walking out must not share its appearance
     // with an arriving main; nested helpers use that same root reservation.
@@ -2153,18 +2244,32 @@
     // mode to a solver's output scale: that would feed font changes back into fit.
     // Count cannot change plate metrics underneath a fixed-size resident.
     office.dataset.nameplateMode = nameplateMode(1);
-    measureActorFootprints(layoutBodies);
+    measureActorFootprints(presentBodies.concat(retiringBodies));
     currentPage.scaleCeiling = sizeStability.maximum();
     if (transferOwner && !transferValid(transferOwner, layoutBodies)) revokeTransfer('snapshot-or-geometry', null, false);
     if (transferOwner) currentPage = { ...currentPage, visible: presentBodies };
     else {
-      const options = sceneOptions(layoutBodies, finiteExitIds(presentBodies));
-      try { currentPage = WalkingLayout.layoutFullSizeWalking(layoutBodies, options); }
+      // Retirees have already released their stationary docks but their real
+      // bodies still need the old physical size to reach the door. Growing
+      // the remaining cast first can invalidate an exiting source near the
+      // viewport edge before depart() even creates its motion owner.
+      const heldPhysicalScale = deferredPhysicalScale ?? (exitingMains.size || hasFiniteClone() || cloneAwaitingReturn() ? uniformScale : null);
+      const options = { ...sceneOptions(layoutBodies, finiteExitIds(presentBodies)),
+        ...(heldPhysicalScale !== null ? { requestedScale: settings.agentScale, physicalScale: heldPhysicalScale, maximumScale: heldPhysicalScale } : {}) };
+      try { currentPage = WalkingLayout.layoutAdaptiveWalking && heldPhysicalScale === null ? WalkingLayout.layoutAdaptiveWalking(layoutBodies, options) : WalkingLayout.layoutFullSizeWalking(layoutBodies, options); }
       catch (error) {
         if (error.code !== 'FIXED_SIZE_CAPACITY') throw error;
         // Keep the user's size and every admitted resident if a transient
         // clone dock or changed floor cannot yet admit a new observation.
         currentPage = WalkingLayout.layoutFixedWalking(layoutBodies, { ...options, fullSize: true });
+      }
+      if (currentPage.adaptiveNeedsReflow && currentPage.adaptiveReflowPage && !exitingMains.size
+        && !hasFiniteClone() && !cloneAwaitingReturn() && ![...actors.values()].some(actor => actor.departing)) {
+        // A changed common display scale may no longer clear an old edge
+        // position. Re-admit the proved full cast at its new physical size,
+        // preserving identities, work clocks and silent presentation markers.
+        const fresh = currentPage.adaptiveReflowPage;
+        cancelPhysicalRoutes(); clearActors({ readmission: true }); currentPage = fresh;
       }
       currentPage.visible = presentBodies.filter(session => currentPage.seats.has(session.id));
       if (currentPage.transferCertificate && !acceptTransfer(currentPage.transferCertificate, layoutBodies)) {
@@ -2183,7 +2288,10 @@
     reconcileActors();
     const alive = snapshot.sessions.filter((session) => !Scene.isClosed(session));
     const allRoomSessions = alive.filter((session) => Scene.inRoom(session, selectedProject));
-    const roomSessions = attendance.present.filter((session) => Scene.inRoom(session, selectedProject) && !restedClones.has(session.id));
+    const standbyIds = new Set(attendance.standby || []);
+    const presentRoomSessions = attendance.present.filter((session) => Scene.inRoom(session, selectedProject) && !restedClones.has(session.id));
+    const standbyCount = presentRoomSessions.filter(session => standbyIds.has(session.id)).length;
+    const roomSessions = presentRoomSessions.filter(session => !standbyIds.has(session.id));
     const localAttention = roomSessions.filter(Scene.needsAttention);
     const otherAttention = alive.filter((session) => !Scene.inRoom(session, selectedProject) && Scene.needsAttention(session));
     const outsideRoots = attendance.present.filter(session => !session.parentId && !Scene.inRoom(session, selectedProject)).length;
@@ -2198,8 +2306,9 @@
     text($('other-attention'), '其他房间 ' + otherAttention.length + ' 项待处理');
     $('attention-jump').hidden = !localAttention.length;
     text($('attention-jump'), localAttention.length + ' 项需要你 →');
-    $('status-dot').dataset.status = localAttention.length ? 'waiting' : roomSessions.length ? 'active' : 'empty';
-    let summary = roomSessions.length ? tr(rootCount + ' 项独立任务') + (helpers ? ' · ' + tr(helpers + ' 位临时帮手') : '') : tr('实时办公室 · 等待任务入驻');
+    $('status-dot').dataset.status = localAttention.length ? 'waiting' : roomSessions.some(hasBodyActivity) ? 'active' : 'empty';
+    let summary = roomSessions.length ? tr(rootCount + ' 项独立任务') + (helpers ? ' · ' + tr(helpers + ' 位临时帮手') : '') : standbyCount ? language === 'en' ? 'No active tasks' : '暂无活跃任务' : tr('实时办公室 · 等待任务入驻');
+    if (standbyCount) summary += language === 'en' ? ' · ' + standbyCount + ' standby' : ' · ' + standbyCount + ' 位待机';
     if (quiet) summary += ' · ' + tr(quiet + ' 项信号暂未更新');
     if (attendance.signalLost?.length) summary += ' · ' + I18n.t(language, 'room.signalLost', { count: attendance.signalLost.length });
     const crowded = roomSessions.length > 0 && uniformScale < .35;

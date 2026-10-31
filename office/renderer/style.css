@@ -257,25 +257,23 @@
 /* Scale the held note about the same floor point as its walking wrist. */
 .actor[data-locomotion="true"] .actor-prop[data-carry="true"]{left:78.25px;top:-45.25px;transform:translate3d(-28.5px,0,0) scale(1.8) rotate(8deg)}
 
-/* One bounded paper label: identifiers never compete with the family token. */
+/* Compact paper labels retain every fact needed on a passive display. */
 .office[data-flat="true"] .actor .nameplate,
-.office[data-flat="true"] .actor[data-helper="true"] .nameplate{display:grid;grid-template-columns:minmax(0,1fr) max-content 25px;grid-template-rows:30px 18px 17px;column-gap:5px;row-gap:3px;align-items:center;align-content:center;padding:0 10px 1px;top:139px;width:264px;min-width:264px;max-width:264px;height:76px}
+.office[data-flat="true"] .actor[data-helper="true"] .nameplate{display:grid;grid-template-columns:minmax(0,1fr) max-content;grid-template-rows:30px 15px 17px;column-gap:3px;row-gap:2px;align-items:center;align-content:center;padding:3px 8px 4px;top:139px;width:176px;min-width:176px;max-width:176px;height:76px}
 .office[data-flat="true"] .actor .actor-title,
-.office[data-flat="true"] .actor[data-helper="true"] .actor-title{grid-column:1;grid-row:1;display:block;min-width:0;width:100%;max-width:none;font-size:29px;line-height:30px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.office[data-flat="true"] .actor .actor-relation{grid-column:1/-1;grid-row:2;min-width:0;width:100%;max-width:none;font-size:16px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.office[data-flat="true"] .actor[data-helper="true"] .actor-title{grid-column:1;grid-row:1;display:block;min-width:0;width:100%;max-width:none;font-size:29px;line-height:30px;white-space:nowrap;overflow:visible;text-overflow:clip}
+.office[data-flat="true"] .actor .actor-relation{grid-column:1/-1;grid-row:2;min-width:0;width:100%;max-width:none;font-size:14px;line-height:14px;white-space:nowrap;overflow:visible;text-overflow:clip;text-align:center}
+.office[data-flat="true"] .actor .actor-relation:empty{display:none}
 .office[data-flat="true"] .actor .actor-subline,
-.office[data-flat="true"] .actor[data-helper="true"] .actor-subline{grid-column:1/-1;grid-row:3;display:flex;min-width:0;width:100%;max-width:none;justify-content:center;font-size:14px;line-height:17px}
-.office[data-flat="true"] .actor .actor-provider{font-size:14px}
-.office[data-flat="true"] .actor .family-badge{position:static;grid-column:2;grid-row:1;align-self:center;justify-self:end}
-.office[data-flat="true"] .actor .actor-keepsake{position:relative;right:auto;top:auto;grid-column:3;grid-row:1;align-self:center;justify-self:center;width:25px;height:25px;font-size:16px}
-/* Density is an observed cast fact, never a response to the solved scale. */
-.office[data-flat="true"][data-nameplate-mode="compact"] .actor .nameplate,
-.office[data-flat="true"][data-nameplate-mode="compact"] .actor[data-helper="true"] .nameplate{grid-template-rows:36px 22px;row-gap:4px}
-.office[data-flat="true"][data-nameplate-mode="compact"] .actor .actor-title,
-.office[data-flat="true"][data-nameplate-mode="compact"] .actor[data-helper="true"] .actor-title{font-size:31px;line-height:36px}
-.office[data-flat="true"][data-nameplate-mode="compact"] .actor .actor-relation{font-size:17px;line-height:22px}
-.office[data-flat="true"][data-nameplate-mode="compact"] .actor .actor-subline,
-.office[data-flat="true"][data-nameplate-mode="compact"] .actor[data-helper="true"] .actor-subline{display:none}
+.office[data-flat="true"] .actor[data-helper="true"] .actor-subline{grid-column:1/-1;grid-row:2/4;display:grid;grid-template-rows:15px 17px;gap:2px;min-width:0;width:100%;max-width:none;overflow:visible;justify-content:stretch;justify-items:center;align-items:center;font-size:16px;line-height:17px}
+.office[data-flat="true"] .actor .actor-provider{font-size:14px;line-height:15px;white-space:nowrap}
+.office[data-flat="true"] .actor .actor-state{font-size:16px;line-height:17px;overflow:visible;text-overflow:clip;white-space:nowrap}
+.office[data-flat="true"] .actor[data-has-relation="true"] .nameplate{grid-template-rows:30px 14px 14px 16px;row-gap:0;padding:0 8px}
+.office[data-flat="true"] .actor[data-has-relation="true"] .actor-subline{grid-row:3/5;grid-template-rows:14px 16px;gap:0}
+.office[data-flat="true"] .actor[data-has-relation="true"] .actor-provider{line-height:14px}
+.office[data-flat="true"] .actor[data-has-relation="true"] .actor-state{font-size:15px;line-height:16px}
+.office[data-flat="true"] .actor .family-badge{position:static;grid-column:2;grid-row:1;align-self:center;justify-self:end;font-size:10px;max-width:22px;padding:1px 3px}
+.office[data-flat="true"] .actor .actor-keepsake{display:none}
 
 /* Event cues: bubbles grow from their speaker, the waiting badge pops in and
  * nudges at most three times, and a turn boundary releases a few sparks. */

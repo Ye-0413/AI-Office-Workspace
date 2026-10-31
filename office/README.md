@@ -36,7 +36,7 @@ Published v0.24.0 packages still contain **AI Mini Office.app**. New builds from
 
 已发布的 v0.24.0 安装包仍包含 **AI Mini Office.app**；当前源码的新构建使用 **AI Work Space.app**，已有 Release 文件保留原名。
 
-Current builds use the manually selected Agent size for both bodies and nameplates. Changes in Agent count do not shrink them. Helpers retain a smaller body and label frame, moving characters may cross through each other, and settled positions keep their full body and nameplate envelopes separate. Local session accounting now covers seven AI tools, with Daily Token and Weekly usage on the homepage. Supported OpenCode and MiMo questions can receive an explicit manual answer through their native question API. Chinese nicknames remain 155 complete mythological names from the Shan Hai Jing, and the social library retains twelve pair choreographies. Active session families survive history-capacity pressure, and passive metadata cannot break an existing in-process usage interval.
+Current builds use the manually selected Agent size for bodies and nameplates. If the main-agent cast reaches capacity, the room may use exactly 90% of that size; it never compounds this reduction or rewrites the saved preference, and restores the manual size when the cast fits again. Completed observed mains remain visibly on standby, quietly dozing or playing, until new real work needs the floor. Helpers retain a smaller body and label frame, moving characters may cross through each other, and settled positions keep their full body and nameplate envelopes separate. Local session accounting now covers seven AI tools, with Daily Token and Weekly usage on the homepage. Supported OpenCode and MiMo questions can receive an explicit manual answer through their native question API. Chinese nicknames remain 155 complete mythological names from the Shan Hai Jing, and the social library retains twelve pair choreographies. Active session families survive history-capacity pressure, and passive metadata cannot break an existing in-process usage interval.
 
 Monitoring and size behavior last checked against source: **2026-10-29**. Implementation details and coverage boundaries: [local monitoring guide](docs/monitoring.md).
 
@@ -120,13 +120,15 @@ The resource-health controller observes only its image, source and presence owne
 
 每个当前主 Agent 家族有独立的身体颜色，分身使用同色系；名牌保留组号和真实父子关系，超过八个同时出现的家族时可用组号继续辨识。中文昵称直接使用《山海经》中的 155 个二至四字神话名字，包含诸犍、英招、九凤、烛九阴等；英文为四至五个字母的独立单词。昵称只影响工作室显示，不改原始会话。
 
-角色和道具按家族配色一起呈现，并保留各自的折纸、墨滴、陶土、毛线与琥珀材质。主身可见身体采用 1.8 倍呈现，分身身体内部为 1.44 倍；分身的按钮外框再统一缩到 82%，身体与名牌一起缩小，因此可见分身身体仍为同尺寸主身的 65.6%。直接和嵌套分身使用同一比例，不随家族深度继续缩小。静止图片、关节动画、备用身体与随身道具使用一致身体比例。名牌采用 264×76px 的基础盒和 29px 名称，分身外框把它们一并缩放；人数不切换名牌模式。布局分别测量实际主身与分身的身体及名牌包络，并计入放大后超出透明画布的绘制范围。旧版保存的项目筛选不会隐藏其它项目的当前会话身份。
+角色和道具按家族配色一起呈现，并保留各自的折纸、墨滴、陶土、毛线与琥珀材质。主身可见身体采用 1.8 倍呈现，分身身体内部为 1.44 倍；分身的按钮外框再统一缩到 82%，身体与名牌一起缩小，因此可见分身身体仍为同尺寸主身的 65.6%。直接和嵌套分身使用同一比例，不随家族深度继续缩小。静止图片、关节动画、备用身体与随身道具使用一致身体比例。名牌采用 176×76px 的短标签和 29px 完整昵称，直接显示 AI 工具、当前动作，以及有分身时的活跃／累计数量或实际父级；副屏观察无需点击。分身外框把它们一并缩放；人数不切换名牌模式。布局分别测量实际主身与分身的身体及名牌包络，并计入放大后超出透明画布的绘制范围。旧版保存的项目筛选不会隐藏其它项目的当前会话身份。
 
-「房间偏好 → Agent 大小」提供 65%–135% 的固定手动比例，100% 对应当前放大后的基础身体与名字。只有手动调整才改变大小，人数增加、减少、空房间和普通刷新都不会改变它。主身与分身共享这个手动比例，分身另保留上述身体与名牌的相对比例。「重新排列」按当前大小重新计算停靠位置。移动允许角色相互穿行，家具与时钟保留区仍参与路径检查；最终工作位置按完整身体与名牌包络分开安排。
+「房间偏好 → Agent 大小」提供 65%–135% 的手动基准，100% 对应当前放大后的基础身体与名字。主 Agent 达到容量时，允许统一缩到手动基准的 90%，不会继续叠乘缩小，也不会改写保存的设置；空间足够后恢复原尺寸。主身决定尺寸档位，分身保留上述身体与名牌相对比例，并继续接受实际占位检查。「重新排列」按当前大小重新计算停靠位置。移动允许角色相互穿行，家具与时钟保留区仍参与路径检查；最终工作位置按完整身体与名牌包络分开安排。
 
 脚底而非角色画布下缘锚定地面，持续约 1.7 秒的真实功能变化会安排身体走向相应家具区域，短暂工具切换先合并。行路与换路从当前实际脚点续接；最多八条路线可并行，角色行走时允许相互穿过，家具与时钟保留区仍会阻挡路径，最终停靠位置按完整包络分开安排。普通心跳和场景切换保留原身体、图片、关节动画与已累计的播放时间。
 
-只有主 Agent 的身体从门口走入；新分身在已观察到的实际父级位置凝聚，再真实走向工作区，归位也回到实际父级。分身凝聚与吸收特效持续 900 毫秒，凝聚阶段后才起步，走回父级后才吸收。已入场身体不会因为交通阻塞而隐身；待入场数量会明确显示。已完成分身保留底层开放会话，后续收到明确活跃但尚未分类的活动也会重新显现，不会被“工作种类未知”误藏。
+只有主 Agent 的身体从门口走入；新分身在已观察到的实际父级位置凝聚，再真实走向工作区，归位也回到实际父级。分身凝聚与吸收特效持续 900 毫秒，凝聚阶段后才起步，走回父级后才吸收。已入场身体不会因为交通阻塞而隐身。已确认退场的主 Agent 保留真实身体并走向门口，但不再占用活跃角色的静止工位；多个离场角色可经过同一门口，不会因终点重叠互相阻塞。有真实分身仍需归位时保留祖先锚点，新工作或迟到的分身可以中断离场。已完成分身保留底层开放会话，后续收到明确活跃但尚未分类的活动也会重新显现，不会被“工作种类未知”误藏。
+
+本次观察中已完成的主 Agent 会留在台前待机，安静地打瞌睡或闲玩；没有新会话活动时持续保留。新的真实主 Agent 或分身开始活动时，待机角色退场让位，其真实祖先仍保留到分身归位。待机不增加工作时长或今日活跃计数，历史闲置记录不会因此重新入场。隐藏时暂停待机动画，减少动作和节能时保留静态姿态。
 
 主 Agent 重新活跃会撤销旧的等分身离场请求；分身归位期间的新工作会保留原关节、道具和动画进度。切换语言造成的名牌增长只取消过时路线，不截断仍在进行的回收。分身凝聚、返回或吸收期间调整尺寸，会先保存设置并显示等待提示，保持原安全尺寸，等该过程完成后再按新尺寸验证入场；仅因尺寸调整重新入场不会重复触发工作区反馈。外部角色图片加载失败时，原创备用身体在相同关节与坐标下继续显示；后续真实状态刷新会有限重试，图片恢复通过短透明度过渡衔接。备用身体不依赖失效图片，也不改变观察到的任务状态。
 
@@ -158,7 +160,7 @@ Token 覆盖 **Codex、Claude Code、Gemini CLI、Pi、OMP、Kimi Code 与 OpenC
 
 ## 本地体验
 
-打开当前源码构建的 **AI Work Space.app**（已发布的 v0.24.0 下载仍为 **AI Mini Office.app**）；使用 DMG 时先将应用拖进「应用程序」，再打开并连接 AI 工具。房间使用「实时观察」：本地只读会话日志与已连接的 hooks／插件提供真实活动，每个独立 session 保持自己的身份，子 Agent 来自真实父子关系。角色使用固定的手动大小，人数变化不会自动缩小身体或名字；移动允许相互穿行，最终工作位置按身体和名牌的完整包络分开安排。空房间不会自动生成模拟任务。
+打开当前源码构建的 **AI Work Space.app**（已发布的 v0.24.0 下载仍为 **AI Mini Office.app**）；使用 DMG 时先将应用拖进「应用程序」，再打开并连接 AI 工具。房间使用「实时观察」：本地只读会话日志与已连接的 hooks／插件提供真实活动，每个独立 session 保持自己的身份，子 Agent 来自真实父子关系。角色以手动大小为基准，主 Agent 满员时最多缩至基准的 90%；移动允许相互穿行，最终工作位置按身体和名牌的完整包络分开安排。空房间不会自动生成模拟任务。
 
 没有伙伴在场时，初始界面只展示完整的空工作室和右上角控制区。连接与偏好从右上角打开为木框纸色面板；语言切换也在同一区域。历史闲置任务不会触发中央欢迎卡片。真实伙伴全部离场、空闲 8 秒后，会有一位明确标记的装饰访客来串门：在 10 个角落随机停留，翻书、喝咖啡、看看植物，偶尔变个小魔术。500 条独立撰写的中英双语气泡按区域轮换，真实工作出现即让路；逛约两分半后离开，过一会儿再来。可在右上角偏好中关闭「闲时串门」。访客不会加入任务数、伙伴列表或真实事件记录。
 
@@ -223,7 +225,7 @@ Tool starts, correlated results, user input, child agents, turn endings and sess
 
 An unanswered question keeps its attention state while parallel tools continue. If a waiting event has no reliable call identifier, an unrelated result cannot prove it was answered: the last observed wait remains until an explicit new turn, interruption, session closure or matching elicitation response. A stale source is labeled as a lost signal.
 
-Open the room preferences to move the window to a secondary display. Use the native green window control or the Display menu to enter full screen. You can preview Hong Kong daylight, change rain, use reduced motion or low-power behavior, and choose a fixed Agent size from 65% to 135%. At 100%, the main body uses a 1.8 presentation scale and a helper uses 1.44 inside an additional 82% frame, retaining a visible body ratio of 65.6%; the frame also scales its nameplate. Only manual size changes alter these sizes. Agent counts, empty rooms and ordinary refreshes do not shrink or enlarge them. Both types have their actual body and nameplate envelopes measured separately, including paint that extends beyond the transparent canvas. Rearrange recomputes destinations at the current size. Up to eight walking routes can run concurrently and agents may cross through one another in transit. Furniture and the clock reservation still block routes; settled work positions keep their complete envelopes separate.
+Open the room preferences to move the window to a secondary display. Use the native green window control or the Display menu to enter full screen. You can preview Hong Kong daylight, change rain, use reduced motion or low-power behavior, and choose a fixed Agent size from 65% to 135%. At 100%, the main body uses a 1.8 presentation scale and a helper uses 1.44 inside an additional 82% frame, retaining a visible body ratio of 65.6%; the frame also scales its nameplate. The main-agent cast may use one capacity fallback at exactly 90% of the manual setting, restoring the chosen size when it fits again. Metadata never compounds the reduction or changes the saved setting; helpers retain their relative proportions. Both types have their actual body and nameplate envelopes measured separately, including paint that extends beyond the transparent canvas. Rearrange recomputes destinations at the current size. Up to eight walking routes can run concurrently and agents may cross through one another in transit. Furniture and the clock reservation still block routes; settled work positions keep their complete envelopes separate.
 
 The larger Hong Kong clock sits beside a daily activity ledger and Daily Token / Weekly usage. Activity counts distinct observed active identities per Hong Kong calendar day, with separate main-agent and clone counts. Repeated turns count once and app restarts retain the day. Its private date/identity summaries retain at most fourteen days and exclude decorative visitors, plain metadata and rejected events. Token totals instead cover supported local session history across all projects, use Hong Kong calendar days and Monday–Sunday weeks, and display M/B/T units with exact counts in the keyboard-accessible source description. Initial imports and errors are explicitly marked incomplete.
 
@@ -247,4 +249,4 @@ Protocol sources, fixtures and verification boundaries are recorded in `docs/pro
 
 [公开机关动画与完整清单](../docs/scenes/README.md)。自动模式使用香港日期：四季按月份，已核实节日优先，手动灵感主题不臆测地区花期或变化中的宗教节日日期。清明精确日期由香港天文台 2026–2035 表提供，范围外保留手动预览。雨雪为装饰，不是实况天气；减少动作、隐藏窗口与节能设置会停止装饰循环。切换主题不改真实 Agent 的位置、身份与动作时钟。背景在解码完成后从当前透明度衔接；快速连选时，已退场画面保持自己的短暂淡出时间，较晚解码的旧选择不会覆盖新选择。
 
-Nameplates use a 264×76 base box and a 29px nickname before the common manual scale; helpers additionally scale their whole button frame to 82%, including the label. Agent count does not change the size or label mode. Current active and cumulative observed helper counts remain below every main; full names, parent relations and counts remain accessible in the inspector and labels. Family tokens and keepsakes reserve space inside the same label rather than covering the name. Moving characters may cross through each other; stationary work positions keep the complete body and nameplate envelopes separate.
+Nameplates use a 176×76 base box and a 29px full nickname before the common manual scale; helpers additionally scale their whole button frame to 82%, including the label. Tool, current activity, and relevant clone counts or parent names remain visible without interaction. Capacity may select the bounded 90% physical size; the label mode stays readable. Family badges retain their own space; decorative keepsakes remain outside the floor label. Retiring mains walk from their real feet to the shared doorway without consuming a stationary work dock. New work or a late real helper can interrupt that departure. Moving characters may cross through each other; stationary work positions keep the complete body and nameplate envelopes separate.

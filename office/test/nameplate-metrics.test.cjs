@@ -17,18 +17,32 @@ function harness(rows=[]){
   querySelector(selector){const cls=selector.replace(/^\./,'');for(const child of this.children){if(child.className.split(' ').includes(cls))return child;const found=child.querySelector(selector);if(found)return found;}return null;}
   // Deterministic DOM adapter tests measurement/control flow, not real fonts.
   // Native Chromium must independently certify the authored CSS rectangles.
-  getBoundingClientRect(){let r=[0,0,0,0];if(this.className==='character-body')r=[-77,-115,154,129];else if(this.className==='nameplate')r=[-132,24,264,76];else if(this.className==='actor-title')r=[-121,28,170+c.extraRight,30];else if(this.className==='actor-relation')r=[-121,61,242,18];else if(this.className==='actor-keepsake')r=[95,28,25,25];else if(this.className==='family-badge')r=[53,34,38,12];else if(['actor-subline','actor-state','actor-provider'].includes(this.className)&&c.office.dataset.nameplateMode!=='compact')r=[-110,82,220,17];if(r[2]===0&&r[3]===0&&this.className!=='actor')return{left:0,top:0,right:0,bottom:0,width:0,height:0};const f=c.frameScale||1,x=c.offsetX||0,y=c.offsetY||0;return{left:x+r[0]*f,top:y+r[1]*f,right:x+(r[0]+r[2])*f,bottom:y+(r[1]+r[3])*f,width:r[2]*f,height:r[3]*f};}
+  getBoundingClientRect(){let r=[0,0,0,0];if(this.className==='character-body')r=[-77,-115,154,129];else if(this.className==='nameplate')r=[-88,24,176,76];else if(this.className==='actor-title')r=[-79,28,133+c.extraRight,30];else if(this.className==='actor-relation')r=[-79,58,158,14];else if(this.className==='actor-keepsake')r=[0,0,0,0];else if(this.className==='family-badge')r=[53,34,26,12];else if(['actor-subline','actor-state','actor-provider'].includes(this.className)&&c.office.dataset.nameplateMode!=='compact')r=[-79,82,158,17];if(r[2]===0&&r[3]===0&&this.className!=='actor')return{left:0,top:0,right:0,bottom:0,width:0,height:0};const f=c.frameScale||1,x=c.offsetX||0,y=c.offsetY||0;return{left:x+r[0]*f,top:y+r[1]*f,right:x+(r[0]+r[2])*f,bottom:y+(r[1]+r[3])*f,width:r[2]*f,height:r[3]*f};}
  }
  c.element=(tag,cls,value)=>new Node(tag,cls,value==null?'':String(value));
  c.actorsLayer=new Node('div','actors');const append=c.actorsLayer.append.bind(c.actorsLayer);c.actorsLayer.append=(node)=>{append(node);if(node.style.cssText)probes.push(node);};
- vm.createContext(c);for(const name of ['hasBodyActivity','nameplateMode','createActorPlate','nameplateRelation','nameplateFamilyBadgeText','measureActorFootprints'])vm.runInContext(production(name),c);
+ vm.createContext(c);for(const name of ['hasBodyActivity','nameplateState','nameplateMode','createActorPlate','nameplateRelation','nameplateFamilyBadgeText','measureActorFootprints'])vm.runInContext(production(name),c);
  const actor=session=>({id:session.id,session,spec:Scene.activitySpec(session),helper:Boolean(session.parentId),state:new Node('span','actor-state','coding'),node:new Node('div','actor'),provider:new Node('span','actor-provider'),title:new Node('span','actor-title'),relation:new Node('span','actor-relation'),button:new Node('button','actor-button'),position:{x:40,y:84},target:{x:40,y:84},serial:5});
  return{c,Node,probes,elements,actor,clock};
 }
 const root={id:'main',provider:'codex',status:'active',activity:'coding',alias:'青霄白泽'};
 const child={id:'helper',provider:'codex',status:'active',activity:'planning',parentId:'main',alias:'赤霄烛龙'};
-test('density is a cast-count decision independent of solved actor scale',()=>{
- const{c}=harness();for(const scale of [.084,.4,1,1.35]){c.uniformScale=scale;assert.equal(c.nameplateMode(11),'full');assert.equal(c.nameplateMode(12),'compact');assert.equal(c.nameplateMode(100),'compact');}
+test('passive plate metrics stay readable at every observed count and solved scale',()=>{
+ const{c}=harness();for(const scale of [.084,.4,1,1.35]){c.uniformScale=scale;assert.equal(c.nameplateMode(11),'readable');assert.equal(c.nameplateMode(12),'readable');assert.equal(c.nameplateMode(100),'readable');}
+});
+test('passive states retain waits, explicit failures and lost signals in both languages',()=>{
+ const {c}=harness();
+ for(const language of ['zh','en']){
+  c.language=language;const en=language==='en';
+  assert.equal(c.nameplateState({...root,activity:'waiting-user',attention:true},'等你处理'),en?'Waiting for you':'等你回复');
+  assert.equal(c.nameplateState({...root,activity:'waiting-tool'},'留意工具动静'),en?'Waiting for tools':'等工具返回');
+  assert.equal(c.nameplateState({...root,activity:'error'},'等后续活动'),en?'Error':'遇到问题');
+  assert.equal(c.nameplateState({...root,status:'stale',disconnected:true},'这一轮已歇下'),en?'Signal lost':'信号中断');
+  assert.equal(c.nameplateState(root,'一个工具出了问题'),en?'Tool error':'工具出错');
+  assert.equal(c.nameplateState(root,'这次工具返回成功'),en?'Tool succeeded':'工具返回成功');
+  assert.equal(c.nameplateState(root,'结果还需确认'),en?'Result unconfirmed':'结果待确认');
+  assert.equal(c.nameplateRelation(root,null,'readable'),'');
+ }
 });
 test('one production plate constructor supplies identical ordered core children and reserved keepsake for probes and live actors',()=>{
  const h=harness([root]),p=h.c.createActorPlate(root);assert.deepEqual(p.plate.children.map(n=>n.className),['actor-title','actor-relation','actor-subline','actor-keepsake']);assert.deepEqual(p.subline.children,[p.provider,p.state]);assert.equal(p.keepsake.attributes['aria-hidden'],'true');
@@ -67,17 +81,17 @@ test('letterboxed compact probes ignore display-none viewport-zero rectangles bu
 function plain(value){return JSON.parse(JSON.stringify(value));}
 function installRender(h){
  const c=h.c,dom=new Map(),noop=()=>{},node=()=>({dataset:{},firstElementChild:{},replaceChildren(){},querySelector(){return this;}}),observations=[];
- Object.assign(c,{currentPage:{},sizeStability:require('../lib/size-stability.js').create({requestedScale:.65}),$:id=>{if(!dom.has(id))dom.set(id,node());return dom.get(id);},Family,attendanceModel:{update:()=>({present:c.snapshot.sessions,retired:[]})},attendance:{present:[]},restedClones:new Set(),selectedProject:'',roomSelectionExplicit:false,rooms:[],page:0,element:node,uniformScale:.4,settings:{agentScale:.65},transferOwner:null,measureActorFootprints:rows=>observations.push({mode:c.office.dataset.nameplateMode,ids:rows.map(s=>s.id)}),finiteExitIds:()=>new Set(),sceneOptions:()=>({}),WalkingLayout:{layoutFullSizeWalking:rows=>({seats:new Map(rows.map(s=>[s.id,{x:40,y:84}])),pathsById:new Map(),uniformScale:.65,pages:1,overflowIds:[]})},reconcileActors:noop,renderConnections:noop,renderRoster:noop,renderInspector:noop,updateSignalSummary:noop,previousAttention:new Set(),refreshQuietPresentation:noop,venueStage:null,festivalStage:null,themeEnvironment:null,social:null,stationArrival:null});
+ Object.assign(c,{currentPage:{},sizeStability:require('../lib/size-stability.js').create({requestedScale:.65}),$:id=>{if(!dom.has(id))dom.set(id,node());return dom.get(id);},Family,attendanceModel:{update:()=>({present:c.snapshot.sessions,retired:[]})},attendance:{present:[]},restedClones:new Set(),selectedProject:'',roomSelectionExplicit:false,rooms:[],page:0,element:node,uniformScale:.4,settings:{agentScale:.65},transferOwner:null,measureActorFootprints:rows=>observations.push({mode:c.office.dataset.nameplateMode,ids:rows.map(s=>s.id)}),finiteExitIds:()=>new Set(),sceneOptions:()=>({}),hasFiniteClone:()=>false,cloneAwaitingReturn:()=>false,WalkingLayout:{layoutFullSizeWalking:rows=>({seats:new Map(rows.map(s=>[s.id,{x:40,y:84}])),pathsById:new Map(),uniformScale:.65,pages:1,overflowIds:[]})},reconcileActors:noop,renderConnections:noop,renderRoster:noop,renderInspector:noop,updateSignalSummary:noop,previousAttention:new Set(),refreshQuietPresentation:noop,venueStage:null,festivalStage:null,themeEnvironment:null,social:null,stationArrival:null});
  vm.runInContext(production('render'),c);return observations;
 }
 test('production fit-all render keeps stable full plate metrics and counts retirees until actual removal',()=>{
  const rows=Array.from({length:11},(_,i)=>({...root,id:'present-'+i})),held={...root,id:'real-retiring'};const h=harness(rows),c=h.c;for(const row of rows)c.actors.set(row.id,h.actor(row));c.actors.set(held.id,h.actor(held));const observations=installRender(h);
- c.render();assert.equal(observations[0].mode,'full');assert.equal(observations[0].ids.length,12);assert.ok(observations[0].ids.includes(held.id));
- c.snapshot.sessions=c.snapshot.sessions.map(s=>({...s,title:'only metadata',lastEventAt:10}));c.render();assert.equal(observations[1].mode,'full');assert.equal(observations[1].ids.length,12,'source absence alone is not physical body removal');
- c.actors.delete(held.id);c.render();assert.equal(observations[2].mode,'full');assert.equal(observations[2].ids.length,11);assert.equal(c.uniformScale,.4,'typography never writes an actor scale');
+ c.render();assert.equal(observations[0].mode,'readable');assert.equal(observations[0].ids.length,12);assert.ok(observations[0].ids.includes(held.id));
+ c.snapshot.sessions=c.snapshot.sessions.map(s=>({...s,title:'only metadata',lastEventAt:10}));c.render();assert.equal(observations[1].mode,'readable');assert.equal(observations[1].ids.length,12,'source absence alone is not physical body removal');
+ c.actors.delete(held.id);c.render();assert.equal(observations[2].mode,'readable');assert.equal(observations[2].ids.length,11);assert.equal(c.uniformScale,.4,'typography never writes an actor scale');
 });
 test('cold crowded snapshot keeps the same plate metrics before actor construction or solver output',()=>{
- const rows=Array.from({length:12},(_,i)=>({...root,id:'cold-'+i})),h=harness(rows),observations=installRender(h);assert.equal(h.c.actors.size,0);h.c.render();assert.equal(observations[0].mode,'full');assert.equal(observations[0].ids.length,12);assert.equal(h.c.uniformScale,.4);
+ const rows=Array.from({length:12},(_,i)=>({...root,id:'cold-'+i})),h=harness(rows),observations=installRender(h);assert.equal(h.c.actors.size,0);h.c.render();assert.equal(observations[0].mode,'readable');assert.equal(observations[0].ids.length,12);assert.equal(h.c.uniformScale,.4);
 });
 test('production retiring reconciliation refreshes current ledger counts and language without changing a held ancestor physical owner',()=>{
  const h=harness([root,child]),c=h.c;installLabel(h);c.office.dataset.nameplateMode='compact';const a=h.actor(root),b=h.actor(child);a.holdingFamily=true;a.lastTurnAt=b.lastTurnAt=0;c.actors.set(a.id,a);c.actors.set(b.id,b);c.updateActorLabel(a);assert.equal(a.relation.textContent,'活跃 1 · 历史 1');
@@ -88,10 +102,10 @@ test('production retiring reconciliation refreshes current ledger counts and lan
  assert.equal(a.position,before.position);assert.equal(a.target,before.target);assert.equal(a.node,before.node);assert.equal(a.serial,before.serial);assert.equal(a.holdingFamily,true);assert.equal(ended.status,'closed');assert.equal(ended.closed,true,'label maintenance never changes observed AI state');
 });
 
-// Mirrors the native CSS probe's 264×76 paper plate; the transparent body
+// Mirrors the native CSS probe's 176×76 paper plate; the transparent body
 // canvas still ends at -115 and cannot account for the enlarged sprite.
 test('production measurement merges painted body bounds before adding its shared motion margin',()=>{
  const h=harness([root]);h.c.measureActorFootprints([root]);
- assert.deepEqual(plain(h.c.actorFootprints.get(root.id)),{left:138,right:138,top:150,bottom:106});
+ assert.deepEqual(plain(h.c.actorFootprints.get(root.id)),{left:94,right:94,top:150,bottom:106});
  assert.ok(h.c.actorFootprints.get(root.id).top>129,'paint extends above the layout canvas');
 });

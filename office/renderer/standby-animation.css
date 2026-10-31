@@ -1,0 +1,7 @@
+/* Quiet material gestures after observed work. Labels and physical feet stay
+   fixed; the small toy is decoration rather than a running tool or outcome. */
+.standby-decoration{pointer-events:none;transform-origin:77.5px 111px;transform-box:view-box}
+.standby-decoration .standby-sleep{transform-box:fill-box;transform-origin:left bottom;fill:none;stroke:#c6b391;stroke-width:.8;stroke-linecap:round;stroke-linejoin:round;opacity:.35}
+.standby-decoration .standby-toy{transform-origin:106px 94px;transform-box:view-box}
+.standby-decoration[data-phase="doze"] .standby-play,.standby-decoration[data-phase="play"] .standby-sleep{display:none}
+@media(prefers-reduced-motion:reduce){.standby-decoration .standby-sleep{opacity:.35}.standby-decoration .standby-play{display:none}}

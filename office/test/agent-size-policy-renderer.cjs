@@ -80,9 +80,14 @@ app.whenReady().then(async()=>{
   assert.equal(await run(`Array.from(originalBodies,([id,old])=>{const node=document.querySelector('[data-session-id="'+id+'"]');return node===old.node&&node.querySelector('.ap-rig')===old.rig&&node.querySelector('.character-body>img')===old.image;}).every(Boolean)`),true);
   fs.writeFileSync('/tmp/office-fixed-size-final.png',(await win.webContents.capturePage()).toPNG());
   checks.push('two to four feasible identities retain exact 100% outer scale; larger art/text stay fixed; helpers inherit the family at the established smaller physical ratio');
-  send([left,right,{...extra,closed:true,status:'closed',activity:'idle',activeTools:0,turnCompletedAt:Date.now()},{...helper,closed:true,status:'closed',activity:'idle',activeTools:0,turnCompletedAt:Date.now()}]);await audit(2,1);
-  send([left,right]);await pause(100);assert.equal(await run(`Array.from(originalBodies,([id,old])=>document.querySelector('[data-session-id="'+id+'"]')===old.node).every(Boolean)`),true);
-  checks.push('removing completed visitors cannot enlarge remaining bodies or replace their original nodes');
+  const endedExtra={...extra,closed:true,status:'closed',activity:'idle',activeTools:0,turnCompletedAt:Date.now()},endedHelper={...helper,closed:true,status:'closed',activity:'idle',activeTools:0,turnCompletedAt:Date.now()};
+  send([left,right,endedExtra,endedHelper]);await audit(3,1);
+  assert.equal(await run(`document.querySelector('[data-session-id="'+${JSON.stringify(extra.id)}+'"]').dataset.standby`),'true');
+  const replacement=task('fixed:replacement','searching');
+  send([left,right,endedExtra,endedHelper,replacement]);await audit(3,1);
+  await until(`!document.querySelector('[data-session-id="'+${JSON.stringify(extra.id)}+'"]')`,'new work releases the completed standby main');
+  send([left,right]);await audit(2,1);await pause(100);assert.equal(await run(`Array.from(originalBodies,([id,old])=>document.querySelector('[data-session-id="'+id+'"]')===old.node).every(Boolean)`),true);
+  checks.push('completed mains remain on standby until new work arrives; releasing visitors cannot enlarge or replace the remaining original bodies');
 
   // Both genuine task changes request opposite functional stations. Capture
   // actual compositor motion and any temporary actor-envelope intersections.

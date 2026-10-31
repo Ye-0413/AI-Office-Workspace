@@ -29,7 +29,7 @@
    * (production source: 100; default attendance memory: 256).
    * entering/leaving are edge-triggered IDs; retired describes this snapshot.
    */
-  function createAttendance({ idleMs = 20000, signalGraceMs = 20000, now = Date.now, maxEntries = 256 } = {}) {
+  function createAttendance({ idleMs = 20000, signalGraceMs = 20000, keepIdle = false, now = Date.now, maxEntries = 256 } = {}) {
     const grace = Number.isFinite(Number(idleMs)) ? Math.max(0, Number(idleMs)) : 20000;
     const signalGrace = Number.isFinite(Number(signalGraceMs)) ? Math.max(0, Number(signalGraceMs)) : 20000;
     const capacity = Number.isInteger(maxEntries) && maxEntries > 0 ? maxEntries : 256;
@@ -47,6 +47,9 @@
     };
     let startedAt = clock();
     const entries = new Map();
+    const workStamp = session => Math.max(0, ...(Array.isArray(session.events) ? session.events : [])
+      .filter(event => ['turn-start', 'tool-start', 'tool-end', 'waiting-user', 'subagent-start'].includes(event.event))
+      .map(event => eventTime(event.at)));
     let initial = true;
     let sequence = 0;
 
@@ -55,6 +58,30 @@
       const current = new Map();
       for (const session of Array.isArray(sessions) ? sessions : []) {
         if (session && typeof session.id === 'string' && session.id) current.set(session.id, session);
+      }
+      // Only a newly observed or genuinely resumed real worker asks
+      // existing standby mains to release the floor. Repeated metadata on an
+      // already busy worker supplies no new arrival, even with a newer clock.
+      const newWorkers = keepIdle ? [...current.values()].filter(session => {
+        if (!working(session)) return false;
+        const entry = entries.get(session.id), event = latestEvent(session);
+        const advanced = eventTime(session.lastEventAt) > (entry?.lastEventAt || 0);
+        const observedWorkAt = workStamp(session);
+        const freshWork = observedWorkAt > (entry?.lastWorkAt || 0);
+        // A coalesced snapshot may already end with metadata after its real
+        // start/tool event. Inspect the accepted packet, while preventing an
+        // older imported boundary from promoting metadata into an arrival.
+        if (!entry) return event?.event !== 'metadata'
+          || observedWorkAt >= startedAt && observedWorkAt <= time + 5000;
+        return !entry.wasWorking && (freshWork || advanced && !event);
+      }) : [];
+      const arrivalAncestors = new Set();
+      for (const worker of newWorkers) {
+        const seen = new Set([worker.id]); let parentId = worker.parentId;
+        while (parentId && !seen.has(parentId)) {
+          seen.add(parentId); arrivalAncestors.add(parentId);
+          parentId = (current.get(parentId) || entries.get(parentId)?.lastSession)?.parentId;
+        }
       }
       const protectedParents = new Set();
       const activeParents = new Set();
@@ -98,7 +125,17 @@
           const advanced = at > entry.lastEventAt;
           const changed = at >= entry.lastEventAt && nextSignature !== entry.signature;
           const freshArrival = advanced && freshHookArrival(session, time);
-          if (closed(session)) {
+          const standbyTimerLoss = keepIdle && entry.standby && !session.parentId && uncertain(session) && !advanced;
+          if (standbyTimerLoss) {
+            // The stale clock cannot undo an already observed idle/end fact.
+            // Preserve its visual standby without changing the stale source.
+            entry.idleSince = null; entry.uncertainSince = null;
+          } else if (keepIdle && !session.parentId && entry.phase === 'present'
+            && !uncertain(session) && (closed(session) || confirmedIdle(session))) {
+            // Retain only an already observed real body. Cold idle/closed
+            // history still never gets a new floor actor on application start.
+            entry.standby = true; entry.idleSince = null; entry.uncertainSince = null;
+          } else if (closed(session)) {
             if (entry.phase === 'present') leaving.push(id);
             entry.phase = 'retired'; entry.reason = 'closed'; entry.idleSince = null;
           } else if (entry.phase === 'retired') {
@@ -129,10 +166,18 @@
             entry.idleSince = null;
             entry.uncertainSince = uncertain(session) ? entry.uncertainSince ?? time : null;
           }
+          if (working(session) || uncertain(session) && !standbyTimerLoss || session.parentId) {
+            entry.standby = false;
+            if (working(session)) entry.releaseRequested = false;
+          }
           entry.lastEventAt = Math.max(entry.lastEventAt, at);
           entry.signature = nextSignature; entry.protectedByChild = protectedByChild;
           entry.seen = ++sequence;
         }
+        entry.lastSession = session;
+        const observedWorkAt = workStamp(session), newlyObservedWork = observedWorkAt > (entry.lastWorkAt || 0);
+        entry.lastWorkAt = Math.max(entry.lastWorkAt || 0, observedWorkAt);
+        entry.wasWorking = working(session) && (entry.wasWorking || latestEvent(session)?.event !== 'metadata' || newlyObservedWork);
         entries.delete(id); entries.set(id, entry);
         if (entry.phase === 'present') present.push(session);
         else {
@@ -142,10 +187,23 @@
       }
       for (const [id, entry] of entries) {
         if (current.has(id) || entry.phase === 'retired') continue;
+        if (keepIdle && entry.standby && entry.lastSession) {
+          present.push(entry.lastSession); continue;
+        }
         // The source removed this row. Animate its visual removal without
         // interpreting that disappearance as successful task completion.
         entry.phase = 'retired'; entry.reason = 'absent'; entry.idleSince = null;
         leaving.push(id);
+      }
+      if (keepIdle) for (const [id, entry] of entries) {
+        if (!entry.standby || entry.phase !== 'present') continue;
+        if (!arrivalAncestors.has(id) && newWorkers.some(session => session.id !== id)) entry.releaseRequested = true;
+        if (!entry.releaseRequested || protectedParents.has(id)) continue;
+        entry.phase = 'retired'; entry.reason = 'standby-released'; entry.standby = false;
+        const index = present.findIndex(session => session.id === id);
+        if (index >= 0) present.splice(index, 1);
+        if (!leaving.includes(id)) leaving.push(id);
+        if (!retired.includes(id)) retired.push(id);
       }
       if (entries.size > capacity) {
         const eviction = [...entries].sort((a, b) =>
@@ -155,7 +213,8 @@
         while (entries.size > capacity && eviction.length) entries.delete(eviction.shift()[0]);
       }
       initial = false;
-      return { present, entering, leaving, retired, signalLost };
+      return { present, entering, leaving, retired, signalLost,
+        standby: present.filter(session => entries.get(session.id)?.standby).map(session => session.id) };
     }
 
     return { update,

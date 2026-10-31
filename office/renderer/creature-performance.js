@@ -29,11 +29,47 @@
     // painted texture remain spatially unchanged, including antialiased alpha.
     return Object.freeze({ index, hue, filter: 'sepia('+sepia+') saturate('+saturation+') hue-rotate('+hue+'deg) brightness('+Number((light*tone).toFixed(6))+')' });
   }
-  const EASE = 'cubic-bezier(.23,1,.32,1)';
+  const SINE = 'cubic-bezier(.37,0,.63,1)';
+  // Finite reactions in each material's own body language. Frames run between
+  // the current transform and rest; every beat returns to the painted pose.
+  const CUES = Object.freeze({
+    folio: {
+      greet: ['translateY(-4px) rotate(-9deg)', 'translateY(-1px) rotate(7deg)', 'rotate(-3deg)'],
+      attention: ['scale(1.05,.93)', 'translateY(-7px) rotate(-5deg) scale(.95,1.06)', 'rotate(4deg) scale(1.04,.96)', 'rotate(-1.5deg)'],
+      startle: ['rotate(-4deg) scale(.9,1.08)', 'rotate(2deg) scale(1.05,.96)'],
+      success: ['scale(1.05,.94)', 'translateY(-5px) rotate(-10deg)', 'translateY(-2px) rotate(6deg)', 'scale(1.02,.98)']
+    },
+    ink: {
+      greet: ['scale(1.1,.9)', 'translateY(-3px) scale(.92,1.1)', 'scale(1.05,.96)', 'scale(.98,1.02)'],
+      attention: ['scale(1.14,.86)', 'translateY(-7px) scale(.88,1.15)', 'scale(1.1,.9)', 'scale(.96,1.04)'],
+      startle: ['scale(.86,1.14)', 'scale(1.08,.93)', 'scale(.98,1.02)'],
+      success: ['scale(1.12,.88)', 'translateY(-5px) scale(.9,1.12)', 'scale(1.06,.94)', 'scale(.98,1.02)']
+    },
+    moss: {
+      greet: ['rotate(-3deg) skewX(2deg)', 'rotate(2.5deg) skewX(-2deg)', 'rotate(-1deg)'],
+      attention: ['translateY(-4px) rotate(-2deg)', 'translateY(.8px) scale(1.05,.94)', 'rotate(1deg)'],
+      startle: ['translateY(-2px)', 'translateY(.6px) scale(1.03,.97)'],
+      success: ['translateY(-3px) rotate(-1.5deg)', 'translateY(.8px) scale(1.04,.95)', 'skewX(-2deg)']
+    },
+    thread: {
+      greet: ['translateY(-5px) rotate(-8deg)', 'scale(1.06,.94)', 'translateY(-2px) rotate(5deg)', 'scale(1.02,.98)'],
+      attention: ['scale(1.08,.92)', 'translateY(-8px) rotate(-10deg) scale(.94,1.06)', 'scale(1.08,.92)', 'translateY(-3px) rotate(6deg)', 'scale(1.02,.98)'],
+      startle: ['translateY(-3px) scale(.92,1.08)', 'rotate(-4deg) scale(1.05,.95)'],
+      success: ['scale(1.07,.93)', 'translateY(-6px) rotate(12deg)', 'scale(1.06,.94)', 'translateY(-2px) rotate(-4deg)']
+    },
+    glow: {
+      greet: ['translateY(-4px) rotate(-3deg)', 'translateY(-3px) rotate(3deg)', 'translateY(-1px)'],
+      attention: ['translateY(-6px) scale(1.04)', 'translateY(-4px) rotate(-3deg)', 'translateY(-5px) rotate(3deg)', 'translateY(-1px)'],
+      startle: ['translateY(2px) scale(.94)', 'translateY(-3px) scale(1.04)'],
+      success: ['translateY(-5px) scale(1.06)', 'translateY(-3px)', 'translateY(-1px) scale(1.02)']
+    }
+  });
+  const CUE_DURATION = Object.freeze({ glance: 480, startle: 420, greet: 620, attention: 680, success: 560 });
   let serial = 0;
   function poseFor(session = {}, options = {}) {
     if (session.disconnected || session.status === 'stale' || options.stale) return 'resting';
     if (options.walking || options.reaction) return 'idle';
+    if (options.standby) return options.standbyPhase === 'play' ? 'idle' : 'resting';
     if (session.activity === 'error') return 'attention';
     if (session.attention === true || ['waiting-user','waiting-tool'].includes(session.activity)) return 'idle';
     const inactive = session.closed || session.status === 'closed' || session.status === 'idle' || session.activity === 'idle';
@@ -79,8 +115,11 @@
       element('use', { href: '#' + source.id, 'clip-path': 'url(#' + clip.id + ')' }, node);
       return node;
     }
-    part('body-left', [LEFT, TOP, CELL / 2, 64], shell);
-    part('body-right', [LEFT + CELL / 2, TOP, CELL / 2, 64], shell);
+    // Halves overlap at the spine and reach behind the feet, so a lifted,
+    // tilted or opened body reveals its own painted edge instead of a seam.
+    // At rest the overlapping pixels are identical and the feet draw on top.
+    part('body-left', [LEFT, TOP, CELL / 2 + 3, 72], shell);
+    part('body-right', [LEFT + CELL / 2 - 3, TOP, CELL / 2 + 3, 72], shell);
     for (let index = 0; index < 4; index++) part('foot-' + (index + 1), [LEFT + index * CELL / 4, TOP + 64, CELL / 4, 16], feet);
     const light = element('ellipse', { class: 'cp-inner-light', cx: 77.5, cy: 82, rx: 8, ry: 10, fill: '#ffe3a2', opacity: '.08' }, shell);
     const neutral = element('g', { class: 'cp-neutral', 'aria-hidden': 'true' }, motion);
@@ -173,7 +212,9 @@
       for (const animation of live) {
         if (paused.has(animation)) continue;
         paused.set(animation, animation.playState);
-        if (animation.playState === 'running' || animation.pending) {
+        // A one-shot pose landing can report finished on the frame it ends;
+        // holding it too keeps every owned clock paused, and resume skips it.
+        if (animation.playState === 'running' || animation.pending || animation.playState === 'finished') {
           const at = animation.currentTime; animation.pause();
           if (Number.isFinite(at)) animation.currentTime = at;
         }
@@ -220,25 +261,27 @@
       if (changed && !quiet && (hidden || health !== 'healthy')) pause();
       return changed;
     }
+    function react(kind, direction = 0) {
+      const creature = currentDesign.id, from = view?.getComputedStyle?.(motion)?.transform || 'none';
+      const side = Math.sign(direction) || 1;
+      const beats = kind === 'glance'
+        ? ['rotate(' + side * 5 + 'deg) translateX(' + side + 'px)', 'rotate(' + side * 4 + 'deg) translateX(' + side + 'px)', 'rotate(' + side * -1 + 'deg)']
+        : CUES[creature][kind];
+      const frames = [from, ...beats, 'none'].map((transform, index, all) => ({ transform, offset: index / (all.length - 1), easing: SINE }));
+      stopCues();
+      const animation = motion.animate(frames, { duration: CUE_DURATION[kind], easing: 'linear' });
+      cues.add(animation); animation.finished.catch(() => {}).finally(() => cues.delete(animation));
+      return true;
+    }
     function cue(kind, { direction = 0 } = {}) {
       if (destroyed || hidden || quiet || gait || health !== 'healthy' || typeof motion.animate !== 'function') return false;
       if (kind === 'wave') kind = 'greet';
-      if (activity?.cue?.(kind, { direction })) return true;
-      if (!['glance', 'startle', 'greet', 'attention'].includes(kind)) return false;
-      const creature = currentDesign.id, glowing = creature === 'glow';
-      const target = glowing && kind === 'attention' ? light : motion;
-      const before = view?.getComputedStyle?.(target), from = target === light ? before?.opacity || '.08' : before?.transform || 'none';
-      stopCues();
-      let frames;
-      if (target === light) frames = [{ opacity: from }, { opacity: '.32', offset: .4 }, { opacity: '.08' }];
-      else {
-        const gestures = { folio: 'rotate(-1.2deg) scale(1.01,.995)', ink: 'scale(1.035,.975)', moss: 'translateY(-.5px) rotate(.35deg)', thread: 'rotate(-1deg) scale(.995,1.015)', glow: 'translateY(-1px)' };
-        const middle = kind === 'glance' && direction ? 'rotate(' + Math.sign(direction) * .8 + 'deg)' : gestures[creature];
-        frames = [{ transform: from }, { transform: middle, offset: .4 }, { transform: 'none' }];
+      if (activity?.cue?.(kind, { direction })) {
+        if (kind === 'tool-success') react('success');
+        return true;
       }
-      const animation = target.animate(frames, { duration: kind === 'attention' ? 250 : 200, easing: EASE });
-      cues.add(animation); animation.finished.catch(() => {}).finally(() => cues.delete(animation));
-      return true;
+      if (!['glance', 'startle', 'greet', 'attention'].includes(kind)) return false;
+      return react(kind, direction);
     }
     function stopGait() {
       if (!gait) return;
@@ -285,10 +328,13 @@
       const nextPose = poseFor(session, options), index = sourcePoseFor(session, options, currentDesign.id);
       const walking = Boolean(options.walking && !quiet);
       if (pose !== nextPose) {
+        // The first painted pose is a mount, not a change; only later swaps land.
+        if (pose) attribute(layer, 'data-pose-change', 'true');
         attribute(layer, 'data-pose', nextPose); pose = nextPose;
       }
       frame(index);
       attribute(layer, 'data-walking', walking);
+      attribute(layer, 'data-live', !quiet);
       // Hiding alone preserves the selector and the exact CSSAnimation object.
       // Quiet preferences deliberately replace playback with a static tableau.
       attribute(layer, 'data-animate', !quiet && (walking || work.active && work.animate));

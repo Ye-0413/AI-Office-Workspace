@@ -228,14 +228,33 @@ channel but does not rewrite host configuration.
 
 ## Fixed Agent size and floor admission
 
-The Agent size slider selects a fixed manual size of **65%–135%** for bodies
-and nameplates. Agent counts, arrivals, departures, empty rooms and ordinary
-metadata refreshes never shrink or enlarge them. At 100%, main artwork uses a
+The Agent size slider selects a manual baseline of **65%–135%** for bodies
+and nameplates. Main-agent capacity selects either that baseline or exactly
+90% of it; repeated snapshots never compound the reduction. The saved setting
+stays unchanged, helpers retain their relative ratios, and the room restores
+the manual size once the complete cast can safely fit. At 100%, main artwork uses a
 1.8 presentation scale; helpers use 1.44 inside an additional 82% frame, giving
 a visible body ratio of **65.6%** of a main. The smaller frame also scales the
 helper's nameplate. Nested helpers use the same helper ratio rather than
 shrinking again at each generation. Full names and real parent relationships
-remain available in the roster and inspector.
+remain available in the roster and inspector. Floor labels use a fixed
+176×76 box with the full 29px nickname, family badge, AI tool and concise
+activity on separate visible rows. Only real parent links or nonzero clone
+counts add a relation row; no hover or click is needed for passive observation.
+
+An observed completed or confirmed-idle main stays on the floor in standby
+until new real work arrives. History-only idle rows never reenter. Standby
+uses local doze/play animation, without source events or usage accounting.
+Hidden scenes pause it exactly; reduced motion and low power use a static
+resting pose. A fresh main or helper releases unrelated standby mains while
+retaining the helper's actual ancestors.
+
+A released standby main no longer consumes a stationary work dock. Its actual body
+walks along a separately validated route to the shared transient doorway,
+then is removed. This avoids requiring the retiring and arriving casts to
+fit simultaneously before anyone can leave. Live or returning descendants
+retain their ancestor anchor; resumed work or a late descendant cancels the
+exit at the real rendered foot without reopening an ended native session.
 
 The production renderer first tries the entire observed cast at the chosen
 size. Moving agents may pass through one another, while furniture and the clock
@@ -247,7 +266,7 @@ If the current floor or a clone transition cannot safely admit another body,
 the fixed-size fallback preserves existing residents and shows an explicit
 count of agents **awaiting a work dock**. Those identities remain in the roster
 and can enter when space becomes available. This does not establish unlimited
-room capacity, and no smaller automatic scale is substituted. Existing actual
+room capacity, after the single 90% main-capacity fallback; no further reduction is substituted. Existing actual
 feet and the real entry, split, return and exit transitions remain authoritative.
 A manual size change during a finite clone transition is saved immediately and
 applied after that transition finishes safely. Geometry-only readmission does

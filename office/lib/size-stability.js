@@ -7,11 +7,11 @@
   const CLONE_RATIO = .8;
   const CLONE_FRAME_RATIO = .82;
   const PRESENTATION_SCALE = 1.8;
-  // Current workshop paint and the 264×76 nameplate, including motion margin.
+  // Current workshop paint and the 176×76 nameplate, including motion margin.
   // Legacy reference/visitor geometry remains in Scene.ACTOR_FOOTPRINT.
   const ACTOR_FOOTPRINT = Object.freeze({
-    root: Object.freeze({ left: 138, right: 138, top: 150, bottom: 106 }),
-    helper: Object.freeze({ left: 115, right: 115, top: 98, bottom: 91 })
+    root: Object.freeze({ left: 94, right: 94, top: 150, bottom: 106 }),
+    helper: Object.freeze({ left: 79, right: 79, top: 98, bottom: 91 })
   });
   const preference = value => Number.isFinite(value) && value > 0 ? Math.max(.65, Math.min(1.35, value)) : 1;
   const bodyRatio = session => session?.parentId ? CLONE_RATIO : 1;
