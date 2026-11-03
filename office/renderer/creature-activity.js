@@ -10,31 +10,31 @@
   const NS = 'http://www.w3.org/2000/svg';
   const ACTIVITIES = Repertoire.ACTIVITIES;
   const MATERIALS = Object.freeze({
-    folio: { base: '#fff0ce', shade: '#d6b58b', edge: '#8a6240', light: '#fff9e9', cycle: 3200 },
-    ink: { base: '#152641', shade: '#0a1226', edge: '#32516c', light: '#8ce0ef', cycle: 2600 },
-    moss: { base: '#d5a06b', shade: '#9e6a43', edge: '#664a31', light: '#b4be70', cycle: 4000 },
-    thread: { base: '#ec8862', shade: '#bd523e', edge: '#874033', light: '#ffd1a3', cycle: 3200 },
-    glow: { base: '#f9c762', shade: '#dd9d3d', edge: '#a97529', light: '#fff6b9', cycle: 3600 }
+    folio: { base: '#fff3d6', shade: '#d4af82', edge: '#7a5230', light: '#fffdf2', cycle: 3200 },
+    ink: { base: '#1a3154', shade: '#0d1933', edge: '#467499', light: '#a2eefc', cycle: 2600 },
+    moss: { base: '#d9a46c', shade: '#9b663e', edge: '#593d25', light: '#bed074', cycle: 4000 },
+    thread: { base: '#f08b65', shade: '#be503b', edge: '#783427', light: '#ffdbb5', cycle: 3200 },
+    glow: { base: '#fad06b', shade: '#df9d38', edge: '#96631c', light: '#fff9c8', cycle: 3600 }
   });
   // Authored choreography was keyed for a sub-pixel envelope. Each material
   // plays it larger in its own way: paper flutters in, ink drips, clay rises
   // with weight, yarn drops and bounces, light blooms.
   const STYLES = Object.freeze({
-    folio: { gain: 1.6, enter: ['translateY(5px) rotate(-8deg) scale(.9)', 'translateY(-1.5px) rotate(3deg) scale(1.03)'], exit: 'translateY(4px) rotate(6deg) scale(.92)' },
-    ink: { gain: 1.7, enter: ['translateY(6px) scale(1.25,.5)', 'scale(.94,1.1)'], exit: 'translateY(5px) scale(1.2,.4)' },
-    moss: { gain: 1.4, enter: ['translateY(8px) scale(.96)', 'translateY(-1px)'], exit: 'translateY(6px)' },
-    thread: { gain: 1.7, enter: ['translateY(-8px) scale(.9)', 'translateY(1px) scale(1.05,.95)'], exit: 'translateY(-5px) scale(.9)' },
-    glow: { gain: 1.5, enter: ['scale(.8)', 'scale(1.06)'], exit: 'scale(.86)' }
+    folio: { gain: 1.6, enter: ['translateY(5px) rotate(-9deg) scale(.9)', 'translateY(-1.8px) rotate(3.5deg) scale(1.04)'], exit: 'translateY(4px) rotate(6deg) scale(.92)' },
+    ink: { gain: 1.7, enter: ['translateY(6px) scale(1.26,.5)', 'scale(.93,1.11)'], exit: 'translateY(5px) scale(1.2,.4)' },
+    moss: { gain: 1.4, enter: ['translateY(8px) scale(.95)', 'translateY(-1.2px) scale(1.02,.98)'], exit: 'translateY(6px)' },
+    thread: { gain: 1.7, enter: ['translateY(-8px) scale(.9)', 'translateY(1.2px) scale(1.06,.94)'], exit: 'translateY(-5px) scale(.9)' },
+    glow: { gain: 1.5, enter: ['scale(.8)', 'scale(1.07)'], exit: 'scale(.86)' }
   });
   // Props whose travel would leave the 62×56 envelope at their material gain,
   // measured natively at the test's twelve phases; they play at this ceiling.
   const CEILINGS = Object.freeze(Object.fromEntries(Object.entries({
-    "1.1": 'folio-coding-punch-strip folio-running-belt-loop folio-searching-window-loupe glow-running-prism-relay glow-searching-perimeter-seek ink-reading-wick-line ink-running-coil-flow ink-running-dual-channel ink-searching-loop-loupe moss-designing-silhouette-frame moss-reading-soil-strata thread-coding-logic-loom thread-running-oval-carrier thread-running-weft-return thread-searching-strand-trace',
-    "1.2": 'folio-designing-crease-guide folio-searching-ribbon-trace folio-testing-seam-inspect glow-running-grid-row-execution glow-running-racetrack-light glow-running-rectangular-loop ink-building-filament-bridge ink-designing-contour-loop ink-reading-drop-magnifier ink-searching-drop-lens ink-searching-ripple-map ink-testing-bridge-probe moss-running-stone-conveyor thread-building-arched-bridge thread-building-basket-rim thread-building-rung-ladder thread-coding-ribbon-input thread-running-braid-shuttles thread-running-loom-carriage thread-running-traverse-winder thread-searching-peg-wall thread-testing-mesh-stretch thread-testing-repeat-spacing',
-    "1.3": 'folio-designing-draw-arc folio-planning-route-strip glow-designing-contour-light glow-running-diamond-loop glow-running-spiral-carrier glow-searching-mirror-corridor glow-searching-orbit-index glow-searching-spotlight-slots glow-testing-membrane-edge ink-designing-filament-drawing ink-planning-draw-channel ink-running-pearl-conveyor ink-searching-meniscus-window ink-searching-probe-pools moss-designing-leaf-palette moss-designing-leaf-stencil moss-designing-shape-garden moss-running-seed-track moss-searching-branch-fork thread-coding-function-wrap thread-designing-contour-board thread-reading-ribbon-bookmark thread-testing-ring-gauge',
-    "1.4": 'folio-coding-patch-tile folio-reading-accordion-map folio-reading-margin-note glow-designing-light-palette glow-searching-crosshair-grid ink-planning-loop-map ink-running-circulation-loop thread-building-spool-rack thread-designing-scallop-edge thread-searching-colour-folio thread-testing-knot-load thread-testing-tension-gate',
-    "1.5": 'folio-designing-swatch-fan folio-planning-sequence-cards folio-running-shuttle-track folio-testing-duplicate-compare ink-planning-layer-path ink-running-relay-pools thread-coding-bundle-order thread-designing-woven-tile thread-searching-sample-pocket thread-searching-shuttle-drawer thread-searching-tag-fan',
-    "1.6": 'ink-coding-filament-input ink-running-bubble-lift ink-running-filament-shuttle ink-searching-capillary-route ink-searching-channel-branch ink-searching-pearl-sieve thread-building-corner-frame thread-testing-rub-sample'
+    "1.1": 'folio-coding-punch-strip folio-running-belt-loop folio-searching-window-loupe glow-running-prism-relay glow-searching-perimeter-seek ink-reading-wick-line ink-running-coil-flow ink-running-dual-channel ink-searching-loop-loupe moss-designing-silhouette-frame moss-reading-soil-strata thread-building-arched-bridge thread-coding-logic-loom thread-running-oval-carrier thread-running-weft-return thread-searching-strand-trace',
+    "1.2": 'folio-designing-crease-guide folio-searching-ribbon-trace folio-testing-seam-inspect glow-running-grid-row-execution glow-running-racetrack-light glow-running-rectangular-loop ink-building-filament-bridge ink-designing-contour-loop ink-reading-drop-magnifier ink-searching-drop-lens ink-searching-ripple-map ink-testing-bridge-probe moss-running-stone-conveyor thread-building-basket-rim thread-building-rung-ladder thread-coding-ribbon-input thread-running-braid-shuttles thread-running-loom-carriage thread-running-traverse-winder thread-searching-peg-wall thread-testing-mesh-stretch thread-testing-repeat-spacing',
+    "1.3": 'folio-designing-draw-arc folio-planning-route-strip folio-reading-accordion-map glow-designing-contour-light glow-running-diamond-loop glow-running-spiral-carrier glow-searching-mirror-corridor glow-searching-orbit-index glow-searching-spotlight-slots glow-testing-membrane-edge ink-designing-filament-drawing ink-planning-draw-channel ink-running-pearl-conveyor ink-searching-meniscus-window ink-searching-probe-pools moss-designing-leaf-palette moss-designing-leaf-stencil moss-designing-shape-garden moss-running-seed-track moss-searching-branch-fork thread-coding-function-wrap thread-designing-contour-board thread-reading-ribbon-bookmark thread-testing-knot-load thread-testing-ring-gauge thread-testing-tension-gate',
+    "1.4": 'folio-coding-patch-tile folio-planning-grid-layout folio-reading-margin-note folio-reading-reading-window glow-designing-light-palette glow-searching-crosshair-grid ink-planning-loop-map ink-running-circulation-loop thread-building-spool-rack thread-coding-bundle-order thread-designing-scallop-edge thread-designing-woven-tile thread-searching-colour-folio',
+    "1.5": 'folio-designing-swatch-fan folio-planning-sequence-cards folio-running-shuttle-track folio-testing-duplicate-compare ink-planning-layer-path ink-running-bubble-lift ink-running-relay-pools thread-searching-sample-pocket thread-searching-shuttle-drawer thread-searching-tag-fan',
+    "1.6": 'ink-coding-filament-input ink-designing-swatch-droplets ink-reading-paired-mirrors ink-running-filament-shuttle ink-searching-capillary-route ink-searching-channel-branch ink-searching-pearl-sieve thread-building-corner-frame thread-testing-rub-sample'
   }).flatMap(([gain, ids]) => ids.split(' ').map(id => [id, Number(gain)]))));
   const gainFor = (species, recipe) => Math.min((STYLES[species] || STYLES.folio).gain, CEILINGS[recipe.id] || Infinity);
   const ENTER_MS = 160, EXIT_MS = 100;

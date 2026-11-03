@@ -7,22 +7,22 @@
 })(typeof globalThis==='object'?globalThis:this,function(){
   'use strict';
   const species='moss',edge='var(--ca-edge)',light='var(--ca-light)',base='var(--ca-base)',shade='var(--ca-shade)';
-  const p=(d,fill='none',width=.9)=>`<path d="${d}" fill="${fill}" stroke="${edge}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round"/>`;
-  const rect=(x,y,w,h,fill=base)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="1.5" fill="${fill}" stroke="${edge}" stroke-width=".8"/>`;
-  const dot=(x,y,r=2,fill=light)=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}" stroke="${edge}" stroke-width=".6"/>`;
+  const p=(d,fill='none',width=1.02)=>`<path d="${d}" fill="${fill}" stroke="${edge}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const rect=(x,y,w,h,fill=base)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="1.5" fill="${fill}" stroke="${edge}" stroke-width=".95"/>`;
+  const dot=(x,y,r=2,fill=light)=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}" stroke="${edge}" stroke-width=".75"/>`;
   const g=(name,x,y,art)=>`<g transform="translate(${x} ${y})"><g data-motion="${name}">${art}</g></g>`;
   const leaf=(size=7)=>p(`M-${size} 2Q-${size} -${size} ${size} -${size}Q${size} 3 -${size} 2Z`,light)+p(`M-${size} 2L${size-1} -${size-1}M-1 -1L-1 -${size-2}M2 -3L${size-2} -3`);
-  const root=(side=1)=>p(`M0 -10Q${side*2} -4 0 0L${side*4} 4M0 0L${-side*3} 4M0 -3L${side*5} -2`,'none',1.8);
+  const root=(side=1)=>p(`M0 -10Q${side*2} -4 0 0L${side*4} 4M0 0L${-side*3} 4M0 -3L${side*5} -2`,'none',1.95);
   const rock=(size=6)=>p(`M-${size} 2L-${size-2} -${size}L${size-2} -${size-1}L${size} 2L2 ${size}L-${size-2} ${size}Z`,base)+p(`M-${size-2} -${size}L0 1L${size-2} -${size-1}M0 1V${size-1}`);
   const page=(w=14,h=8)=>p(`M-${w} -${h}Q-${w/2} -${h+3} 0 -${h-1}Q${w/2} -${h+3} ${w} -${h}V${h}Q${w/2} ${h-2} 0 ${h+1}Q-${w/2} ${h-2} -${w} ${h}Z`,base)+p(`M0 -${h-1}V${h+1}M-${w-3} -3H-3M-${w-3} 1H-4M3 -3H${w-3}M3 1H${w-4}`);
   const slab=(w=18,h=9,detail='M-12 -3H10M-12 1H6M-12 5H9')=>rect(-w,-h,w*2,h*2)+p(detail);
-  const ring=(r=7)=>`<circle r="${r}" fill="none" stroke="${edge}" stroke-width="1.5"/>`;
+  const ring=(r=7)=>`<circle r="${r}" fill="none" stroke="${edge}" stroke-width="1.65"/>`;
   const grip=(x,y,side=1)=>`<g transform="translate(${x} ${y})">${root(side)}</g>`;
   const grips=(x,y)=>grip(-x,y)+grip(x,y,-1);
-  const support=(x=19)=>p(`M-${x} 8H${x}M-${x-3} 8V1M${x-3} 8V1`,'none',1.7);
+  const support=(x=19)=>p(`M-${x} 8H${x}M-${x-3} 8V1M${x-3} 8V1`,'none',1.85);
   const m=(part,...poses)=>({part,origin:'center center',easing:'organic',keyframes:['none','none',...poses,poses.at(-1),'none'].map((transform,i,all)=>({offset:i/(all.length-1),transform}))});
   const t=(part,poses,origin='center center',easing='move')=>{const keyframes=poses.map((transform,i,all)=>({offset:i/(all.length-1),transform}));if(poses.at(-1)!==poses[0])keyframes.push({offset:1,transform:poses[0]});return{part,origin,easing,keyframes};};
-  function list(state,rows){return rows.map(([slug,labelZh,labelEn,beats,markup,tracks,duration])=>Object.freeze({id:species+'-'+state+'-'+slug,labelZh,labelEn,descriptionZh:beats.join('，')+'。',beats:Object.freeze(beats),duration:duration||(['waiting-tool','waiting-user','error'].includes(state)?7800:3800),markup:`<g data-role="${({coding:'input',testing:'sample',building:'assembly',running:'mechanism','waiting-tool':'mechanism','waiting-user':'request',error:'fault'})[state]||state}" class="cv-moss" fill="${base}" stroke="${edge}" stroke-width=".8">${markup}</g>`,tracks:Object.freeze(tracks)}));}
+  function list(state,rows){return rows.map(([slug,labelZh,labelEn,beats,markup,tracks,duration])=>Object.freeze({id:species+'-'+state+'-'+slug,labelZh,labelEn,descriptionZh:beats.join('，')+'。',beats:Object.freeze(beats),duration:duration||(['waiting-tool','waiting-user','error'].includes(state)?7800:3800),markup:`<g data-role="${({coding:'input',testing:'sample',building:'assembly',running:'mechanism','waiting-tool':'mechanism','waiting-user':'request',error:'fault'})[state]||state}" class="cv-moss" fill="${base}" stroke="${edge}" stroke-width=".95">${markup}</g>`,tracks:Object.freeze(tracks)}));}
   const states={
     reading:list('reading',[
       ['leaf-codex','翻叶书','Leaf codex',['根指托住书脊','叶角缓慢翻起','按住新页停读','叶角落回'],g('book',0,5,page(14,6))+g('leaf',12,1,leaf(4))+g('finger',-19,5,root()),[m('leaf','rotate(-24deg) translate(-3px,-1px)','rotate(-8deg)'),m('finger','translate(1px,-2px)')]],

@@ -7,16 +7,16 @@
 })(typeof globalThis==='object'?globalThis:this,function(){
   'use strict';
   const species='glow',edge='var(--ca-edge)',light='var(--ca-light)',base='var(--ca-base)',shade='var(--ca-shade)';
-  const p=(d,fill='none',width=.8,opacity=1)=>`<path d="${d}" fill="${fill}" stroke="${edge}" stroke-width="${width}" opacity="${opacity}" stroke-linecap="round" stroke-linejoin="round"/>`;
-  const rect=(x,y,w,h,opacity=.35)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="1" fill="${light}" fill-opacity="${opacity}" stroke="${edge}" stroke-width=".7"/>`;
+  const p=(d,fill='none',width=.95,opacity=1)=>`<path d="${d}" fill="${fill}" stroke="${edge}" stroke-width="${width}" opacity="${opacity}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const rect=(x,y,w,h,opacity=.48)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="1" fill="${light}" fill-opacity="${opacity}" stroke="${edge}" stroke-width=".85"/>`;
   const g=(name,x,y,art)=>`<g transform="translate(${x} ${y})"><g data-motion="${name}">${art}</g></g>`;
-  const orb=(r=3)=>`<circle r="${r}" fill="${light}" fill-opacity=".8" stroke="${edge}" stroke-width=".55"/><circle cx="-${r*.25}" cy="-${r*.25}" r="${r*.22}" fill="${light}" stroke="none"/>`;
-  const ring=(r=9)=>`<circle r="${r}" fill="${light}" fill-opacity=".08" stroke="${edge}" stroke-width=".8"/>`;
-  const lens=(w=10,h=7)=>p(`M-${w} 0Q0 -${h*2} ${w} 0Q0 ${h*2} -${w} 0Z`,light,.7,.42)+p(`M-${w-3} 0Q0 -${h} ${w-3} 0`,'none',.5,.7);
-  const prism=(s=9)=>p(`M0 -${s}L${s} ${s*.7}H-${s}Z`,light,.8,.52)+p(`M0 -${s}V${s*.7}M0 0L${s} ${s*.7}M0 0L-${s} ${s*.7}`,'none',.5,.8);
-  const beam=(d,width=1.5,opacity=.8)=>`<path d="${d}" fill="none" stroke="${light}" stroke-width="${width}" opacity="${opacity}" stroke-linecap="round"/>`;
-  const doc=(w=14,h=10,lines='M-9 -5H9M-9 0H9M-9 5H5')=>rect(-w,-h,w*2,h*2)+p(lines,'none',.6,.8);
-  const stand=(w=22)=>p(`M-${w} 9H${w}M-${w-3} 9V3M${w-3} 9V3`,'none',1.2);
+  const orb=(r=3)=>`<circle r="${r}" fill="${light}" fill-opacity=".9" stroke="${edge}" stroke-width=".7"/><circle cx="-${r*.25}" cy="-${r*.25}" r="${r*.25}" fill="${light}" stroke="none"/>`;
+  const ring=(r=9)=>`<circle r="${r}" fill="${light}" fill-opacity=".14" stroke="${edge}" stroke-width=".95"/>`;
+  const lens=(w=10,h=7)=>p(`M-${w} 0Q0 -${h*2} ${w} 0Q0 ${h*2} -${w} 0Z`,light,.85,.54)+p(`M-${w-3} 0Q0 -${h} ${w-3} 0`,'none',.68,.82);
+  const prism=(s=9)=>p(`M0 -${s}L${s} ${s*.7}H-${s}Z`,light,.95,.62)+p(`M0 -${s}V${s*.7}M0 0L${s} ${s*.7}M0 0L-${s} ${s*.7}`,'none',.68,.88);
+  const beam=(d,width=1.7,opacity=.92)=>`<path d="${d}" fill="none" stroke="${light}" stroke-width="${width}" opacity="${opacity}" stroke-linecap="round"/>`;
+  const doc=(w=14,h=10,lines='M-9 -5H9M-9 0H9M-9 5H5')=>rect(-w,-h,w*2,h*2)+p(lines,'none',.78,.9);
+  const stand=(w=22)=>p(`M-${w} 9H${w}M-${w-3} 9V3M${w-3} 9V3`,'none',1.35);
   const m=(part,...poses)=>({part,origin:'center center',easing:'organic',keyframes:['none','none',...poses,poses.at(-1),'none'].map((transform,i,all)=>({offset:i/(all.length-1),transform}))});
   const t=(part,poses,origin='center center',easing='move')=>{
     const keyframes=poses.map((transform,i,all)=>({offset:i/(all.length-1),transform}));
@@ -24,7 +24,7 @@
     return{part,origin,easing,keyframes};
   };
   const fade=(part,levels)=>({part,origin:'center center',easing:'organic',keyframes:levels.map((opacity,i,all)=>({offset:i/(all.length-1),opacity}))});
-  function list(state,rows){return rows.map(([slug,labelZh,labelEn,beats,markup,tracks,duration])=>Object.freeze({id:species+'-'+state+'-'+slug,labelZh,labelEn,descriptionZh:beats.join('，')+'。',beats:Object.freeze(beats),duration:duration||(['waiting-tool','waiting-user','error'].includes(state)?7600:3400),markup:`<g data-role="${({coding:'input',testing:'sample',building:'assembly',running:'mechanism','waiting-tool':'mechanism','waiting-user':'request',error:'fault'})[state]||state}" class="cv-glow" fill="${base}" stroke="${edge}" stroke-width=".7">${markup}</g>`,tracks:Object.freeze(tracks)}));}
+  function list(state,rows){return rows.map(([slug,labelZh,labelEn,beats,markup,tracks,duration])=>Object.freeze({id:species+'-'+state+'-'+slug,labelZh,labelEn,descriptionZh:beats.join('，')+'。',beats:Object.freeze(beats),duration:duration||(['waiting-tool','waiting-user','error'].includes(state)?7600:3400),markup:`<g data-role="${({coding:'input',testing:'sample',building:'assembly',running:'mechanism','waiting-tool':'mechanism','waiting-user':'request',error:'fault'})[state]||state}" class="cv-glow" fill="${base}" stroke="${edge}" stroke-width=".88">${markup}</g>`,tracks:Object.freeze(tracks)}));}
   const states={
     reading:list('reading',[
       ['refracted-page','折光读页','Refracted page',['透明页保持展开','内光沿第一行缓移','折向下一行停读','光点回到页边'],g('page',0,-17,doc(17,10))+g('reader',-12,-22,beam('M0 0H6',2)),[t('reader',['none','translate(16px,0px)','translate(0px,5px)','translate(16px,5px)','translate(0px,10px)','none'])]],

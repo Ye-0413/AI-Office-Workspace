@@ -3,20 +3,20 @@
   'use strict';
   const species='ink',n='translate(0px,0px)';
   const p=(part,art,x=0,y=0)=>`<g transform="translate(${x} ${y})"><g data-motion="${part}">${art}</g></g>`;
-  const line=(d,w=.8)=>`<path d="${d}" fill="none" stroke="var(--ca-light)" stroke-width="${w}"/>`;
-  const blob=(w=14,h=12)=>`<path d="M${-w/2} 0C${-w*.6} ${-h*.6} ${w*.35} ${-h*.68} ${w/2} ${-h*.15}C${w*.67} ${h*.48} ${-w*.36} ${h*.67} ${-w/2} 0Z"/>${line(`M${-w*.3} ${-h*.2}Q0 ${-h*.48} ${w*.2} ${-h*.25}`,.65)}`;
-  const drop=`<path d="M0 -9C-1 -4 -6 -1 -6 3C-6 11 7 10 6 3C6 -1 2 -4 0 -9Z"/>${line('M-3 1Q-5 5 -2 6',.7)}`;
-  const hand=`<g transform="scale(.65)"><path d="M-5 1C-7 -4 -2 -5 0 -3C5 -7 8 -1 4 2C1 6 -3 5 -5 1Z"/>${line('M-3 -1Q0 -3 2 -1',.6)}</g>`;
-  const film=(w=30,h=22)=>(h=Math.min(h,26),`<path d="M${-w/2} ${-h/2}Q0 ${-h*.65} ${w/2} ${-h/2}Q${w*.4} 0 ${w/2} ${h/2}Q0 ${h*.5} ${-w/2} ${h/2}Q${-w*.38} 0 ${-w/2} ${-h/2}Z"/>${line(`M${-w*.3} ${-h*.27}Q0 ${-h*.4} ${w*.27} ${-h*.28}`,.6)}`);
-  const channel=(d,w=4)=>`<path d="${d}" fill="none" stroke="var(--ca-edge)" stroke-width="${w+1.4}"/><path d="${d}" fill="none" stroke="var(--ca-base)" stroke-width="${w}"/>`;
-  const pearl=(r=3)=>`<circle r="${r}"/>${line(`M${-r*.5} ${-r*.1}Q${-r*.4} ${-r*.6} ${r*.2} ${-r*.5}`,.6)}`;
+  const line=(d,w=.92)=>`<path d="${d}" fill="none" stroke="var(--ca-light)" stroke-width="${w}"/>`;
+  const blob=(w=14,h=12)=>`<path d="M${-w/2} 0C${-w*.6} ${-h*.6} ${w*.35} ${-h*.68} ${w/2} ${-h*.15}C${w*.67} ${h*.48} ${-w*.36} ${h*.67} ${-w/2} 0Z"/>${line(`M${-w*.3} ${-h*.2}Q0 ${-h*.48} ${w*.2} ${-h*.25}`,.78)}`;
+  const drop=`<path d="M0 -9C-1 -4 -6 -1 -6 3C-6 11 7 10 6 3C6 -1 2 -4 0 -9Z"/>${line('M-3 1Q-5 5 -2 6',.82)}`;
+  const hand=`<g transform="scale(.65)"><path d="M-5 1C-7 -4 -2 -5 0 -3C5 -7 8 -1 4 2C1 6 -3 5 -5 1Z"/>${line('M-3 -1Q0 -3 2 -1',.75)}</g>`;
+  const film=(w=30,h=22)=>(h=Math.min(h,26),`<path d="M${-w/2} ${-h/2}Q0 ${-h*.65} ${w/2} ${-h/2}Q${w*.4} 0 ${w/2} ${h/2}Q0 ${h*.5} ${-w/2} ${h/2}Q${-w*.38} 0 ${-w/2} ${-h/2}Z"/>${line(`M${-w*.3} ${-h*.27}Q0 ${-h*.4} ${w*.27} ${-h*.28}`,.75)}`);
+  const channel=(d,w=4)=>`<path d="${d}" fill="none" stroke="var(--ca-edge)" stroke-width="${w+1.6}"/><path d="${d}" fill="none" stroke="var(--ca-base)" stroke-width="${w}"/>`;
+  const pearl=(r=3)=>`<circle r="${r}"/>${line(`M${-r*.5} ${-r*.1}Q${-r*.4} ${-r*.6} ${r*.2} ${-r*.5}`,.75)}`;
   const ring=(rx=13,ry=10)=>`<path d="M${-rx} 0a${rx} ${ry} 0 1 0 ${rx*2} 0a${rx} ${ry} 0 1 0 ${-rx*2} 0ZM${-rx+4} 0a${rx-4} ${ry-4} 0 1 1 ${(rx-4)*2} 0a${rx-4} ${ry-4} 0 1 1 ${-(rx-4)*2} 0Z" fill-rule="evenodd"/>`;
   const a=(part,prep,touch,settle=n,origin='center center',easing='organic')=>({part,origin,easing,keyframes:[{offset:0,transform:n},{offset:.14,transform:n},{offset:.3,transform:prep},{offset:.5,transform:touch},{offset:.67,transform:settle},{offset:.82,transform:n},{offset:1,transform:n}]});
   const path=(part,poses,origin='center center',easing='move')=>({part,origin,easing,keyframes:poses.map(([x,y,r=0],i)=>({offset:i/(poses.length-1),transform:`translate(${x}px,${y}px) rotate(${r}deg)`}))});
   const spin=(part,direction=1)=>({part,origin:'center center',easing:'linear',keyframes:[{offset:0,transform:'rotate(0deg)'},{offset:1,transform:`rotate(${direction*360}deg)`}]});
   const pulse=part=>({part,origin:'center center',easing:'settle',keyframes:[{offset:0,opacity:1,transform:n},{offset:.35,opacity:.55,transform:n},{offset:.6,opacity:1,transform:n},{offset:1,opacity:1,transform:n}]});
   const roles={reading:'document',searching:'search',planning:'plan',coding:'input',designing:'design',testing:'sample',building:'assembly',running:'mechanism','waiting-tool':'mechanism','waiting-user':'request',error:'fault'};
-  const r=(state,slug,labelZh,labelEn,beats,art,tracks,duration)=>Object.freeze({id:species+'-'+state+'-'+slug,labelZh,labelEn,descriptionZh:beats.join('，')+'。',beats,duration:duration||(state.startsWith('waiting')||state==='error'?7800:3600),markup:`<g class="cv-ink" data-role="${roles[state]}" fill="var(--ca-base)" stroke="var(--ca-edge)" stroke-width=".8" stroke-linecap="round" stroke-linejoin="round">${art}</g>`,tracks});
+  const r=(state,slug,labelZh,labelEn,beats,art,tracks,duration)=>Object.freeze({id:species+'-'+state+'-'+slug,labelZh,labelEn,descriptionZh:beats.join('，')+'。',beats,duration:duration||(state.startsWith('waiting')||state==='error'?7800:3600),markup:`<g class="cv-ink" data-role="${roles[state]}" fill="var(--ca-base)" stroke="var(--ca-edge)" stroke-width=".95" stroke-linecap="round" stroke-linejoin="round">${art}</g>`,tracks});
   const states={
     reading:[
       r('reading','liquid-sheet','托膜读行','Read a liquid sheet',['两侧墨掌托住薄膜','一滴墨沿文字行下移','停在行尾后回到段首'],p('sheet',film(33,25)+line('M-11 -6H10M-11 0H7M-11 6H10',.6),0,-8)+p('reader',pearl(2.5),-12,-14)+p('left',hand,-23,1)+p('right',hand,23,1),[path('reader',[[0,0],[20,0],[0,6],[17,6],[0,0]]),a('left','translate(0px,-1px)','translate(1px,0px)'),a('right','translate(0px,-1px)','translate(-1px,0px)')]),

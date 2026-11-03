@@ -3,19 +3,19 @@
   'use strict';
   const species='folio',n='translate(0px,0px)';
   const p=(part,art,x=0,y=0)=>`<g transform="translate(${x} ${y})"><g data-motion="${part}">${art}</g></g>`;
-  const line=(d,w=.8)=>`<path d="${d}" fill="none" stroke="var(--ca-edge)" stroke-width="${w}"/>`;
-  const paper=(w=14,h=16)=>(h=Math.min(h,25),`<path d="M${-w/2} ${-h/2}H${w/2-4}L${w/2} ${4-h/2}V${h/2}H${-w/2}Z"/>${line(`M${w/2-4} ${-h/2}V${4-h/2}H${w/2}`,.55)}`);
-  const hand=`<path d="M-3 -4L4 -2L2 4L-4 1Z"/>${line('M-3 -4L0 0L2 4',.5)}`;
-  const book=`<path d="M-18 -10Q-8 -13 0 -8Q8 -13 18 -10V11Q8 7 0 12Q-8 7 -18 11Z"/>${line('M0 -8V12M-14 -5H-5M-14 -1H-5M-14 3H-7M5 -5H14M5 -1H14M5 3H11',.55)}`;
-  const ruler=`<path d="M-21 -3H21V3H-21Z"/>${line('M-17 -3V0M-11 -3V2M-5 -3V0M1 -3V2M7 -3V0M13 -3V2M19 -3V0',.55)}`;
-  const wheel=(r=7)=>`<circle r="${r}"/>${line(`M${-r} 0H${r}M0 ${-r}V${r}M${-r*.7} ${-r*.7}L${r*.7} ${r*.7}M${-r*.7} ${r*.7}L${r*.7} ${-r*.7}`,.6)}<circle r="1.5" fill="var(--ca-shade)"/>`;
+  const line=(d,w=.92)=>`<path d="${d}" fill="none" stroke="var(--ca-edge)" stroke-width="${w}"/>`;
+  const paper=(w=14,h=16)=>(h=Math.min(h,25),`<path d="M${-w/2} ${-h/2}H${w/2-4}L${w/2} ${4-h/2}V${h/2}H${-w/2}Z"/>${line(`M${w/2-4} ${-h/2}V${4-h/2}H${w/2}`,.72)}`);
+  const hand=`<path d="M-3 -4L4 -2L2 4L-4 1Z"/>${line('M-3 -4L0 0L2 4',.65)}`;
+  const book=`<path d="M-18 -10Q-8 -13 0 -8Q8 -13 18 -10V11Q8 7 0 12Q-8 7 -18 11Z"/>${line('M0 -8V12M-14 -5H-5M-14 -1H-5M-14 3H-7M5 -5H14M5 -1H14M5 3H11',.72)}`;
+  const ruler=`<path d="M-21 -3H21V3H-21Z"/>${line('M-17 -3V0M-11 -3V2M-5 -3V0M1 -3V2M7 -3V0M13 -3V2M19 -3V0',.72)}`;
+  const wheel=(r=7)=>`<circle r="${r}"/>${line(`M${-r} 0H${r}M0 ${-r}V${r}M${-r*.7} ${-r*.7}L${r*.7} ${r*.7}M${-r*.7} ${r*.7}L${r*.7} ${-r*.7}`,.75)}<circle r="1.5" fill="var(--ca-shade)"/>`;
   const pen=`<path d="M-2 8L1 -9L4 -8L1 8L-1 11Z"/><path d="M-1 8H1L-1 11Z" fill="var(--ca-edge)"/>`;
   const a=(part,prep,touch,settle=n,origin='center center',easing='organic')=>({part,origin,easing,keyframes:[{offset:0,transform:n},{offset:.14,transform:n},{offset:.3,transform:prep},{offset:.5,transform:touch},{offset:.67,transform:settle},{offset:.82,transform:n},{offset:1,transform:n}]});
   const path=(part,poses,origin='center center',easing='move')=>({part,origin,easing,keyframes:poses.map(([x,y,r=0],i)=>({offset:i/(poses.length-1),transform:`translate(${x}px,${y}px) rotate(${r}deg)`}))});
   const pulse=(part)=>({part,origin:'center center',easing:'settle',keyframes:[{offset:0,opacity:1,transform:n},{offset:.35,opacity:.55,transform:n},{offset:.6,opacity:1,transform:n},{offset:1,opacity:1,transform:n}]});
   const spin=(part,direction=1)=>({part,origin:'center center',easing:'linear',keyframes:[{offset:0,transform:'rotate(0deg)'},{offset:1,transform:`rotate(${direction*360}deg)`}]});
   const roles={reading:'document',searching:'search',planning:'plan',coding:'input',designing:'design',testing:'sample',building:'assembly',running:'mechanism','waiting-tool':'mechanism','waiting-user':'request',error:'fault'};
-  const r=(state,slug,labelZh,labelEn,beats,art,tracks,duration)=>Object.freeze({id:species+'-'+state+'-'+slug,labelZh,labelEn,descriptionZh:beats.join('，')+'。',beats,duration:duration||(state.startsWith('waiting')||state==='error'?7600:3400),markup:`<g class="cv-folio" data-role="${roles[state]}" fill="var(--ca-base)" stroke="var(--ca-edge)" stroke-width=".8" stroke-linecap="round" stroke-linejoin="round">${art}</g>`,tracks});
+  const r=(state,slug,labelZh,labelEn,beats,art,tracks,duration)=>Object.freeze({id:species+'-'+state+'-'+slug,labelZh,labelEn,descriptionZh:beats.join('，')+'。',beats,duration:duration||(state.startsWith('waiting')||state==='error'?7600:3400),markup:`<g class="cv-folio" data-role="${roles[state]}" fill="var(--ca-base)" stroke="var(--ca-edge)" stroke-width=".95" stroke-linecap="round" stroke-linejoin="round">${art}</g>`,tracks});
   const states={
     reading:[
       r('reading','turn-leaf','翻页停读','Turn a leaf',['托住书脊','抬起右侧纸页','翻过页面后停读'],p('book',book,0,-5)+p('leaf',paper(16,20),9,-5)+p('finger',hand,20,1),[a('leaf','rotate(-5deg)','scaleX(.14)','rotate(3deg)','left center'),a('finger','translate(-2px,-2px)','translate(-7px,-5px)','translate(-2px,0px)')]),

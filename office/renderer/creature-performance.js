@@ -34,34 +34,34 @@
   // the current transform and rest; every beat returns to the painted pose.
   const CUES = Object.freeze({
     folio: {
-      greet: ['translateY(-4px) rotate(-9deg)', 'translateY(-1px) rotate(7deg)', 'rotate(-3deg)'],
-      attention: ['scale(1.05,.93)', 'translateY(-7px) rotate(-5deg) scale(.95,1.06)', 'rotate(4deg) scale(1.04,.96)', 'rotate(-1.5deg)'],
-      startle: ['rotate(-4deg) scale(.9,1.08)', 'rotate(2deg) scale(1.05,.96)'],
-      success: ['scale(1.05,.94)', 'translateY(-5px) rotate(-10deg)', 'translateY(-2px) rotate(6deg)', 'scale(1.02,.98)']
+      greet: ['translateY(1px) rotate(2deg) scale(1.04,.94)', 'translateY(-6px) rotate(-10deg) scale(.96,1.05)', 'translateY(-2px) rotate(8deg)', 'rotate(-3deg)'],
+      attention: ['scale(1.07,.91)', 'translateY(-8.5px) rotate(-6deg) scale(.94,1.08)', 'rotate(4.5deg) scale(1.05,.95)', 'rotate(-1.8deg)'],
+      startle: ['rotate(-5deg) scale(.88,1.1)', 'rotate(2.5deg) scale(1.06,.94)', 'rotate(-.8deg)'],
+      success: ['scale(1.06,.92)', 'translateY(-6.5px) rotate(-11deg) scale(.96,1.05)', 'translateY(-2.5px) rotate(7deg)', 'scale(1.03,.97)']
     },
     ink: {
-      greet: ['scale(1.1,.9)', 'translateY(-3px) scale(.92,1.1)', 'scale(1.05,.96)', 'scale(.98,1.02)'],
-      attention: ['scale(1.14,.86)', 'translateY(-7px) scale(.88,1.15)', 'scale(1.1,.9)', 'scale(.96,1.04)'],
-      startle: ['scale(.86,1.14)', 'scale(1.08,.93)', 'scale(.98,1.02)'],
-      success: ['scale(1.12,.88)', 'translateY(-5px) scale(.9,1.12)', 'scale(1.06,.94)', 'scale(.98,1.02)']
+      greet: ['scale(1.13,.87)', 'translateY(-4.5px) scale(.9,1.12)', 'scale(1.06,.94)', 'scale(.98,1.02)'],
+      attention: ['scale(1.17,.83)', 'translateY(-8.5px) scale(.86,1.17)', 'scale(1.11,.89)', 'scale(.96,1.04)'],
+      startle: ['scale(.84,1.17)', 'scale(1.1,.91)', 'scale(.98,1.02)'],
+      success: ['scale(1.15,.85)', 'translateY(-6.5px) scale(.88,1.15)', 'scale(1.07,.93)', 'scale(.98,1.02)']
     },
     moss: {
-      greet: ['rotate(-3deg) skewX(2deg)', 'rotate(2.5deg) skewX(-2deg)', 'rotate(-1deg)'],
-      attention: ['translateY(-4px) rotate(-2deg)', 'translateY(.8px) scale(1.05,.94)', 'rotate(1deg)'],
-      startle: ['translateY(-2px)', 'translateY(.6px) scale(1.03,.97)'],
-      success: ['translateY(-3px) rotate(-1.5deg)', 'translateY(.8px) scale(1.04,.95)', 'skewX(-2deg)']
+      greet: ['translateY(.8px) scale(1.03,.96)', 'translateY(-3.5px) rotate(-4deg) skewX(3deg)', 'rotate(3deg) skewX(-2.5deg)', 'rotate(-1.2deg)'],
+      attention: ['translateY(1px) scale(1.04,.95)', 'translateY(-5.5px) rotate(-2.8deg)', 'translateY(1.2px) scale(1.06,.93)', 'rotate(1.2deg)'],
+      startle: ['translateY(-3.5px) rotate(-1.5deg)', 'translateY(1px) scale(1.05,.94)', 'scale(.99,1.01)'],
+      success: ['translateY(.8px) scale(1.03,.96)', 'translateY(-4.5px) rotate(-2deg)', 'translateY(1px) scale(1.05,.94)', 'skewX(-2.5deg)']
     },
     thread: {
-      greet: ['translateY(-5px) rotate(-8deg)', 'scale(1.06,.94)', 'translateY(-2px) rotate(5deg)', 'scale(1.02,.98)'],
-      attention: ['scale(1.08,.92)', 'translateY(-8px) rotate(-10deg) scale(.94,1.06)', 'scale(1.08,.92)', 'translateY(-3px) rotate(6deg)', 'scale(1.02,.98)'],
-      startle: ['translateY(-3px) scale(.92,1.08)', 'rotate(-4deg) scale(1.05,.95)'],
-      success: ['scale(1.07,.93)', 'translateY(-6px) rotate(12deg)', 'scale(1.06,.94)', 'translateY(-2px) rotate(-4deg)']
+      greet: ['scale(1.06,.93)', 'translateY(-6.5px) rotate(-10deg)', 'scale(1.07,.93)', 'translateY(-2.5px) rotate(6deg)', 'scale(1.02,.98)'],
+      attention: ['scale(1.1,.9)', 'translateY(-9.5px) rotate(-12deg) scale(.92,1.08)', 'scale(1.09,.91)', 'translateY(-3.5px) rotate(7deg)', 'scale(1.02,.98)'],
+      startle: ['translateY(-4.5px) scale(.9,1.1)', 'rotate(-5deg) scale(1.06,.94)', 'rotate(1.5deg)'],
+      success: ['scale(1.09,.91)', 'translateY(-7.5px) rotate(14deg)', 'scale(1.07,.93)', 'translateY(-2.5px) rotate(-5deg)']
     },
     glow: {
-      greet: ['translateY(-4px) rotate(-3deg)', 'translateY(-3px) rotate(3deg)', 'translateY(-1px)'],
-      attention: ['translateY(-6px) scale(1.04)', 'translateY(-4px) rotate(-3deg)', 'translateY(-5px) rotate(3deg)', 'translateY(-1px)'],
-      startle: ['translateY(2px) scale(.94)', 'translateY(-3px) scale(1.04)'],
-      success: ['translateY(-5px) scale(1.06)', 'translateY(-3px)', 'translateY(-1px) scale(1.02)']
+      greet: ['translateY(1px) scale(.97)', 'translateY(-5.5px) rotate(-4deg) scale(1.04)', 'translateY(-3.5px) rotate(4deg)', 'translateY(-1.2px)'],
+      attention: ['translateY(-7.5px) scale(1.07)', 'translateY(-4.5px) rotate(-4deg)', 'translateY(-5.5px) rotate(4deg)', 'translateY(-1.2px)'],
+      startle: ['translateY(2.5px) scale(.92)', 'translateY(-4px) scale(1.06)', 'translateY(-.8px)'],
+      success: ['translateY(-6.5px) scale(1.08)', 'translateY(-3.5px) rotate(-2deg)', 'translateY(-1.2px) scale(1.03)']
     }
   });
   const CUE_DURATION = Object.freeze({ glance: 480, startle: 420, greet: 620, attention: 680, success: 560 });
@@ -265,7 +265,7 @@
       const creature = currentDesign.id, from = view?.getComputedStyle?.(motion)?.transform || 'none';
       const side = Math.sign(direction) || 1;
       const beats = kind === 'glance'
-        ? ['rotate(' + side * 5 + 'deg) translateX(' + side + 'px)', 'rotate(' + side * 4 + 'deg) translateX(' + side + 'px)', 'rotate(' + side * -1 + 'deg)']
+        ? ['rotate(' + side * 6.5 + 'deg) translateX(' + side * 1.6 + 'px)', 'rotate(' + side * 5 + 'deg) translateX(' + side * 1.4 + 'px)', 'rotate(' + side * -1.5 + 'deg)']
         : CUES[creature][kind];
       const frames = [from, ...beats, 'none'].map((transform, index, all) => ({ transform, offset: index / (all.length - 1), easing: SINE }));
       stopCues();

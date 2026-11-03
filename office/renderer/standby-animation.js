@@ -11,11 +11,11 @@
   const MATERIALS = Object.freeze(['folio', 'ink', 'moss', 'thread', 'glow']);
   const PHASES = Object.freeze(['doze', 'doze', 'play']);
   const PROPS = Object.freeze({
-    folio: '<path class="standby-toy" d="m102 87 9-3-3 11-3-4-5 1Z" fill="#e9cf96" stroke="#967553" stroke-width=".7"/><path d="m102 87 3 4 6-7" fill="none" stroke="#b08b5e" stroke-width=".6"/>',
-    ink: '<g class="standby-toy" fill="#b6cec4"><ellipse cx="105" cy="94" rx="3" ry="1.2"/><path d="M106 85c-1 2-3 4-3 6a3 3 0 0 0 6 0c0-2-2-4-3-6Z"/></g>',
-    moss: '<g class="standby-toy"><path d="M106 96q-2-8 3-12" fill="none" stroke="#7e8f50" stroke-width="1"/><path d="M106 90q-7-5-6-1 1 5 6 1m1-3q5-7 6-3 0 4-6 3" fill="#a4b677"/><ellipse cx="104" cy="97" rx="3" ry="1" fill="#8a7254"/></g>',
-    thread: '<g class="standby-toy" fill="none" stroke="#d4b49e" stroke-width="1"><circle cx="106" cy="94" r="4"/><path d="m103 91 6 6m-8-3 9-1m-4-3 1 8m-5-2q-5 4-5 0"/></g>',
-    glow: '<g class="standby-toy" fill="none" stroke="#ddbc7b" stroke-width=".8"><path d="m106 84 4 7-4 7-4-7Z"/><ellipse cx="106" cy="92" rx="7" ry="2"/></g>'
+    folio: '<path class="standby-toy" d="m102 87 9-3-3 11-3-4-5 1Z" fill="#efd79d" stroke="#856340" stroke-width=".9"/><path d="m102 87 3 4 6-7" fill="none" stroke="#9e794c" stroke-width=".75"/>',
+    ink: '<g class="standby-toy" fill="#b6cec4" stroke="#365973" stroke-width=".6"><ellipse cx="105" cy="94" rx="3.2" ry="1.3"/><path d="M106 85c-1 2-3 4-3 6a3 3 0 0 0 6 0c0-2-2-4-3-6Z"/></g>',
+    moss: '<g class="standby-toy"><path d="M106 96q-2-8 3-12" fill="none" stroke="#6c7d41" stroke-width="1.2"/><path d="M106 90q-7-5-6-1 1 5 6 1m1-3q5-7 6-3 0 4-6 3" fill="#a8bd78" stroke="#5d6d36" stroke-width=".6"/><ellipse cx="104" cy="97" rx="3.2" ry="1.1" fill="#8a7254"/></g>',
+    thread: '<g class="standby-toy" fill="none" stroke="#d49e85" stroke-width="1.2"><circle cx="106" cy="94" r="4.2"/><path d="m103 91 6 6m-8-3 9-1m-4-3 1 8m-5-2q-5 4-5 0"/></g>',
+    glow: '<g class="standby-toy" fill="#fff4bd33" stroke="#d6af63" stroke-width="1"><path d="m106 84 4 7-4 7-4-7Z"/><ellipse cx="106" cy="92" rx="7" ry="2.2"/></g>'
   });
   function seed(value) {
     let hash = 2166136261;
@@ -26,18 +26,18 @@
     // All endpoints return to the authored material silhouette. Gestures stay
     // inside the body; the actor's own position never translates.
     const doze = {
-      folio: ['none', 'rotate(-2.5deg) scale(1.02,.96)', 'none'],
-      ink: ['none', 'scale(1.07,.91)', 'none'],
-      moss: ['none', 'translateY(1.2px) scale(1.02,.97)', 'none'],
-      thread: ['none', 'rotate(3deg) scale(1.03,.96)', 'none'],
-      glow: ['none', 'translateY(1.5px) scale(.98,1.02)', 'none']
+      folio: ['none', 'rotate(-3.2deg) scale(1.03,.95)', 'none'],
+      ink: ['none', 'scale(1.09,.89)', 'none'],
+      moss: ['none', 'translateY(1.6px) scale(1.03,.96)', 'none'],
+      thread: ['none', 'rotate(3.8deg) scale(1.04,.95)', 'none'],
+      glow: ['none', 'translateY(2px) scale(.97,1.03)', 'none']
     };
     const play = {
-      folio: ['none', 'translateY(-4px) rotate(-5deg)', 'rotate(4deg)', 'translateY(-2px) rotate(-2deg)', 'none'],
-      ink: ['none', 'scale(1.1,.88)', 'translateY(-3px) scale(.92,1.1)', 'scale(1.04,.97)', 'none'],
-      moss: ['none', 'rotate(-3deg) skewX(2deg)', 'none', 'rotate(2.5deg) skewX(-2deg)', 'none'],
-      thread: ['none', 'translateY(-5px) rotate(-8deg)', 'scale(1.06,.94)', 'translateY(-2px) rotate(5deg)', 'none'],
-      glow: ['none', 'translateY(-4px) rotate(2deg)', 'translateY(-2px) rotate(-2deg)', 'none']
+      folio: ['none', 'translateY(-5px) rotate(-6.5deg)', 'rotate(5deg)', 'translateY(-2.5px) rotate(-2.5deg)', 'none'],
+      ink: ['none', 'scale(1.12,.86)', 'translateY(-4px) scale(.9,1.12)', 'scale(1.05,.96)', 'none'],
+      moss: ['none', 'rotate(-3.8deg) skewX(2.6deg)', 'none', 'rotate(3.2deg) skewX(-2.6deg)', 'none'],
+      thread: ['none', 'translateY(-6px) rotate(-9.5deg)', 'scale(1.07,.93)', 'translateY(-2.5px) rotate(6deg)', 'none'],
+      glow: ['none', 'translateY(-5px) rotate(2.8deg) scale(1.03)', 'translateY(-2.5px) rotate(-2.8deg)', 'none']
     };
     return (phase === 'doze' ? doze : play)[material].map(transform => ({ transform }));
   }

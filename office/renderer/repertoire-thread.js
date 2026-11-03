@@ -9,19 +9,19 @@
   'use strict';
   const states = Object.fromEntries(['reading', 'searching', 'planning', 'coding', 'designing', 'testing', 'building', 'running', 'waiting-tool', 'waiting-user', 'error'].map(state => [state, []]));
   const C = { base: 'var(--ca-base)', shade: 'var(--ca-shade)', edge: 'var(--ca-edge)', light: 'var(--ca-light)' };
-  const p = (d, fill = 'none', width = 1.2, extra = '') => `<path d="${d}" fill="${fill}" stroke-width="${width}" ${extra}/>`;
+  const p = (d, fill = 'none', width = 1.32, extra = '') => `<path d="${d}" fill="${fill}" stroke-width="${width}" ${extra}/>`;
   const box = (x, y, w, h, r = 1, fill = C.light) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="${fill}"/>`;
   const ring = (x, y, r, fill = 'none') => `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}"/>`;
   // The outer SVG anchor never animates. Only its inner data-motion group does.
   const part = (name, x, y, art) => `<g transform="translate(${x} ${y})"><g class="cv-thread-part" data-motion="${name}">${art}</g></g>`;
-  const hand = (name, x, y) => part(name, x, y, p('M-2.5 -4.5C-7 -2 -4 5 0 3.5C6 1 2.5 -4 -.8 -.8C-3 2.5 3.3 4.3 4.2 0', 'none', 2.1) + p('M-4 -2Q-2 -5 0 -3', 'none', .65, `stroke="${C.light}"`));
-  const spool = (name, x, y, size = 1) => part(name, x, y, `<g transform="scale(${size})">${box(-6, -8, 12, 16, 2, C.shade)}${p('M-7 -8H7M-7 8H7M-5 -5L5 -2M-5 -1L5 2M-5 3L5 6', 'none', 1.6)}${ring(0, 0, 1.6, C.light)}</g>`);
-  const needle = (name, x, y) => part(name, x, y, p('M-1 10L-1 -9Q0 -14 1 -9L1 10Z', C.light, .7) + p('M0 -9V-6', 'none', .6));
-  const wheel = (name, x, y, r = 8) => part(name, x, y, ring(0, 0, r, C.base) + ring(0, 0, 1.8, C.shade) + p(`M0 -${r}V${r}M-${r} 0H${r}M-${r * .7} -${r * .7}L${r * .7} ${r * .7}M-${r * .7} ${r * .7}L${r * .7} -${r * .7}`, 'none', .8));
-  const swatch = (name, x, y, w = 18, h = 14) => part(name, x, y, box(-w / 2, -h / 2, w, h, 1, C.base) + p(`M-${w / 2 - 2} -4H${w / 2 - 2}M-${w / 2 - 2} 0H${w / 2 - 2}M-${w / 2 - 2} 4H${w / 2 - 2}M-4 -${h / 2}V${h / 2}M1 -${h / 2}V${h / 2}M6 -${h / 2}V${h / 2}`, 'none', .7));
-  const knot = (name, x, y) => part(name, x, y, p('M-8 1C-13 -9 8 -12 9 -3C11 7 -10 11 -8 1C-7 -7 11 -7 7 4C2 13 -8 -8 -2 -7C7 -6 -6 12 -7 4', 'none', 2.5) + p('M-7 -3Q-2 -8 3 -5', 'none', .75, `stroke="${C.light}"`));
-  const strand = (name, x, y, d, width = 1.8) => part(name, x, y, p(d, 'none', width));
-  const chart = (name, x, y, d) => part(name, x, y, box(-14, -10, 28, 20, 1, C.light) + p('M-10 -6H10M-10 -2H10M-10 2H10M-10 6H10M-6 -8V8M0 -8V8M6 -8V8', 'none', .45) + p(d, 'none', 1.3));
+  const hand = (name, x, y) => part(name, x, y, p('M-2.5 -4.5C-7 -2 -4 5 0 3.5C6 1 2.5 -4 -.8 -.8C-3 2.5 3.3 4.3 4.2 0', 'none', 2.25) + p('M-4 -2Q-2 -5 0 -3', 'none', .78, `stroke="${C.light}"`));
+  const spool = (name, x, y, size = 1) => part(name, x, y, `<g transform="scale(${size})">${box(-6, -8, 12, 16, 2, C.shade)}${p('M-7 -8H7M-7 8H7M-5 -5L5 -2M-5 -1L5 2M-5 3L5 6', 'none', 1.75)}${ring(0, 0, 1.6, C.light)}</g>`);
+  const needle = (name, x, y) => part(name, x, y, p('M-1 10L-1 -9Q0 -14 1 -9L1 10Z', C.light, .85) + p('M0 -9V-6', 'none', .75));
+  const wheel = (name, x, y, r = 8) => part(name, x, y, ring(0, 0, r, C.base) + ring(0, 0, 1.8, C.shade) + p(`M0 -${r}V${r}M-${r} 0H${r}M-${r * .7} -${r * .7}L${r * .7} ${r * .7}M-${r * .7} ${r * .7}L${r * .7} -${r * .7}`, 'none', .95));
+  const swatch = (name, x, y, w = 18, h = 14) => part(name, x, y, box(-w / 2, -h / 2, w, h, 1, C.base) + p(`M-${w / 2 - 2} -4H${w / 2 - 2}M-${w / 2 - 2} 0H${w / 2 - 2}M-${w / 2 - 2} 4H${w / 2 - 2}M-4 -${h / 2}V${h / 2}M1 -${h / 2}V${h / 2}M6 -${h / 2}V${h / 2}`, 'none', .82));
+  const knot = (name, x, y) => part(name, x, y, p('M-8 1C-13 -9 8 -12 9 -3C11 7 -10 11 -8 1C-7 -7 11 -7 7 4C2 13 -8 -8 -2 -7C7 -6 -6 12 -7 4', 'none', 2.65) + p('M-7 -3Q-2 -8 3 -5', 'none', .9, `stroke="${C.light}"`));
+  const strand = (name, x, y, d, width = 1.95) => part(name, x, y, p(d, 'none', width));
+  const chart = (name, x, y, d) => part(name, x, y, box(-14, -10, 28, 20, 1, C.light) + p('M-10 -6H10M-10 -2H10M-10 2H10M-10 6H10M-6 -8V8M0 -8V8M6 -8V8', 'none', .6) + p(d, 'none', 1.45));
   const move = (name, steps, origin = 'center center', easing = 'organic') => ({ part: name, origin, easing, keyframes: [{ offset: 0, transform: 'translate(0px, 0px) rotate(0deg)', opacity: 1 }, ...steps.map(([offset, transform, opacity = 1]) => ({ offset, transform, opacity })), { offset: 1, transform: 'translate(0px, 0px) rotate(0deg)', opacity: 1 }] });
   const glow = (name, steps, initial = .5) => ({ part: name, origin: 'center center', easing: 'settle', keyframes: [{ offset: 0, transform: 'none', opacity: initial }, ...steps.map(([offset, opacity]) => ({ offset, transform: 'none', opacity })), { offset: 1, transform: 'none', opacity: initial }] });
   function add(state, slug, labelZh, labelEn, descriptionZh, beats, artwork, tracks, duration = 3400) {
@@ -37,9 +37,9 @@
     }
     // Thoughts live above the face; design work sits low on a shallow surface.
     // Anchors inside these material wrappers remain separate from WAAPI parts.
-    const placement = state === 'planning' ? ' transform="translate(0 -22) scale(.5)"' : state === 'designing' ? ' transform="translate(0 5) scale(.8 .55)"' : '';
+    const placement = state === 'planning' ? ' transform="translate(0 -21) scale(.56)"' : state === 'designing' ? ' transform="translate(0 4) scale(.82 .6)"' : '';
     states[state].push({ id: 'thread-' + state + '-' + slug, labelZh, labelEn, descriptionZh, beats, duration,
-      markup: `<g class="cv-thread cv-${state}-${slug}"${placement} fill="${C.base}" stroke="${C.edge}" stroke-width=".9" stroke-linecap="round" stroke-linejoin="round">${artwork}</g>`, tracks });
+      markup: `<g class="cv-thread cv-${state}-${slug}"${placement} fill="${C.base}" stroke="${C.edge}" stroke-width=".95" stroke-linecap="round" stroke-linejoin="round">${artwork}</g>`, tracks });
   }
 
   // READING: follow real marks, turn or compare their material carrier.
