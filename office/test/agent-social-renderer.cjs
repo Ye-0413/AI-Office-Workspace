@@ -22,7 +22,9 @@ function observeContextExit(patch){
         if(!same)throw Error('a visual context change altered an original actor/body/clock/fact');
         if(clickedAt===null){
           pre.push({at:now,pose:getComputedStyle(part).transform});
-          if(pre.length===31){
+          // On a high-refresh display 31 RAFs can cover less than two
+          // movement beats. Require elapsed time as well as paint samples.
+          if(pre.length>=31&&now-pre[0].at>=700){
             held={pose:getComputedStyle(part).transform,alpha:Number(getComputedStyle(original).opacity),times:owned.map(a=>a.currentTime)};
             clickedAt=performance.now();Object.assign(fixtureContext,patch);social.update();
             if(social.state().active!==null||social.state().exiting?.token!==token||!original.isConnected)throw Error('visual context must immediately release active while retaining its original outgoing SVG');
@@ -44,7 +46,7 @@ function observeContextExit(patch){
           if(post.length>=31&&finishedAt!==null){
             if(original.isConnected||document.querySelector('.agent-social-vignette')||social.state().active||social.state().exiting)throw Error('old context replayed or failed to clean up');
             if(performance.now()-clickedAt>1000)throw Error('context31RAF tail exceeded1000ms');
-            clearTimeout(deadline);return resolve({patch,preFrames:pre.length,distinctPoses:new Set(pre.map(r=>r.pose)).size,postFrames:post.length,held,rows:post,finishedAt,totalElapsedMs:performance.now()-clickedAt,denied,sameActors:true,ownedDuration:fade.effect.getTiming().duration});
+            clearTimeout(deadline);return resolve({patch,preFrames:pre.length,preElapsedMs:pre.at(-1).at-pre[0].at,distinctPoses:new Set(pre.map(r=>r.pose)).size,heldPose:pre.some((r,i)=>i>0&&r.pose===pre[i-1].pose),postFrames:post.length,held,rows:post,finishedAt,totalElapsedMs:performance.now()-clickedAt,denied,sameActors:true,ownedDuration:fade.effect.getTiming().duration});
           }
         }
         requestAnimationFrame(sample);
@@ -148,10 +150,12 @@ app.whenReady().then(async()=>{
     await run(`fixtureTime+=60000;fixtureContext={venue:'workshop',language:'zh',theme:'auto',resolvedTheme:'spring',artworkKey:'workshop:spring',hidden:false,reducedMotion:false,lowPower:false,mode:'live'};social.update();void 0`);
     assert.equal(await run(`social.trigger({kind:'blueprint-pass'})`),true);await wait(620);
     const report=await run('('+observeContextExit.toString()+')('+JSON.stringify(patch)+')');
-    assert.equal(report.preFrames,31);assert.ok(report.distinctPoses>=4&&report.distinctPoses<report.preFrames,'the live prop changes and visibly holds cels');assert.ok(report.postFrames>=31);assert.ok(report.finishedAt<=500&&report.totalElapsedMs<=1000);
+    assert.ok(report.preFrames>=31&&report.preElapsedMs>=700);
+    assert.ok(report.distinctPoses>=4&&report.heldPose,'the live prop changes and visibly holds cels: '+JSON.stringify({patch,frames:report.preFrames,elapsedMs:report.preElapsedMs,poses:report.distinctPoses}));
+    assert.ok(report.postFrames>=31);assert.ok(report.finishedAt<=500&&report.totalElapsedMs<=1000);
     assert.equal(report.sameActors,true);assert.equal(report.ownedDuration,160);const visible=report.rows.filter(r=>r.connected&&r.alpha>0);
     assert.ok(visible.length>=3&&visible.some(r=>r.alpha<.9)&&visible.some(r=>r.alpha<.5),'a context change must retain several real alpha levels of the original pose');
-    checks.push({kind:'actual-visual-context-interruption',patch,preFrames:report.preFrames,distinctPoses:report.distinctPoses,postFrames:report.postFrames,finishedAt:report.finishedAt,totalElapsedMs:report.totalElapsedMs});
+    checks.push({kind:'actual-visual-context-interruption',patch,preFrames:report.preFrames,preElapsedMs:report.preElapsedMs,distinctPoses:report.distinctPoses,postFrames:report.postFrames,finishedAt:report.finishedAt,totalElapsedMs:report.totalElapsedMs});
   }
   // Actual world geometry supplies the local candidates. Bodies stay at their
   // fixture feet: no real movement or work/lifecycle facts are manufactured.
