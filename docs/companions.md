@@ -38,6 +38,8 @@ A squat terracotta creature carrying a tiny garden on its back. An uneven patch 
 
 Moss moves slowly and steadily. Leaves hold pages, roots handle small objects, and its design story leaves room for a tentative new shoot during a quiet pause. Reliable and unhurried, it feels at home with work that needs time. Leaf growth and unfurling are expressions of character, never a measure of task progress.
 
+From this release Moss's coding, reading, error, waiting-tool and waiting-user states are performed by painted keyframe strips: a root striking a leaf keypad, a big leaf page turning, a collapse with a snapped root, peering into an empty clay pot, and a leaf raised toward the viewer, each with its own prop and action. Its other states still use the vector prop performances.
+
 ### Thread · 线团 — Design & creative exploration
 
 A coral-orange yarn creature with a pear-shaped body and the irregular charm of something made by hand. One ear is a loop, the other a loose end; its limbs are slightly different lengths. Its personality comes through tension, texture and posture.
@@ -100,6 +102,8 @@ Open **Room preferences → Workshop companions → Motion gallery** to explore 
 **慢慢来，也稳稳地向前。** 矮方形的陶土小兽，四条粗短腿站得很稳，眼睛嵌在陶土凹槽里。背上覆盖着不规则的苔藓与叶片，像一只背着小花园的生物。
 
 它用**叶片、短根、托举**完成动作：稳稳走到工位，托起书页，压实模块；设定中，背上的叶片会舒展，等待时偶尔探出一片新芽。可靠、不着急，很适合长久陪伴。叶片的生长表达性格，实际任务进度仍以工具信息为准。
+
+本版本起，苔盒的编程、阅读、异常、等待工具与等待用户由画出来的关键帧条演出：根须敲叶片键盘、翻一片大叶、塌陷断根、探看空陶盆、举叶递向观众，五种道具与动作各不相同。其余状态仍为矢量道具动作。
 
 ### 04 · 线团 THREAD — 设计与创意探索
 

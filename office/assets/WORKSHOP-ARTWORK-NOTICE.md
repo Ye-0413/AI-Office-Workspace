@@ -26,6 +26,18 @@ Files covered / 涉及文件：
 
 [Complete prompts and generation method / 完整提示与生成方式](avatars/workshop-prompts.json)
 
+### Keyframe strips / 关键帧条
+
+From 2026-11-04 some activities are performed by painted keyframe strips instead of SVG props. Each strip is derived from the corresponding workshop sheet: the idle cell is supplied as the reference image, the same image tool paints four extreme keys on a flat key colour, and `scripts/frame-qa.cjs` keys the colour out, registers every frame against the idle cell (floor, size, centre, eyes) and writes the strip and its manifest entry (`renderer/creature-frame-manifest.js`). The strips are the same user-directed, AI-assisted creation as the sheets and are covered by the same policy below. Prompts and briefs are recorded in the `frames` section of the prompts file.
+
+自 2026-11-04 起，部分活动改由位图关键帧条演出，不再使用 SVG 道具。每条帧条均由对应工坊图集派生：以待机格作为参考图，用同一图像工具在纯色抠像背景上绘制四个极端关键帧，再由 `scripts/frame-qa.cjs` 抠像、按待机格配准（脚底、尺寸、中心、眼睛）并写出帧条与清单（`renderer/creature-frame-manifest.js`）。帧条与图集同属用户指导、AI 辅助创作，适用下文同一政策；提示与简述记录在提示文件的 `frames` 段。
+
+- `avatars/frames/moss/coding.png`
+- `avatars/frames/moss/reading.png`
+- `avatars/frames/moss/error.png`
+- `avatars/frames/moss/waiting-user.png`
+- `avatars/frames/moss/waiting-tool.png`
+
 These five sheets do not use restored upstream Clawd or Calico sprites. Character names and material personalities are decorative, without changing provider abilities or proving a real task result. This notice does not authorize use of any third-party trademark or character.
 
 这五张图集不使用还原的上游 Clawd 或 Calico 角色图。名称与材质性格属于装饰，不改变工具能力，也不证明真实任务结果。本声明不授予任何第三方商标或角色的使用权。

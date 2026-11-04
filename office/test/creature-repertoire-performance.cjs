@@ -23,7 +23,7 @@ app.whenReady().then(async () => {
     return { design: { id: species, renderer: 'creature', asset: 'workshop-' + species + '.png' },
       session: { id: 'codex:repertoire-performance-' + index, provider: 'codex', status: 'active', activity, title: 'Synthetic observation ' + index, events: [] } };
   });
-  const scripts = ['../lib/avatar-performance-model.js', ...Repertoire.SPECIES.map(id => 'repertoire-' + id + '.js'), 'creature-repertoire.js', 'creature-activity.js', 'creature-performance.js'];
+  const scripts = ['../lib/avatar-performance-model.js', ...Repertoire.SPECIES.map(id => 'repertoire-' + id + '.js'), 'creature-repertoire.js', 'creature-activity.js', 'creature-frame-manifest.js', 'creature-frames.js', 'creature-performance.js'];
   const base = pathToFileURL(path.join(__dirname, '../renderer/')).href;
   const html = `<!doctype html><html><head><meta charset="utf-8"><base href="${base}">
     <link rel="stylesheet" href="avatar-performance.css"><link rel="stylesheet" href="creature-activity.css"><link rel="stylesheet" href="creature-performance.css">

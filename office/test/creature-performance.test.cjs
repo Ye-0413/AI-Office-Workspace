@@ -167,10 +167,12 @@ test('a walking material change keeps the distance phase without reviving a repl
 
 test('a request gets one finite material response, suppressed quiet episodes do not replay on resume',()=>{
   const f=fixture('glow');emit(f.source,'load');f.controller.update(observed(),{now:0});
-  const waiting=observed('waiting-user');f.controller.update(waiting,{now:100});assert.equal(f.animations.length,1);
-  for(let index=0;index<20;index++)f.controller.update(waiting,{now:200+index});assert.equal(f.animations.length,1);
-  f.controller.update(observed(),{now:300});f.controller.update(waiting,{now:400,reducedMotion:true});assert.equal(f.layer.dataset.animate,'false');assert.equal(f.animations.length,1);
-  f.controller.update(waiting,{now:500});assert.equal(f.animations.length,1,'a suppressed reminder is not queued for later');
+  // Only the finite reaction on .cp-motion is a response; family loops, the blink and pose dissolves are not.
+  const motion=f.layer.querySelector('.cp-motion'),responses=()=>f.animations.filter(a=>a.effect.target===motion).length;
+  const waiting=observed('waiting-user');f.controller.update(waiting,{now:100});assert.equal(responses(),1);
+  for(let index=0;index<20;index++)f.controller.update(waiting,{now:200+index});assert.equal(responses(),1);
+  f.controller.update(observed(),{now:300});f.controller.update(waiting,{now:400,reducedMotion:true});assert.equal(f.layer.dataset.animate,'false');assert.equal(responses(),1);
+  f.controller.update(waiting,{now:500});assert.equal(responses(),1,'a suppressed reminder is not queued for later');
   f.controller.destroy();assert.equal(f.controller.cue('wave'),false);
 });
 

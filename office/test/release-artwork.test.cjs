@@ -16,7 +16,8 @@ test('public build uses exact original artwork paths and retains scoped upstream
   for (const bad of ['assets/**/*','assets/avatars/*','assets/icon.png','assets/scenes/rooms/renamed.svg']) {
     assert.throws(() => Policy.assertBuildPolicy({ ...pkg.build, files: [...pkg.build.files, bad] }), /exact public artwork allowlist/);
   }
-  assert.equal(Policy.ASSET_FILES.filter(name => name.startsWith('assets/avatars/') && name.endsWith('.png')).length, 5);
+  assert.equal(Policy.ASSET_FILES.filter(name => name.startsWith('assets/avatars/') && !name.startsWith('assets/avatars/frames/') && name.endsWith('.png')).length, 5);
+  for (const strip of Policy.ASSET_FILES.filter(name => name.startsWith('assets/avatars/frames/'))) assert.match(strip, /^assets\/avatars\/frames\/(folio|ink|moss|thread|glow)\/[a-z-]+\.png$/);
   assert.ok(Policy.ASSET_FILES.includes('assets/ORIGINAL-ARTWORK-LICENSE.txt'));
   assert.ok(Policy.ASSET_FILES.includes('assets/WORKSHOP-ARTWORK-NOTICE.md'));
   assert.ok(!Policy.ASSET_FILES.includes('assets/icon.png'));

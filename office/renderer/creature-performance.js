@@ -2,10 +2,11 @@
  * clock. A creature never invents work, completion, or a reminder timer. */
 (function (root, factory) {
   'use strict';
-  const api = factory(typeof module === 'object' && module.exports ? require('../lib/avatar-performance-model.js') : root.OfficeAvatarPerformanceModel, root.OfficeCreatureActivity);
-  if (typeof module === 'object' && module.exports) module.exports = api;
+  const node = typeof module === 'object' && module.exports;
+  const api = factory(node ? require('../lib/avatar-performance-model.js') : root.OfficeAvatarPerformanceModel, root.OfficeCreatureActivity, node ? require('./creature-frames.js') : root.OfficeCreatureFrames);
+  if (node) module.exports = api;
   else root.OfficeCreaturePerformance = api;
-})(typeof globalThis === 'object' ? globalThis : this, function (Model, Activity) {
+})(typeof globalThis === 'object' ? globalThis : this, function (Model, Activity, Frames) {
   'use strict';
   const NS = 'http://www.w3.org/2000/svg', CELL = 80, LEFT = 37.5, TOP = 35;
   const POSES = Object.freeze(['idle', 'working', 'thinking', 'resting', 'attention', 'completed']);
@@ -105,37 +106,51 @@
     const source = element('image', { id: id + '-source', x: LEFT, y: TOP, width: CELL * 3, height: CELL * 2, preserveAspectRatio: 'none' }, defs);
     const cellClip = element('clipPath', { id: id + '-cell' }, defs);
     const cellRect = element('rect', { x: LEFT, y: TOP, width: CELL, height: CELL }, cellClip);
+    // The previous painted cell stays mounted so a pose change dissolves
+    // instead of cutting. It is a second view of the same sheet.
+    const previous = element('image', { id: id + '-previous', x: LEFT, y: TOP, width: CELL * 3, height: CELL * 2, preserveAspectRatio: 'none' }, defs);
+    const previousClip = element('clipPath', { id: id + '-previous-cell' }, defs);
+    const previousRect = element('rect', { x: LEFT, y: TOP, width: CELL, height: CELL }, previousClip);
+    const eyeClip = element('clipPath', { id: id + '-eyes' }, defs);
+    const eyeRect = element('rect', { x: 0, y: 0, width: 0, height: 0 }, eyeClip);
     const motion = element('g', { class: 'cp-motion' }, svg), art = element('g', { class: 'cp-art' }, motion);
-    const gesture = element('g', { class: 'cp-gesture' }, art);
+    // .cp-pose performs the observed state family with the whole body about
+    // its feet; .cp-gesture stays the repertoire's own body track.
+    const poseGroup = element('g', { class: 'cp-pose' }, art), gesture = element('g', { class: 'cp-gesture' }, poseGroup);
     const shell = element('g', { class: 'cp-shell' }, gesture), feet = element('g', { class: 'cp-feet' }, gesture);
-    const clips = new Map(), parts = {};
-    function part(name, rect, parent) {
-      const clip = element('clipPath', { id: id + '-' + name }, defs);
-      clips.set(name, element('rect', { x: rect[0], y: rect[1], width: rect[2], height: rect[3] }, clip));
-      const node = element('g', { class: 'cp-part cp-' + name, 'clip-path': 'url(#' + cellClip.id + ')' }, parent);
+    const parts = {};
+    // The body is one unsliced painting. Only the four feet are separate
+    // slices, for the stride; nothing above the ankles is ever cut or skewed.
+    const bodyPrevious = element('g', { class: 'cp-body cp-body-previous', 'clip-path': 'url(#' + previousClip.id + ')' }, shell);
+    element('use', { href: '#' + previous.id }, bodyPrevious);
+    bodyPrevious.style.setProperty('opacity', '0');
+    const bodyNow = element('g', { class: 'cp-body cp-body-now', 'clip-path': 'url(#' + cellClip.id + ')' }, shell);
+    element('use', { href: '#' + source.id }, bodyNow);
+    // The lid is the creature's own pixels from just above its eyes, clipped
+    // to the eye rectangle and slid down for a blink.
+    const lid = element('g', { class: 'cp-lid', 'clip-path': 'url(#' + eyeClip.id + ')', 'data-active': 'false' }, shell);
+    const lidUse = element('use', { class: 'cp-lid-skin', href: '#' + source.id }, lid);
+    for (let index = 0; index < 4; index++) {
+      const clip = element('clipPath', { id: id + '-foot-' + (index + 1) }, defs);
+      element('rect', { x: LEFT + index * CELL / 4, y: TOP + 64, width: CELL / 4, height: 16 }, clip);
+      const node = element('g', { class: 'cp-part cp-foot-' + (index + 1), 'clip-path': 'url(#' + cellClip.id + ')' }, feet);
       element('use', { href: '#' + source.id, 'clip-path': 'url(#' + clip.id + ')' }, node);
-      parts[name] = node; return node;
+      parts['foot-' + (index + 1)] = node;
     }
-    // Halves overlap at the spine and reach behind the feet, so a lifted,
-    // tilted or opened body reveals its own painted edge instead of a seam.
-    // At rest the overlapping pixels are identical and the feet draw on top.
-    // Each half carries its crown (ears, curl, leaves, loop, tip) as a child
-    // slice above the material's cut line, so the crown inherits the half's
-    // motion and can still lag and rebound on its own without a seam.
-    const bodyLeft = part('body-left', [LEFT, TOP, CELL / 2 + 3, 72], shell);
-    const bodyRight = part('body-right', [LEFT + CELL / 2 - 3, TOP, CELL / 2 + 3, 72], shell);
-    part('crown-left', [LEFT, TOP, CELL / 2 + 3, 35], bodyLeft);
-    part('crown-right', [LEFT + CELL / 2 - 3, TOP, CELL / 2 + 3, 35], bodyRight);
-    for (let index = 0; index < 4; index++) part('foot-' + (index + 1), [LEFT + index * CELL / 4, TOP + 64, CELL / 4, 16], feet);
     const light = element('ellipse', { class: 'cp-inner-light', cx: 77.5, cy: 82, rx: 8, ry: 10, fill: '#ffe3a2', opacity: '.08' }, shell);
     parts.light = light;
-    function carve(creature) {
-      const cut = Number(Activity?.STAGES?.[creature]?.cut) || 70;
-      for (const name of ['body-left', 'body-right']) { attribute(clips.get(name), 'y', cut); attribute(clips.get(name), 'height', TOP + 72 - cut); }
-      for (const name of ['crown-left', 'crown-right']) {
-        attribute(clips.get(name), 'height', cut - TOP);
-        style(parts[name], 'transform-origin', '77.5px ' + cut + 'px');
-      }
+    const frames = Frames?.create?.({ document, pose: poseGroup, lid: lidUse, lidGroup: lid, lidClip: eyeRect, creature: design?.id, shell, defs, id });
+    let dissolves = [];
+    function stopDissolve() { for (const animation of dissolves) animation.cancel(); dissolves = []; style(bodyPrevious, 'opacity', '0'); }
+    // A pose change cross-dissolves the old painted cell into the new one
+    // over 220ms; the feet and lid follow the incoming cell.
+    function dissolve() {
+      if (quiet || hidden || health !== 'healthy' || typeof bodyPrevious.animate !== 'function') return;
+      stopDissolve();
+      const timing = { duration: 220, easing: SINE, fill: 'both' };
+      const out = bodyPrevious.animate([{ opacity: 1 }, { opacity: 0 }], timing);
+      dissolves = [out, ...[bodyNow, feet, lid].map(node => node.animate([{ opacity: 0 }, { opacity: 1 }], timing))];
+      out.finished.then(() => { if (dissolves.includes(out)) stopDissolve(); }, () => {});
     }
     const neutral = element('g', { class: 'cp-neutral', 'aria-hidden': 'true' }, motion);
     element('path', { fill: '#a8b2a2', stroke: '#59685e', 'stroke-width': '1', d: 'M57 99Q55 87 66 79Q75 72 83 79Q99 84 99 98Q98 107 87 108H69Q58 108 57 99Z' }, neutral);
@@ -155,6 +170,13 @@
     const probe = document.createElement('img');
     const attribute = (node, name, value) => { value = String(value); if (node.getAttribute(name) !== value) node.setAttribute(name, value); };
     const style = (node, name, value) => { if (node.style.getPropertyValue(name) !== value) node.style.setProperty(name, value); };
+    // A painted keyframe strip for the observed activity carries its own
+    // props, so the vector repertoire stands down for it; without one the
+    // repertoire performs as before.
+    // An explicit recipe preview (gallery, audits) asks for the vector
+    // repertoire itself, so strips stand down there.
+    function vectorPreview(options) { return options.preview === true && Number.isInteger(options.repertoireIndex); }
+    function repertoireActivity(walking, options = inherited) { return observedActivity && !walking && !vectorPreview(options) && frames?.has?.(observedActivity) ? '' : observedActivity; }
     function paintHealth() {
       attribute(body, 'data-rig-health', health); attribute(body, 'data-bitmap-health', bitmapHealth);
       attribute(layer, 'data-art-state', health);
@@ -162,7 +184,7 @@
       style(neutral, 'opacity', health === 'healthy' ? '0' : '1');
       if (last) {
         if (health !== 'healthy') lease?.sample(last.kind, { visible: false });
-        activity?.update?.({ activity: observedActivity, attention: Boolean(observedActivity) && session.attention === true, creature: currentDesign.id, identity, elapsed: activityElapsed, animate: activityAnimate, quiet, walking: Boolean(gait), hidden, healthy: health === 'healthy', preview: inherited.preview === true, repertoireIndex: inherited.repertoireIndex, poseIndex: last.poseIndex });
+        activity?.update?.({ activity: repertoireActivity(Boolean(gait)), attention: Boolean(observedActivity) && session.attention === true, creature: currentDesign.id, identity, elapsed: activityElapsed, animate: activityAnimate, quiet, walking: Boolean(gait), hidden, healthy: health === 'healthy', preview: inherited.preview === true, repertoireIndex: inherited.repertoireIndex, poseIndex: last.poseIndex });
       }
       // A cached image can settle between observation snapshots. If its
       // recovery creates new activity clocks, acquire their hidden lease in
@@ -198,7 +220,7 @@
     function ownedAnimations() {
       return (layer.getAnimations?.({ subtree: true }) || []).filter(animation => cues.has(animation)
         || typeof animation.animationName === 'string' && animation.animationName.startsWith('cp-')
-        || animation.effect?.target?.closest?.('.cp-activity,.cp-reach,.cp-gesture') || animation.effect?.target === gesture);
+        || animation.effect?.target?.closest?.('.cp-activity,.cp-reach,.cp-gesture,.cp-pose') || animation.effect?.target === gesture || animation.effect?.target === poseGroup);
     }
     function observeToolSuccess() {
       const events = (Array.isArray(session.events) ? session.events : []).filter(event => event && typeof event.eventId === 'string' && event.eventId
@@ -246,8 +268,14 @@
       const key = currentDesign.id + '/' + index + '/' + baseline;
       if (key === frameKey) return;
       const offset = (512 - baseline) * CELL / 512;
+      if (frameKey) {
+        // Keep the outgoing cell on the previous view, then dissolve.
+        attribute(previous, 'href', source.getAttribute('href')); attribute(previous, 'x', source.getAttribute('x')); attribute(previous, 'y', source.getAttribute('y'));
+        attribute(previousRect, 'y', cellRect.getAttribute('y'));
+      }
       attribute(source, 'x', LEFT - index % 3 * CELL); attribute(source, 'y', TOP - Math.floor(index / 3) * CELL + offset);
       attribute(cellRect, 'y', TOP + offset); attribute(layer, 'data-pose-index', index);
+      if (frameKey) dissolve();
       frameKey = key;
     }
     function setDesign(value) {
@@ -264,7 +292,6 @@
         health = 'pending'; bitmapHealth = image?.complete && image.naturalWidth > 0 ? 'healthy' : 'pending';
         attribute(source, 'href', '../assets/avatars/' + asset); paintHealth(); probeSource();
       }
-      if (materialChanged) carve(creature);
       attribute(layer, 'data-creature', creature); attribute(actorNode, 'data-creature-design', creature);
       attribute(layer, 'data-color-variant', variantIndex); attribute(layer, 'data-appearance-key', appearanceKey);
       style(actorNode, '--creature-color-filter', variantPalette(creature, variantIndex).filter);
@@ -367,7 +394,11 @@
       observedActivity = work.active && !['resting', 'completed'].includes(nextPose)
         ? session.activity === 'error' ? 'error' : session.attention === true ? 'waiting-user' : session.activity : '';
       activityAnimate = Boolean(!quiet && observedActivity && work.active && work.animate);
-      activity?.update?.({ activity: observedActivity, attention: Boolean(observedActivity) && session.attention === true, creature: currentDesign.id, identity, elapsed, animate: activityAnimate, quiet, walking, hidden, healthy: health === 'healthy', preview: options.preview === true, repertoireIndex: options.repertoireIndex, poseIndex: index });
+      activity?.update?.({ activity: repertoireActivity(walking), attention: Boolean(observedActivity) && session.attention === true, creature: currentDesign.id, identity, elapsed, animate: activityAnimate, quiet, walking, hidden, healthy: health === 'healthy', preview: options.preview === true, repertoireIndex: options.repertoireIndex, poseIndex: index });
+      // The whole-body state family and the blink share the activity's
+      // animate decision; hidden pauses them with every other owned clock.
+      const performed = frames?.update?.({ creature: currentDesign.id, activity: observedActivity, animate: activityAnimate, quiet, walking, standby: Boolean(options.standby), painted: !vectorPreview(options), identity, poseIndex: index, phase: work.phaseOffset });
+      attribute(layer, 'data-frames', Boolean(performed?.painted));
       if (quiet) {
         stopCues(); paused.clear();
         for (const animation of ownedAnimations()) if (typeof animation.animationName !== 'string') animation.cancel();
@@ -389,8 +420,8 @@
       source.removeEventListener('load', sourceLoad); source.removeEventListener('error', sourceError);
       image?.removeEventListener('load', bitmapLoad); image?.removeEventListener('error', bitmapError);
       probe.removeEventListener('load', probeLoad); probe.removeEventListener('error', probeError); probe.removeAttribute('src');
-      stopCues(); stopGait(); paused.clear(); lease?.release(); lease = null;
-      activity?.destroy?.();
+      stopCues(); stopGait(); stopDissolve(); paused.clear(); lease?.release(); lease = null;
+      frames?.destroy?.(); activity?.destroy?.();
       layer.remove(); body.classList.remove('has-avatar-performance'); delete body.dataset.creature;
       delete body.dataset.rigHealth; delete body.dataset.bitmapHealth;
       delete actorNode.dataset.creatureDesign; delete actorNode.dataset.performance; delete actorNode.dataset.performanceProgram;

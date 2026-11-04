@@ -23,5 +23,50 @@
       "id": "glow",
       "prompt": "Use case: identity-preserve. Edit target: the supplied character concept board. Rework ONLY the GLOW / 灯籽, the fifth amber seed creature in the reference. A translucent amber seed body narrow above and wide below with four tiny amber supports, a single warm floating light seed inside. Hand-painted translucent honey shell, luminous cream core, discreet tiny dark face near bottom, NO antenna, NO screen, NO robot hands. Gentle restrained coordinator.\nDeliver a production game sprite sheet for this ONE character, keeping the rich cozy hand-painted pixel-art texture of the reference at small scale. Actual transparent RGBA background.\nLayout: exactly THREE equal square columns and TWO equal square rows, overall aspect ratio 3:2 (1536x1024 ideal). Six separate full-body poses, one per cell. NO lines, labels, text, props outside cells, environment, floor, cast ground shadow, checkerboard, border, contact sheet title, or other characters.\nCell order reading left to right: top row IDLE, WORKING, THINKING; bottom row RESTING, ERROR, COMPLETED.\nAll six use the same camera (gentle three-quarter front view), identical character identity/material/detail, same overall design scale. Each cell has generous 10% transparent margins, creature horizontally centered, feet baseline at 86% of that cell height. No clipping or overlap between cells. Every cell is square. Keep props small within creature silhouette.\nPose instructions: idle: neutral alert standing; working: poised upright while warm core sits slightly off center; thinking: core suspended higher inside shell, intent tiny eyes; resting: lowers and softens, core sunk to the base and eyes closed; error/needs-attention: upright, one brighter warm core with calm alert eyes, no red alerts; completed: warm core centered inside, a quiet settled glow, no confetti.\nVisual priorities: specific material texture, strong recognizable silhouette, four short feet, detailed but legible at 80px tall, warm atelier palette, no thick modern vector shapes, no generic geometric mascot, no oversized eyes. Do not include any part of the reference board or background. Return only this six-pose transparent sheet."
     }
-  ]
+  ],
+  "frames": {
+    "tool": "built-in image generation tool, 1:1 output, reference image = idle cell cropped from avatars/workshop-moss.png",
+    "reference": "avatars/workshop-moss.png idle cell (project artwork, 2026-10-29); user direction 2026-11-04: one distinct prop or action per activity, no repeats, readable on a 5-inch screen",
+    "layout": "2 columns x 2 rows of extreme keys on a flat #FF00FF key colour; scripts/frame-qa.cjs keys the colour out, prunes cross-cell bleed, registers every frame against the idle cell and writes a 4 x 512 px strip to avatars/frames/<species>/<activity>.png plus renderer/creature-frame-manifest.js",
+    "preamble": "Use case: identity-preserve animation keyframes with LARGE pose differences. Edit target: the supplied reference sprite of MOSS, a squat terracotta clay box creature carrying a moss garden with a two-leaf sprout on its back, four short clay legs, two small dark eyes in a recessed face panel. Keep the exact same character, proportions, hand-painted pixel-art texture, warm palette, top-left light and outline weight as the reference.",
+    "commonConstraints": "Background: flat solid pure magenta #FF00FF everywhere, no checkerboard, no floor, no shadow. No text, lines, arrows, borders.\nLayout: exactly two equal columns and two equal rows, overall square. One full-body frame per cell. Creature horizontally centered in each cell, feet baseline at 86% of the cell height, same body size in all four cells.\nThe four frames MUST look clearly different from each other (an animator's extreme keys). Keep both eyes visible in every frame. No human arms, no antenna, no screen face.",
+    "record": "The coding prompt is stored verbatim. The other four sheets were generated the same session with the same preamble and constraints; only their activity brief survives in the project record and is stored here as a summary, not as the literal prompt text.",
+    "prompts": [
+      {
+        "species": "moss",
+        "activity": "coding",
+        "sheet": "c",
+        "verbatim": true,
+        "prompt": "Use case: identity-preserve animation keyframes with LARGE pose differences. Edit target: the supplied reference sprite of MOSS, a squat terracotta clay box creature carrying a moss garden with a two-leaf sprout on its back, four short clay legs, two small dark eyes in a recessed face panel. Keep the exact same character, proportions, hand-painted pixel-art texture, warm palette, top-left light and outline weight as the reference.\n\nDeliver a 2x2 keyframe sheet of this ONE character CODING on a big leaf keypad (a broad green leaf lying flat on the ground to the LEFT, with 6 pale stone keys on it; keypad about 60% of body width, clearly outside the body). A thick flexible brown root grows from Moss's left side as the typing limb.\n\nBackground: flat solid pure magenta #FF00FF everywhere, no checkerboard, no floor, no shadow. No text, lines, arrows, borders.\nLayout: exactly two equal columns and two equal rows, overall square. One full-body frame per cell. Creature horizontally centered in each cell, feet baseline at 86% of the cell height, same body size in all four cells.\n\nThe four frames MUST look clearly different from each other (an animator's extreme keys):\nFrame 1 (top-left): root limb raised HIGH above the keypad, higher than the eyes, curled like a question mark; body upright; eyes looking down at keys.\nFrame 2 (top-right): root SLAMMED down onto a key; the body is squashed noticeably shorter and wider (about 12% shorter), eyes squeezed to happy arcs; the pressed key sunk; two little dust puffs of pollen rise from the key.\nFrame 3 (bottom-left): root swung to the FAR right side of the keypad near the body, body stretched slightly taller and leaning left; the back leaves tilted left.\nFrame 4 (bottom-right): root raised to mid height, body upright, eyes round, a glowing pale-yellow glyph square floating above the keypad (the typed character).\n\nKeep both eyes visible in every frame. No human arms, no antenna, no screen face."
+      },
+      {
+        "species": "moss",
+        "activity": "reading",
+        "sheet": "a",
+        "verbatim": false,
+        "brief": "READING a large leaf page held up in front of the body by a root; four keys of a page turn: leaf flat and open, leaf lifted at one corner, leaf mid-flip with eyes following it, leaf settled on the other side."
+      },
+      {
+        "species": "moss",
+        "activity": "error",
+        "sheet": "b",
+        "verbatim": false,
+        "brief": "ERROR: the clay box has collapsed forward and sits low; a snapped brown root lies beside it; keys alternate between a slumped body with drooping leaves and a sharp jolt/jam with eyes pinched, no rising or recovery pose."
+      },
+      {
+        "species": "moss",
+        "activity": "waiting-user",
+        "sheet": "b",
+        "verbatim": false,
+        "brief": "WAITING FOR THE USER: Moss raises one big leaf above its head and offers it toward the viewer; keys move from a low hold to a high stretched offer and back, eyes wide and looking out of the frame."
+      },
+      {
+        "species": "moss",
+        "activity": "waiting-tool",
+        "sheet": "a",
+        "verbatim": false,
+        "brief": "WAITING FOR A TOOL: an empty clay pot stands beside Moss; Moss leans to peer into it, leans back, tilts the other way and peers again, eyes tracking the pot."
+      }
+    ]
+  }
 }

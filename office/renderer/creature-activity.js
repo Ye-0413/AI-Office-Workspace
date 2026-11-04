@@ -232,7 +232,7 @@
       const owned = recipe.tracks.some(track => track.part === '$body');
       const posture = {
         folio: f => 'rotate(' + round(side * (3.2 * f.w) + .14 * f.dx) + 'deg) translate(' + round(side * .9 * f.w) + 'px,' + round(-.5 * f.w + .08 * f.dy) + 'px)',
-        ink: f => 'translate(' + round(side * 1.8 * f.w + .12 * f.dx) + 'px,' + round(.7 * f.w) + 'px) skewX(' + round(-side * 7 * f.w - .3 * f.dx) + 'deg) scale(' + round(1 + .06 * f.w) + ',' + round(1 - .08 * f.w) + ')',
+        ink: f => 'translate(' + round(side * 1.8 * f.w + .12 * f.dx) + 'px,' + round(.7 * f.w) + 'px) rotate(' + round(side * 2.5 * f.w + .1 * f.dx) + 'deg) scale(' + round(1 + .06 * f.w) + ',' + round(1 - .08 * f.w) + ')',
         moss: f => 'rotate(' + round(side * 2 * f.w) + 'deg) translate(' + round(side * .5 * f.w) + 'px,' + round(.9 * f.w + .08 * Math.max(0, f.dy)) + 'px)',
         thread: f => 'rotate(' + round(side * 4.5 * f.w + .18 * f.dx) + 'deg) translate(' + round(side * 1.2 * f.w) + 'px,' + round(-.4 * f.w) + 'px)',
         glow: f => 'rotate(' + round(side * 2 * f.w) + 'deg) translate(' + round(side * 1.3 * f.w + .1 * f.dx) + 'px,0px)'
@@ -251,22 +251,6 @@
       // Ink's other soft foot alternates with the pressing one.
       const other = species === 'ink' ? bodyParts?.['foot-1'] : null;
       if (other) out.push({ target: other, origin: '47.5px 113px', keyframes: timeline.map((frame, index) => ({ offset: frame.offset, easing: frame.easing, transform: 'scale(' + round(1 + .12 * (index % 2 ? frame.w : 0)) + ',' + round(1 - .18 * (index % 2 ? frame.w : 0)) + ')' })) });
-      // Ears, curl, leaves, loop and tip lag the lean and rebound after it.
-      const crowns = [bodyParts?.['crown-left'], bodyParts?.['crown-right']].filter(Boolean);
-      if (crowns.length) {
-        const lag = .07, tilt = { folio: 6, ink: 7, moss: 4.5, thread: 7, glow: 3.5 }[species] || 4;
-        const keyframes = [];
-        timeline.forEach((frame, index) => {
-          const offset = index === 0 ? 0 : index === timeline.length - 1 ? 1 : Math.min(.96, frame.offset + lag);
-          const angle = -side * tilt * frame.w;
-          keyframes.push({ offset, easing: frame.easing, angle });
-          const next = timeline[index + 1];
-          if (next && frame.w > next.w && next.offset + lag + .08 < 1) keyframes.push({ offset: Math.min(.98, next.offset + lag + .08), easing: Repertoire.EASINGS.settle, angle: side * tilt * .35 });
-        });
-        keyframes.sort((a, b) => a.offset - b.offset);
-        const shaped = keyframes.map(frame => ({ offset: frame.offset, easing: frame.easing, transform: 'translate(' + round(-Math.tan(frame.angle * Math.PI / 180) * (s.cut - 111)) + 'px,0px) skewX(' + round(frame.angle) + 'deg)' }));
-        for (const crown of crowns) out.push({ target: crown, origin: '77.5px 111px', keyframes: shaped });
-      }
       const light = species === 'glow' ? bodyParts?.light : null;
       if (light) out.push(...frames(frame => ({ transform: 'translate(' + round(side * 3.5 * frame.w + .12 * frame.dx) + 'px,' + round(-1.5 * frame.w) + 'px) scale(' + round(1 + .4 * frame.w) + ')', opacity: round(.12 + .36 * frame.w) }), '77.5px 82px', light));
       return out;

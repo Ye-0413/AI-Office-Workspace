@@ -10,6 +10,8 @@ const ASSET_FILES = Object.freeze([
   'assets/ORIGINAL-ARTWORK-LICENSE.txt', 'assets/WORKSHOP-ARTWORK-NOTICE.md',
   'assets/avatars.manifest.json', 'assets/avatars/workshop-prompts.json',
   ...Artwork.ASSETS.map(name => 'assets/avatars/' + name),
+  // Registered keyframe strips, one exact path per species/activity.
+  ...Object.entries(require('../renderer/creature-frame-manifest.js').strips || {}).flatMap(([species, strips]) => Object.keys(strips).map(activity => 'assets/avatars/frames/' + species + '/' + activity + '.png')),
   'assets/helpers/mini-office-flock', 'assets/scenes/generation.json',
   'assets/scenes/teahouse.jpg', 'assets/scenes/observatory.jpg',
   'assets/scenes/themes/generation.json',

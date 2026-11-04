@@ -211,6 +211,8 @@ clawd-emoji-final/
 !/office/assets/avatars/workshop-thread.png
 !/office/assets/avatars/workshop-glow.png
 !/office/assets/avatars/workshop-prompts.json
+# Registered keyframe strips derived from the workshop sheets (scripts/frame-qa.cjs).
+!/office/assets/avatars/frames/
 /office/assets/icon.png
 /office/assets/.local-artwork-*/
 .local-work/
