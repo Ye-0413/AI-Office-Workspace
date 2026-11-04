@@ -27,17 +27,23 @@ async function auditPage() {
     const group=item.body.querySelector('.cp-activity'),recipe=OfficeCreatureRepertoire.recipes(item.design.id,item.activity)[variant],presence=group.querySelector('.cv-presence:not(.cv-outgoing)');
     const targets=recipe.tracks.map(track=>track.part==='$body'?item.body.querySelector('.cp-gesture'):presence.querySelector('[data-motion="'+track.part+'"]'));
     const clocks=targets.map(target=>target?.getAnimations().find(animation=>animation.effect?.target===target&&animation.effect.getTiming().iterations===Infinity));
-    return{item,group,recipe,presence,targets,clocks,samples:[],bounds:[]};
+    return{item,group,recipe,presence,targets,clocks,samples:[],bounds:[],svg:item.body.querySelector('.creature-rig'),face:(stage=>stage.faces?.[Number(item.body.querySelector('.creature-performance').dataset.poseIndex)]||stage.face)(OfficeCreatureActivity.STAGES[item.design.id])};
   });
-  for(const row of rows){if(row.targets.some(target=>!target)||row.clocks.some(clock=>!clock))throw Error('Missing actual WAAPI target: '+row.recipe.id);await Promise.all(row.clocks.map(clock=>clock.ready));row.clocks.forEach(clock=>clock.pause());}
+  for(const row of rows){if(row.targets.some(target=>!target)||row.clocks.some(clock=>!clock))throw Error('Missing actual WAAPI target: '+row.recipe.id);await Promise.all(row.clocks.map(clock=>clock.ready));row.clocks.forEach(clock=>clock.pause());
+    // The entry cue (overshooting scale on .cv-presence) is not part of the recipe; let it land before measuring artwork.
+    for(const animation of row.presence.getAnimations({subtree:true}))if(!row.clocks.includes(animation))animation.finish();}
   function bounds(row){
-    const inverse=row.group.getScreenCTM().inverse(),points=[];
+    const inverse=row.group.getScreenCTM().inverse(),rig=row.svg.getScreenCTM().inverse(),points=[],rigPoints=[];
     for(const node of row.presence.querySelectorAll('path,rect,circle,ellipse,line,polyline,polygon')){
       let opacity=1;for(let parent=node;parent&&parent!==row.group;parent=parent.parentElement)opacity*=Number(getComputedStyle(parent).opacity);if(opacity<.025)continue;
       const b=node.getBBox(),m=inverse.multiply(node.getScreenCTM()),s=getComputedStyle(node),pad=s.stroke==='none'?0:parseFloat(s.strokeWidth)/2;
-      for(const[x,y]of[[b.x,b.y],[b.x+b.width,b.y],[b.x,b.y+b.height],[b.x+b.width,b.y+b.height]]){const p=new DOMPoint(x,y).matrixTransform(m);points.push({x:p.x,y:p.y,px:pad*(Math.abs(m.a)+Math.abs(m.c)),py:pad*(Math.abs(m.b)+Math.abs(m.d))});}
+      const r=rig.multiply(node.getScreenCTM());
+      for(const[x,y]of[[b.x,b.y],[b.x+b.width,b.y],[b.x,b.y+b.height],[b.x+b.width,b.y+b.height]]){const p=new DOMPoint(x,y).matrixTransform(m);points.push({x:p.x,y:p.y,px:pad*(Math.abs(m.a)+Math.abs(m.c)),py:pad*(Math.abs(m.b)+Math.abs(m.d))});const q=new DOMPoint(x,y).matrixTransform(r);rigPoints.push({x:q.x,y:q.y});}
     }
-    return{x:Math.min(...points.map(p=>p.x-p.px)),right:Math.max(...points.map(p=>p.x+p.px)),y:Math.min(...points.map(p=>p.y-p.py)),bottom:Math.max(...points.map(p=>p.y+p.py))};
+    // Face overlap is measured in rig units against the species' guarded eyes.
+    const[fx,fy,fr,fb]=row.face,rx=Math.min(...rigPoints.map(p=>p.x)),rr=Math.max(...rigPoints.map(p=>p.x)),ry=Math.min(...rigPoints.map(p=>p.y)),rb=Math.max(...rigPoints.map(p=>p.y));
+    const faceOverlap=Math.max(0,Math.min(rr,fr)-Math.max(rx,fx))*Math.max(0,Math.min(rb,fb)-Math.max(ry,fy));
+    return{x:Math.min(...points.map(p=>p.x-p.px)),right:Math.max(...points.map(p=>p.x+p.px)),y:Math.min(...points.map(p=>p.y-p.py)),bottom:Math.max(...points.map(p=>p.y+p.py)),rig:{x:rx,right:rr,y:ry,bottom:rb},faceOverlap};
   }
   const paint=()=>new Promise(resolve=>requestAnimationFrame(resolve));
   for(const phase of phases){for(const row of rows)row.clocks.forEach(clock=>{clock.currentTime=Number(clock.effect.getTiming().delay)+Number(clock.effect.getTiming().duration)*phase;});await paint();for(const row of rows){row.samples.push(row.targets.map(target=>{const s=getComputedStyle(target);return s.transform+'/'+s.opacity;}).join('|'));row.bounds.push({phase,...bounds(row)});}}
@@ -58,17 +64,17 @@ app.whenReady().then(async()=>{
   win.webContents.session.webRequest.onBeforeRequest({urls:['http://*/*','https://*/*']},(detail,callback)=>{errors.push('Unexpected network: '+detail.url);callback({cancel:true});});
   await win.loadFile(path.join(scratch,'gallery.html'));win.webContents.debugger.attach('1.3');await win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]});
   await until(`specimens.length===55&&specimens.every(item=>item.body.querySelector('.creature-performance').dataset.artState==='healthy'&&item.image.naturalWidth===1536)`,'All local sprite sheets must decode');
-  const pages=[],envelopeViolations=[],missingMotion=[],seams=[];
+  const pages=[],envelopeViolations=[],faceViolations=[],missingMotion=[],seams=[];
   for(let index=0;index<10;index++){
     await run(`showPage(${index})`);await wait(310);const report=await run('('+auditPage.toString()+')()');
-    for(const row of report){assert.equal(row.matches,true,row.id);assert.equal(row.visible,true,row.id);assert.ok(row.tracks>0&&row.tracks<=8,row.id);if(!row.changed)missingMotion.push(row.id);if(row.seam>.015)seams.push({id:row.id,seam:row.seam});const spill=row.bounds.filter(b=>b.x< -31.25||b.right>31.25||b.y< -41.25||b.bottom>15.25);if(spill.length)envelopeViolations.push({id:row.id,bounds:spill});}
+    for(const row of report){assert.equal(row.matches,true,row.id);assert.equal(row.visible,true,row.id);assert.ok(row.tracks>0&&row.tracks<=8,row.id);if(!row.changed)missingMotion.push(row.id);if(row.seam>.015)seams.push({id:row.id,seam:row.seam});const spill=row.bounds.filter(b=>b.x< -31.25||b.right>31.25||b.y< -41.25||b.bottom>15.25);if(spill.length)envelopeViolations.push({id:row.id,bounds:spill});const covering=row.bounds.filter(b=>b.faceOverlap>4);if(covering.length)faceViolations.push({id:row.id,phases:covering.map(b=>({phase:b.phase,overlap:Number(b.faceOverlap.toFixed(1)),rig:b.rig}))});}
     pages.push({variant:index,recipes:report.length,phases:12,tracks:report.reduce((sum,row)=>sum+row.tracks,0)});
     await capture('workshop-actions-550-page-'+String(index+1).padStart(2,'0'));
     if(index===0){await capture('workshop-actions-55');await capture('workshop-lineup',{x:0,y:0,width:1604,height:340});}
   }
-  if(envelopeViolations.length)console.error(JSON.stringify({envelopeViolations}));
-  assert.deepEqual(envelopeViolations,[],'Artwork must fit before its defensive clip');assert.deepEqual(missingMotion,[],'Every recipe needs real native motion');assert.deepEqual(seams,[],'Loop endpoints must meet without a visible jump');
-  checks.push('all 550 exact recipes have native WAAPI targets and motion; twelve phases each fit before clipping and meet at seamless loop endpoints');
+  if(envelopeViolations.length)console.error(JSON.stringify({envelopeViolations}));if(faceViolations.length)console.error(JSON.stringify({faceViolations}));
+  assert.deepEqual(envelopeViolations,[],'Artwork must fit before its defensive clip');assert.deepEqual(missingMotion,[],'Every recipe needs real native motion');assert.deepEqual(seams,[],'Loop endpoints must meet without a visible jump');assert.deepEqual(faceViolations,[],'Tools stay off the painted eyes, expression and light core');
+  checks.push('all 550 exact recipes have native WAAPI targets and motion; twelve phases each fit before clipping, stay off the guarded face and meet at seamless loop endpoints');
 
   await run(`specimens.forEach(item=>item.body.getAnimations({subtree:true}).forEach(a=>{if(a.playState==='paused')a.play();}));window.actionClocks=specimens.flatMap(item=>item.body.getAnimations({subtree:true}));specimens.forEach(item=>item.controller.update(item.session,{now:1000,preview:true,repertoireIndex:9,hidden:true}));void 0`);await wait(60);
   assert.equal(await run(`actionClocks.length>100&&actionClocks.every(a=>a.playState==='paused')`),true);const hiddenTimes=await run(`actionClocks.map(a=>a.currentTime)`);await wait(120);assert.deepEqual(await run(`actionClocks.map(a=>a.currentTime)`),hiddenTimes);

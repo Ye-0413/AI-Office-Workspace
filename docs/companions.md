@@ -56,7 +56,7 @@ The character concepts and reference were supplied by the user. Sprite sheets we
 
 ## 550 ways to be at work
 
-**5 companions × 11 observed activities × 10 distinct performances.** Each material gets its own props, contact sequence and movement: paper folds and feeds, roots touch leaf keypads, yarn threads through small mechanisms, and light follows translucent tracks.
+**5 companions × 11 observed activities × 10 distinct performances.** Each material gets its own props, contact sequence and movement: paper folds and feeds, roots touch leaf keypads, yarn threads through small mechanisms, and light follows translucent tracks. Tools sit in a low work zone beside each face, never over the eyes; a limb made of the body's own material reaches from a fixed point on the body to the tool's grip, and the lean, the planted front foot and the trailing ears, leaves or thread end follow the tool's own timeline.
 
 Reading · Searching · Planning · Coding · Designing · Testing · Building · Running · Waiting for tools · Waiting for you · Error
 
@@ -119,7 +119,7 @@ Open **Room preferences → Workshop companions → Motion gallery** to explore 
 
 ## 550 套动作，让忙碌有细节
 
-**5 位伙伴 × 11 类真实活动 × 每类 10 套动作。** 各自使用符合材质的道具、接触顺序和运动路径：纸张折叠与送入，根须敲打叶片键盘，毛线穿过小机构，暖光沿透明轨道运行。
+**5 位伙伴 × 11 类真实活动 × 每类 10 套动作。** 各自使用符合材质的道具、接触顺序和运动路径：纸张折叠与送入，根须敲打叶片键盘，毛线穿过小机构，暖光沿透明轨道运行。道具放在面部旁的低位工作区，不遮眼睛；由本体材质延伸的肢体从身体固定点伸到道具握持处，身体倾斜、前足压地和耳朵、叶片、线头的余动都跟随道具自己的时间线。
 
 阅读 · 搜索 · 思考规划 · 编程 · 设计 · 测试 · 构建 · 执行 · 等待工具 · 等待用户 · 异常
 

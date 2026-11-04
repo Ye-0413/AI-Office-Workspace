@@ -6,7 +6,8 @@
   const line=(d,w=.92)=>`<path d="${d}" fill="none" stroke="var(--ca-light)" stroke-width="${w}"/>`;
   const blob=(w=14,h=12)=>`<path d="M${-w/2} 0C${-w*.6} ${-h*.6} ${w*.35} ${-h*.68} ${w/2} ${-h*.15}C${w*.67} ${h*.48} ${-w*.36} ${h*.67} ${-w/2} 0Z"/>${line(`M${-w*.3} ${-h*.2}Q0 ${-h*.48} ${w*.2} ${-h*.25}`,.78)}`;
   const drop=`<path d="M0 -9C-1 -4 -6 -1 -6 3C-6 11 7 10 6 3C6 -1 2 -4 0 -9Z"/>${line('M-3 1Q-5 5 -2 6',.82)}`;
-  const hand=`<g transform="scale(.65)"><path d="M-5 1C-7 -4 -2 -5 0 -3C5 -7 8 -1 4 2C1 6 -3 5 -5 1Z"/>${line('M-3 -1Q0 -3 2 -1',.75)}</g>`;
+  // The grip marks where the ink pseudopod from the body touches the tool.
+  const hand=`<g data-grip="1" transform="scale(.65)"><path d="M-5 1C-7 -4 -2 -5 0 -3C5 -7 8 -1 4 2C1 6 -3 5 -5 1Z"/>${line('M-3 -1Q0 -3 2 -1',.75)}</g>`;
   const film=(w=30,h=22)=>(h=Math.min(h,26),`<path d="M${-w/2} ${-h/2}Q0 ${-h*.65} ${w/2} ${-h/2}Q${w*.4} 0 ${w/2} ${h/2}Q0 ${h*.5} ${-w/2} ${h/2}Q${-w*.38} 0 ${-w/2} ${-h/2}Z"/>${line(`M${-w*.3} ${-h*.27}Q0 ${-h*.4} ${w*.27} ${-h*.28}`,.75)}`);
   const channel=(d,w=4)=>`<path d="${d}" fill="none" stroke="var(--ca-edge)" stroke-width="${w+1.6}"/><path d="${d}" fill="none" stroke="var(--ca-base)" stroke-width="${w}"/>`;
   const pearl=(r=3)=>`<circle r="${r}"/>${line(`M${-r*.5} ${-r*.1}Q${-r*.4} ${-r*.6} ${r*.2} ${-r*.5}`,.75)}`;

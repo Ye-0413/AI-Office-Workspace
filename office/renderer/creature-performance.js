@@ -108,25 +108,40 @@
     const motion = element('g', { class: 'cp-motion' }, svg), art = element('g', { class: 'cp-art' }, motion);
     const gesture = element('g', { class: 'cp-gesture' }, art);
     const shell = element('g', { class: 'cp-shell' }, gesture), feet = element('g', { class: 'cp-feet' }, gesture);
+    const clips = new Map(), parts = {};
     function part(name, rect, parent) {
       const clip = element('clipPath', { id: id + '-' + name }, defs);
-      element('rect', { x: rect[0], y: rect[1], width: rect[2], height: rect[3] }, clip);
+      clips.set(name, element('rect', { x: rect[0], y: rect[1], width: rect[2], height: rect[3] }, clip));
       const node = element('g', { class: 'cp-part cp-' + name, 'clip-path': 'url(#' + cellClip.id + ')' }, parent);
       element('use', { href: '#' + source.id, 'clip-path': 'url(#' + clip.id + ')' }, node);
-      return node;
+      parts[name] = node; return node;
     }
     // Halves overlap at the spine and reach behind the feet, so a lifted,
     // tilted or opened body reveals its own painted edge instead of a seam.
     // At rest the overlapping pixels are identical and the feet draw on top.
-    part('body-left', [LEFT, TOP, CELL / 2 + 3, 72], shell);
-    part('body-right', [LEFT + CELL / 2 - 3, TOP, CELL / 2 + 3, 72], shell);
+    // Each half carries its crown (ears, curl, leaves, loop, tip) as a child
+    // slice above the material's cut line, so the crown inherits the half's
+    // motion and can still lag and rebound on its own without a seam.
+    const bodyLeft = part('body-left', [LEFT, TOP, CELL / 2 + 3, 72], shell);
+    const bodyRight = part('body-right', [LEFT + CELL / 2 - 3, TOP, CELL / 2 + 3, 72], shell);
+    part('crown-left', [LEFT, TOP, CELL / 2 + 3, 35], bodyLeft);
+    part('crown-right', [LEFT + CELL / 2 - 3, TOP, CELL / 2 + 3, 35], bodyRight);
     for (let index = 0; index < 4; index++) part('foot-' + (index + 1), [LEFT + index * CELL / 4, TOP + 64, CELL / 4, 16], feet);
     const light = element('ellipse', { class: 'cp-inner-light', cx: 77.5, cy: 82, rx: 8, ry: 10, fill: '#ffe3a2', opacity: '.08' }, shell);
+    parts.light = light;
+    function carve(creature) {
+      const cut = Number(Activity?.STAGES?.[creature]?.cut) || 70;
+      for (const name of ['body-left', 'body-right']) { attribute(clips.get(name), 'y', cut); attribute(clips.get(name), 'height', TOP + 72 - cut); }
+      for (const name of ['crown-left', 'crown-right']) {
+        attribute(clips.get(name), 'height', cut - TOP);
+        style(parts[name], 'transform-origin', '77.5px ' + cut + 'px');
+      }
+    }
     const neutral = element('g', { class: 'cp-neutral', 'aria-hidden': 'true' }, motion);
     element('path', { fill: '#a8b2a2', stroke: '#59685e', 'stroke-width': '1', d: 'M57 99Q55 87 66 79Q75 72 83 79Q99 84 99 98Q98 107 87 108H69Q58 108 57 99Z' }, neutral);
     for (const x of [59,69,84,94]) element('path', { fill: '#82917f', d: 'M'+x+' 105h5v8q0 2-2.5 2t-2.5-2Z' }, neutral);
     for (const x of [68,85]) element('ellipse', { fill: '#34493f', cx: x, cy: 93, rx: '1.7', ry: '2.5' }, neutral);
-    const activity = Activity?.create?.({ document, svg, layer, creature: design?.id, bodyTarget: gesture });
+    const activity = Activity?.create?.({ document, svg, layer, creature: design?.id, bodyTarget: gesture, bodyParts: parts });
     body.append(layer);
     const originalImageOpacity = image?.style.getPropertyValue('opacity') || '';
     const originalColorFilter = actorNode.style.getPropertyValue('--creature-color-filter');
@@ -147,7 +162,7 @@
       style(neutral, 'opacity', health === 'healthy' ? '0' : '1');
       if (last) {
         if (health !== 'healthy') lease?.sample(last.kind, { visible: false });
-        activity?.update?.({ activity: observedActivity, attention: Boolean(observedActivity) && session.attention === true, creature: currentDesign.id, identity, elapsed: activityElapsed, animate: activityAnimate, quiet, walking: Boolean(gait), hidden, healthy: health === 'healthy', preview: inherited.preview === true, repertoireIndex: inherited.repertoireIndex });
+        activity?.update?.({ activity: observedActivity, attention: Boolean(observedActivity) && session.attention === true, creature: currentDesign.id, identity, elapsed: activityElapsed, animate: activityAnimate, quiet, walking: Boolean(gait), hidden, healthy: health === 'healthy', preview: inherited.preview === true, repertoireIndex: inherited.repertoireIndex, poseIndex: last.poseIndex });
       }
       // A cached image can settle between observation snapshots. If its
       // recovery creates new activity clocks, acquire their hidden lease in
@@ -183,7 +198,7 @@
     function ownedAnimations() {
       return (layer.getAnimations?.({ subtree: true }) || []).filter(animation => cues.has(animation)
         || typeof animation.animationName === 'string' && animation.animationName.startsWith('cp-')
-        || animation.effect?.target?.closest?.('.cp-activity') || animation.effect?.target === gesture);
+        || animation.effect?.target?.closest?.('.cp-activity,.cp-reach,.cp-gesture') || animation.effect?.target === gesture);
     }
     function observeToolSuccess() {
       const events = (Array.isArray(session.events) ? session.events : []).filter(event => event && typeof event.eventId === 'string' && event.eventId
@@ -249,6 +264,7 @@
         health = 'pending'; bitmapHealth = image?.complete && image.naturalWidth > 0 ? 'healthy' : 'pending';
         attribute(source, 'href', '../assets/avatars/' + asset); paintHealth(); probeSource();
       }
+      if (materialChanged) carve(creature);
       attribute(layer, 'data-creature', creature); attribute(actorNode, 'data-creature-design', creature);
       attribute(layer, 'data-color-variant', variantIndex); attribute(layer, 'data-appearance-key', appearanceKey);
       style(actorNode, '--creature-color-filter', variantPalette(creature, variantIndex).filter);
@@ -351,7 +367,7 @@
       observedActivity = work.active && !['resting', 'completed'].includes(nextPose)
         ? session.activity === 'error' ? 'error' : session.attention === true ? 'waiting-user' : session.activity : '';
       activityAnimate = Boolean(!quiet && observedActivity && work.active && work.animate);
-      activity?.update?.({ activity: observedActivity, attention: Boolean(observedActivity) && session.attention === true, creature: currentDesign.id, identity, elapsed, animate: activityAnimate, quiet, walking, hidden, healthy: health === 'healthy', preview: options.preview === true, repertoireIndex: options.repertoireIndex });
+      activity?.update?.({ activity: observedActivity, attention: Boolean(observedActivity) && session.attention === true, creature: currentDesign.id, identity, elapsed, animate: activityAnimate, quiet, walking, hidden, healthy: health === 'healthy', preview: options.preview === true, repertoireIndex: options.repertoireIndex, poseIndex: index });
       if (quiet) {
         stopCues(); paused.clear();
         for (const animation of ownedAnimations()) if (typeof animation.animationName !== 'string') animation.cancel();

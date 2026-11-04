@@ -6,6 +6,13 @@
 .cp-activity .cv-detail{fill:none;stroke:var(--ca-edge);stroke-width:.75;opacity:.85}
 .cp-activity .cv-shine{fill:none;stroke:var(--ca-light);stroke-width:1;opacity:.85}
 .cp-activity .cv-board{fill:var(--ca-base)}
+/* The authored grip glyph nearest the body is replaced by the species limb
+   drawn in .cp-reach, so the hand always traces back to the painted body. */
+.cp-activity [data-grip="active"]{visibility:hidden}
+.cp-reach{pointer-events:none;filter:var(--creature-color-filter,none)}
+.cp-reach[data-active="false"]{visibility:hidden}
+.cp-reach .cr-limb,.cp-reach .cr-palm,.cp-reach .cr-mote{transform-box:view-box;transform-origin:0 0}
+.creature-performance:not([data-art-state="healthy"]) .cp-reach{opacity:0}
 /* JavaScript cancels WAAPI when this preference changes; the retained first
    keyframes are a legible still tableau, including request and fault props. */
-@media(prefers-reduced-motion:reduce){.cp-activity *{animation:none!important;transition:none!important}}
+@media(prefers-reduced-motion:reduce){.cp-activity *,.cp-reach *{animation:none!important;transition:none!important}}

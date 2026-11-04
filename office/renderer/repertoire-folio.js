@@ -5,7 +5,8 @@
   const p=(part,art,x=0,y=0)=>`<g transform="translate(${x} ${y})"><g data-motion="${part}">${art}</g></g>`;
   const line=(d,w=.92)=>`<path d="${d}" fill="none" stroke="var(--ca-edge)" stroke-width="${w}"/>`;
   const paper=(w=14,h=16)=>(h=Math.min(h,25),`<path d="M${-w/2} ${-h/2}H${w/2-4}L${w/2} ${4-h/2}V${h/2}H${-w/2}Z"/>${line(`M${w/2-4} ${-h/2}V${4-h/2}H${w/2}`,.72)}`);
-  const hand=`<path d="M-3 -4L4 -2L2 4L-4 1Z"/>${line('M-3 -4L0 0L2 4',.65)}`;
+  // The grip marks where the paper limb from the body takes hold of the tool.
+  const hand=`<g data-grip="1"><path d="M-3 -4L4 -2L2 4L-4 1Z"/>${line('M-3 -4L0 0L2 4',.65)}</g>`;
   const book=`<path d="M-18 -10Q-8 -13 0 -8Q8 -13 18 -10V11Q8 7 0 12Q-8 7 -18 11Z"/>${line('M0 -8V12M-14 -5H-5M-14 -1H-5M-14 3H-7M5 -5H14M5 -1H14M5 3H11',.72)}`;
   const ruler=`<path d="M-21 -3H21V3H-21Z"/>${line('M-17 -3V0M-11 -3V2M-5 -3V0M1 -3V2M7 -3V0M13 -3V2M19 -3V0',.72)}`;
   const wheel=(r=7)=>`<circle r="${r}"/>${line(`M${-r} 0H${r}M0 ${-r}V${r}M${-r*.7} ${-r*.7}L${r*.7} ${r*.7}M${-r*.7} ${r*.7}L${r*.7} ${-r*.7}`,.75)}<circle r="1.5" fill="var(--ca-shade)"/>`;

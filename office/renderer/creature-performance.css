@@ -47,33 +47,34 @@
 
 .creature-performance[data-animate="true"] .cp-shell,.creature-performance[data-animate="true"] .cp-part,.creature-performance[data-animate="true"] .cp-inner-light{animation-timing-function:var(--ease-organic,cubic-bezier(.37,0,.63,1));animation-iteration-count:infinite;animation-delay:var(--cp-offset,0ms)}
 
-/* Folio · folded paper. Light and crisp: pages open at the spine, then a
-   tip-toe hop; thinking is a long head tilt that flicks back. */
+/* Shell loops under a playing repertoire are breath-level only: the body's
+   lean, pressing foot and crown follow-through are keyed by the recipe clock
+   in creature-activity.js, so these never compete with the hand's contact. */
+/* Folio · folded paper. Light and crisp: pages ease at the spine, then a
+   small tip-toe rise; thinking is a long head tilt that flicks back. */
 .creature-performance[data-creature="folio"][data-pose="working"][data-animate="true"] .cp-body-left{animation-name:cp-paper-open-left;animation-duration:3.6s}
 .creature-performance[data-creature="folio"][data-pose="working"][data-animate="true"] .cp-body-right{animation-name:cp-paper-open-right;animation-duration:3.6s}
 .creature-performance[data-creature="folio"][data-pose="working"][data-animate="true"] .cp-shell{animation-name:cp-paper-hop;animation-duration:3.6s}
 .creature-performance[data-creature="folio"][data-pose="thinking"][data-animate="true"] .cp-shell{animation-name:cp-paper-consider;animation-duration:5s}
 .creature-performance[data-creature="folio"][data-pose="attention"][data-animate="true"] .cp-shell{animation-name:cp-paper-crumple;animation-duration:2.6s}
-@keyframes cp-paper-open-left{0%,22%,86%,100%{transform:none}40%{transform:rotate(-3.6deg) translateX(-.4px)}48%,64%{transform:rotate(-2.8deg)}74%{transform:rotate(.9deg)}}
-@keyframes cp-paper-open-right{0%,22%,86%,100%{transform:none}40%{transform:rotate(3.6deg) translateX(.4px)}48%,64%{transform:rotate(2.8deg)}74%{transform:rotate(-.9deg)}}
-@keyframes cp-paper-hop{0%,28%,100%{transform:none}36%{transform:scale(1.05,.94)}45%{transform:translateY(-4.2px) rotate(-1.5deg) scale(.96,1.05)}54%{transform:scale(1.04,.96)}63%{transform:none}}
-@keyframes cp-paper-consider{0%,100%{transform:none}18%{transform:rotate(1.6deg)}32%,58%{transform:rotate(-6.5deg) translateY(-1.6px)}64%{transform:rotate(2.4deg)}70%{transform:rotate(-1deg)}76%{transform:none}}
-@keyframes cp-paper-crumple{0%,38%,100%{transform:none}45%{transform:rotate(-3deg) scale(.93,1.05)}50%{transform:rotate(3.2deg) scale(.94,1.04)}55%{transform:rotate(-2.8deg)}60%{transform:rotate(2deg)}65%{transform:scale(1.03,.97)}72%{transform:none}}
+@keyframes cp-paper-open-left{0%,22%,86%,100%{transform:none}40%{transform:rotate(-1.6deg) translateX(-.2px)}48%,64%{transform:rotate(-1.2deg)}74%{transform:rotate(.4deg)}}
+@keyframes cp-paper-open-right{0%,22%,86%,100%{transform:none}40%{transform:rotate(1.6deg) translateX(.2px)}48%,64%{transform:rotate(1.2deg)}74%{transform:rotate(-.4deg)}}
+@keyframes cp-paper-hop{0%,28%,100%{transform:none}36%{transform:scale(1.02,.975)}45%{transform:translateY(-1.5px) rotate(-.6deg) scale(.985,1.02)}54%{transform:scale(1.015,.985)}63%{transform:none}}
+@keyframes cp-paper-consider{0%,100%{transform:none}18%{transform:rotate(.8deg)}32%,58%{transform:rotate(-3deg) translateY(-.8px)}64%{transform:rotate(1.2deg)}70%{transform:rotate(-.5deg)}76%{transform:none}}
+@keyframes cp-paper-crumple{0%,38%,100%{transform:none}45%{transform:rotate(-1.6deg) scale(.965,1.025)}50%{transform:rotate(1.7deg) scale(.97,1.02)}55%{transform:rotate(-1.4deg)}60%{transform:rotate(1deg)}65%{transform:scale(1.015,.985)}72%{transform:none}}
 @keyframes cp-folio-idle{0%,58%,86%,100%{transform:none}28%{transform:translateY(-1.5px) scale(.985,1.022)}66%{transform:rotate(-3deg) translateY(-.5px)}72%{transform:rotate(2.4deg)}78%{transform:rotate(-1deg)}}
 @keyframes cp-folio-rest{0%,100%{transform:none}50%{transform:translateY(.4px) scale(1.045,.94)}}
 @keyframes cp-folio-done{0%,38%,78%,100%{transform:none}45%{transform:scale(1.06,.92)}53%{transform:translateY(-6px) rotate(-7.5deg) scale(.95,1.06)}62%{transform:translateY(-5.5px) rotate(6deg)}70%{transform:scale(1.045,.955)}}
 
-/* Ink · liquid droplet. Heavy squash and stretch with jelly follow-through;
-   thinking melts sideways, errors boil in short ripples. */
+/* Ink · liquid droplet. Low and fluid: a slow pooling breath with jelly
+   follow-through; thinking melts sideways, errors boil in short ripples.
+   Its soft feet tap on the recipe clock, not on a free-running loop. */
 .creature-performance[data-creature="ink"][data-pose="working"][data-animate="true"] .cp-shell{animation-name:cp-ink-pool;animation-duration:2.8s}
-.creature-performance[data-creature="ink"][data-activity="coding"][data-animate="true"] .cp-foot-1{animation-name:cp-ink-tap;animation-duration:1.2s}
-.creature-performance[data-creature="ink"][data-activity="coding"][data-animate="true"] .cp-foot-4{animation-name:cp-ink-tap;animation-duration:1.7s}
 .creature-performance[data-creature="ink"][data-pose="thinking"][data-animate="true"] .cp-shell{animation-name:cp-ink-think;animation-duration:4.4s}
 .creature-performance[data-creature="ink"][data-pose="attention"][data-animate="true"] .cp-shell{animation-name:cp-ink-boil;animation-duration:2.2s}
-@keyframes cp-ink-pool{0%,44%,78%,100%{transform:none}14%{transform:scale(1.09,.91)}24%{transform:translateY(-1.8px) scale(.94,1.07)}34%{transform:scale(1.04,.96)}58%{transform:scale(1.08,.92)}68%{transform:translateY(-.8px) scale(.96,1.05)}}
-@keyframes cp-ink-tap{0%,30%,63%,100%{transform:none}40%,52%{transform:translateY(-3.6px) scale(.95,1.06)}}
-@keyframes cp-ink-think{0%,84%,100%{transform:none}28%{transform:skewX(-5.5deg) scale(1.045,.955)}50%{transform:translateY(-1.6px) skewX(4.2deg) scale(.97,1.04)}70%{transform:skewX(-2deg)}}
-@keyframes cp-ink-boil{0%,52%,100%{transform:none}10%{transform:scale(1.06,.94)}20%{transform:translateY(-1px) scale(.95,1.06)}30%{transform:scale(1.05,.95)}40%{transform:scale(.97,1.03)}}
+@keyframes cp-ink-pool{0%,44%,78%,100%{transform:none}14%{transform:scale(1.04,.96)}24%{transform:translateY(-.8px) scale(.975,1.03)}34%{transform:scale(1.02,.98)}58%{transform:scale(1.035,.965)}68%{transform:translateY(-.4px) scale(.98,1.02)}}
+@keyframes cp-ink-think{0%,84%,100%{transform:none}28%{transform:skewX(-3deg) scale(1.025,.975)}50%{transform:translateY(-.8px) skewX(2.2deg) scale(.985,1.02)}70%{transform:skewX(-1deg)}}
+@keyframes cp-ink-boil{0%,52%,100%{transform:none}10%{transform:scale(1.03,.97)}20%{transform:translateY(-.5px) scale(.975,1.03)}30%{transform:scale(1.025,.975)}40%{transform:scale(.985,1.015)}}
 @keyframes cp-ink-idle{0%,100%{transform:none}25%{transform:scale(1.05,.95)}50%{transform:translateY(-1.2px) scale(.975,1.03)}75%{transform:scale(1.02,.985)}}
 @keyframes cp-ink-rest{0%,100%{transform:none}50%{transform:scale(1.11,.88)}}
 @keyframes cp-ink-done{0%,34%,72%,100%{transform:none}41%{transform:scale(1.14,.84)}50%{transform:translateY(-6px) scale(.88,1.16)}58%{transform:scale(1.09,.91)}65%{transform:scale(.96,1.04)}}
@@ -83,9 +84,9 @@
 .creature-performance[data-creature="moss"][data-pose="working"][data-animate="true"] .cp-shell{animation-name:cp-moss-settle;animation-duration:4.4s}
 .creature-performance[data-creature="moss"][data-pose="thinking"][data-animate="true"] .cp-shell{animation-name:cp-moss-listen;animation-duration:6s}
 .creature-performance[data-creature="moss"][data-pose="attention"][data-animate="true"] .cp-shell{animation-name:cp-moss-sigh;animation-duration:4s}
-@keyframes cp-moss-settle{0%,18%,56%,100%{transform:none}30%{transform:translateY(-3.2px) rotate(-3.2deg)}39%{transform:translateY(.9px) scale(1.045,.955)}44%{transform:rotate(1.1deg) scale(1.015,.985)}49%{transform:rotate(-.6deg)}}
-@keyframes cp-moss-listen{0%,85%,100%{transform:none}34%,60%{transform:skewX(-4.2deg) rotate(-1.2deg) translateY(-.6px)}74%{transform:skewX(1.8deg)}}
-@keyframes cp-moss-sigh{0%,100%{transform:none}28%,70%,84%{transform:translateY(1.8px) scale(1.045,.945)}74%{transform:translateY(1.8px) rotate(1.2deg) scale(1.045,.945)}78%{transform:translateY(1.8px) rotate(-1.2deg) scale(1.045,.945)}}
+@keyframes cp-moss-settle{0%,18%,56%,100%{transform:none}30%{transform:translateY(-1.1px) rotate(-1.1deg)}39%{transform:translateY(.4px) scale(1.02,.98)}44%{transform:rotate(.5deg) scale(1.008,.992)}49%{transform:rotate(-.3deg)}}
+@keyframes cp-moss-listen{0%,85%,100%{transform:none}34%,60%{transform:skewX(-2.2deg) rotate(-.6deg) translateY(-.3px)}74%{transform:skewX(.9deg)}}
+@keyframes cp-moss-sigh{0%,100%{transform:none}28%,70%,84%{transform:translateY(1.2px) scale(1.025,.97)}74%{transform:translateY(1.2px) rotate(.8deg) scale(1.025,.97)}78%{transform:translateY(1.2px) rotate(-.8deg) scale(1.025,.97)}}
 @keyframes cp-moss-idle{0%,50%,100%{transform:none}25%{transform:translateY(-.5px) rotate(-2deg) skewX(2.2deg)}75%{transform:translateY(-.5px) rotate(2deg) skewX(-2.2deg)}}
 @keyframes cp-moss-rest{0%,100%{transform:none}50%{transform:translateY(.6px) scale(1.03,.965)}}
 @keyframes cp-moss-done{0%,38%,70%,100%{transform:none}46%{transform:translateY(-5px) rotate(-2deg)}55%{transform:translateY(1px) scale(1.06,.93)}62%{transform:scale(.985,1.015)}}
@@ -95,13 +96,11 @@
 .creature-performance[data-creature="thread"][data-pose="thinking"][data-animate="true"] .cp-shell{animation-name:cp-thread-unwind;animation-duration:4.8s}
 .creature-performance[data-creature="thread"][data-pose="working"][data-animate="true"] .cp-shell{animation-name:cp-thread-roll;animation-duration:3.2s}
 .creature-performance[data-creature="thread"][data-pose="working"][data-animate="true"] .cp-body-left{animation-name:cp-thread-tuck;animation-duration:3.2s}
-.creature-performance[data-creature="thread"][data-pose="working"][data-animate="true"] .cp-foot-4{animation-name:cp-thread-pull;animation-duration:3.2s}
 .creature-performance[data-creature="thread"][data-pose="attention"][data-animate="true"] .cp-shell{animation-name:cp-thread-tangle;animation-duration:2.4s}
-@keyframes cp-thread-unwind{0%,16%,84%,100%{transform:none}38%,62%{transform:rotate(-7.5deg) translateY(-1px) scale(.96,1.05)}70%{transform:rotate(3.8deg) scale(1.03,.97)}77%{transform:rotate(-1.5deg)}}
-@keyframes cp-thread-roll{0%,72%,100%{transform:none}19%{transform:translateX(-1.5px) rotate(-5.2deg)}39%{transform:translateX(1.5px) rotate(4.6deg)}55%{transform:translateY(-3.4px) scale(.96,1.05)}64%{transform:scale(1.06,.94)}}
-@keyframes cp-thread-tuck{0%,24%,100%{transform:none}45%,64%{transform:rotate(2deg)}}
-@keyframes cp-thread-pull{0%,24%,100%{transform:none}45%,64%{transform:translateX(-3.2px) rotate(-7.5deg)}}
-@keyframes cp-thread-tangle{0%,38%,72%,100%{transform:none}45%{transform:rotate(-4.5deg) scale(1.04,.96)}52%{transform:rotate(4deg) scale(.97,1.03)}58%{transform:rotate(-2.8deg)}65%{transform:rotate(1.4deg)}}
+@keyframes cp-thread-unwind{0%,16%,84%,100%{transform:none}38%,62%{transform:rotate(-3.4deg) translateY(-.5px) scale(.98,1.025)}70%{transform:rotate(1.8deg) scale(1.015,.985)}77%{transform:rotate(-.7deg)}}
+@keyframes cp-thread-roll{0%,72%,100%{transform:none}19%{transform:translateX(-.7px) rotate(-2.4deg)}39%{transform:translateX(.7px) rotate(2.1deg)}55%{transform:translateY(-1.4px) scale(.98,1.025)}64%{transform:scale(1.03,.97)}}
+@keyframes cp-thread-tuck{0%,24%,100%{transform:none}45%,64%{transform:rotate(1.2deg)}}
+@keyframes cp-thread-tangle{0%,38%,72%,100%{transform:none}45%{transform:rotate(-2.4deg) scale(1.02,.98)}52%{transform:rotate(2.1deg) scale(.985,1.015)}58%{transform:rotate(-1.4deg)}65%{transform:rotate(.7deg)}}
 @keyframes cp-thread-idle{0%,84%,100%{transform:none}38%{transform:translateY(-3px) rotate(-1.2deg) scale(.975,1.032)}68%{transform:scale(1.04,.96)}}
 @keyframes cp-thread-rest{0%,100%{transform:none}50%{transform:rotate(2.8deg) scale(1.05,.94)}}
 @keyframes cp-thread-done{0%,28%,72%,100%{transform:none}35%{transform:scale(1.09,.91)}44%{transform:translateY(-7px) rotate(-9.5deg) scale(.94,1.07)}52%{transform:scale(1.08,.92)}59%{transform:translateY(-3px) rotate(5deg)}65%{transform:scale(1.03,.97)}}
@@ -118,8 +117,8 @@
 .creature-performance[data-creature="glow"][data-live="true"][data-walking="false"][data-pose="resting"] .cp-inner-light{animation-name:cp-glow-dim;animation-duration:6s}
 .creature-performance[data-creature="glow"][data-live="true"][data-walking="false"][data-pose="completed"] .cp-inner-light{animation-name:cp-glow-bloom;animation-duration:3.6s}
 @keyframes cp-glow-warmth{0%,100%{transform:translate(-1px,1px) scale(.85);opacity:.12}50%{transform:translate(1.5px,-1.5px) scale(1.3);opacity:.44}}
-@keyframes cp-glow-hover{0%,100%{transform:none}50%{transform:translateY(-3px) rotate(1.2deg)}}
-@keyframes cp-glow-hold{0%,100%{transform:none}35%,65%{transform:translateY(-4.8px) rotate(-2deg)}50%{transform:translateY(-5.6px) rotate(1.4deg)}}
+@keyframes cp-glow-hover{0%,100%{transform:none}50%{transform:translateY(-1.6px) rotate(.6deg)}}
+@keyframes cp-glow-hold{0%,100%{transform:none}35%,65%{transform:translateY(-2.4px) rotate(-1deg)}50%{transform:translateY(-3px) rotate(.7deg)}}
 @keyframes cp-glow-falter{0%,14%,40%,100%{transform:none}8%{transform:translateY(1.5px) scale(1.02,.98)}32%{transform:translateY(1.2px) rotate(-1deg)}}
 @keyframes cp-glow-flicker{0%,100%{opacity:.34}8%{opacity:.05}12%{opacity:.32}16%{opacity:.03}30%{opacity:.24}34%{opacity:.04}60%{opacity:.26}}
 @keyframes cp-glow-idle{0%,100%{transform:none}50%{transform:translateY(-3.4px) rotate(.6deg)}}

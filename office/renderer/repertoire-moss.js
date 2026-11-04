@@ -12,7 +12,8 @@
   const dot=(x,y,r=2,fill=light)=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}" stroke="${edge}" stroke-width=".75"/>`;
   const g=(name,x,y,art)=>`<g transform="translate(${x} ${y})"><g data-motion="${name}">${art}</g></g>`;
   const leaf=(size=7)=>p(`M-${size} 2Q-${size} -${size} ${size} -${size}Q${size} 3 -${size} 2Z`,light)+p(`M-${size} 2L${size-1} -${size-1}M-1 -1L-1 -${size-2}M2 -3L${size-2} -3`);
-  const root=(side=1)=>p(`M0 -10Q${side*2} -4 0 0L${side*4} 4M0 0L${-side*3} 4M0 -3L${side*5} -2`,'none',1.95);
+  // Each root is a grip: the one nearest the body becomes the live root limb.
+  const root=(side=1)=>`<g data-grip="1">${p(`M0 -10Q${side*2} -4 0 0L${side*4} 4M0 0L${-side*3} 4M0 -3L${side*5} -2`,'none',1.95)}</g>`;
   const rock=(size=6)=>p(`M-${size} 2L-${size-2} -${size}L${size-2} -${size-1}L${size} 2L2 ${size}L-${size-2} ${size}Z`,base)+p(`M-${size-2} -${size}L0 1L${size-2} -${size-1}M0 1V${size-1}`);
   const page=(w=14,h=8)=>p(`M-${w} -${h}Q-${w/2} -${h+3} 0 -${h-1}Q${w/2} -${h+3} ${w} -${h}V${h}Q${w/2} ${h-2} 0 ${h+1}Q-${w/2} ${h-2} -${w} ${h}Z`,base)+p(`M0 -${h-1}V${h+1}M-${w-3} -3H-3M-${w-3} 1H-4M3 -3H${w-3}M3 1H${w-4}`);
   const slab=(w=18,h=9,detail='M-12 -3H10M-12 1H6M-12 5H9')=>rect(-w,-h,w*2,h*2)+p(detail);

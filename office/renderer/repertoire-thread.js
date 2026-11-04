@@ -14,7 +14,8 @@
   const ring = (x, y, r, fill = 'none') => `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}"/>`;
   // The outer SVG anchor never animates. Only its inner data-motion group does.
   const part = (name, x, y, art) => `<g transform="translate(${x} ${y})"><g class="cv-thread-part" data-motion="${name}">${art}</g></g>`;
-  const hand = (name, x, y) => part(name, x, y, p('M-2.5 -4.5C-7 -2 -4 5 0 3.5C6 1 2.5 -4 -.8 -.8C-3 2.5 3.3 4.3 4.2 0', 'none', 2.25) + p('M-4 -2Q-2 -5 0 -3', 'none', .78, `stroke="${C.light}"`));
+  // The loop is a grip: live yarn runs to it from the body's loose strand end.
+  const hand = (name, x, y) => part(name, x, y, `<g data-grip="1">` + p('M-2.5 -4.5C-7 -2 -4 5 0 3.5C6 1 2.5 -4 -.8 -.8C-3 2.5 3.3 4.3 4.2 0', 'none', 2.25) + p('M-4 -2Q-2 -5 0 -3', 'none', .78, `stroke="${C.light}"`) + '</g>');
   const spool = (name, x, y, size = 1) => part(name, x, y, `<g transform="scale(${size})">${box(-6, -8, 12, 16, 2, C.shade)}${p('M-7 -8H7M-7 8H7M-5 -5L5 -2M-5 -1L5 2M-5 3L5 6', 'none', 1.75)}${ring(0, 0, 1.6, C.light)}</g>`);
   const needle = (name, x, y) => part(name, x, y, p('M-1 10L-1 -9Q0 -14 1 -9L1 10Z', C.light, .85) + p('M0 -9V-6', 'none', .75));
   const wheel = (name, x, y, r = 8) => part(name, x, y, ring(0, 0, r, C.base) + ring(0, 0, 1.8, C.shade) + p(`M0 -${r}V${r}M-${r} 0H${r}M-${r * .7} -${r * .7}L${r * .7} ${r * .7}M-${r * .7} ${r * .7}L${r * .7} -${r * .7}`, 'none', .95));
@@ -35,9 +36,10 @@
       descriptionZh += '两只短线指同时在下方输入垫持续交替敲入。';
       beats = beats.concat('双线指持续交替敲入输入垫');
     }
-    // Thoughts live above the face; design work sits low on a shallow surface.
-    // Anchors inside these material wrappers remain separate from WAAPI parts.
-    const placement = state === 'planning' ? ' transform="translate(0 -21) scale(.56)"' : state === 'designing' ? ' transform="translate(0 4) scale(.82 .6)"' : '';
+    // Every state plays on the species stage beside the body (creature-activity.js).
+    // Planning and design artwork is authored on a wider canvas and is only
+    // normalised uniformly into the shared envelope; nothing is offset here.
+    const placement = state === 'planning' ? ' transform="scale(.6)"' : state === 'designing' ? ' transform="scale(.82)"' : '';
     states[state].push({ id: 'thread-' + state + '-' + slug, labelZh, labelEn, descriptionZh, beats, duration,
       markup: `<g class="cv-thread cv-${state}-${slug}"${placement} fill="${C.base}" stroke="${C.edge}" stroke-width=".95" stroke-linecap="round" stroke-linejoin="round">${artwork}</g>`, tracks });
   }
@@ -280,7 +282,7 @@
     part('track',0,-10,p('M-21 0C-21 -17 21 -17 21 0C21 17 -21 17 -21 0Z','none',1.3)+ring(0,-12,3,C.light)+ring(0,12,3,C.light))+part('carrier',-21,-10,p('M-4 -3H4V3H-4Z',C.base)+ring(0,0,1,C.light))+strand('feed',-23,7,'M0 0Q-6 -9 2 -16',1.8),
     [move('carrier',[[.125,'translate(6px,-9px) rotate(20deg)'],[.25,'translate(21px,-12px) rotate(0deg)'],[.375,'translate(36px,-9px) rotate(-20deg)'],[.5,'translate(42px,0px) rotate(0deg)'],[.625,'translate(36px,9px) rotate(20deg)'],[.75,'translate(21px,12px) rotate(0deg)'],[.875,'translate(6px,9px) rotate(-20deg)']], 'center center','linear')],3600);
   add('running','knitting-bed','针床规律起落','Run a knitting needle bed','两排针床错相起落，织片留在中间，表现已持续运行的编织机构。',['前排针升起','后排针接替','前排针回落','后排针回落'],
-    part('bed',0,3,p('M-25 -4H25V7H-25Z',C.shade))+part('front',0,-5,p('M-21 8V-9M-9 8V-9M3 8V-9M15 8V-9','none',2))+part('back',0,-11,p('M-15 8V-9M-3 8V-9M9 8V-9M21 8V-9','none',2))+swatch('fabric',0,4,35,10)+hand('rest',-25,5),
+    part('bed',0,3,p('M-25 -4H25V7H-25Z',C.shade))+part('front',0,-5,p('M-21 8V-9M-9 8V-9M3 8V-9M15 8V-9','none',2))+part('back',0,-11,p('M-15 8V-9M-3 8V-9M9 8V-9M21 8V-9','none',2))+swatch('fabric',0,4,35,10)+hand('rest',-23,5),
     [move('front',[[.18,'translate(0px,-4px)'],[.38,'translate(0px,-4px)'],[.58,'translate(0px,0px)'],[.8,'translate(0px,0px)']], 'center center','move'),move('back',[[.18,'translate(0px,0px)'],[.4,'translate(0px,-4px)'],[.62,'translate(0px,-4px)'],[.84,'translate(0px,0px)']], 'center center','move')],2800);
   add('running','treadle-link','脚踏连杆循环','Run a treadle linkage','软踏板与连杆按固定节奏往复，导轮保持小幅均匀摆动。',['踏板压低','连杆向前','踏板抬回','连杆返回'],
     part('frame',0,-7,p('M-23 17L-15 -17H15L23 17M-24 17H24','none',1.5))+wheel('guide-wheel',0,-15,10)+part('rod',0,-2,p('M0 -7L-13 9','none',2))+part('pedal',-8,8,p('M-14 0H14','none',2.2))+hand('rest',23,4),
