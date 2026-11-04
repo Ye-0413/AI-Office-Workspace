@@ -1,0 +1,120 @@
+{
+  "sourceRevision": "f867e2f535500594cdf19ef2bf517799cf170221",
+  "version": "0.24.0",
+  "scope": "Five fixed synthetic specimens recorded from the production painted-strip path; no provider IPC or private sessions. This is a visual sample, not a human readability certification.",
+  "catalog": {
+    "species": 5,
+    "activities": 11,
+    "strips": 55,
+    "paintedKeys": 220
+  },
+  "specimens": [
+    {
+      "species": "folio",
+      "activity": "reading"
+    },
+    {
+      "species": "ink",
+      "activity": "coding"
+    },
+    {
+      "species": "moss",
+      "activity": "waiting-tool"
+    },
+    {
+      "species": "thread",
+      "activity": "error"
+    },
+    {
+      "species": "glow",
+      "activity": "waiting-user"
+    }
+  ],
+  "sampling": {
+    "frames": 36,
+    "fps": 12,
+    "durationMs": 3000,
+    "phaseNormalized": true,
+    "nativePhaseChecks": 660
+  },
+  "sourceHashScope": "Repository-relative paths in the workshop source at capture time. Current pixel files at those paths are separate artwork. The same painted strips now ship in office/assets/avatars/painted-frames.",
+  "sourceHashes": {
+    "office/renderer/creature-performance.js": "8b517bb2f0f3306610eb05c83d15fef43998e614096a0d78dd728c112b8e3172",
+    "office/renderer/creature-performance.css": "fb6d09eddcb5242fa68c9e29f597966f3b055b76a6e1448a5a7cdedd8c7a7f28",
+    "office/renderer/creature-frame-manifest.js": "c9914ffaa4281de9c89dd3d6372b5a32d6e4da8abc9b05f91764a6e0b3649cdc",
+    "office/renderer/creature-frames.js": "68c544dd9d9f88828b45e8e0794727215f06a7d6a5a6e7e19ee881bd369b6f65",
+    "office/test/creature-frames-renderer.cjs": "458b65872c0b9e24461d1e4e837a6409eabd70d100c8c787e1b4f1149df351af",
+    "office/assets/avatars/frames/folio/building.png": "ddcf1a99446a07144823abb070786e58aaf1f59d6d3ee6d3928a4db404dd66ca",
+    "office/assets/avatars/frames/folio/coding.png": "7281e74df2a94871a6af2b0868ef4ca45241a583bbda47a8acf4d2a50634642f",
+    "office/assets/avatars/frames/folio/designing.png": "fd4a30c920b3161e0438d947f679b21ab1d750b3a2422aaa27e280f6024e21b0",
+    "office/assets/avatars/frames/folio/error.png": "29fc43ca4cf801359cd121092417204543faeeabe38f226252a9102eddd0fa0f",
+    "office/assets/avatars/frames/folio/planning.png": "07ed32602146c16a626c981e1a4f3f08d607e4bd7e1f14b6268c90cd33e7fc38",
+    "office/assets/avatars/frames/folio/reading.png": "ecbc551118dd255ced58c4ecd6e3f7e3ba1720ff2bcd0acadadc6ff556ba2d47",
+    "office/assets/avatars/frames/folio/running.png": "079f2db8311d34a1695ffe7e72b8aa8c8d141e5d8aad7b27c9e262a36821811c",
+    "office/assets/avatars/frames/folio/searching.png": "5ba54ef712f9dd1e247cfb13d995137521678bdb80f065008ab3855db7c57669",
+    "office/assets/avatars/frames/folio/testing.png": "14b77a2219a7177f7f33d8c60f232508c776db4d85423d8238048836cdb71fdf",
+    "office/assets/avatars/frames/folio/waiting-tool.png": "0cfe242ae94e79bd16a564a6e88bb960c661b74e0ec58a00d09a237e0dc653c6",
+    "office/assets/avatars/frames/folio/waiting-user.png": "bf42bd6c7de9a421ca59557c0bd05c431dfa77e2f9758c8eacd44b36faca39a7",
+    "office/assets/avatars/frames/glow/building.png": "8c6da6826e517dea99e6a7f5329d4502e041ebfb4605fa71ab862d894368d217",
+    "office/assets/avatars/frames/glow/coding.png": "3dc551a1787e8870bb5a8487045454740143f92b77dc551178e254bf9b1fab42",
+    "office/assets/avatars/frames/glow/designing.png": "2ba59ef911b283cf798593725155274cf033a4edf1cb2ac150485f697db6e860",
+    "office/assets/avatars/frames/glow/error.png": "1bb864ad8dbc75f13554b7dd486fc319663c87f3b56a224d6283dae40992f263",
+    "office/assets/avatars/frames/glow/planning.png": "4404bc004177e04a44c983a9f0c86bd63b0dedb379d6fe40fcbba8d39c683c83",
+    "office/assets/avatars/frames/glow/reading.png": "f65139fd98d7d9bea39523135a4c85f3735d52e252312b4fbd1721119cf14c15",
+    "office/assets/avatars/frames/glow/running.png": "e84d6fa6a33f996441ce59d20cfa4e3d9c0cb7134980cc187d1ce3169adee809",
+    "office/assets/avatars/frames/glow/searching.png": "3f1fbbf0d3638dac4e1dcc598147c1ccbc39225373fd2998122e94c3f2dc8953",
+    "office/assets/avatars/frames/glow/testing.png": "b54ef1d21f0371ab3ae83c8dcb3a340e193c9ba522054a50eb3bd92dc3bc9f1e",
+    "office/assets/avatars/frames/glow/waiting-tool.png": "92fab1f5040dd9708c08cb74dfc92c665d1097a093e9b563ee0d707244e094ff",
+    "office/assets/avatars/frames/glow/waiting-user.png": "505439d5c7a957f22601c584680997d034e98375bcab3d55a2cb7164eede180e",
+    "office/assets/avatars/frames/ink/building.png": "36b660027ad73abe911d60ae05e7cc10adad2cb3b50dc3b9ad0c7c6685d9ea5a",
+    "office/assets/avatars/frames/ink/coding.png": "ad6a588abe8b773100aa00c7bfeba24942fb5b8270503d8f69a5daf006098316",
+    "office/assets/avatars/frames/ink/designing.png": "11bc5b6bdef1d75fdecafc11a53e21a108a1efd853b26ece687b3969603c14ed",
+    "office/assets/avatars/frames/ink/error.png": "61ebd86c040c7d03b0527a9c005656ba2b96a684768c46fc3f51c71c976bd65f",
+    "office/assets/avatars/frames/ink/planning.png": "15a5350e3e94ca39ad78396a87ad8f3ac9edc5ed76c2be19cf5237dcf606467e",
+    "office/assets/avatars/frames/ink/reading.png": "ca96aef81a53295ddcac8f3cc86002538c0af28919c4468c797504386fd45267",
+    "office/assets/avatars/frames/ink/running.png": "76122964cc0a49317dfb1a570adad87a0bdaad6596aaf47e2ebea446326fa7e1",
+    "office/assets/avatars/frames/ink/searching.png": "3044f25f14b7446a7f3dc29fffc272d0ef815fe3e6ebdea464548be02a403a18",
+    "office/assets/avatars/frames/ink/testing.png": "9d640a396453f067f7643a838ddc7edaa80f71a6aeddd9c5f0d488bae7f92940",
+    "office/assets/avatars/frames/ink/waiting-tool.png": "f0380830d932d15d381aa0abdc1ba0c4aa403ee4e0fe48f547d8b25828fcd6dc",
+    "office/assets/avatars/frames/ink/waiting-user.png": "c5786713d0ea004e05683339a90bb2e13b7b6e9495cbfaafc6b5a41c062859ea",
+    "office/assets/avatars/frames/moss/building.png": "2cd0bc1ed84a749fe15f52f9f424007b2065e545c7d75ac5f4140eb7798c713f",
+    "office/assets/avatars/frames/moss/coding.png": "97cae6dba13f3ed00ad5600b93b7b66bc6f5e57d8a5b35348fb7e4f71d34bd3d",
+    "office/assets/avatars/frames/moss/designing.png": "5504ab39c137eb5d0fe83605164e82d6864ffcdf607239c4d51f88db0b5f41c9",
+    "office/assets/avatars/frames/moss/error.png": "c1e0bbaf62419711338d245c82b79faa6d952fb45f65ddc84e27e7c147c93143",
+    "office/assets/avatars/frames/moss/planning.png": "57f7b944d2adb777525394e258e9fafb20c0210445f8adf02156ef1e0a0d5608",
+    "office/assets/avatars/frames/moss/reading.png": "193eeaa32f4e6d83170a7cbb59eeb593d53d0a6ef4f9eaab8fc5821b4a202ea9",
+    "office/assets/avatars/frames/moss/running.png": "908c64b6e32069d32540018ddee83a0c336bc84c2ddfb579176eed6254303bf4",
+    "office/assets/avatars/frames/moss/searching.png": "afdd3bf433b0bce35cedd280d4168c8c711f4e03f60112d85db42302c8450582",
+    "office/assets/avatars/frames/moss/testing.png": "ab8e5246bd69e9f109ca9b8ce406ece2fa990cd4165ebd9935dfd15bd6d92e96",
+    "office/assets/avatars/frames/moss/waiting-tool.png": "0dbed359b976627abc7f5de31a15689069d3e238e373e0bff5958931cf1e2b17",
+    "office/assets/avatars/frames/moss/waiting-user.png": "7832e93a27e41648b59a13944ce8e6798d1cf0473c170a930a401e7c1142497b",
+    "office/assets/avatars/frames/thread/building.png": "a209399f4df0982ce197cd5750ded1e4835be874967781fbb12212ca1651b685",
+    "office/assets/avatars/frames/thread/coding.png": "d277d1f9527328442f52d349049103e00d74b5a6074fce51a8b0d747058eddcd",
+    "office/assets/avatars/frames/thread/designing.png": "fc0975524c18b0af35f48726f2e91a6425de7e1da34591d0bfd76c38e70a0a5d",
+    "office/assets/avatars/frames/thread/error.png": "b9408f10d6300a3b252018ea02d5b84ffeea42d4e0d91f5de8329bc3200f39bd",
+    "office/assets/avatars/frames/thread/planning.png": "7a658177bd05091ebe52b85765c36acba2e6d13624ab42208ced2bf757b6b4e4",
+    "office/assets/avatars/frames/thread/reading.png": "468eb486412362f32edb79faeb0d68e7d3abb5567d889ba08ac4e8ec36c2d5a1",
+    "office/assets/avatars/frames/thread/running.png": "c3948a38a4cf118007a0502f1323f424d4f5ab51fdba293a5dc89b9b1612d28f",
+    "office/assets/avatars/frames/thread/searching.png": "d7417241b7269fe4b3cb346024d6b0e2413ee7a2d93e0185ff42c448ef9fb6bc",
+    "office/assets/avatars/frames/thread/testing.png": "22a1b8d4ae282caa673a3d697e47c7a7cebdfaeecc51c8a93c0386b28bf01bed",
+    "office/assets/avatars/frames/thread/waiting-tool.png": "ffd9dc22064e63371a2151ab28d77d88ec7b0e40092e002adecd7d7cd6fbf470",
+    "office/assets/avatars/frames/thread/waiting-user.png": "5bd80934fce14d238e239291d26db5a651a0c67a5c29ac169d9d5b1e95629bc0"
+  },
+  "assets": [
+    {
+      "file": "painted-overview.gif",
+      "sha256": "10bdec52fa4db69348e6ac34c85b3a248d6b0b0be5672daa6ebfd37179e3d7c5",
+      "bytes": 851695,
+      "width": 1100,
+      "height": 340
+    },
+    {
+      "file": "painted-overview.png",
+      "sha256": "7f5b9cead1031e12a0acb159d3d43e4efee75b8ebe4775f9782c2b8712c8a8e8",
+      "bytes": 138868,
+      "width": 1100,
+      "height": 340
+    }
+  ],
+  "qa": "Registration warnings are explicitly retained in renderer/creature-frame-manifest.js and avatars/workshop-prompts.json; no strict all-metrics or human blind-test claim."
+}

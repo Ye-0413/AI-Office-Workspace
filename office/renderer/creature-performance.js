@@ -71,7 +71,7 @@
       parent?.append(node); return node;
     };
     const layer = document.createElement('span');
-    layer.setAttribute('class', 'avatar-performance creature-performance'); layer.setAttribute('aria-hidden', 'true');
+    layer.setAttribute('class', 'avatar-performance creature-performance'); layer.dataset.avatarStyle = 'pixel'; layer.setAttribute('aria-hidden', 'true');
     const svg = element('svg', { class: 'ap-rig creature-rig', viewBox: '0 0 154 129', focusable: 'false' });
     layer.append(svg);
     const defs = element('defs', {}, svg);
@@ -235,6 +235,7 @@
       attribute(layer, 'data-color-variant', variantIndex); attribute(layer, 'data-appearance-key', appearanceKey);
       style(actorNode, '--creature-color-filter', variantPalette(creature, variantIndex).filter);
       attribute(body, 'data-creature', 'true');
+      attribute(body, 'data-avatar-style', 'pixel');
       if (last) frame(last.poseIndex);
       // Changing material may replace only the body's CSS stride name. Keep
       // route distance/phase, but reacquire its current animation objects so a
@@ -359,7 +360,7 @@
       probe.removeEventListener('load', probeLoad); probe.removeEventListener('error', probeError); probe.removeAttribute('src');
       stopCues(); stopGait(); paused.clear(); lease?.release(); lease = null;
       frames?.destroy?.(); emotes?.destroy(); activity?.destroy?.();
-      layer.remove(); body.classList.remove('has-avatar-performance'); delete body.dataset.creature;
+      layer.remove(); body.classList.remove('has-avatar-performance'); delete body.dataset.creature; delete body.dataset.avatarStyle;
       delete body.dataset.rigHealth; delete body.dataset.bitmapHealth;
       delete actorNode.dataset.creatureDesign; delete actorNode.dataset.performance; delete actorNode.dataset.performanceProgram;
       if (originalColorFilter) actorNode.style.setProperty('--creature-color-filter', originalColorFilter);

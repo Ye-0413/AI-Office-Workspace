@@ -25,7 +25,7 @@
   const archivedTurns = new Map();
   // Older observation bridges without roomDesign retain their legacy room.
   // Current native settings explicitly supply daily rotation by default.
-  const settingsDefaults = { rain: false, night: false, sceneTime: 'auto', sceneVenue: 'workshop', sceneTheme: 'auto', sceneWeather: 'auto', roomDesign: 'legacy', agentAppearance: 'mixed', agentScale: 1, reducedMotion: false, lowPower: false, idleVisitor: true, sound: false, selectedProject: '', language: 'zh' };
+  const settingsDefaults = { rain: false, night: false, sceneTime: 'auto', sceneVenue: 'workshop', sceneTheme: 'auto', sceneWeather: 'auto', roomDesign: 'legacy', agentAppearance: 'mixed', avatarStyle: 'pixel', agentScale: 1, reducedMotion: false, lowPower: false, idleVisitor: true, sound: false, selectedProject: '', language: 'zh' };
   let settings = { ...settingsDefaults };
   let deferredPhysicalScale = null;
   const sizeStability = window.OfficeSizeStability.create({ requestedScale: settings.agentScale });
@@ -34,7 +34,7 @@
   const usageHistory = window.OfficeUsageHistory?.create({ bridge, getLanguage: () => language });
   const manualQuestions = window.OfficeManualQuestions?.create({ bridge, language });
   const setupAssistant = window.OfficeSetupAssistant?.create({ bridge, getLanguage: () => language });
-  const appearancePicker = window.OfficeAppearancePicker?.create({ container: $('settings-dialog') });
+  const appearancePicker = window.OfficeAppearancePicker?.create({ container: $('settings-dialog'), onChange: avatarStyle => saveSettings({ avatarStyle }) });
   const scenery = window.OfficeDayScenery.create({ office, world, layer: $('window-scenery') });
   const attendanceModel = Attendance.createAttendance({ keepIdle: true });
   const cloneLedger = Clones.createLedger();
@@ -95,7 +95,7 @@
   const providerIds = window.OfficeProviders.getAllProviders().map(provider => provider.id === 'cursor-agent' ? 'cursor' : provider.id);
   const observedIds = new Set();
   let familyGraph = Family.build([]);
-  const visitor = window.OfficeIdleVisitor.create({ layer: $('visitors'), world, openDoor, getScene: () => Scene, getLayout: () => WalkingLayout, context: () => ({ enabled: settings.idleVisitor, ready: snapshotReceived > 0, mode: snapshot.mode, busy: attendance.present.length > 0 || actors.size > 0, hidden: sceneHidden(), reducedMotion: reduced(), lowPower: settings.lowPower, language, roomKey:activeRoom?.id||'legacy' }) });
+  const visitor = window.OfficeIdleVisitor.create({ layer: $('visitors'), world, openDoor, getScene: () => Scene, getLayout: () => WalkingLayout, context: () => ({ enabled: settings.idleVisitor, ready: snapshotReceived > 0, mode: snapshot.mode, busy: attendance.present.length > 0 || actors.size > 0, hidden: sceneHidden(), reducedMotion: reduced(), lowPower: settings.lowPower, language, avatarStyle: settings.avatarStyle, roomKey:activeRoom?.id||'legacy' }) });
   const sceneContext = () => ({ venue: settings.roomDesign==='legacy'?settings.sceneVenue:activeRoom?.effectVenue || settings.sceneVenue,
     scene: settings.roomDesign==='legacy'?settings.sceneVenue:activeRoom?.effectVenue || settings.sceneVenue, theme: settings.sceneTheme, weather: settings.sceneWeather,
     roomDesign: settings.roomDesign, room: activeRoom, layout: WalkingLayout,
@@ -1688,11 +1688,11 @@
   function companionFor(session) {
     const design = companionRegistry ? companionRegistry.forRoot(companionRoot(session))
       : window.OfficeAgentAppearance?.forSession(session, { sessions: familyGraph.byId, mode: settings.agentAppearance }) || null;
-    return window.OfficePublicArtwork ? window.OfficePublicArtwork.design(design) : design;
+    return window.OfficePublicArtwork ? window.OfficePublicArtwork.design(design, settings.avatarStyle) : design;
   }
   function syncActorDesign(actor) {
     const design = companionFor(actor.session);
-    if ((actor.design?.appearanceKey || actor.design?.id || 'original') === (design?.appearanceKey || design?.id || 'original')) return;
+    if (actor.design?.appearanceKey === design?.appearanceKey && actor.design?.asset === design?.asset) return;
     const changedFormat = actor.design?.renderer !== design?.renderer;
     const changedAsset = actor.design?.asset !== design?.asset;
     // Keep the actual actor, position and accumulated work clocks. A switch
@@ -2349,6 +2349,8 @@
     nativeWindowHidden = typeof next.windowVisibility?.hidden === 'boolean' ? next.windowVisibility.hidden : false;
     snapshotReceived += 1;
     snapshot = { ...next, mode: 'live', sessions: next.sessions.filter((session) => session && typeof session.id === 'string'), connections: Array.isArray(next.connections) ? next.connections : [] };
+    const styleChanged = (next.avatarStyle === 'pixel' || next.avatarStyle === 'painted') && settings.avatarStyle !== next.avatarStyle;
+    if (styleChanged) settings = { ...settings, avatarStyle: next.avatarStyle };
     usageHistory?.updateStatus(snapshot.usageLog);
     homeTokenUsage?.update(snapshot);
     manualQuestions?.update(snapshot);
@@ -2356,6 +2358,7 @@
     // Reconcile fresh work before quiet lifecycle cleanup: this packet may
     // revoke the very absorption owner that was active before native hiding.
     render();
+    if (styleChanged) refreshAvatarStyle();
     if (previouslyHidden !== sceneHidden()) refreshVisibility();
   }
   async function refreshSnapshot() { const next = await call('getSnapshot'); if (next) receive(next); }
@@ -2368,8 +2371,17 @@
     const index = candidates.findIndex((session) => session.id === selectedSession);
     selectSession(candidates[(index + 1) % candidates.length].id);
   }
+  function updateAppearancePicker() {
+    appearancePicker?.update({ avatarStyle: settings.avatarStyle, language, reducedMotion: reduced(), lowPower: settings.lowPower, hidden: nativeWindowHidden });
+  }
+  function refreshAvatarStyle() {
+    updateAppearancePicker();
+    for (const actor of actors.values()) syncActorDesign(actor);
+    visitor.tick();
+  }
   function applySettings(next) {
     const oldScale = settings.agentScale;
+    const oldStyle = settings.avatarStyle;
     const requestedScale = Number(next && next.agentScale);
     const nextScale = Number.isFinite(requestedScale) && requestedScale > 0 ? Math.max(.65, Math.min(1.35, requestedScale)) : 1;
     const scaleChanged = oldScale !== nextScale;
@@ -2389,12 +2401,12 @@
       }
     }
     if (transferOwner && (next?.reducedMotion || next?.lowPower || mediaReduce.matches || sceneHidden())) revokeTransfer('quiet', null, false);
-    settings = { ...settingsDefaults, ...next, agentScale: nextScale };
+    settings = { ...settingsDefaults, ...next, agentScale: nextScale, avatarStyle: window.OfficePublicArtwork?.normalizeStyle(next?.avatarStyle) || 'pixel' };
     numberFlip?.sync();
     const previousLanguage = language;
     language = settings.language === 'en' ? 'en' : 'zh';
     applyLanguage();
-    appearancePicker?.update({ value: settings.agentAppearance, language, reducedMotion: reduced(), lowPower: settings.lowPower, hidden: nativeWindowHidden });
+    updateAppearancePicker();
     office.dataset.rain = String(settings.rain);
     scenery.update(settings, language);
     office.dataset.reducedMotion = String(reduced());
@@ -2408,6 +2420,7 @@
     for (const actor of [...actors.values()]) {
       settleQuietCloneEffects(actor);
       if (!actors.has(actor.id)) continue;
+      if (oldStyle !== settings.avatarStyle) syncActorDesign(actor);
       setPose(actor, actor.wantedAsset || actor.spec.asset);
       updateActorLabel(actor);
       if (previousLanguage !== language) { clearTimeout(actor.bubbleTimer); actor.bubble.dataset.show = 'false'; }
@@ -2560,7 +2573,7 @@
     numberFlip?.sync();
     if (sceneHidden()) revokeTransfer('hidden');
     office.dataset.hidden = String(sceneHidden());
-    appearancePicker?.update({ language, reducedMotion: reduced(), lowPower: settings.lowPower, hidden: nativeWindowHidden });
+    appearancePicker?.update({ avatarStyle: settings.avatarStyle, language, reducedMotion: reduced(), lowPower: settings.lowPower, hidden: nativeWindowHidden });
     for (const actor of [...actors.values()]) {
       settleQuietCloneEffects(actor);
       if (actors.has(actor.id)) setPose(actor, actor.wantedAsset || actor.spec.asset);

@@ -1,8 +1,10 @@
-# 像素工坊动作图鉴 / Pixel Workshop motion gallery
+# 工坊动作图鉴 / Workshop motion gallery
 
-五位原创像素伙伴各有 11 类活动，每类四帧，共 **55 套循环**。在「房间偏好 → 像素伙伴 → 像素动作图鉴」可以查看全部动画。
+五位伙伴各有 11 类活动，像素风和手绘风各有 **55 套循环**。默认使用像素风，通过「显示 → 头像风格」或「房间偏好 → 头像风格」可切换。房间偏好中的动作图鉴会显示当前风格。
 
-Five original companions perform **55 activity loops** with four pixel cels each. Open **Room preferences → Pixel companions → Pixel motion gallery** for the complete set.
+Five companions perform **55 activity loops per style**. Pixel is the default. Switch with **View → Avatar Style** or **Room preferences → Avatar style**. The motion gallery in Room preferences follows your selection.
+
+## 像素风 / Pixel
 
 <picture>
   <source media="(prefers-reduced-motion: reduce)" srcset="pixel-overview.png">
@@ -16,6 +18,19 @@ Five original companions perform **55 activity loops** with four pixel cels each
 每位伙伴的九张表情帧包括眨眼、左右瞥视、两张招手帧、受惊、两张访客彩蛋帧和工具成功后的轻微表情。眨眼只改变眼睛的像素，身体轮廓和脚底沿用待命姿态。装饰访客偶尔会展示纸鹤、墨泡、苔花、纱线爱心或暖光星星。
 
 Each companion has nine expression cels. The blink changes only the eye pixels. Rare visitor expressions show a paper crane, ink bubble, moss blossom, yarn heart or glowing star. [访客彩蛋预览 / Visitor expression preview](pixel-expressions.png).
+
+## 手绘风 / Painted
+
+<picture>
+  <source media="(prefers-reduced-motion: reduce)" srcset="painted-overview.png">
+  <img src="painted-overview.gif" width="1100" alt="手绘工坊，五个合成状态 / Painted Workshop, five synthetic activities">
+</picture>
+
+上图是原工坊位图渲染器的离线采样。录制用五个合成会话把循环统一为 3 秒、36 帧。应用中的手绘风保留各自原有节拍和帧间过渡。
+
+The archived recording samples five synthetic activities from the painted renderer. The recording normalizes cycles to three seconds and 36 frames for comparison. The app uses each activity's original timing and blends. [静态预览 / Still](painted-overview.png) · [录制清单 / Capture manifest](painted-manifest.json)
+
+手绘风的动作图鉴也保留了每个活动的十套矢量参考动作。The painted gallery also keeps ten vector references per activity.
 
 ## 原版录制存档 / Workshop recording archive
 

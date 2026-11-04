@@ -33,13 +33,43 @@ function current(){
   const liveSessions=liveStore.snapshot();
   const monitorStatus=monitor.status(),extraStatus=additionalMonitor.status(),connections=bridge.getConnections().map(c=>mergeObservationHealth(c,c.provider==='codex'?monitorStatus:extraStatus,liveSessions));
   const tokenStatus=combinedTokenStatus(),tokenUsage={...tokenStore.summary(),importing:tokenStatus.importing,lastScanAt:tokenStatus.lastScanAt,providers:tokenStatus.providers,...(tokenStatus.error?{error:tokenStatus.error}:{})};
-  return{mode:'live',now:Date.now(),windowVisibility:windowVisibility?.snapshot()||{available:false,hidden:null},sessions:liveSessions,activityStats:activityStats.snapshot(),usageLog:usageLog.status(),tokenUsage,questions:manualQuestions.snapshot(),questionStatus:manualQuestions.status(),setup:setupManager.snapshot(),connections,monitor:{running:monitorStatus.running,error:monitorStatus.error||null},version:app.getVersion(),packaged:app.isPackaged};
+  return{mode:'live',now:Date.now(),avatarStyle:settings.get().avatarStyle,windowVisibility:windowVisibility?.snapshot()||{available:false,hidden:null},sessions:liveSessions,activityStats:activityStats.snapshot(),usageLog:usageLog.status(),tokenUsage,questions:manualQuestions.snapshot(),questionStatus:manualQuestions.status(),setup:setupManager.snapshot(),connections,monitor:{running:monitorStatus.running,error:monitorStatus.error||null},version:app.getVersion(),packaged:app.isPackaged};
 }
 function combinedTokenStatus(){const basic=tokenMonitor.status(),extra=additionalMonitor.status(),error=[basic.error,extra.error].filter(Boolean).join('; ');return{...basic,providers:[...new Set([...basic.providers,...extra.providers])],sources:extra.sources,bytesRead:basic.bytesRead+extra.bytesRead,lastScanAt:Math.max(basic.lastScanAt||0,extra.lastScanAt||0)||null,importing:basic.completedScans===0||extra.completedScans===0||basic.pendingFiles>0||extra.pendingFiles>0,...(error?{error}:{})};}
 function broadcast(){if(win&&!win.isDestroyed()&&ready)win.webContents.send('office:snapshot',current());}
 function observe(event){return liveStore.ingest(event);}
 function applySettings(){if(win&&!win.isDestroyed()){win.setAlwaysOnTop(settings.get().alwaysOnTop);win.setTitle('AI Work Space');refreshMenu();}}
-function refreshMenu(){const en=settings.get().language==='en';const label=(zh,english)=>en?english:zh;Menu.setApplicationMenu(Menu.buildFromTemplate([{label:app.name,submenu:[{role:'about'},{type:'separator'},{label:label('显示办公室','Show studio'),click:()=>win.show()},{type:'separator'},{role:'quit'}]},{label:label('编辑','Edit'),submenu:[{role:'undo'},{role:'redo'},{type:'separator'},{role:'cut'},{role:'copy'},{role:'paste'},{role:'selectAll'}]},{label:label('显示','View'),submenu:[{role:'togglefullscreen'},{role:'minimize'},{role:'zoom'}]}]));}
+function updateSettings(patch){
+  const previousStyle=settings.get().avatarStyle;
+  const next=settings.set(patch);
+  applySettings();
+  if(next.avatarStyle!==previousStyle)broadcast();
+  return next;
+}
+function refreshMenu(){
+  const {language,avatarStyle}=settings.get();
+  const label=(zh,english)=>language==='en'?english:zh;
+  function styleOption(style,zh,english){
+    return {
+      id:'avatar-style-'+style,label:label(zh,english),type:'radio',checked:avatarStyle===style,
+      click:()=>{
+        try{updateSettings({avatarStyle:style});}
+        catch(error){
+          refreshMenu();
+          dialog.showErrorBox(label('无法保存头像风格','Could not save avatar style'),error.message);
+        }
+      }
+    };
+  }
+  Menu.setApplicationMenu(Menu.buildFromTemplate([
+    {label:app.name,submenu:[{role:'about'},{type:'separator'},{label:label('显示办公室','Show studio'),click:()=>win.show()},{type:'separator'},{role:'quit'}]},
+    {label:label('编辑','Edit'),submenu:[{role:'undo'},{role:'redo'},{type:'separator'},{role:'cut'},{role:'copy'},{role:'paste'},{role:'selectAll'}]},
+    {label:label('显示','View'),submenu:[
+      {role:'togglefullscreen'},{role:'minimize'},{role:'zoom'},{type:'separator'},
+      {id:'avatar-style',label:label('头像风格','Avatar Style'),submenu:[styleOption('pixel','像素风','Pixel'),styleOption('painted','手绘风','Painted')]}
+    ]}
+  ]));
+}
 function moveToDisplay(id){const display=screen.getAllDisplays().find(d=>d.id===id);if(!display)throw new Error('显示器已断开');const area=display.workArea;win.setFullScreen(false);win.setBounds({x:area.x,y:area.y,width:Math.min(1280,area.width),height:Math.min(720,area.height)});settings.set({displayId:id});win.show();return{id:display.id};}
 function bind(name,handler){ipcMain.handle('office:'+name,(event,...args)=>{if(!win||event.sender!==win.webContents)throw new Error('Unexpected IPC sender');return handler(...args);});}
 async function writeSmokeReport(){
@@ -87,7 +117,7 @@ app.whenReady().then(async()=>{
   bind('question-native',id=>manualQuestions.native(id));
   bind('setup-status',()=>setupManager.snapshot());
   bind('setup-initialize',options=>{if(providerMutation)throw new Error('A provider configuration change is already running');return setupManager.run(options);});
-  bind('set-settings',patch=>{const next=settings.set(patch);applySettings();return next;});
+  bind('set-settings',updateSettings);
   async function configureProvider(provider,remove){if(!getProvider(provider))throw new Error('Unknown provider');if(setupManager.running||providerMutation)throw new Error('A provider configuration change is already running');providerMutation=true;try{return await bridge[remove?'disconnect':'connect'](provider);}finally{providerMutation=false;broadcast();}}
   bind('connect',provider=>configureProvider(provider,false));
   bind('disconnect',provider=>configureProvider(provider,true));

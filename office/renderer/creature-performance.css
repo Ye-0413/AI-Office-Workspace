@@ -1,27 +1,27 @@
 /* The atlas and action cels share a two-unit texel and a fixed foot line. */
-.creature-performance .creature-rig{shape-rendering:crispEdges;image-rendering:pixelated}
-.creature-performance .creature-rig image{image-rendering:pixelated}
+.creature-performance:not([data-avatar-style="painted"]) .creature-rig{shape-rendering:crispEdges;image-rendering:pixelated}
+.creature-performance:not([data-avatar-style="painted"]) .creature-rig image{image-rendering:pixelated}
 .creature-performance .cp-art,.creature-performance .cp-activity{filter:var(--creature-color-filter,none)}
 [data-creature-design="ink"] :is(.clone-ink-puddle,.clone-ink-core,.clone-ink-drop){filter:var(--creature-color-filter,none)}
 .creature-performance:not([data-art-state="healthy"]) .cp-activity{opacity:0}
 /* Rare decorations can extend a few texels above the body crop. */
-.character-body[data-creature="true"]{overflow:visible}
-.actor .character-body[data-creature="true"]{clip-path:inset(-48px 0 0)}
+.character-body[data-avatar-style="pixel"]{overflow:visible}
+.actor .character-body[data-avatar-style="pixel"]{clip-path:inset(-48px 0 0)}
 .character-body[data-creature="true"]>img{opacity:0!important;filter:none!important}
-.appearance-pose-preview img{image-rendering:pixelated}
+.appearance-pose-preview:not([data-avatar-style="painted"]) img{image-rendering:pixelated}
 .creature-rig :is(.cp-motion,.cp-art,.cp-pose,.cp-gesture,.cp-shell,.cp-part){transform-origin:77.5px 111px;transform-box:view-box}
-.creature-rig .cp-frames[data-ready="false"]{display:none}
-.creature-rig:has(.cp-frames[data-ready="true"]) :is(.cp-body,.cp-feet){visibility:hidden}
+.creature-performance:not([data-avatar-style="painted"]) .creature-rig .cp-frames[data-ready="false"]{display:none}
+.creature-performance:not([data-avatar-style="painted"]) .creature-rig:has(.cp-frames[data-ready="true"]) :is(.cp-body,.cp-feet){visibility:hidden}
 
 /* Ambient cels only advance in the still poses. Standby owns its own clock. */
-.creature-performance{--cp-idle:cp-idle-rise 4400ms;--cp-rest:cp-doze 5200ms;--cp-done:cp-idle-done 3400ms}
-.creature-performance[data-creature="ink"]{--cp-idle:cp-idle-look 3200ms;--cp-rest:cp-doze 5000ms}
-.creature-performance[data-creature="moss"]{--cp-idle:cp-idle-look 5600ms;--cp-rest:cp-doze 6400ms;--cp-done:cp-idle-done 4000ms}
-.creature-performance[data-creature="thread"]{--cp-idle:cp-idle-rise 3000ms;--cp-rest:cp-doze 4900ms;--cp-done:cp-idle-done 3100ms}
-.creature-performance[data-creature="glow"]{--cp-idle:cp-idle-hover 3800ms;--cp-rest:cp-doze 6000ms}
-.creature-performance[data-live="true"][data-walking="false"][data-frames="false"][data-pose="idle"] .cp-art{animation:var(--cp-idle) step-end var(--cp-offset,0ms) infinite}
-.creature-performance[data-live="true"][data-walking="false"][data-pose="resting"] .cp-art{animation:var(--cp-rest) step-end var(--cp-offset,0ms) infinite}
-.creature-performance[data-live="true"][data-walking="false"][data-pose="completed"] .cp-art{animation:var(--cp-done) step-end var(--cp-offset,0ms) infinite}
+.creature-performance:not([data-avatar-style="painted"]){--cp-idle:cp-idle-rise 4400ms;--cp-rest:cp-doze 5200ms;--cp-done:cp-idle-done 3400ms}
+.creature-performance:not([data-avatar-style="painted"])[data-creature="ink"]{--cp-idle:cp-idle-look 3200ms;--cp-rest:cp-doze 5000ms}
+.creature-performance:not([data-avatar-style="painted"])[data-creature="moss"]{--cp-idle:cp-idle-look 5600ms;--cp-rest:cp-doze 6400ms;--cp-done:cp-idle-done 4000ms}
+.creature-performance:not([data-avatar-style="painted"])[data-creature="thread"]{--cp-idle:cp-idle-rise 3000ms;--cp-rest:cp-doze 4900ms;--cp-done:cp-idle-done 3100ms}
+.creature-performance:not([data-avatar-style="painted"])[data-creature="glow"]{--cp-idle:cp-idle-hover 3800ms;--cp-rest:cp-doze 6000ms}
+.creature-performance:not([data-avatar-style="painted"])[data-live="true"][data-walking="false"][data-frames="false"][data-pose="idle"] .cp-art{animation:var(--cp-idle) step-end var(--cp-offset,0ms) infinite}
+.creature-performance:not([data-avatar-style="painted"])[data-live="true"][data-walking="false"][data-pose="resting"] .cp-art{animation:var(--cp-rest) step-end var(--cp-offset,0ms) infinite}
+.creature-performance:not([data-avatar-style="painted"])[data-live="true"][data-walking="false"][data-pose="completed"] .cp-art{animation:var(--cp-done) step-end var(--cp-offset,0ms) infinite}
 [data-standby-motion] .creature-performance .cp-art{animation:none!important}
 @keyframes cp-idle-rise{0%,58%,81%,100%{transform:none}74%{transform:translateY(-2px)}}
 @keyframes cp-idle-look{0%,63%,85%,100%{transform:none}71%{transform:translateX(-2px)}}
@@ -31,11 +31,11 @@
 
 /* These owners keep their original 600ms distance phase. The route itself
    remains continuous so its reserved physical vertices stay authoritative. */
-.creature-performance[data-walking="true"][data-animate="true"] .cp-shell{animation:cp-walk-body 600ms step-end infinite}
-.creature-performance[data-creature="moss"][data-walking="true"][data-animate="true"] .cp-shell{animation-name:cp-walk-grounded}
-.creature-performance[data-creature="glow"][data-walking="true"][data-animate="true"] .cp-shell{animation-name:cp-walk-glow}
-.creature-performance[data-walking="true"][data-animate="true"] :is(.cp-foot-1,.cp-foot-3){animation:cp-walk-left 600ms step-end infinite}
-.creature-performance[data-walking="true"][data-animate="true"] :is(.cp-foot-2,.cp-foot-4){animation:cp-walk-right 600ms step-end infinite}
+.creature-performance:not([data-avatar-style="painted"])[data-walking="true"][data-animate="true"] .cp-shell{animation:cp-walk-body 600ms step-end infinite}
+.creature-performance:not([data-avatar-style="painted"])[data-creature="moss"][data-walking="true"][data-animate="true"] .cp-shell{animation-name:cp-walk-grounded}
+.creature-performance:not([data-avatar-style="painted"])[data-creature="glow"][data-walking="true"][data-animate="true"] .cp-shell{animation-name:cp-walk-glow}
+.creature-performance:not([data-avatar-style="painted"])[data-walking="true"][data-animate="true"] :is(.cp-foot-1,.cp-foot-3){animation:cp-walk-left 600ms step-end infinite}
+.creature-performance:not([data-avatar-style="painted"])[data-walking="true"][data-animate="true"] :is(.cp-foot-2,.cp-foot-4){animation:cp-walk-right 600ms step-end infinite}
 @keyframes cp-walk-body{0%,50%,100%{transform:none}25%{transform:translate(2px,-2px)}75%{transform:translate(-2px,-2px)}}
 @keyframes cp-walk-grounded{0%,50%,100%{transform:none}25%{transform:translateX(2px)}75%{transform:translateX(-2px)}}
 @keyframes cp-walk-glow{0%,50%,100%{transform:translateY(-2px)}25%,75%{transform:translateY(-4px)}}

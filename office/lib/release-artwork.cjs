@@ -5,14 +5,23 @@ const { createHash } = require('node:crypto');
 const Artwork = require('./public-artwork.js');
 const restrictedManifest = require('../assets/avatars.manifest.json');
 const RESTRICTED_HASHES = new Set(restrictedManifest.files.map(file => file.sha256));
+const pixelAtlases = Artwork.ASSETS.map(name => 'assets/avatars/' + name);
+const paintedAtlases = Artwork.PAINTED_ASSETS.map(name => 'assets/avatars/' + name);
+
+function stripPaths(directory, { strips }) {
+  return Object.entries(strips).flatMap(([species, entries]) =>
+    Object.keys(entries).map(activity => 'assets/avatars/' + directory + '/' + species + '/' + activity + '.png'));
+}
+
 const ASSET_FILES = Object.freeze([
   'assets/studio-icon.png', 'assets/office-room.jpg',
   'assets/ORIGINAL-ARTWORK-LICENSE.txt', 'assets/WORKSHOP-ARTWORK-NOTICE.md',
   'assets/avatars.manifest.json', 'assets/avatars/workshop-prompts.json',
-  ...Artwork.ASSETS.map(name => 'assets/avatars/' + name),
+  ...pixelAtlases, ...paintedAtlases,
   ...Artwork.IDS.map(id => 'assets/avatars/pixel-emotes-' + id + '.png'),
   // Registered keyframe strips, one exact path per species/activity.
-  ...Object.entries(require('../renderer/creature-frame-manifest.js').strips || {}).flatMap(([species, strips]) => Object.keys(strips).map(activity => 'assets/avatars/frames/' + species + '/' + activity + '.png')),
+  ...stripPaths('frames', require('../renderer/creature-frame-manifest.js')),
+  ...stripPaths('painted-frames', require('../renderer/painted-creature-frame-manifest.js')),
   'assets/helpers/mini-office-flock', 'assets/scenes/generation.json',
   'assets/scenes/teahouse.jpg', 'assets/scenes/observatory.jpg',
   'assets/scenes/themes/generation.json',
@@ -31,7 +40,7 @@ function assertBuildPolicy(build) {
 }
 function auditEntries(names, read, { requireOriginal = true, restrictedHashes = RESTRICTED_HASHES } = {}) {
   const files = [...new Set(names.map(normalize))];
-  let originalCharacterCount = 0, restrictedAssetCount = 0;
+  let originalCharacterCount = 0, paintedCharacterCount = 0, restrictedAssetCount = 0;
   const failures = [];
   for (const name of files) {
     if (name.startsWith('assets/') && !allowedAssets.has(name)) failures.push('Unapproved packaged asset: ' + name);
@@ -42,11 +51,12 @@ function auditEntries(names, read, { requireOriginal = true, restrictedHashes = 
     if (restrictedHashes.has(hash(read(name)))) {
       restrictedAssetCount++; failures.push('Restricted artwork content: ' + name);
     }
-    if (Artwork.ASSETS.some(asset => name === 'assets/avatars/' + asset)) originalCharacterCount++;
+    if (pixelAtlases.includes(name)) originalCharacterCount++;
+    if (paintedAtlases.includes(name)) paintedCharacterCount++;
   }
   if (requireOriginal) for (const name of ASSET_FILES) if (!files.includes(name)) failures.push('Missing public asset: ' + name);
   if (failures.length) throw new Error(failures.join('\n'));
-  return { originalCharacterCount, originalIconCount: files.includes('assets/studio-icon.png') ? 1 : 0, restrictedAssetCount, artworkFilesScanned: files.length };
+  return { originalCharacterCount, paintedCharacterCount, originalIconCount: files.includes('assets/studio-icon.png') ? 1 : 0, restrictedAssetCount, artworkFilesScanned: files.length };
 }
 function auditArchive(archive, asar = require('@electron/asar')) {
   const names = asar.listPackage(archive).map(normalize).filter(name => !asar.statFile(archive, name).files);

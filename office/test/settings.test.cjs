@@ -19,6 +19,34 @@ test('workshop creature preferences persist and reject unrecognized presentation
   }
   for (const agentAppearance of ['', 'Claude', '../avatar.svg', null, {}, 1]) assert.throws(() => settings.set({ agentAppearance }), /appearance/);
 });
+test('avatar style defaults to Pixel and persists separately from family allocation', t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'office-settings-avatar-style-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const file = path.join(dir, 'settings.json');
+  for (const saved of [{ language: 'en', agentAppearance: 'folio' }, { language: 'en', avatarStyle: '../atlas.png' }]) {
+    const original = JSON.stringify(saved);
+    fs.writeFileSync(file, original);
+    const restored = createSettings(dir).get();
+    assert.equal(restored.avatarStyle, 'pixel');
+    assert.equal(restored.agentAppearance, 'mixed');
+    assert.equal(restored.language, 'en');
+    assert.equal(fs.readFileSync(file, 'utf8'), original);
+  }
+  const settings = createSettings(dir);
+  for (const avatarStyle of ['painted', 'pixel']) {
+    settings.set({ avatarStyle });
+    const restored = createSettings(dir).get();
+    assert.equal(restored.avatarStyle, avatarStyle);
+    assert.equal(restored.agentAppearance, 'mixed');
+  }
+  const persisted = fs.readFileSync(file, 'utf8');
+  for (const avatarStyle of ['', 'mixed', 'Pixel', '../atlas.png', null, []]) {
+    assert.throws(() => settings.set({ avatarStyle, language: 'zh' }), /avatar style/);
+    assert.equal(settings.get().language, 'en');
+    assert.equal(settings.get().avatarStyle, 'pixel');
+    assert.equal(fs.readFileSync(file, 'utf8'), persisted);
+  }
+});
 test('saved original and geometric choices migrate read-only and retain every unrelated preference', t => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'office-settings-creature-migration-'));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));

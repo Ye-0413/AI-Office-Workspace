@@ -22,11 +22,15 @@ function inspectGif(buffer){
 // Historical recordings refer to the pre-pixel tree. Source archives can
 // still verify the encoded media and the archived hash format without Git.
 const workshopRevision='dcf3941056d3aca36d932b50aef8d108b75d835a';
-const hasWorkshopRevision=spawnSync('git',['cat-file','-e',workshopRevision+'^{commit}'],{cwd:repo,stdio:'ignore'}).status===0;
+const availableRevisions=new Map();
+function hasRevision(revision){
+ if(!availableRevisions.has(revision))availableRevisions.set(revision,spawnSync('git',['cat-file','-e',revision+'^{commit}'],{cwd:repo,stdio:'ignore'}).status===0);
+ return availableRevisions.get(revision);
+}
 const sha256=bytes=>createHash('sha256').update(bytes).digest('hex');
-function workshopSource(name){
- if(!hasWorkshopRevision)return null;
- const result=spawnSync('git',['show',workshopRevision+':'+name],{cwd:repo,maxBuffer:16*1024*1024});
+function workshopSource(name,revision=workshopRevision){
+ if(!hasRevision(revision))return null;
+ const result=spawnSync('git',['show',revision+':'+name],{cwd:repo,maxBuffer:16*1024*1024});
  assert.equal(result.status,0,'Archived source '+name);
  return result.stdout;
 }
@@ -50,7 +54,7 @@ function recordedSources(manifest){
  assert.equal(new Set(changes.map(change=>change.file)).size,changes.length);
  for(const change of changes)assert.ok(manifest.sourceHashes[change.file]);
  for(const[name,recorded]of Object.entries(manifest.sourceHashes)){
-  const current=workshopSource(name),change=changes.find(change=>change.file===name);
+  const current=workshopSource(name,manifest.sourceRevision),change=changes.find(change=>change.file===name);
   assert.match(recorded,/^[a-f0-9]{64}$/);
   if(!current)continue;
   const currentHash=sha256(current);
@@ -123,6 +127,18 @@ test('README media links resolve and select the still when motion is reduced',()
  }
 });
 
+test('the painted overview preserves its captures and all 55 relocated source strips',()=>{
+ const manifest=require('../../docs/animations/painted-manifest.json');
+ assert.deepEqual(manifest.catalog,{species:5,activities:11,strips:55,paintedKeys:220});
+ recordedSources(manifest);
+ const sources=Object.entries(manifest.sourceHashes).filter(([name])=>name.startsWith('office/assets/avatars/frames/'));
+ assert.equal(sources.length,55);
+ for(const [name,hash] of sources)assert.equal(sha256(fs.readFileSync(path.join(repo,name.replace('/avatars/frames/','/avatars/painted-frames/')))),hash,name);
+ for(const asset of manifest.assets) {
+  const bytes=fs.readFileSync(path.join(dir,asset.file));
+  assert.equal(bytes.length,asset.bytes);assert.equal(sha256(bytes),asset.sha256,asset.file);
+ }
+});
 test('pixel overview pairs a changing native loop with a same-size still',()=>{
  const png=fs.readFileSync(path.join(dir,'pixel-overview.png'));
  const gif=inspectGif(fs.readFileSync(path.join(dir,'pixel-overview.gif')));
@@ -160,7 +176,9 @@ test('archived lifecycle previews retain recorded provenance and at least 31 cha
 test('station gallery certifies all twelve archived furniture programs and actual complete looping media',()=>{
  const Station=require('../renderer/station-arrival.js'),Exporter=require('../scripts/render-station-previews.cjs');
  const folder=path.join(dir,'stations'),manifest=JSON.parse(fs.readFileSync(path.join(folder,'manifest.json')));
- archivedSources(manifest);assert.equal(manifest.restrictedImageElements,0);assert.equal(manifest.unlistedResourceRequests,0);
+ assert.equal(manifest.version,require('../package.json').version);
+ assert.match(manifest.sourceRevision,/^[a-f0-9]{40}$/);
+ recordedSources(manifest);assert.equal(manifest.restrictedImageElements,0);assert.equal(manifest.unlistedResourceRequests,0);
  assert.equal(manifest.sampling.continuousRoomPlaybackCertified,false);assert.equal(manifest.sampling.continuousOwnerLifetimeCertified,false);assert.match(manifest.scope,/synthetic/);assert.match(manifest.scope,/no provider connection/);
  assert.deepEqual(Object.keys(manifest.sourceHashes).sort(),[...Exporter.SOURCES].sort());
  assert.deepEqual(manifest.assets.map(a=>a.venue),Object.keys(Station.PROGRAMS));

@@ -169,7 +169,7 @@ Native answers require your explicit submission; tool approvals stay in the orig
 | Writing & research | Coding & debugging | Long tasks & care | Design & exploration | Coordination |
 | Earnest · meticulous | Quiet · determined | Steady · patient | Playful · inventive | Gentle · precise |
 
-**55 pixel loops = 5 companions × 11 activities.** Four hand-drawn cels per loop, sampled with synthetic sessions. [Motion gallery](docs/animations/README.md).
+**Pixel is the default.** Switch to **Painted** from **View → Avatar Style** or **Room preferences → Avatar style**. Each style has 55 loops across five companions and eleven activities. The preview above shows pixel cels sampled with synthetic sessions. [See both styles in the motion gallery](docs/animations/README.md).
 
 First five families: distinct designs; additional families: color variants. Helpers inherit their root's **shape and color, at a smaller size**. [Stories & family rules](docs/companions.md).
 
@@ -190,7 +190,7 @@ From the observatory to **33 daily & holiday rooms**: follow the Hong Kong calen
 | Setup, settings & local data | [App guide](office/README.md) |
 | Connect AI tools | [Compatibility](office/docs/upstream-compatibility.md) |
 | Activity, usage & native questions | [Monitoring](office/docs/monitoring.md) |
-| Character stories & 55 pixel loops | [Companions](docs/companions.md) · [Animation gallery](docs/animations/README.md) |
+| Character stories & both motion galleries | [Companions](docs/companions.md) · [Animation gallery](docs/animations/README.md) |
 | Rooms & recordings | [Room gallery](docs/rooms/README.md) · [Media details](docs/media/README.md) |
 | What's changed | [v0.24.0](docs/releases/release-v0.24.0.md) · [Release index](docs/releases/README.md) |
 
@@ -200,7 +200,7 @@ Start with the [development guide](office/README.md); run `npm --prefix office t
 
 ## License & credits
 
-**Code:** [AGPL-3.0-only](LICENSE), building on [Clawd on Desk](UPSTREAM-README.md). **Character art:** [All Rights Reserved](office/assets/WORKSHOP-ARTWORK-NOTICE.md). User-supplied character concepts, AI-assisted artwork, project-authored rendering and motion.
+**Code:** [AGPL-3.0-only](LICENSE), building on [Clawd on Desk](UPSTREAM-README.md). **Character art:** [All Rights Reserved](office/assets/WORKSHOP-ARTWORK-NOTICE.md). The user supplied the character concepts. The painted artwork uses AI-assisted imagery, and the pixel sprites were drawn on an integer grid.
 
 [Originality & provenance](ORIGINALITY.md) · [Third-party notices](NOTICE.md) · [App credits](office/UPSTREAM-NOTICE.md) · [Release index](docs/releases/README.md)
 

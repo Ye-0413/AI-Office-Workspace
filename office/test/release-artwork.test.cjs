@@ -13,15 +13,22 @@ const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 test('public build uses exact original artwork paths and retains scoped upstream notices', () => {
   const pkg = require('../package.json');
   assert.doesNotThrow(() => Policy.assertBuildPolicy(pkg.build));
-  for (const bad of ['assets/**/*','assets/avatars/*','assets/avatars/pixel-emotes-*.png','assets/icon.png','assets/scenes/rooms/renamed.svg']) {
+  for (const bad of ['assets/**/*','assets/avatars/*','assets/avatars/pixel-emotes-*.png','assets/avatars/painted-*.png','assets/avatars/painted-frames/**/*.png','assets/avatars/painted-frames/folio/unknown.png','assets/icon.png','assets/scenes/rooms/renamed.svg']) {
     assert.throws(() => Policy.assertBuildPolicy({ ...pkg.build, files: [...pkg.build.files, bad] }), /exact public artwork allowlist/);
   }
-  const spriteAtlases = Artwork.ASSETS.map(name => 'assets/avatars/' + name);
-  const emoteAtlases = Artwork.IDS.map(id => 'assets/avatars/pixel-emotes-' + id + '.png');
-  assert.deepEqual(Policy.ASSET_FILES.filter(name => name.startsWith('assets/avatars/') && !name.startsWith('assets/avatars/frames/') && name.endsWith('.png')), [...spriteAtlases, ...emoteAtlases].sort());
   const { ACTIVITIES } = require('../renderer/creature-repertoire.js');
-  const stripFiles = Artwork.IDS.flatMap(id => ACTIVITIES.map(activity => 'assets/avatars/frames/' + id + '/' + activity + '.png')).sort();
-  assert.deepEqual(Policy.ASSET_FILES.filter(name => name.startsWith('assets/avatars/frames/')), stripFiles);
+  const expectedArtwork = Artwork.IDS.flatMap(id => [
+    'assets/avatars/workshop-' + id + '.png',
+    'assets/avatars/pixel-emotes-' + id + '.png',
+    'assets/avatars/painted-' + id + '.png',
+    ...['frames', 'painted-frames'].flatMap(directory =>
+      ACTIVITIES.map(activity => 'assets/avatars/' + directory + '/' + id + '/' + activity + '.png')),
+  ]).sort();
+  assert.deepEqual(Policy.ASSET_FILES.filter(name => name.startsWith('assets/avatars/') && name.endsWith('.png')), expectedArtwork);
+  assert.throws(() => Policy.assertBuildPolicy({
+    ...pkg.build,
+    files: pkg.build.files.filter(name => name !== 'assets/avatars/painted-frames/moss/testing.png'),
+  }), /exact public artwork allowlist/);
   assert.ok(Policy.ASSET_FILES.includes('assets/ORIGINAL-ARTWORK-LICENSE.txt'));
   assert.ok(Policy.ASSET_FILES.includes('assets/WORKSHOP-ARTWORK-NOTICE.md'));
   assert.ok(!Policy.ASSET_FILES.includes('assets/icon.png'));
@@ -37,7 +44,11 @@ test('public resource resolution rejects legacy, traversal, renamed and remote a
   const clean = Artwork.design(record);
   assert.equal(clean.asset, 'workshop-ink.png'); assert.equal(clean.renderer, 'creature');
   assert.equal(clean.familyId, record.familyId); assert.equal(clean.appearanceKey, record.appearanceKey);
-  for (const name of ['clawd-static-base.svg','../icon.png','https://example.test/art.png','renamed.svg',null]) assert.equal(Artwork.asset(name), 'workshop-folio.png');
+  const painted = Artwork.design(record, 'painted');
+  assert.equal(painted.asset, 'painted-ink.png'); assert.equal(painted.avatarStyle, 'painted');
+  assert.equal(painted.familyId, record.familyId); assert.equal(painted.appearanceKey, record.appearanceKey);
+  assert.equal(Artwork.asset(painted.asset), painted.asset);
+  for (const name of ['clawd-static-base.svg','../icon.png','https://example.test/art.png','renamed.svg','painted-extra.png',null]) assert.equal(Artwork.asset(name), 'workshop-folio.png');
   assert.equal(Artwork.design(null), Artwork.DEFAULT);
   assert.equal(Artwork.design({ id: 'clawd', asset: 'clawd-static-base.svg' }), Artwork.DEFAULT);
   const valid = require('../lib/agent-appearance.js').catalog[1];
@@ -50,7 +61,8 @@ test('archive audit rejects restricted content even after moving and renaming ou
   assert.throws(() => Policy.auditEntries(['assets/avatars/clawd-renamed.svg'], () => Buffer.from('other'), { requireOriginal: false, restrictedHashes }), /Restricted artwork path/);
   assert.throws(() => Policy.auditEntries(['assets/avatars/workshop-extra.png'], () => Buffer.from('other'), { requireOriginal: false, restrictedHashes }), /Unapproved packaged asset/);
   const report = Policy.auditEntries(Policy.ASSET_FILES, () => Buffer.from('authored fixture'), { restrictedHashes });
-  assert.equal(report.originalCharacterCount, 5); assert.equal(report.originalIconCount, 1); assert.equal(report.restrictedAssetCount, 0);
+  assert.equal(report.originalCharacterCount, 5); assert.equal(report.paintedCharacterCount, 5);
+  assert.equal(report.originalIconCount, 1); assert.equal(report.restrictedAssetCount, 0);
   assert.throws(() => Policy.auditEntries(Policy.ASSET_FILES.slice(1), () => Buffer.from('authored fixture'), { restrictedHashes }), /Missing public asset/);
 });
 

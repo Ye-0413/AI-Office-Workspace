@@ -3,10 +3,10 @@
  * into this source, mutated, fetched, or exported. Props below are original. */
 (function (root, factory) {
   'use strict';
-  const api = factory(root.OfficeAvatarPerformanceModel, root.OfficeCreaturePerformance, root.OfficePublicArtwork);
+  const api = factory(root.OfficeAvatarPerformanceModel, root.OfficeCreaturePerformance, root.OfficePublicArtwork, root.OfficePaintedCreaturePerformance);
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.OfficeAvatarPerformance = api;
-})(typeof globalThis === 'object' ? globalThis : this, function (Model, Creature, Artwork) {
+})(typeof globalThis === 'object' ? globalThis : this, function (Model, Creature, Artwork, Painted) {
   'use strict';
   let serial = 0;
   const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -715,20 +715,20 @@
     systemMotion = watchReduced(view, () => update(session, { ...inheritedOptions, now: undefined }));
     return Object.freeze({ update, setDesign, locomotion, cue, destroy, get plan() { return last; } });
   }
-  // Public ownership stays with this handle when a user changes between the
-  // articulated original and painted creatures. The existing shared clock
-  // registry transfers visible work history; the actor/image/route stay put.
+  // The handle keeps the real actor, route and visible work clock when the
+  // avatar style changes. Only the style's internal drawing is replaced.
   function create(options = {}) {
     if (!Model) throw new Error('Avatar performance model must load before its renderer.');
     let session = options.session || {}, inherited = {}, design = Artwork ? Artwork.design(options.design) : options.design || null, destroyed = false;
     const clockRegistry = options.clockRegistry || Model.createClockRegistry({ limit: 1 });
-    const creature = value => value?.renderer === 'creature';
+    function factory(value) {
+      if (value?.renderer !== 'creature') return createLegacy;
+      const performance = value.avatarStyle === 'painted' ? Painted : Creature;
+      if (!performance) throw new Error('Creature performance must load before selecting its style.');
+      return performance.create;
+    }
     function construct(value) {
-      if (creature(value)) {
-        if (!Creature) throw new Error('Creature performance must load before selecting a painted creature.');
-        return Creature.create({ ...options, session, clockRegistry, design: value });
-      }
-      return createLegacy({ ...options, session, clockRegistry, design: value });
+      return factory(value)({ ...options, session, clockRegistry, design: value });
     }
     let renderer = construct(design);
     return Object.freeze({
@@ -736,7 +736,7 @@
       setDesign(value = null) {
         if (destroyed) return false;
         if (Artwork) value = Artwork.design(value);
-        if (creature(value) === creature(design)) { design = value; return renderer.setDesign(value); }
+        if (factory(value) === factory(design)) { design = value; return renderer.setDesign(value); }
         renderer.update(session, { ...inherited, now: undefined, hidden: true }); renderer.destroy();
         design = value; renderer = construct(design); renderer.update(session, { ...inherited, now: undefined });
         return true;

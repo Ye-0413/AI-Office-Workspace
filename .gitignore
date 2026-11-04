@@ -204,7 +204,7 @@ clawd-emoji-final/
 # Local studio outputs and restricted artwork (restore from an authorized local source)
 /dist-mini-office/
 /office/assets/avatars/*
-# Workshop creatures generated from the user's supplied concept; restored avatars stay ignored.
+# Project workshop avatars. Restored upstream avatars stay ignored.
 !/office/assets/avatars/workshop-folio.png
 !/office/assets/avatars/workshop-ink.png
 !/office/assets/avatars/workshop-moss.png
@@ -218,6 +218,31 @@ clawd-emoji-final/
 !/office/assets/avatars/pixel-emotes-glow.png
 # Activity sprite strips drawn by the pixel companion generator.
 !/office/assets/avatars/frames/
+# Exact generated paintings included as the alternate character style.
+!/office/assets/avatars/painted-folio.png
+!/office/assets/avatars/painted-glow.png
+!/office/assets/avatars/painted-ink.png
+!/office/assets/avatars/painted-moss.png
+!/office/assets/avatars/painted-thread.png
+!/office/assets/avatars/painted-frames/
+/office/assets/avatars/painted-frames/*
+!/office/assets/avatars/painted-frames/folio/
+!/office/assets/avatars/painted-frames/glow/
+!/office/assets/avatars/painted-frames/ink/
+!/office/assets/avatars/painted-frames/moss/
+!/office/assets/avatars/painted-frames/thread/
+/office/assets/avatars/painted-frames/*/*
+!/office/assets/avatars/painted-frames/*/building.png
+!/office/assets/avatars/painted-frames/*/coding.png
+!/office/assets/avatars/painted-frames/*/designing.png
+!/office/assets/avatars/painted-frames/*/error.png
+!/office/assets/avatars/painted-frames/*/planning.png
+!/office/assets/avatars/painted-frames/*/reading.png
+!/office/assets/avatars/painted-frames/*/running.png
+!/office/assets/avatars/painted-frames/*/searching.png
+!/office/assets/avatars/painted-frames/*/testing.png
+!/office/assets/avatars/painted-frames/*/waiting-tool.png
+!/office/assets/avatars/painted-frames/*/waiting-user.png
 /office/assets/icon.png
 /office/assets/.local-artwork-*/
 .local-work/

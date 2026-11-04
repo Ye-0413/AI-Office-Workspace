@@ -32,7 +32,7 @@ const required=['main.cjs','preload.cjs','renderer/index.html','renderer/app.js'
 required.push('lib/usage-log.cjs','lib/usage-api.cjs','renderer/usage-history.js','lib/setup-manager.cjs','renderer/setup-assistant.js','renderer/setup-assistant.css','lib/provider-detection.cjs','lib/observer-command-owner.cjs');
 required.push('renderer/avatar-fallback.js','renderer/avatar-fallback.css');
 required.push('renderer/creature-performance.js','renderer/creature-performance.css','assets/avatars/workshop-prompts.json');
-required.push('renderer/creature-activity.js','renderer/creature-emotes.js','renderer/creature-frame-manifest.js','renderer/creature-frames.js','renderer/creature-activity.css','renderer/creature-repertoire.js','renderer/repertoire-gallery.js','renderer/repertoire-gallery.css');
+required.push('renderer/creature-activity.js','renderer/creature-emotes.js','renderer/creature-frame-manifest.js','renderer/painted-creature-frame-manifest.js','renderer/painted-creature-frames.js','renderer/painted-creature-performance.js','renderer/painted-creature-performance.css','renderer/creature-frames.js','renderer/creature-activity.css','renderer/creature-repertoire.js','renderer/repertoire-gallery.js','renderer/repertoire-gallery.css');
 for (const species of ['folio','ink','moss','thread','glow']) required.push('renderer/repertoire-'+species+'.js');
 required.push('lib/agent-appearance.js','renderer/appearance-picker.js','renderer/appearance-picker.css',
   ...require('../lib/agent-appearance.js').catalog.map(shape=>'assets/avatars/'+shape.asset));

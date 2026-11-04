@@ -1,53 +1,48 @@
 # Workshop artwork notice / 工坊角色美术声明
 
-
-## Pixel edition / 像素版
-
-The pixel edition draws five new transparent 3×2 pose sheets and 55 four-cel activity strips and five nine-cel expression strips directly on an integer grid using `office/scripts/draw-pixel-companions.cjs`. The script supplies the pixel contours, palettes and props. The notices below describe the original workshop material and its archived previews.
-
-像素版通过 `office/scripts/draw-pixel-companions.cjs` 在整数像素网格绘制五张 3×2 透明姿态图、55 条四帧活动帧条，以及五条九帧表情帧条。脚本包含轮廓、配色和道具的绘制定义。下列声明记录原工坊版素材及其存档预览。
-
 **Project contribution credit / 项目创作署名：AI Work Space contributors** (formerly credited as / 原署名 AI Office Workspace contributors).
 
 This notice accompanies the five workshop characters in AI Work Space (formerly AI Office Workspace / AI Mini Office): **Folio／纸团, Ink／墨豆, Moss／苔盒, Thread／线团 and Glow／灯籽**. It records their creation process and the existing artwork policy. It does not replace the source-code license or grant a new artwork license.
 
 本声明随 AI Work Space（原 AI Office Workspace／AI Mini Office／小小工作室）的五只角色分发：**纸团 Folio、墨豆 Ink、苔盒 Moss、线团 Thread、灯籽 Glow**。它记录创作过程与既有美术政策，不替代源码许可证，也不新增美术授权。
 
-## Creation and scope / 创作与范围
+## Pixel style / 像素风
 
-The user supplied the character concepts and visual reference on 2026-10-29. The project used the built-in `image_gen` tool with individual prompts to make six-pose transparent sheets, then implemented their clipping, state selection, family color variants, resource fallback, floor anchoring and motion. The 550 material performances combine these raster sheets with project-authored SVG props and animation code.
+The Pixel style is drawn on an integer grid by `office/scripts/draw-pixel-companions.cjs`. It generates five transparent 3×2 pose atlases (`avatars/workshop-<species>.png`), 55 four-cel activity strips (`avatars/frames/<species>/<activity>.png`) and five nine-cel expression strips (`avatars/pixel-emotes-<species>.png`). The generator defines the character contours, palettes and props directly in code.
+
+像素风由 `office/scripts/draw-pixel-companions.cjs` 在整数像素网格上绘制，生成五张 3×2 透明姿态图集（`avatars/workshop-<species>.png`）、55 条四帧活动帧条（`avatars/frames/<species>/<activity>.png`）和五条九帧表情帧条（`avatars/pixel-emotes-<species>.png`）。角色轮廓、配色与道具由脚本直接定义。
+
+## Painted style / 手绘风
+
+The user supplied the character concepts and visual reference on 2026-10-29. The project used the built-in `image_gen` tool with individual prompts to make six-pose transparent sheets, then implemented their clipping, state selection, family color variants, resource fallback, floor anchoring and motion. The earlier 550 reference performances combine these raster sheets with project-authored SVG props and animation code; the current 55 activity performances use the painted keyframe strips described below.
 
 This is **user-directed, AI-assisted image creation plus project implementation**. The sprites are not represented as entirely hand-drawn. “User-supplied reference” records the source of the creative input; it does not certify ownership or rights in every external reference. Provenance does not guarantee exclusive rights in every generated element or the absence of third-party claims.
 
-用户于 2026-10-29 提供角色概念与视觉参考；项目使用内置 `image_gen` 工具，按各角色提示制作六姿态透明图集，再实现裁剪、状态选择、家族配色、资源备用显示、脚底定位与动作。550 套材质动作将这些位图与项目编写的 SVG 道具、动画代码结合。
+用户于 2026-10-29 提供角色概念与视觉参考；项目使用内置 `image_gen` 工具，按各角色提示制作六姿态透明图集，再实现裁剪、状态选择、家族配色、资源备用显示、脚底定位与动作。此前 550 套参考动作将这些位图与项目编写的 SVG 道具、动画代码结合；当前 55 套活动动作使用下述绘制关键帧条。
 
 准确来源为 **用户指导、AI 辅助图像创作与项目实现**，不宣称全部纯手绘。「用户提供参考」记录创意输入的来源，不替其证明全部外部参考的权属；来源记录不保证每个生成元素均有排他权利，也不保证不存在第三方权利主张。
 
 Files covered / 涉及文件：
 
-- `avatars/workshop-folio.png`
-- `avatars/workshop-ink.png`
-- `avatars/workshop-moss.png`
-- `avatars/workshop-thread.png`
-- `avatars/workshop-glow.png`
+- `avatars/painted-folio.png`
+- `avatars/painted-ink.png`
+- `avatars/painted-moss.png`
+- `avatars/painted-thread.png`
+- `avatars/painted-glow.png`
 
 [Complete prompts and generation method / 完整提示与生成方式](avatars/workshop-prompts.json)
 
 ### Keyframe strips / 关键帧条
 
-From 2026-11-04 some activities are performed by painted keyframe strips instead of SVG props. Each strip is derived from the corresponding workshop sheet: the idle cell is supplied as the reference image, the same image tool paints four extreme keys on a flat key colour, and `scripts/frame-qa.cjs` keys the colour out, registers every frame against the idle cell (floor, size, centre, eyes) and writes the strip and its manifest entry (`renderer/creature-frame-manifest.js`). The strips are the same user-directed, AI-assisted creation as the sheets and are covered by the same policy below. Prompts and briefs are recorded in the `frames` section of the prompts file.
+From 2026-11-04 all five companions’ eleven work/wait/error activities have painted keyframe strips: **55 strips with four keys each, 220 painted keys**. Each strip derives from the corresponding workshop sheet’s idle cell, supplied to the built-in image tool as its identity reference. The tool paints the creature and its main prop together on a flat magenta key colour; `scripts/frame-qa.cjs` removes that colour, registers the keys against the idle reference, measures the result and writes the strip and its registration record. Idle, blinking and other identity poses continue to use the existing atlas. These are the same user-directed, AI-assisted creations as the sheets, under the same policy below. Literal prompts and source records for the expansion, and the earlier pilot’s honestly labeled surviving briefs, are recorded in the prompts file. Measurement exceptions are retained as `waived` entries; acceptance with a recorded exception is not a strict pass or evidence of a human readability test.
 
-自 2026-11-04 起，部分活动改由位图关键帧条演出，不再使用 SVG 道具。每条帧条均由对应工坊图集派生：以待机格作为参考图，用同一图像工具在纯色抠像背景上绘制四个极端关键帧，再由 `scripts/frame-qa.cjs` 抠像、按待机格配准（脚底、尺寸、中心、眼睛）并写出帧条与清单（`renderer/creature-frame-manifest.js`）。帧条与图集同属用户指导、AI 辅助创作，适用下文同一政策；提示与简述记录在提示文件的 `frames` 段。
+自 2026-11-04 起，五位伙伴的十一类工作／等待／异常活动均有绘制关键帧条，共 **55 条、每条四帧、合计 220 个关键帧**。每条以对应工坊图集的待机格作为身份参考，交给内置图像工具，在纯品红抠像底色上一起绘制角色与主道具，再由 `scripts/frame-qa.cjs` 去底色、相对待机图配准、测量，并写出帧条与配准记录。待命、眨眼及其它身份姿态继续使用已有图集。帧条与图集同属用户指导、AI 辅助创作，适用下文同一政策；此次扩展的逐字提示与来源记录，以及较早试点中明确标注为摘要的存续简述，保存在提示文件中。测量例外保留于 `waived` 字段；带例外接受不等于严格通过，也不证明已经做过人工可读性测试。
 
-- `avatars/frames/moss/coding.png`
-- `avatars/frames/moss/reading.png`
-- `avatars/frames/moss/error.png`
-- `avatars/frames/moss/waiting-user.png`
-- `avatars/frames/moss/waiting-tool.png`
+Published painted frames / 随应用分发的手绘帧条：`avatars/painted-frames/<species>/<activity>.png`. Species / 物种：`folio`, `ink`, `moss`, `thread`, `glow`. Activities / 活动：`reading`, `searching`, `planning`, `coding`, `designing`, `testing`, `building`, `running`, `waiting-tool`, `waiting-user`, `error`. The runtime manifest (`renderer/painted-creature-frame-manifest.js`) and package file list enumerate the exact 55 files. The generation records preserve the artwork paths used at creation. / 运行时清单（`renderer/painted-creature-frame-manifest.js`）与打包文件表逐项列出这 55 个文件，生成记录保留创作时使用的素材路径。
 
-These five sheets do not use restored upstream Clawd or Calico sprites. Character names and material personalities are decorative, without changing provider abilities or proving a real task result. This notice does not authorize use of any third-party trademark or character.
+Both companion styles use project artwork independent of restored upstream Clawd or Calico sprites. Character names and material personalities are decorative, without changing provider abilities or proving a real task result. This notice does not authorize use of any third-party trademark or character.
 
-这五张图集不使用还原的上游 Clawd 或 Calico 角色图。名称与材质性格属于装饰，不改变工具能力，也不证明真实任务结果。本声明不授予任何第三方商标或角色的使用权。
+两种伙伴风格均使用项目独立素材，与本地还原的上游 Clawd 或 Calico 角色图分开。名称与材质性格属于装饰，不改变工具能力，也不证明真实任务结果。本声明不授予任何第三方商标或角色的使用权。
 
 ## Rights retained / 权利保留
 

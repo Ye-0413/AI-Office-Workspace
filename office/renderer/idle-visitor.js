@@ -15,7 +15,7 @@
       const activity=({reading:'reading',planning:'planning',tidying:'building'})[name]||'visiting';
       // This private decorative presentation never enters the observation store.
       guest.performance.update({...guest.presentation,activity},{now:Date.now(),reducedMotion:c.reducedMotion,lowPower:c.lowPower,hidden:c.hidden,walking:Boolean(guest.motion)||guest.node.dataset.walking==='true'});
-      if(reaction&&!c.reducedMotion&&!c.lowPower&&!c.hidden)guest.performance.cue(reaction);
+      if(reaction&&!c.reducedMotion&&!c.lowPower&&!c.hidden)guest.performance.cue(reaction === 'rare' && c.avatarStyle === 'painted' ? 'attention' : reaction);
     }
     function stopMotion(){if(!guest?.motion)return;const matrix=new DOMMatrixReadOnly(getComputedStyle(guest.node).transform);guest.point={x:matrix.m41/12.8,y:matrix.m42/7.2};guest.node.style.transform=transform(guest.point);guest.motion.cancel();guest.motion=null;guest.node.dataset.walking='false';}
     function clearProps(){for(const prop of world.querySelectorAll('[data-visitor-active]'))delete prop.dataset.visitorActive;}
@@ -26,12 +26,12 @@
       const node=make('div','visitor'),button=make('button','actor-button'),body=make('span','character-body'),image=make('img'),plate=make('span','nameplate'),title=make('span','actor-title'),badge=make('span','visitor-badge'),state=make('span','actor-state'),bubble=make('span','actor-bubble'),trinket=make('span','visitor-trinket');
       button.type='button';image.alt='';image.draggable=false;bubble.setAttribute('aria-hidden','true');trinket.setAttribute('aria-hidden','true');
       body.append(image);plate.append(title,badge,state);button.append(body,plate,bubble,trinket);node.append(make('span','actor-shadow'),button);layer.append(node);
-      const designs=root.OfficeAgentAppearance.catalog,design=root.OfficePublicArtwork.design(designs[Math.floor(Math.random()*designs.length)]);
+      const designs=root.OfficeAgentAppearance.catalog,design=root.OfficePublicArtwork.design(designs[Math.floor(Math.random()*designs.length)],lastContext.avatarStyle);
       const presentation={id:'decorative-visitor-'+(++guestSerial),provider:'decorative',status:'active',activity:'visiting'};
       node.dataset.bodyDesign=design.id;node.dataset.bodyAppearance=design.id+':0';
       image.dataset.asset=design.asset;image.src='../assets/avatars/'+design.asset;
-      const performance=root.OfficeCreaturePerformance.create({actorNode:node,body,image,session:presentation,design});
-      guest={node,button,image,title,badge,state,bubble,trinket,performance,presentation,name:names[Math.floor(Math.random()*names.length)],point:{x:Scene.ZONES.exit.x,y:Scene.ZONES.exit.y},motion:null,generation:-1,stopSerial:-1,bubbleTimer:0,quote:null,wantedPose:'looking',leaving:false,lastHello:0};
+      const performance=root.OfficeAvatarPerformance.create({actorNode:node,body,image,session:presentation,design});
+      guest={node,button,image,design,title,badge,state,bubble,trinket,performance,presentation,name:names[Math.floor(Math.random()*names.length)],point:{x:Scene.ZONES.exit.x,y:Scene.ZONES.exit.y},motion:null,generation:-1,stopSerial:-1,bubbleTimer:0,quote:null,wantedPose:'looking',leaving:false,lastHello:0};
       node.style.transform=transform(guest.point);world.dataset.visitor='true';copy();pose('looking');openDoor();
       image.addEventListener('error',()=>{if(guest?.image===image)image.hidden=true;});
       image.addEventListener('load',()=>{if(guest?.image===image&&image.naturalWidth>0)image.hidden=false;});
@@ -64,6 +64,14 @@
       if(state.phase==='absent'){remove();return;}
       if(!guest&&state.phase==='leaving'){director.departed(state.generation);return;}
       if(!guest)create();copy();
+      if(previous&&previous.avatarStyle!==lastContext.avatarStyle){
+        const design=root.OfficePublicArtwork.design(guest.design,lastContext.avatarStyle);
+        if(design.asset!==guest.design.asset){
+          guest.design=design;guest.performance.setDesign(design);
+          guest.image.dataset.asset=design.asset;guest.image.src='../assets/avatars/'+design.asset;
+          pose(guest.wantedPose);
+        }
+      }
       // Hidden guests can leave without running an invisible route. A paused
       // departure must never retain a guest across a later real task.
       if(state.phase==='leaving'&&(lastContext.hidden||lastContext.mode!=='live'||lastContext.reducedMotion)){openDoor();remove();director.departed(state.generation);return;}
