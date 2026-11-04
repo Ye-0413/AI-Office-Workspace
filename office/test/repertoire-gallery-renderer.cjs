@@ -20,33 +20,32 @@ app.whenReady().then(async () => {
   await until(`document.querySelector('.repertoire-gallery')`, 'The production settings must include a gallery');
   assert.equal(await run(`document.querySelectorAll('.repertoire-preview .creature-performance').length`), 0, 'closed viewer has no renderer or work clocks');
   await run(`document.getElementById('settings-button').click();document.querySelector('.repertoire-gallery').open=true;void 0`);
-  await until(`document.querySelector('.repertoire-preview .creature-performance')?.dataset.artState==='healthy'`, 'Opened preview must decode its actual atlas');
+  await until(`document.querySelector('.repertoire-preview .creature-performance')?.dataset.frames==='true'`, 'Opened preview must decode its production sprite strip');
+  assert.match(await run(`document.querySelector('.repertoire-gallery summary').textContent`), /55/);
+  assert.equal(await run(`document.querySelector('[name="repertoire-character"]').options.length`), 5);
   assert.equal(await run(`document.querySelector('[name="repertoire-state"]').options.length`), 11);
-  assert.equal(await run(`document.querySelector('[name="repertoire-variant"]').options.length`), 10);
+  assert.equal(await run(`document.querySelector('[name="repertoire-variant"]')`), null);
   assert.equal(await run(`document.querySelectorAll('.actors .actor[data-session-id]').length`), 0, 'preview cannot create a real observation');
-  const ids = new Set();
   for (const species of ['folio', 'ink', 'moss', 'thread', 'glow']) {
     await select('character', species);
-    await select('state', 'coding'); await select('variant', '9');
-    await until(`document.querySelector('.repertoire-preview .creature-performance')?.dataset.artState==='healthy'`, 'New material must decode');
-    const recipe = await run(`document.querySelector('.repertoire-preview .cp-activity').dataset.recipe`); ids.add(recipe);
-    assert.ok(recipe.startsWith(species + '-coding-'));
-    assert.equal(await run(`document.querySelector('.repertoire-preview .cp-activity').dataset.variant`), '9');
+    await select('state', 'coding');
+    await until(`[...document.querySelectorAll('.repertoire-preview .cp-frame')].some(frame=>frame.getAttribute('href')?.endsWith('/${species}/coding.png'))`, 'Every companion shows its own production coding strip');
     assert.equal(await run(`document.querySelectorAll('.repertoire-preview .creature-performance').length`), 1);
+    assert.equal(await run(`[...document.querySelectorAll('.repertoire-preview .cp-frame')].filter(frame=>Number(getComputedStyle(frame).opacity)>0).length`), 1, 'only one pixel key owns the image');
   }
-  assert.equal(ids.size, 5);
+  await select('state', 'error');
   await run(`document.querySelector('.repertoire-controls button:last-child').click()`);
-  assert.equal(await run(`document.querySelector('[name="repertoire-variant"]').value`), '0', 'next wraps at ten');
+  assert.equal(await run(`document.querySelector('[name="repertoire-state"]').value`), 'reading', 'next wraps to the first activity');
   await run(`document.querySelector('.repertoire-controls button:first-child').click()`);
-  assert.equal(await run(`document.querySelector('[name="repertoire-variant"]').value`), '9');
-  await wait(300);
-  await run(`window.galleryClocks=document.querySelector('.repertoire-preview').getAnimations({subtree:true});document.querySelector('.repertoire-controls button:nth-child(2)').click();void 0`);
-  assert.equal(await run(`galleryClocks.length>0&&galleryClocks.every(a=>a.playState==='paused')`), true);
+  assert.equal(await run(`document.querySelector('[name="repertoire-state"]').value`), 'error', 'previous wraps to the last activity');
+  await until(`document.querySelector('.repertoire-preview .creature-performance')?.dataset.frames==='true'`, 'Wrapped activity decodes before checking playback ownership');
+  await run(`window.galleryClocks=document.querySelector('.repertoire-preview').getAnimations({subtree:true}).filter(a=>a.effect?.target?.matches('.cp-frame'));document.querySelector('.repertoire-controls button:nth-child(2)').click();void 0`);
+  await until(`galleryClocks.length>0&&galleryClocks.every(a=>a.playState==='paused')`, 'Pause holds the exact native sprite clocks');
   const held = await run(`galleryClocks.map(a=>a.currentTime)`); await wait(100);
   assert.deepEqual(await run(`galleryClocks.map(a=>a.currentTime)`), held);
   await run(`document.querySelector('.repertoire-controls button:nth-child(2)').click();void 0`);
   await until(`galleryClocks.every(a=>a.playState==='running')`, 'Play must resume the exact paused objects');
-  checks.push('five materials, eleven states, ten variants; wrapped navigation; exact native pause/resume; no live actors');
+  checks.push('five companions and eleven states share the production pixel strips; wrapped activity navigation, exact pause/resume and no live actors');
   win.webContents.send('office:snapshot', { mode: 'live', now: Date.now(), sessions: [], connections: [], windowVisibility: { hidden: true } });
   await until(`galleryClocks.every(a=>a.playState==='paused')`, 'Native window visibility also owns the specimen outside the room DOM');
   const nativeHeld = await run(`galleryClocks.map(a=>a.currentTime)`); await wait(100);
@@ -72,7 +71,7 @@ app.whenReady().then(async () => {
   assert.doesNotMatch(await run(`document.querySelector('.repertoire-gallery').textContent`), /\p{Script=Han}/u);
   await win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
   await until(`!document.querySelector('.repertoire-controls button:nth-child(2)').disabled`, 'Media preference resumes available playback');
-  await select('state', 'building'); await select('variant', '3');
+  await select('state', 'building');
   await run(`document.querySelector('.repertoire-gallery').scrollIntoView({block:'start',behavior:'instant'});void 0`);
   await wait(350);
   if (process.env.MINI_OFFICE_PREVIEW_DIR) {

@@ -25,7 +25,7 @@
   const archivedTurns = new Map();
   // Older observation bridges without roomDesign retain their legacy room.
   // Current native settings explicitly supply daily rotation by default.
-  const settingsDefaults = { rain: false, night: false, sceneTime: 'auto', sceneVenue: 'workshop', sceneTheme: 'auto', sceneWeather: 'auto', roomDesign: 'legacy', agentAppearance: 'mixed', agentScale: 1, reducedMotion: false, lowPower: false, idleVisitor: true, sound: false, selectedProject: '', language: 'zh' };
+  const settingsDefaults = { rain: false, night: false, sceneTime: 'auto', sceneVenue: 'workshop', sceneTheme: 'auto', sceneWeather: 'auto', roomDesign: 'legacy', agentAppearance: 'mixed', avatarStyle: 'pixel', agentScale: 1, reducedMotion: false, lowPower: false, idleVisitor: true, sound: false, selectedProject: '', language: 'zh' };
   let settings = { ...settingsDefaults };
   let deferredPhysicalScale = null;
   const sizeStability = window.OfficeSizeStability.create({ requestedScale: settings.agentScale });
@@ -34,7 +34,7 @@
   const usageHistory = window.OfficeUsageHistory?.create({ bridge, getLanguage: () => language });
   const manualQuestions = window.OfficeManualQuestions?.create({ bridge, language });
   const setupAssistant = window.OfficeSetupAssistant?.create({ bridge, getLanguage: () => language });
-  const appearancePicker = window.OfficeAppearancePicker?.create({ container: $('settings-dialog') });
+  const appearancePicker = window.OfficeAppearancePicker?.create({ container: $('settings-dialog'), onChange: avatarStyle => saveSettings({ avatarStyle }) });
   const scenery = window.OfficeDayScenery.create({ office, world, layer: $('window-scenery') });
   const attendanceModel = Attendance.createAttendance({ keepIdle: true });
   const cloneLedger = Clones.createLedger();
@@ -95,7 +95,7 @@
   const providerIds = window.OfficeProviders.getAllProviders().map(provider => provider.id === 'cursor-agent' ? 'cursor' : provider.id);
   const observedIds = new Set();
   let familyGraph = Family.build([]);
-  const visitor = window.OfficeIdleVisitor.create({ layer: $('visitors'), world, openDoor, getScene: () => Scene, getLayout: () => WalkingLayout, context: () => ({ enabled: settings.idleVisitor, ready: snapshotReceived > 0, mode: snapshot.mode, busy: attendance.present.length > 0 || actors.size > 0, hidden: sceneHidden(), reducedMotion: reduced(), lowPower: settings.lowPower, language, roomKey:activeRoom?.id||'legacy' }) });
+  const visitor = window.OfficeIdleVisitor.create({ layer: $('visitors'), world, openDoor, getScene: () => Scene, getLayout: () => WalkingLayout, context: () => ({ enabled: settings.idleVisitor, ready: snapshotReceived > 0, mode: snapshot.mode, busy: attendance.present.length > 0 || actors.size > 0, hidden: sceneHidden(), reducedMotion: reduced(), lowPower: settings.lowPower, language, avatarStyle: settings.avatarStyle, roomKey:activeRoom?.id||'legacy' }) });
   const sceneContext = () => ({ venue: settings.roomDesign==='legacy'?settings.sceneVenue:activeRoom?.effectVenue || settings.sceneVenue,
     scene: settings.roomDesign==='legacy'?settings.sceneVenue:activeRoom?.effectVenue || settings.sceneVenue, theme: settings.sceneTheme, weather: settings.sceneWeather,
     roomDesign: settings.roomDesign, room: activeRoom, layout: WalkingLayout,
@@ -1270,7 +1270,12 @@
     actor.arrivedAt = performance.now();
     actor.node.dataset.traffic = 'arrived';
     if (!quietSprites()) {
-      actor.arrival.animate([{ opacity: 0, transform: 'scale(.95)' }, { opacity: .8, offset: .25 }, { opacity: 0, transform: 'scale(1.3)' }], { duration: 500, easing: 'cubic-bezier(.23,1,.32,1)' });
+      actor.arrival.animate([
+        { opacity: .85, transform: 'translateY(0px)', easing: 'step-end' },
+        { opacity: .45, transform: 'translateY(2px)', offset: .42, easing: 'step-end' },
+        { opacity: .25, transform: 'translateY(4px)', offset: .72, easing: 'step-end' },
+        { opacity: 0 }
+      ], { duration: 280 });
     }
     return true;
   }
@@ -1393,50 +1398,52 @@
   }
   function addEffect(kind, point, target) {
     if (quietSprites()) return;
-    const effect = element('span', 'scene-effect ' + (kind === 'delivery' || kind === 'reply' ? 'note-delivery' : 'task-spark'), kind === 'delivery' ? '✓' : kind === 'reply' ? '≡' : kind === 'problem' ? '!' : '✦');
+    const effect = element('span', 'scene-effect ' + (kind === 'delivery' || kind === 'reply' ? 'note-delivery' : 'task-spark'), kind === 'delivery' ? '✓' : kind === 'reply' ? '≡' : kind === 'problem' ? '!' : '');
+    effect.dataset.effect = ['delivery', 'reply', 'problem'].includes(kind) ? kind : 'success';
     $('effects').append(effect);
-    const from = { x: point.x * 12.8, y: point.y * 7.2 - 48 };
-    const to = target ? { x: target.x * 12.8, y: target.y * 7.2 - 45 } : { x: from.x + 7, y: from.y - 40 };
+    const grid = value => Math.round(value / 2) * 2;
+    const from = { x: grid(point.x * 12.8), y: grid(point.y * 7.2 - 48) };
+    const to = target ? { x: grid(target.x * 12.8), y: grid(target.y * 7.2 - 45) } : { x: from.x + 8, y: from.y - 40 };
     const animation = effect.animate([
-      { transform: 'translate(' + from.x + 'px,' + from.y + 'px) rotate(-7deg)', opacity: 0 },
-      { transform: 'translate(' + from.x + 'px,' + (from.y - 7) + 'px) rotate(-3deg)', opacity: 1, offset: .18 },
-      { transform: 'translate(' + to.x + 'px,' + to.y + 'px) rotate(8deg)', opacity: 0 }
-    ], { duration: kind === 'delivery' ? 1400 : 900, easing: 'cubic-bezier(.77,0,.175,1)' });
+      { transform: `translate(${from.x}px,${from.y}px)`, opacity: 1, easing: 'steps(3,end)' },
+      { transform: `translate(${from.x}px,${from.y - 8}px)`, opacity: 1, offset: .18, easing: 'steps(7,end)' },
+      { transform: `translate(${to.x}px,${to.y}px)`, opacity: 0 }
+    ], { duration: kind === 'delivery' ? 1400 : 900 });
     animation.finished.catch(() => {}).finally(() => effect.remove());
   }
   // A turn boundary is the only evidence here; the sparkle never claims success.
   function turnSparkles(point) {
     if (quietSprites()) return;
-    const x = point.x * 12.8, y = point.y * 7.2 - 120;
-    [[-24, 34], [-9, 46], [10, 40], [25, 30]].forEach(([dx, rise], index) => {
-      const spark = element('span', 'scene-effect turn-spark', '✦');
+    const x = Math.round(point.x * 6.4) * 2, y = Math.round((point.y * 7.2 - 120) / 2) * 2;
+    [[-24, 34], [-10, 46], [10, 40], [24, 30]].forEach(([dx, rise], index) => {
+      const spark = element('span', 'scene-effect turn-spark');
       $('effects').append(spark);
       const motion = spark.animate([
-        { transform: `translate(${x + dx * .4}px,${y}px) scale(.6)`, opacity: 0 },
-        { transform: `translate(${x + dx * .8}px,${y - rise * .45}px) scale(1)`, opacity: 1, offset: .35 },
-        { transform: `translate(${x + dx}px,${y - rise}px) scale(.7)`, opacity: 0 }
-      ], { duration: 700, delay: 140 + index * 60, easing: 'cubic-bezier(.23,1,.32,1)', fill: 'backwards' });
+        { transform: `translate(${x}px,${y}px)`, opacity: 0, easing: 'step-end' },
+        { transform: `translate(${x + dx / 2}px,${y - rise / 2}px)`, opacity: 1, offset: .22, easing: 'step-end' },
+        { transform: `translate(${x + dx}px,${y - rise}px)`, opacity: .62, offset: .65, easing: 'step-end' },
+        { transform: `translate(${x + dx}px,${y - rise}px)`, opacity: 0 }
+      ], { duration: 540, delay: 140 + index * 60, fill: 'backwards' });
       motion.finished.catch(() => {}).finally(() => spark.remove());
     });
   }
   const BODY_CUES = Object.freeze({
-    hop: { duration: 640, frames: [
-      { transform: 'translateY(0px) scale(1,1)', easing: 'cubic-bezier(.23,1,.32,1)' },
-      { transform: 'translateY(0px) scale(1.04,.94)', offset: .15, easing: 'cubic-bezier(.23,1,.32,1)' },
-      { transform: 'translateY(-6px) scale(.97,1.04)', offset: .45, easing: 'cubic-bezier(.37,0,.63,1)' },
-      { transform: 'translateY(0px) scale(1.04,.95)', offset: .75, easing: 'cubic-bezier(.37,0,.63,1)' },
-      { transform: 'translateY(0px) scale(1,1)' }] },
-    startle: { duration: 300, frames: [
-      { transform: 'translate(0px,0px)', easing: 'cubic-bezier(.37,0,.63,1)' },
-      { transform: 'translate(-1.5px,-1px)', offset: .2, easing: 'cubic-bezier(.37,0,.63,1)' },
-      { transform: 'translate(1.5px,0px)', offset: .45, easing: 'cubic-bezier(.37,0,.63,1)' },
-      { transform: 'translate(-1px,0px)', offset: .7, easing: 'cubic-bezier(.37,0,.63,1)' },
-      { transform: 'translate(0px,0px)' }] }
+    hop: { duration: 520, frames: [
+      { transform: 'translateY(0px)', easing: 'step-end' },
+      { transform: 'translateY(-4px)', offset: .18, easing: 'step-end' },
+      { transform: 'translateY(-8px)', offset: .38, easing: 'step-end' },
+      { transform: 'translateY(-4px)', offset: .62, easing: 'step-end' },
+      { transform: 'translateY(0px)' }] },
+    startle: { duration: 280, frames: [
+      { transform: 'translate(0px,0px)', easing: 'step-end' },
+      { transform: 'translate(-2px,-2px)', offset: .2, easing: 'step-end' },
+      { transform: 'translate(2px,0px)', offset: .45, easing: 'step-end' },
+      { transform: 'translate(0px,0px)', offset: .7 }] }
   });
   function leanFrames(direction) {
-    const lean = `rotate(${Math.sign(direction) * 2}deg)`;
-    return [{ transform: 'rotate(0deg)', easing: 'cubic-bezier(.37,0,.63,1)' }, { transform: lean, offset: .25 },
-      { transform: lean, offset: .7, easing: 'cubic-bezier(.37,0,.63,1)' }, { transform: 'rotate(0deg)' }];
+    const lean = `translateX(${Math.sign(direction) * 2}px)`;
+    return [{ transform: 'translateX(0px)', easing: 'step-end' }, { transform: lean, offset: .2, easing: 'step-end' },
+      { transform: 'translateX(0px)', offset: .7 }];
   }
   // Body cues add onto whatever the body is doing and own no route or clock.
   function bodyCue(actor, kind, direction = 0) {
@@ -1444,12 +1451,11 @@
     const cue = kind === 'glance' ? direction && { duration: 1200, frames: leanFrames(direction) } : BODY_CUES[kind];
     if (!cue) return;
     actor.bodyCue?.cancel();
+    if (kind !== 'hop' && actor.performance?.cue?.(kind, { direction })) return;
     const motion = actor.body.animate(cue.frames, { duration: cue.duration, composite: 'add' });
     actor.bodyCue = motion;
     motion.finished.catch(() => {}).finally(() => { if (actor.bodyCue === motion) actor.bodyCue = null; });
-    requestAnimationFrame(() => {
-      if (actor.bodyCue === motion && kind !== 'hop') actor.performance?.cue?.(kind, { direction });
-    });
+
   }
   function parentGlance(parent, child, toward) {
     if (!parent || parent === child || parent.motion) return;
@@ -1682,11 +1688,11 @@
   function companionFor(session) {
     const design = companionRegistry ? companionRegistry.forRoot(companionRoot(session))
       : window.OfficeAgentAppearance?.forSession(session, { sessions: familyGraph.byId, mode: settings.agentAppearance }) || null;
-    return window.OfficePublicArtwork ? window.OfficePublicArtwork.design(design) : design;
+    return window.OfficePublicArtwork ? window.OfficePublicArtwork.design(design, settings.avatarStyle) : design;
   }
   function syncActorDesign(actor) {
     const design = companionFor(actor.session);
-    if ((actor.design?.appearanceKey || actor.design?.id || 'original') === (design?.appearanceKey || design?.id || 'original')) return;
+    if (actor.design?.appearanceKey === design?.appearanceKey && actor.design?.asset === design?.asset) return;
     const changedFormat = actor.design?.renderer !== design?.renderer;
     const changedAsset = actor.design?.asset !== design?.asset;
     // Keep the actual actor, position and accumulated work clocks. A switch
@@ -1759,20 +1765,7 @@
     const p = persona(actor.session);
     const pose = ['teacup','bookmark','leaf'].includes(p.keepsake) ? 'clawd-aegyo-shy.svg' : ['paperboat','lantern','bell'].includes(p.keepsake) ? 'clawd-react-double.svg' : 'clawd-react-double-jump.svg';
     setPose(actor, pose, true);
-    if (!quietSprites()) {
-      if (actor.design?.renderer === 'creature') actor.performance?.cue?.('wave');
-      const arm = actor.body.querySelector('.ap-arm-right');
-      if (arm) {
-        const wave = arm.animate([{ transform: 'translate(0px,0px) rotate(0deg)' },
-          { transform: 'translate(0px,-5px) rotate(-12deg)', offset: .25 },
-          { transform: 'translate(0px,-4px) rotate(6deg)', offset: .5 },
-          { transform: 'translate(0px,-5px) rotate(-10deg)', offset: .75 },
-          { transform: 'translate(0px,0px) rotate(0deg)' }],
-        { duration: 1000, composite: 'add', easing: 'cubic-bezier(.77,0,.175,1)' });
-        const effect = { cancel: () => wave.cancel() }; actor.cloneEffects.add(effect);
-        wave.finished.catch(() => {}).finally(() => { actor.cloneEffects.delete(effect); wave.cancel(); });
-      }
-    }
+    if (!quietSprites()) actor.performance?.cue?.('wave');
     say(actor, language === 'en' ? p.greetingEn : p.greetingZh, 3000);
     if (!await delay(actor, 3000, serial)) return;
     actor.node.dataset.reaction = 'false';
@@ -2356,6 +2349,8 @@
     nativeWindowHidden = typeof next.windowVisibility?.hidden === 'boolean' ? next.windowVisibility.hidden : false;
     snapshotReceived += 1;
     snapshot = { ...next, mode: 'live', sessions: next.sessions.filter((session) => session && typeof session.id === 'string'), connections: Array.isArray(next.connections) ? next.connections : [] };
+    const styleChanged = (next.avatarStyle === 'pixel' || next.avatarStyle === 'painted') && settings.avatarStyle !== next.avatarStyle;
+    if (styleChanged) settings = { ...settings, avatarStyle: next.avatarStyle };
     usageHistory?.updateStatus(snapshot.usageLog);
     homeTokenUsage?.update(snapshot);
     manualQuestions?.update(snapshot);
@@ -2363,6 +2358,7 @@
     // Reconcile fresh work before quiet lifecycle cleanup: this packet may
     // revoke the very absorption owner that was active before native hiding.
     render();
+    if (styleChanged) refreshAvatarStyle();
     if (previouslyHidden !== sceneHidden()) refreshVisibility();
   }
   async function refreshSnapshot() { const next = await call('getSnapshot'); if (next) receive(next); }
@@ -2375,8 +2371,17 @@
     const index = candidates.findIndex((session) => session.id === selectedSession);
     selectSession(candidates[(index + 1) % candidates.length].id);
   }
+  function updateAppearancePicker() {
+    appearancePicker?.update({ avatarStyle: settings.avatarStyle, language, reducedMotion: reduced(), lowPower: settings.lowPower, hidden: nativeWindowHidden });
+  }
+  function refreshAvatarStyle() {
+    updateAppearancePicker();
+    for (const actor of actors.values()) syncActorDesign(actor);
+    visitor.tick();
+  }
   function applySettings(next) {
     const oldScale = settings.agentScale;
+    const oldStyle = settings.avatarStyle;
     const requestedScale = Number(next && next.agentScale);
     const nextScale = Number.isFinite(requestedScale) && requestedScale > 0 ? Math.max(.65, Math.min(1.35, requestedScale)) : 1;
     const scaleChanged = oldScale !== nextScale;
@@ -2396,12 +2401,12 @@
       }
     }
     if (transferOwner && (next?.reducedMotion || next?.lowPower || mediaReduce.matches || sceneHidden())) revokeTransfer('quiet', null, false);
-    settings = { ...settingsDefaults, ...next, agentScale: nextScale };
+    settings = { ...settingsDefaults, ...next, agentScale: nextScale, avatarStyle: window.OfficePublicArtwork?.normalizeStyle(next?.avatarStyle) || 'pixel' };
     numberFlip?.sync();
     const previousLanguage = language;
     language = settings.language === 'en' ? 'en' : 'zh';
     applyLanguage();
-    appearancePicker?.update({ value: settings.agentAppearance, language, reducedMotion: reduced(), lowPower: settings.lowPower, hidden: nativeWindowHidden });
+    updateAppearancePicker();
     office.dataset.rain = String(settings.rain);
     scenery.update(settings, language);
     office.dataset.reducedMotion = String(reduced());
@@ -2415,6 +2420,7 @@
     for (const actor of [...actors.values()]) {
       settleQuietCloneEffects(actor);
       if (!actors.has(actor.id)) continue;
+      if (oldStyle !== settings.avatarStyle) syncActorDesign(actor);
       setPose(actor, actor.wantedAsset || actor.spec.asset);
       updateActorLabel(actor);
       if (previousLanguage !== language) { clearTimeout(actor.bubbleTimer); actor.bubble.dataset.show = 'false'; }
@@ -2567,7 +2573,7 @@
     numberFlip?.sync();
     if (sceneHidden()) revokeTransfer('hidden');
     office.dataset.hidden = String(sceneHidden());
-    appearancePicker?.update({ language, reducedMotion: reduced(), lowPower: settings.lowPower, hidden: nativeWindowHidden });
+    appearancePicker?.update({ avatarStyle: settings.avatarStyle, language, reducedMotion: reduced(), lowPower: settings.lowPower, hidden: nativeWindowHidden });
     for (const actor of [...actors.values()]) {
       settleQuietCloneEffects(actor);
       if (actors.has(actor.id)) setPose(actor, actor.wantedAsset || actor.spec.asset);

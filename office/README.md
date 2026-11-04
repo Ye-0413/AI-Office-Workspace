@@ -4,7 +4,7 @@
 
 在闲置屏幕上，观察你的 Agent 团队协作。
 
-**v0.24.0 · The workshop companions / 工坊伙伴**
+**Pixel and Painted avatars / 像素与手绘伙伴**
 
 A local macOS studio for watching real, independent AI sessions inhabit a little room. Designed for a five-inch 1280×720 secondary display.
 
@@ -28,9 +28,9 @@ A local macOS studio for watching real, independent AI sessions inhabit a little
 
 真实 v0.24.0 App 录屏，后期使用 AI Work Space 品牌与中英双语文案；动作图鉴镜头已标注为演示。Recorded in the real v0.24.0 app, with updated AI Work Space titles, bilingual captions and labeled Motion gallery demonstrations. [录制说明与来源 / Recording details & credits](../docs/media/README.md).
 
-This release introduces five material companions and 550 performances, larger bodies and names, and fixed manual sizing. The verified platform is **macOS 13+ on Apple Silicon / arm64**. Current packages use local ad-hoc signing and are **not Apple-notarized**. Install the DMG or ZIP from the Release page; installed users do not need Node.js.
+Current builds include both Pixel and Painted avatars, with Pixel selected by default. Public v0.24.0 downloads contain the earlier workshop release. The verified platform is **macOS 13+ on Apple Silicon / arm64**. Current packages use local ad-hoc signing and are **not Apple-notarized**. Install the DMG or ZIP from the Release page; installed users do not need Node.js.
 
-本次发布包括五只材质伙伴、550 套动作、更大的身体与名字，以及不随人数变化的固定手动大小。可验证平台为 **macOS 13+、Apple Silicon／arm64**；当前安装包采用本地 ad-hoc 签名，**尚未经过 Apple 公证**。从 Release 下载 DMG 或 ZIP，安装后无需另装 Node.js。
+当前构建包含像素和手绘两种头像风格，默认使用像素风。公开的 v0.24.0 下载对应此前发布的工坊版。可验证平台为 **macOS 13+、Apple Silicon／arm64**；当前安装包采用本地 ad-hoc 签名，**尚未经过 Apple 公证**。从 Release 下载 DMG 或 ZIP，安装后无需另装 Node.js。
 
 Published v0.24.0 packages still contain **AI Mini Office.app**. New builds from the current source use **AI Work Space.app**; existing release files retain their original names.
 
@@ -64,19 +64,19 @@ Daily room uses a stable Hong Kong date schedule: six different everyday interio
 
 ## 当前动画展示
 
-五只工坊伙伴各有 11 类状态，每类 10 套材质动作，共 **550 套**。在应用的「房间偏好 → 工坊伙伴 → 动作图鉴」可逐一选择、播放或暂停。演示与真实会话分开。
+五位伙伴各有 11 类活动，像素风和手绘风各有 **55 套**逐帧动作。通过「显示 → 头像风格」或「房间偏好 → 头像风格」切换。房间偏好中的动作图鉴随风格切换，可以选择角色和活动、播放或暂停。演示使用独立的合成会话。
 
 <details>
 <summary>展开离线动作预览 / Expand the offline animation preview</summary>
 
 <picture>
-  <source media="(prefers-reduced-motion: reduce)" srcset="../docs/animations/workshop-demo.png">
-  <img src="../docs/animations/workshop-demo.svg" width="1100" alt="五只工坊伙伴与同族分身的离线生产动作示意">
+  <source media="(prefers-reduced-motion: reduce)" srcset="../docs/animations/pixel-overview.png">
+  <img src="../docs/animations/pixel-overview.gif" width="1100" alt="五位原创像素伙伴的活动循环">
 </picture>
 
 </details>
 
-[当前活动预览与演示范围](../docs/animations/README.md) · [静态预览](../docs/animations/workshop-demo.png)。公开演示采用生产渲染模块的离线原生采样，以合成会话展示，不是用户实时任务截图。完整 550 套在应用图鉴内查看。
+公开演示采用生产渲染模块的离线原生采样，以合成会话展示。[两种风格的活动预览与录制说明](../docs/animations/README.md) · [像素风静态预览](../docs/animations/pixel-overview.png) · [手绘风静态预览](../docs/animations/painted-overview.png)。
 
 保留的旧关节渲染器另有 88 套参考动作，其步态／分身和双人道具图使用原创示意外观，不代表当前工坊伙伴的材质动作。公开图鉴中的离线采样帧率不代表真实房间运行帧率。
 
@@ -92,21 +92,17 @@ Daily room uses a stable Hong Kong date schedule: six different everyday interio
 
 每个主 Agent 家族随机分配五只工坊伙伴之一：**纸团**（奶油白折纸）、**墨豆**（深蓝墨滴）、**苔盒**（陶土与苔藓）、**线团**（珊瑚色毛线）、**灯籽**（透明琥珀与暖光）。Claude 也使用新角色。分身继承主身的造型与配色，体型更小；同一场景中每个主 Agent 的「造型＋配色」唯一。先分配五种原色造型，超过五个家族时复用造型并添加配色变体。在场家族不随新成员加入或离开而换外观，离场过渡结束前仍保留其外观名额。名牌家族色与编号继续区分真实身份和父子关系。用途说明是角色性格设定，不会改变工具能力或任务分配。
 
-「房间偏好 → 工坊伙伴」提供五种角色的大图图鉴，并说明家族外观规则。每只使用六格透明姿态图：待命、工作、思考、休息、异常／需留意、完成。姿态跟随实际观察状态，完成只在真实完成证据出现后呈现；节能、隐藏和减少动作时停止动态，保留正确姿态。外观分配保留真实身份、脚点和父子关系。旧版「全部原貌」、指定统一角色和几何外观偏好均迁移为家族自动分配。素材由内置图像生成工具依据用户提供的概念图制作，完整提示保存在 `assets/avatars/workshop-prompts.json`，不使用恢复的上游角色素材。
+「房间偏好」提供当前风格的五种角色大图。默认的像素风使用六格 40×40 透明姿态，分别呈现待命、工作、思考、休息、需留意与确认完成。手绘风保留原工坊姿态与活动帧条，播放时在帧之间柔和过渡。两种风格都支持节能和减少动作，切换只影响同一组家族的外观与动作呈现。
 
-五只均支持阅读、搜索、思考、编程、设计、测试、构建、执行、等待工具、等待用户、异常，每个角色每类状态各有 **10 套动作，共 550 套**。每套有独立道具、操作路径或接触顺序，身体图与各材质的动态道具分层绘制。道具固定在角色侧前方的低位工作区（苔盒用左侧），不遮挡眼睛、表情或灯籽的内光；由本体材质延伸的肢体（纸片、墨线、根须、纱线、光点）从固定起点伸到道具的握持点，身体倾斜、前足压地、头部余动和墨豆的双足交替都跟随同一条道具时间线，暂停、恢复和切换时一起停止或收回。思考重排元素、编程输入、构建组装、执行运行回路；两类等待分别保留停止的工具和朝向观众的请求，异常保留卡纸、断路、断根或线结。工作循环约 2.6–4.2 秒，等待与异常为 6–9 秒；工作完成三个完整循环后轮换动作，等待与异常完成两个循环后轮换，不代表真实进度或预设测试结果。完整身份决定固定遍历顺序，十套动作全部出现后才重复；普通元数据刷新不会重启动作。隐藏保留同一动画对象和时钟，减少动作或节能保留静态道具。道具切换先停止旧动作再收起；单次工具成功只触发去重后的轻微反馈，不播放整轮完成。墨豆分身以墨滴分离和融回表现，仍由原有真实分身生命周期驱动。
-
-苔盒的编程、阅读、异常、等待工具与等待用户五类状态已改由**位图关键帧条**演出（`assets/avatars/frames/moss/`，清单 `renderer/creature-frame-manifest.js`）：每条四个画出来的极端关键帧，道具与动作互不重复（叶片键盘与根须击键、翻大叶、塌陷断根、探看空陶盆、举叶递出），按拍交叉溶解或硬切，并叠加以脚底为轴的整体位移、旋转与挤压插值，使整只角色在 5 英寸屏上也能读出状态。帧条按待机格配准（脚底、尺寸、中心、眼睛），减少动作或节能时停在首帧，隐藏保留同一组动画对象；无帧条的状态仍使用上文的矢量道具，动作图鉴与审计也仍用矢量配方。帧条由 `scripts/frame-qa.cjs` 抠像、配准、校验并写入清单与打包清单，来源记录见 `assets/WORKSHOP-ARTWORK-NOTICE.md` 与 `assets/avatars/workshop-prompts.json`。
+像素风的 55 条活动帧条各有四张 60×60 像素画面。角色和道具同步硬切，在隐藏时暂停同一组时钟，在节能和减少动作模式停在首帧。到站、分身、待命、访客、天气、节庆和数字翻页使用阶梯节奏和方块轮廓。素材由 `scripts/draw-pixel-companions.cjs` 在整数网格绘制。帧条损坏时保留对应姿态；整张姿态图无法加载时显示像素备用头像。五位伙伴另有逐像素绘制的眨眼、左右偷看、招手、受惊和轻微成功反馈。点击伙伴可打招呼，装饰访客偶尔会展示角色专属彩蛋。
 
 按 **⌘K / Ctrl+K** 打开伙伴搜索，可按昵称、任务、工具、项目或真实 ID 查找，并筛选「仅需留意」。方向键、Home / End 可浏览结果，Enter 查看详情，Esc 关闭后返回来源；实时更新保留列表焦点和滚动位置。选中伙伴有静态脚底光圈，便于在房间中定位。
 
 Each real main-agent family receives one randomly assigned workshop companion: **Folio**, a folded paper creature; **Ink**, a low fluid pebble; **Moss**, a moss-backed terracotta creature; **Thread**, a coral yarn creature; or **Glow**, a translucent amber seed. Claude also uses these characters. Helpers inherit their main agent’s shape and color at a smaller size. Every main agent on the floor has a unique shape-and-color combination: the first five families use distinct original designs; additional families reuse those shapes with new color variants. Existing families keep their appearance as others arrive or leave, and departing bodies retain their reservation until they leave the floor. Nameplate colors and numbers preserve family identification and actual ancestry. Role descriptions express character, without changing provider capability or task assignment.
 
-Room preferences → Workshop companions offers a large character gallery and explains automatic family assignment. Six transparent poses follow observed idle, work, thought, rest, attention and confirmed completion states. Quiet modes stop motion without hiding the selected pose. Actor identities, foot anchors and parent relationships remain intact. Retired original, fixed-character and geometric appearance preferences all migrate to automatic family assignment. Assets were made with the built-in image generation tool from the user-supplied concept; complete prompts are retained in `assets/avatars/workshop-prompts.json`.
+Open **View → Avatar Style** in the macOS menu bar or **Room preferences → Avatar style** to switch between Pixel and Painted. The app remembers the choice locally. Both styles cover the same five companions and eleven activities, and the room preferences show the selected style’s motion gallery. Pixel companions have six 40×40 poses and 55 activity strips, each with four 60×60 cels that cut on each beat. Painted companions use the original workshop poses and 55 activity strips with soft transitions between keys. Both styles pause playback when hidden and show a still pose in reduced motion or low power.
 
-Each of the five companions has ten distinct choreographies for each of the eleven activities, giving **550 material-specific performances**. The motion gallery in Room preferences lets you select a character, activity and variation, then pause the isolated specimen for inspection. Separate tools distinguish reading, searching, planning, coding, designing, testing, building and running. Waiting stops the work loop; a tool wait retains its stopped mechanism while a user wait offers a request. Error states retain a visible jam, break or knot without claiming a repair. Work cycles take 2.6–4.2 seconds and waiting/error cycles take 6–9 seconds. Work changes variation after three complete cycles; waits/errors change after two. Full identity seeds a stable order that visits all ten before repeating. Native animations advance at cycle boundaries without per-character timers or frame callbacks; ordinary metadata does not restart playback. Hidden scenes preserve the exact paused clocks, while quiet preferences retain static poses. None of these loops implies progress or test success. A confirmed tool success gets one deduplicated, restrained response, separate from a confirmed turn completion. Ink helpers bud into droplets and merge back within the existing real clone lifecycle.
-
-Moss's coding, reading, error, waiting-tool and waiting-user states are now performed by **painted keyframe strips** (`assets/avatars/frames/moss/`, manifest `renderer/creature-frame-manifest.js`): four painted extreme keys per activity with a distinct prop and action each (leaf keypad struck by a root, a big leaf page turned, a collapse with a snapped root, peering into an empty clay pot, a leaf raised and offered), cross-dissolved or hard-cut per beat and layered with whole-body shift, rotation and squash interpolation around the feet so the state reads on a 5-inch screen. Strips are registered against the idle cell (floor, size, centre, eyes); reduced motion and quiet settings hold the first key and hidden scenes keep the same animation objects. Activities without a strip still use the vector props above, and the gallery and audits keep using the vector recipes. `scripts/frame-qa.cjs` keys, registers, checks and writes each strip into the manifest and the package file list; provenance is recorded in `assets/WORKSHOP-ARTWORK-NOTICE.md` and `assets/avatars/workshop-prompts.json`.
+`scripts/draw-pixel-companions.cjs` draws the original artwork directly on a pixel grid. A missing strip leaves the corresponding atlas pose visible. A missing atlas shows the pixel backup body. Each species has nine additional expression cels for blinking, sideways glances, greetings, startles, a small reaction to confirmed tool success, and a rare decorative visitor surprise. Click a companion to say hello. Both styles are included in the same app and share its local profile and observation hooks.
 
 Use **⌘K / Ctrl+K** to search the roster by nickname, task, tool, project or real ID. Filter to agents needing attention, browse with arrows or Home / End, and press Enter for details. Focus and scroll survive live updates, and closing details restores focus.
 
@@ -194,7 +190,7 @@ Codex 的线程 UUID 与每轮 ID 分开识别，子 Agent 日志中复制的父
 
 观察日志轮换时会先按文件身份排空保留文件的未读尾部，再读取新文件；每轮仍最多读取 64 KiB。损坏行和不同文件的 JSON 碎片会被隔离。GitHub 的 Office quality 工作流在 main 推送和 PR 上安装锁定依赖、重建原生锁并运行回归测试；公开源码检查无需还原角色素材。
 
-保留的旧关节渲染器覆盖十一种真实活动，**每类八套，共 88 套参考关节动作**（当前工坊角色使用上文的 550 套材质动作）：思考与规划、阅读、搜索、写代码、设计、测试、构建、命令执行、等待工具、等待用户及错误。托腮、转笔、分解方案、推演分支；打字、调试、重构、核对补丁；展开卷轴、翻目录卡、检查测试边界、绕线装配等场景使用不同的道具及眼手脚编排。同一活动按约 18–24 秒可见工作时间自然轮换，普通事件刷新不会重启动作。每个完整身份分别累计各类活动时间，切换场景后会继续轮换，不重复从首个动作开始；离屏时间不算作工作时间。姿态与道具切换保留可中断的短暂衔接，工具结果和生命周期反应继续优先。动作只引用本地静态角色素材，不将受限 SVG 内容写入源码；减少动作、节能、隐藏、走路或离场时会暂停轮换。
+保留的旧关节渲染器覆盖十一种真实活动，**每类八套，共 88 套参考关节动作**（当前像素角色使用上文的 55 套逐帧动作）：思考与规划、阅读、搜索、写代码、设计、测试、构建、命令执行、等待工具、等待用户及错误。托腮、转笔、分解方案、推演分支；打字、调试、重构、核对补丁；展开卷轴、翻目录卡、检查测试边界、绕线装配等场景使用不同的道具及眼手脚编排。同一活动按约 18–24 秒可见工作时间自然轮换，普通事件刷新不会重启动作。每个完整身份分别累计各类活动时间，切换场景后会继续轮换，不重复从首个动作开始；离屏时间不算作工作时间。姿态与道具切换保留可中断的短暂衔接，工具结果和生命周期反应继续优先。动作只引用本地静态角色素材，不将受限 SVG 内容写入源码；减少动作、节能、隐藏、走路或离场时会暂停轮换。
 
 ## Run and build
 
@@ -221,7 +217,7 @@ Tests and builds first check that authored holiday profiles match the generated 
 
 The default mode is **实时观察**. Existing hooks/plugins and the bounded Codex rollout observer supply real activity; native Gemini CLI, Pi and OMP session logs provide additional fresh read-only observations. Each session and reliably identified child agent has its own identity. Historical token imports never create a room actor or credit offline work time. There is no demonstration store, synthetic task timer, mode switch or demo IPC in the application. Synthetic events exist only in isolated regression fixtures.
 
-The retained legacy joint renderer has eight reference choreographies for each of eleven activities, for 88 total; the current workshop companions use the 550 material-specific performances described above. In the reference renderer, props and joint motion distinguish reading, search, planning, coding, design, testing, builds, execution, tool waits, user waits and error inspection. A bounded per-identity clock keeps each activity's accumulated visible work across page and room navigation. Offscreen and quiet intervals do not advance the cycle; metadata does not replay it.
+The retained legacy joint renderer has eight reference choreographies for each of eleven activities, for 88 total; the current workshop companions have 55 activity loops per avatar style. In the reference renderer, props and joint motion distinguish reading, search, planning, coding, design, testing, builds, execution, tool waits, user waits and error inspection. A bounded per-identity clock keeps each activity's accumulated visible work across page and room navigation. Offscreen and quiet intervals do not advance the cycle; metadata does not replay it.
 
 The connection panel installs or updates owned integrations only when explicitly selected. It preserves existing hooks and native approval behavior. Supported OpenCode/MiMo plugins also carry the request-scoped manual question channel; update an existing installation with an explicit reconnect or one-click Initialize, then follow the host's normal plugin reload/new-session path. Codex hook trust must still be reviewed in Codex; this app does not write trust hashes or approve tools. Unknown Cursor host versions use a conservative observation subset. A host must be available and run a real session before its end-to-end connection can be considered verified.
 
@@ -239,7 +235,7 @@ Presentation preferences and a normalized event spool live in the application's 
 
 Source code remains **AGPL-3.0-only**. This repository retains and adapts upstream Clawd on Desk code and provider definitions; it is not wholly original. Third-party attribution, including CC Switch monitoring mechanisms, remains in [UPSTREAM-NOTICE.md](UPSTREAM-NOTICE.md).
 
-The five workshop characters use **user-supplied concepts + AI-assisted image generation + project implementation**. Their self-contained [Workshop artwork notice](assets/WORKSHOP-ARTWORK-NOTICE.md) ships with the app. Artwork retains **All Rights Reserved**; the source-code license grants no open artwork license. Existing [upstream artwork restrictions](assets/ORIGINAL-ARTWORK-LICENSE.txt) remain separate. See the [bilingual project originality statement](../ORIGINALITY.md) for the full scope and sources.
+The five workshop characters are based on **user-supplied concepts**. The original painted edition uses AI-assisted artwork, and the pixel edition uses integer-grid sprites drawn by the project. Their self-contained [Workshop artwork notice](assets/WORKSHOP-ARTWORK-NOTICE.md) ships with the app. Artwork retains **All Rights Reserved**; the source-code license grants no open artwork license. Existing [upstream artwork restrictions](assets/ORIGINAL-ARTWORK-LICENSE.txt) remain separate. See the [bilingual project originality statement](../ORIGINALITY.md) for the full scope and sources.
 
 The office background was generated with the built-in image tool; its prompt and source are preserved in `docs/office-art-prompt.txt` and `assets/office-room-source.png`. The 33 independent room paintings and exact prompts, source basenames and hashes are in `assets/scenes/rooms/generation.json`; the reference-based base interiors and 43 seasonal paintings have separate generation records. The public app source omits restricted upstream character artwork and the upstream icon. The optional authorized local restoration process does not grant redistribution rights.
 

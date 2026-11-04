@@ -7,7 +7,7 @@
 })(typeof globalThis === 'object' ? globalThis : this, function (root) {
   'use strict';
   const NS = 'http://www.w3.org/2000/svg';
-  const OUT = 'cubic-bezier(.23,1,.32,1)', MOVE = 'cubic-bezier(.77,0,.175,1)';
+  const OUT = 'steps(3,end)', MOVE = 'steps(4,end)';
   const DURATION = 1400, BRIDGE_WAIT = 240, EXIT = 160, STATION_INTERVAL = 2400;
   const ACTIVITIES = Object.freeze({ reading: 'library', searching: 'library', planning: 'board', designing: 'board', coding: 'desk', building: 'bench', testing: 'bench', running: 'bench' });
   const MOUNTS = Object.freeze({

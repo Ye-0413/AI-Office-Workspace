@@ -4,7 +4,7 @@
   if(typeof module==='object'&&module.exports)module.exports=api;else root.OfficeCloneMotion=api;
 })(typeof globalThis==='object'?globalThis:this,function(){
   'use strict';
-  const EASE_OUT='cubic-bezier(.23,1,.32,1)',EASE_MOVE='cubic-bezier(.77,0,.175,1)';
+  const EASE_OUT='steps(3,end)',EASE_MOVE='steps(4,end)';
   const DURATION=900,READY=Object.freeze({split:300,absorb:680});
   function burst({anchor,kind='split',ownerId='',reducedMotion=false,lowPower=false,hidden=false}={}){
     if(!anchor?.ownerDocument)throw new TypeError('A clone effect needs its actual scene anchor.');

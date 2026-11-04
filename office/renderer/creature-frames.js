@@ -1,9 +1,4 @@
-/* State families performed by the whole painted body about its feet, plus an
- * eyelid blink cut from the body's own pixels. This is the body half of the
- * frame-animation plan (docs/plans/2026-11-04-route-a-frame-animation.md):
- * one legible motion vocabulary per observed state family, large enough to
- * read at a 64px body, with no prop, no timer and no invented state. Every
- * loop is an ordinary pausable WAAPI clock owned by the performance layer. */
+/* Native-grid cels share the observed creature clock. */
 (function (root, factory) {
   'use strict';
   const node = typeof module === 'object' && module.exports;
@@ -14,39 +9,17 @@
   'use strict';
   const PIVOT = '77.5px 111px';
   const NS = 'http://www.w3.org/2000/svg';
-  // Painted keyframe strips (scripts/frame-qa.cjs) draw over a SPAN-unit
-  // square centred on the feet, where the atlas cell covers 80 units; the
-  // feet of both sit on the same floor line.
+  // The 60-pixel reel and the 40-pixel atlas both use two rig units
+  // per texel and share the same physical floor line.
   const FEET_Y = 115, ATLAS_LEFT = 37.5, ATLAS_BODY = 80;
-  const MANIFEST = Manifest && typeof Manifest === 'object' ? Manifest : { cell: 512, span: 120, baseline: 440, blend: 150, strips: {} };
-  const SPAN = MANIFEST.span || 120, FRAME_LEFT = ATLAS_LEFT + ATLAS_BODY / 2 - SPAN / 2, FRAME_TOP = FEET_Y - (MANIFEST.baseline || 440) * SPAN / (MANIFEST.cell || 512);
-  function strip(species, activity) { return MANIFEST.strips?.[species]?.[activity] || null; }
-  // Opacity tracks for one strip: each step shows its key from its beat to
-  // the next beat; a step enters by a `blend` ms cross-dissolve unless it is
-  // listed in `cuts`, when it lands as a hard cut.
+  const MANIFEST = Manifest || { cell: 60, span: 120, baseline: 56, strips: {} };
+  const SPAN = MANIFEST.span, FRAME_LEFT = ATLAS_LEFT + ATLAS_BODY / 2 - SPAN / 2;
+  const FRAME_TOP = FEET_Y - MANIFEST.baseline * SPAN / MANIFEST.cell;
+  function strip(species, activity) { return MANIFEST.strips[species]?.[activity] || null; }
   function tracks(entry) {
-    const n = entry.sequence?.length || entry.frames, sequence = entry.sequence || Array.from({ length: n }, (_, i) => i);
-    const beats = entry.beats || sequence.map((_, i) => i / n), cuts = new Set(entry.cuts || []), b = Math.min(.45 / n, (MANIFEST.blend || 150) / entry.duration);
-    const steps = sequence.map((key, j) => ({ key, start: beats[j], end: j + 1 < n ? beats[j + 1] : 1, cutIn: cuts.has(j), cutOut: cuts.has((j + 1) % n) }));
-    const value = (step, t) => {
-      const ramp = (from, to, at) => Math.max(0, Math.min(1, (at - from) / (to - from)));
-      const inside = (t) => t >= step.start && t < step.end ? (step.cutIn || t >= step.start + b ? 1 : ramp(step.start, step.start + b, t)) : 0;
-      const tail = (t) => !step.cutOut && t >= step.end && t < step.end + b ? 1 - ramp(step.end, step.end + b, t) : 0;
-      return Math.max(inside(t), tail(t), inside(t + 1), tail(t + 1));
-    };
-    const points = new Set([0, 1]);
-    for (const step of steps) for (const t of [step.start, step.start + b, step.end, step.end + b]) { const w = ((t % 1) + 1) % 1; points.add(+w.toFixed(5)); if (step.cutIn || step.cutOut) points.add(+Math.max(0, w - 1e-4).toFixed(5)); }
-    const offsets = [...points].sort((x, y) => x - y);
-    return Array.from({ length: entry.frames }, (_, key) => offsets.map(offset => ({ offset, opacity: +Math.max(...steps.filter(step => step.key === key).map(step => value(step, offset === 1 ? 1 - 1e-9 : offset)), 0).toFixed(4), easing: 'linear' })));
-  }
-  // Whole-body annotations per key (§4.2), interpolated from step to step so
-  // the lean, dip or sway continues while the painted keys dissolve.
-  function motion(entry) {
-    if (!Array.isArray(entry.motion) || !entry.motion.length) return null;
-    const n = entry.sequence?.length || entry.frames, sequence = entry.sequence || Array.from({ length: n }, (_, i) => i);
-    const beats = entry.beats || sequence.map((_, i) => i / n);
-    const frames = sequence.map((key, j) => K(beats[j], entry.motion[key] || {}));
-    return [...frames, K(1, entry.motion[sequence[0]] || {})];
+    return entry.beats.map((_, key) => [...entry.beats.map((offset, index) => ({
+      offset, opacity: index === key ? 1 : 0, easing: 'step-end'
+    })), { offset: 1, opacity: key === 0 ? 1 : 0 }]);
   }
   const SINE = 'cubic-bezier(.37,0,.63,1)', ORGANIC = 'cubic-bezier(.4,0,.2,1)', SETTLE = 'cubic-bezier(.2,.8,.3,1)', SNAP = 'cubic-bezier(.6,0,.9,.6)';
   // Seven families. The family decides the vocabulary; the activity picks a
@@ -58,16 +31,6 @@
   });
   // Work zone side per species (Moss keeps its tools on the left).
   const SIDE = Object.freeze({ folio: 1, ink: 1, moss: -1, thread: 1, glow: 1 });
-  // Painted eye rectangles in rig units, per sheet cell whose eyes share the
-  // idle registration. A lid copies the pixels directly above the eyes down
-  // over them, so the blink is made of the creature's own material. Moss's
-  // eyes sit in a clay recess and Glow's under its light core: neither has
-  // matching skin to borrow, so they wait for a painted closed-eye frame.
-  const EYES = Object.freeze({
-    folio: { 0: [66, 82, 22, 12], 1: [66, 82, 22, 12] },
-    ink: { 0: [61, 90, 26, 12], 1: [61, 90, 26, 12] },
-    thread: { 0: [71, 83, 25, 12], 1: [71, 83, 25, 12] }
-  });
   const r = value => Number(value.toFixed(3));
   const T = ({ x = 0, y = 0, rot = 0, sx = 1, sy = 1 }) => 'translate(' + r(x) + 'px,' + r(y) + 'px) rotate(' + r(rot) + 'deg) scale(' + r(sx) + ',' + r(sy) + ')';
   const K = (offset, pose, easing = ORGANIC) => ({ offset, transform: T(pose), easing });
@@ -112,21 +75,19 @@
       default: return null;
     }
   }
-  function hash(text) { let h = 2166136261; for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
-  function create({ document, pose, lid, lidGroup, lidClip, creature = 'folio', shell = null, defs = null, id = 'cp', assetBase = '../assets/avatars/' } = {}) {
+  function create({ document, pose, creature = 'folio', shell = null, defs = null, id = 'cp', assetBase = '../assets/avatars/' } = {}) {
     if (!document || !pose) throw new TypeError('Frames need the pose group of an existing creature.');
-    let loop = null, blink = null, key = '', blinkKey = '', destroyed = false, species = creature;
-    let painted = null, paintedKey = '', reels = [];
+    let loop = null, key = '', destroyed = false, species = creature;
+    let painted = null, paintedKey = '', reels = [], probe = null;
     const attribute = (node, name, value) => { value = String(value); if (node.getAttribute(name) !== value) node.setAttribute(name, value); };
     const style = (node, name, value) => { if (node.style.getPropertyValue(name) !== value) node.style.setProperty(name, value); };
     const element = (tag, attrs, parent) => { const n = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, String(v)); parent?.append(n); return n; };
-    // The painted strip lives in the shell beside the atlas body; one
-    // <image> per key, all showing the same strip at different x offsets.
+    // Each cel clips the same sheet at a different grid offset.
     let group = null, frameClip = null, images = [];
     if (shell && defs) {
       frameClip = element('clipPath', { id: id + '-frame-cell' }, defs);
       element('rect', { x: FRAME_LEFT, y: FRAME_TOP, width: SPAN, height: SPAN }, frameClip);
-      group = element('g', { class: 'cp-frames', 'data-active': 'false' }, shell);
+      group = element('g', { class: 'cp-frames', 'data-active': 'false', 'data-ready': 'false' }, shell);
     }
     function image(index) {
       while (images.length <= index) {
@@ -138,7 +99,8 @@
     function stopPainted() {
       for (const reel of reels) reel.cancel(); reels = []; paintedKey = ''; painted = null;
       for (const img of images) style(img, 'opacity', '0');
-      if (group) attribute(group, 'data-active', 'false');
+      if (probe) { probe.onload = probe.onerror = null; probe = null; }
+      if (group) { attribute(group, 'data-active', 'false'); attribute(group, 'data-ready', 'false'); }
     }
     function paint(activity, phase, still = false) {
       const entry = group ? strip(species, activity) : null;
@@ -151,29 +113,23 @@
       for (let k = entry.frames; k < images.length; k++) attribute(images[k], 'href', '');
       attribute(group, 'data-active', 'true'); attribute(group, 'data-strip', activity);
       painted = entry; paintedKey = nextKey;
+      // Keep the atlas visible until the selected reel has decoded. Stale
+      // requests cannot cover the current pose after a state or species swap.
+      probe = document.createElement('img');
+      probe.onload = () => { if (paintedKey === nextKey) attribute(group, 'data-ready', 'true'); };
+      probe.src = href;
+      if (probe.complete && probe.naturalWidth > 0) attribute(group, 'data-ready', 'true');
       // Quiet preferences get the first key as a still tableau: no reels.
       if (still || typeof images[0].animate !== 'function') { style(images[0], 'opacity', '1'); return; }
       const at = Number.isFinite(phase) ? ((phase % entry.duration) + entry.duration) % entry.duration : 0;
       reels = tracks(entry).map((frames, k) => { const reel = images[k].animate(frames, { duration: entry.duration, iterations: Infinity, easing: 'linear', fill: 'both' }); reel.currentTime = at; return reel; });
-      const sway = motion(entry);
-      if (sway && typeof pose.animate === 'function') { const reel = pose.animate(sway, { duration: entry.duration, iterations: Infinity, easing: 'linear', fill: 'both' }); reel.currentTime = at; reels.push(reel); }
     }
     function stopLoop() { if (loop) { loop.cancel(); loop = null; } key = ''; }
-    function stopBlink() { if (blink) { blink.cancel(); blink = null; } blinkKey = ''; if (lid) style(lid, 'transform', 'none'); }
     function hold(activity) {
       const sig = signature(species, activity);
       style(pose, 'transform', sig ? sig.frames[0].transform : 'none');
     }
-    function eyes(poseIndex) { return EYES[species]?.[poseIndex] || null; }
-    function placeLid(poseIndex) {
-      if (!lid || !lidClip) return null;
-      const rect = eyes(poseIndex);
-      attribute(lidGroup || lid, 'data-active', Boolean(rect));
-      if (!rect) return null;
-      attribute(lidClip, 'x', rect[0]); attribute(lidClip, 'y', rect[1]); attribute(lidClip, 'width', rect[2]); attribute(lidClip, 'height', rect[3]);
-      return rect;
-    }
-    function update({ creature: next = species, activity = '', animate = false, quiet = false, walking = false, standby = false, painted: allowPainted = true, identity = '', poseIndex = 0, phase = 0 } = {}) {
+    function update({ creature: next = species, activity = '', animate = false, quiet = false, walking = false, painted: allowPainted = true, phase = 0 } = {}) {
       if (destroyed) return null;
       species = Object.hasOwn(SIDE, next) ? next : 'folio';
       // A painted strip replaces both the body signature and the vector
@@ -194,26 +150,10 @@
         } else if (quiet && !walking && !painted) hold(activity);
         else style(pose, 'transform', 'none');
       }
-      const rect = placeLid(poseIndex);
-      // Standby owns the body as a sleeping tableau; a dozing creature does not blink.
-      const wantBlink = Boolean(rect) && !quiet && !walking && !standby && typeof lid?.animate === 'function';
-      const nextBlinkKey = wantBlink ? [species, poseIndex, identity].join('|') : '';
-      if (nextBlinkKey !== blinkKey) {
-        stopBlink();
-        if (wantBlink) {
-          const period = 2800 + hash(identity + species) % 2400, drop = rect[3] + 1;
-          const open = 'translate(0px,0px)', closed = 'translate(0px,' + drop + 'px)';
-          blink = lid.animate([
-            { offset: 0, transform: open, easing: SNAP }, { offset: 80 / period, transform: closed, easing: 'linear' },
-            { offset: 120 / period, transform: closed, easing: SETTLE }, { offset: 190 / period, transform: open }, { offset: 1, transform: open }
-          ], { duration: period, iterations: Infinity, easing: 'linear', delay: 600 + hash(species + identity) % 1400, fill: 'both' });
-          blinkKey = nextBlinkKey;
-        }
-      }
-      return { family: FAMILIES[activity] || 'idle', loop, blink, painted: Boolean(painted) };
+      return { family: FAMILIES[activity] || 'idle', loop, painted: Boolean(painted) };
     }
-    function destroy() { if (destroyed) return; destroyed = true; stopLoop(); stopBlink(); stopPainted(); group?.remove(); frameClip?.remove(); }
-    return Object.freeze({ update, destroy, has: activity => Boolean(group && strip(species, activity)), get loop() { return loop; }, get blink() { return blink; }, get painted() { return painted; }, get reels() { return reels; } });
+    function destroy() { if (destroyed) return; destroyed = true; stopLoop(); stopPainted(); group?.remove(); frameClip?.remove(); }
+    return Object.freeze({ update, destroy, has: activity => Boolean(group && strip(species, activity)), get loop() { return loop; }, get painted() { return painted; }, get reels() { return reels; } });
   }
-  return Object.freeze({ create, signature, tracks, motion, strip, FAMILIES, EYES, SIDE, PIVOT, SPAN, FRAME_LEFT, FRAME_TOP });
+  return Object.freeze({ create, signature, tracks, strip, FAMILIES, SIDE, PIVOT, SPAN, FRAME_LEFT, FRAME_TOP });
 });

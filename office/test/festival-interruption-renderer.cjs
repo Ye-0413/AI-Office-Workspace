@@ -15,7 +15,7 @@ async function until(source,message,ms=4000){const end=Date.now()+ms;while(Date.
 async function check(name,fn){try{await fn();checks.push(name);}catch(error){error.message=name+': '+error.message;throw error;}}
 async function festival(patch){await run(`festivalState={...festivalState,...${JSON.stringify(patch)}};festival.update(festivalState);void 0`);}
 async function venue(id){await run(`venueState={...venueState,venue:${JSON.stringify(id)}};venue.update(venueState);void 0`);await until(`document.getElementById('room-art').dataset.venue===${JSON.stringify(id)}&&document.querySelectorAll('.venue-art-buffer').length===0`,'background must settle before the next test');}
-async function reentry(selector,trigger){return run(`(async()=>{const target=document.querySelector(${JSON.stringify(selector)}),frames=[];function sample(){const s=getComputedStyle(target),m=new DOMMatrixReadOnly(s.transform);frames.push({at:performance.now(),a:m.a,b:m.b,c:m.c,d:m.d,x:m.e,y:m.f,opacity:Number(s.opacity)})}sample();${trigger};sample();await new Promise(resolve=>{let count=0;function tick(){sample();if(++count===6)resolve();else requestAnimationFrame(tick)}requestAnimationFrame(tick)});return frames})()`);}
+async function reentry(selector,trigger){return run(`(async()=>{const target=document.querySelector(${JSON.stringify(selector)}),frames=[];function sample(){const s=getComputedStyle(target),m=new DOMMatrixReadOnly(s.transform);frames.push({at:performance.now(),a:m.a,b:m.b,c:m.c,d:m.d,x:m.e,y:m.f,opacity:Number(s.opacity)})}sample();${trigger};sample();await new Promise(resolve=>{let count=0;function tick(){sample();if(++count===12)resolve();else requestAnimationFrame(tick)}requestAnimationFrame(tick)});return frames})()`);}
 function continuousMatrix(frames,label){assert.ok(frames.length>=8);for(let i=1;i<frames.length;i++){const previous=frames[i-1],next=frames[i];assert.ok(Math.max(...['a','b','c','d'].map(key=>Math.abs(next[key]-previous[key])))<.08,label+': '+JSON.stringify(frames));assert.ok(Math.hypot(next.x-previous.x,next.y-previous.y)<4,label+': '+JSON.stringify(frames));}}
 app.whenReady().then(async()=>{
   win=new BrowserWindow({width:1280,height:720,useContentSize:true,show:true,webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true,backgroundThrottling:false}});
@@ -29,11 +29,11 @@ app.whenReady().then(async()=>{
     const second=await reentry('.festival-primary',`document.querySelector('.festival-control').dispatchEvent(new MouseEvent('click',{bubbles:true,detail:1}))`);
     continuousMatrix(second,'close-to-open fan');evidence.push({case:'fan-close-to-open',frames:second});
   });
-  await check('the Christmas lid really opens and closes through at least 31 actual distinct poses each',async()=>{
+  await check('the Christmas lid opens and closes in held cels with the authored endpoint',async()=>{
     await festival({theme:'christmas',language:'en',reducedMotion:false,lowPower:false,hidden:false});
     for(const expected of ['unwrapped','wrapped']){
       const report=await run(`(async()=>{const p=document.querySelector('.festival-primary'),w=document.querySelector('.festival-widget'),frames=[];document.querySelector('.festival-control').dispatchEvent(new MouseEvent('click',{bubbles:true,detail:1}));await new Promise((resolve,reject)=>{const start=performance.now();function sample(t){const s=getComputedStyle(p);frames.push({at:t,transform:s.transform,opacity:Number(s.opacity)});if(w.dataset.playing!=='true'){resolve();return}if(t-start>2400){reject(new Error('gift motion did not complete'));return}requestAnimationFrame(sample)}requestAnimationFrame(sample)});const end=getComputedStyle(p),m=new DOMMatrixReadOnly(end.transform),target=OfficeFestivals.interactionFrames('christmas',{open:${expected==='unwrapped'}}).at(-1),wanted=new DOMMatrixReadOnly(target.transform);return{phase:w.dataset.state,frames,unique:new Set(frames.map(f=>f.transform+'|'+f.opacity)).size,matrixError:Math.max(...['a','b','c','d','e','f'].map(k=>Math.abs(m[k]-wanted[k]))),lights:Number(getComputedStyle(document.querySelector('[data-part="tree-lights"]')).opacity),feedback:document.querySelector('.festival-feedback').textContent}})()`);
-      assert.equal(report.phase,expected);assert.ok(report.frames.length>=31,JSON.stringify(report));assert.ok(report.unique>=31,JSON.stringify(report));assert.ok(report.frames.at(-1).at-report.frames[0].at>=600,JSON.stringify(report));assert.ok(report.frames.every((f,i)=>!i||f.at>report.frames[i-1].at));assert.ok(report.matrixError<.0001,JSON.stringify(report));assert.ok(Math.abs(report.lights-(expected==='unwrapped'?1:.2))<.001);assert.match(report.feedback,expected==='unwrapped'?/opens/:/closed/);evidence.push({case:'gift-full-'+expected,...report});
+      assert.equal(report.phase,expected);assert.ok(report.frames.length>=31,JSON.stringify(report));assert.ok(report.unique>=10&&report.unique<=15&&report.unique<report.frames.length,JSON.stringify(report));assert.ok(report.frames.at(-1).at-report.frames[0].at>=600,JSON.stringify(report));assert.ok(report.frames.every((f,i)=>!i||f.at>report.frames[i-1].at));assert.ok(report.matrixError<.0001,JSON.stringify(report));assert.ok(Math.abs(report.lights-(expected==='unwrapped'?1:.2))<.001);assert.match(report.feedback,expected==='unwrapped'?/opens/:/closed/);evidence.push({case:'gift-full-'+expected,...report});
     }
     await festival({theme:'spring'});await festival({theme:'christmas'});
     assert.equal(await run(`document.querySelector('.festival-widget').dataset.state`),'wrapped');
@@ -55,7 +55,7 @@ app.whenReady().then(async()=>{
       await festival({theme:'christmas',hidden:false,reducedMotion:false,lowPower:false});await run(`document.querySelector('.festival-control').dispatchEvent(new MouseEvent('click',{bubbles:true,detail:1}));void 0`);await pause(80);await festival({[mode]:true});const before=await run(`({pose:getComputedStyle(document.querySelector('.festival-primary')).transform,state:document.querySelector('.festival-widget').dataset.state})`);await festival({[mode]:false});await run(`new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))`);const after=await run(`({pose:getComputedStyle(document.querySelector('.festival-primary')).transform,state:document.querySelector('.festival-widget').dataset.state,effects:document.querySelector('.festival-primary').getAnimations().length,playing:document.querySelector('.festival-widget').dataset.playing})`);assert.equal(after.pose,before.pose);assert.equal(after.state,before.state);assert.equal(after.effects,0);assert.equal(after.playing,'false');
     }
   });
-  await check('core inner petals and ribbon changes crossfade rather than jump to a new drawing',async()=>{
+  await check('core inner petals and ribbons use a stepped opacity transition',async()=>{
     await festival({theme:'spring',reducedMotion:true});await run(`document.querySelector('.festival-control').click();void 0`);assert.equal(await run(`document.querySelector('.festival-widget').dataset.state`),'sprout');assert.equal(await run(`Number(getComputedStyle(document.querySelector('[data-part="flower"]')).opacity)`),.15);
     await run(`document.querySelector('.festival-control').click();void 0`);assert.equal(await run(`document.querySelector('.festival-widget').dataset.state`),'blossom');assert.equal(await run(`Number(getComputedStyle(document.querySelector('[data-part="flower"]')).opacity)`),1);
     for(const [theme,selector]of [['midsummer','[data-part="ribbon-a"]'],['hanami','[data-part="blossom-4"]']]){
@@ -64,7 +64,7 @@ app.whenReady().then(async()=>{
       assert.ok(Math.abs(frames[1].opacity-frames[0].opacity)<.02,JSON.stringify(frames));
       // A CSS transition may acquire its compositor start after several real
       // frames. Require a painted intermediate opacity within this bounded
-      // six-frame observation, without assuming it starts on RAF number two.
+      // twelve-frame observation, without assuming it starts on RAF number two.
       assert.ok(frames.slice(2).some(frame=>frame.opacity>0&&frame.opacity<1),JSON.stringify(frames));evidence.push({case:theme+'-inner-fade',frames});
     }
   });
@@ -72,7 +72,7 @@ app.whenReady().then(async()=>{
     await venue('observatory');await run(`document.querySelector('[data-interaction="observatory-meteor-note"] .venue-control').dispatchEvent(new MouseEvent('click',{bubbles:true,detail:1}));void 0`);await pause(220);
     const frames=await reentry('[data-interaction="observatory-meteor-note"] .venue-meteor',`document.querySelector('[data-interaction="observatory-meteor-note"] .venue-control').dispatchEvent(new MouseEvent('click',{bubbles:true,detail:1}))`);
     assert.ok(frames[0].opacity>.1,JSON.stringify(frames));assert.ok(Math.abs(frames[1].opacity-frames[0].opacity)<.03,JSON.stringify(frames));assert.ok(Math.hypot(frames[1].x-frames[0].x,frames[1].y-frames[0].y)<.1,JSON.stringify(frames));
-    for(let i=2;i<frames.length;i++)assert.ok(frames[i].x>=frames[i-1].x-.1&&frames[i].x-frames[i-1].x<4,JSON.stringify(frames));evidence.push({case:'meteor-reentry',frames});
+    for(let i=2;i<frames.length;i++)assert.ok(frames[i].x>=frames[i-1].x-.1&&frames[i].x-frames[i-1].x<8,JSON.stringify(frames));evidence.push({case:'meteor-reentry',frames});
   });
   await check('a new background retargets the existing partial blend without an opaque flash',async()=>{
     await run(`(async()=>{const image=new Image();image.src=OfficeVenues.getVenue('teahouse').background;await image.decode()})()`);await venue('workshop');

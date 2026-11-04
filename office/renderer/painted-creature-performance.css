@@ -1,0 +1,165 @@
+/* Material-led motion for the painted workshop creatures. The 80px sprite
+   cell stays inside the established body envelope after presentation scaling.
+   Layers: .cp-motion (pose entry, cues) > .cp-art (ambient breath) >
+   .cp-pose (observed state family, painted-creature-frames.js) > .cp-gesture
+   (repertoire body track) > .cp-shell (one unsliced painted cell, its
+   dissolving predecessor and the eyelid) + .cp-feet (stride slices). */
+.painted-creature-performance .painted-creature-rig{shape-rendering:geometricPrecision;image-rendering:auto}
+.painted-creature-performance .painted-creature-rig image,.appearance-pose-preview[data-avatar-style="painted"] img{image-rendering:auto}
+.painted-creature-performance .cp-art,.painted-creature-performance .cp-activity{filter:var(--creature-color-filter,none)}
+.painted-creature-performance:not([data-art-state="healthy"]) .cp-activity{opacity:0}
+.character-body[data-avatar-style="painted"]>img{opacity:0!important;filter:none!important}
+.painted-creature-rig .cp-motion,.painted-creature-rig .cp-art,.painted-creature-rig .cp-pose,.painted-creature-rig .cp-gesture,.painted-creature-rig .cp-shell,.painted-creature-rig .cp-part,.painted-creature-rig .cp-lid{transform-origin:77.5px 111px;transform-box:view-box}
+.painted-creature-rig .cp-lid[data-active="false"]{display:none}
+/* A painted keyframe strip stands in for the atlas body, lid and feet. */
+.painted-creature-rig .cp-frames[data-active="false"]{display:none}
+/* Add complementary premultiplied pixels before compositing onto the room.
+   Ordinary source-over turns two 50% frames into 75% coverage, producing a
+   brightness flash at every dissolve. Isolation keeps the room out of the sum. */
+.painted-creature-rig .cp-frames{isolation:isolate}
+.painted-creature-rig .cp-frame{mix-blend-mode:plus-lighter}
+.painted-creature-performance[data-frames="true"] .cp-body,.painted-creature-performance[data-frames="true"] .cp-lid,.painted-creature-performance[data-frames="true"] .cp-feet{visibility:hidden}
+/* The painted performance already contains its light and body accents.
+   Its five native tracks own the work pose without a second ambient bob. */
+.painted-creature-performance[data-frames="true"] :is(.cp-shell,.cp-art,.cp-inner-light){animation:none!important}
+.painted-creature-performance[data-frames="true"] .cp-inner-light{display:none!important}
+.painted-creature-rig .cp-inner-light{display:none;transform-origin:77.5px 82px;transform-box:view-box;pointer-events:none}
+.painted-creature-performance[data-creature="glow"] .cp-inner-light{display:block}
+.painted-creature-performance{--cp-sine:cubic-bezier(.37,0,.63,1)}
+.painted-creature-performance .cp-part,.painted-creature-performance .cp-shell,.painted-creature-performance .cp-inner-light,.painted-creature-performance .cp-art,.painted-creature-performance .cp-motion{animation:none}
+
+/* Per-material personality: pose-entry overshoot and ambient loop names. */
+.painted-creature-performance[data-creature="folio"]{--cp-in-0:rotate(-7deg) scale(.92,1.08);--cp-in-1:rotate(3.6deg) scale(1.03,.97);--cp-in-2:rotate(-1.2deg);--cp-idle:painted-cp-folio-idle 4.4s;--cp-rest:painted-cp-folio-rest 5.2s;--cp-done:painted-cp-folio-done 3.4s}
+.painted-creature-performance[data-creature="ink"]{--cp-in-0:scale(1.16,.84);--cp-in-1:scale(.92,1.09) translateY(-1.5px);--cp-in-2:scale(1.04,.97);--cp-idle:painted-cp-ink-idle 3s;--cp-rest:painted-cp-ink-rest 5s;--cp-done:painted-cp-ink-done 3s}
+.painted-creature-performance[data-creature="moss"]{--cp-in-0:translateY(-5px) rotate(-1.5deg);--cp-in-1:translateY(.9px) scale(1.05,.95);--cp-in-2:scale(.99,1.01);--cp-idle:painted-cp-moss-idle 5.6s;--cp-rest:painted-cp-moss-rest 6.4s;--cp-done:painted-cp-moss-done 4s}
+.painted-creature-performance[data-creature="thread"]{--cp-in-0:translateY(-6px) scale(.92,1.08);--cp-in-1:scale(1.08,.92);--cp-in-2:translateY(-1.8px) rotate(2.5deg);--cp-idle:painted-cp-thread-idle 2.6s;--cp-rest:painted-cp-thread-rest 5s;--cp-done:painted-cp-thread-done 3s}
+.painted-creature-performance[data-creature="glow"]{--cp-in-0:translateY(3.5px) scale(.9);--cp-in-1:translateY(-2px) scale(1.04);--cp-in-2:translateY(-.5px);--cp-idle:painted-cp-glow-idle 3.8s;--cp-rest:painted-cp-glow-rest 6s;--cp-done:painted-cp-glow-done 3.6s}
+
+/* A painted pose swap lands with its material's overshoot instead of a cut.
+   Each pose owns a distinct name so the browser restarts it on change. */
+.painted-creature-performance[data-live="true"][data-pose-change="true"] .cp-motion{animation-duration:560ms;animation-timing-function:var(--cp-sine);animation-iteration-count:1}
+.painted-creature-performance[data-live="true"][data-pose-change="true"][data-pose="idle"] .cp-motion{animation-name:painted-cp-enter-idle}
+.painted-creature-performance[data-live="true"][data-pose-change="true"][data-pose="working"] .cp-motion{animation-name:painted-cp-enter-working}
+.painted-creature-performance[data-live="true"][data-pose-change="true"][data-pose="thinking"] .cp-motion{animation-name:painted-cp-enter-thinking}
+.painted-creature-performance[data-live="true"][data-pose-change="true"][data-pose="resting"] .cp-motion{animation-name:painted-cp-enter-resting}
+.painted-creature-performance[data-live="true"][data-pose-change="true"][data-pose="attention"] .cp-motion{animation-name:painted-cp-enter-attention}
+.painted-creature-performance[data-live="true"][data-pose-change="true"][data-pose="completed"] .cp-motion{animation-name:painted-cp-enter-completed}
+@keyframes painted-cp-enter-idle{0%{transform:var(--cp-in-0)}35%{transform:var(--cp-in-1)}65%{transform:var(--cp-in-2)}100%{transform:none}}
+@keyframes painted-cp-enter-working{0%{transform:var(--cp-in-0)}35%{transform:var(--cp-in-1)}65%{transform:var(--cp-in-2)}100%{transform:none}}
+@keyframes painted-cp-enter-thinking{0%{transform:var(--cp-in-0)}35%{transform:var(--cp-in-1)}65%{transform:var(--cp-in-2)}100%{transform:none}}
+@keyframes painted-cp-enter-resting{0%{transform:var(--cp-in-0)}35%{transform:var(--cp-in-1)}65%{transform:var(--cp-in-2)}100%{transform:none}}
+@keyframes painted-cp-enter-attention{0%{transform:var(--cp-in-0)}35%{transform:var(--cp-in-1)}65%{transform:var(--cp-in-2)}100%{transform:none}}
+@keyframes painted-cp-enter-completed{0%{transform:var(--cp-in-0)}35%{transform:var(--cp-in-1)}65%{transform:var(--cp-in-2)}100%{transform:none}}
+
+/* Ambient breath for poses without an observed work clock. Standby owns the
+   shell with its own cycle, so the art layer stays still underneath it. */
+.painted-creature-performance[data-live="true"][data-walking="false"][data-pose="idle"] .cp-art{animation:var(--cp-idle) var(--cp-sine) var(--cp-offset,0ms) infinite}
+.painted-creature-performance[data-live="true"][data-walking="false"][data-pose="resting"] .cp-art{animation:var(--cp-rest) var(--cp-sine) var(--cp-offset,0ms) infinite}
+.painted-creature-performance[data-live="true"][data-walking="false"][data-pose="completed"] .cp-art{animation:var(--cp-done) var(--cp-sine) var(--cp-offset,0ms) infinite}
+[data-standby-motion] .painted-creature-performance .cp-art{animation:none!important}
+
+.painted-creature-performance[data-animate="true"] .cp-shell,.painted-creature-performance[data-animate="true"] .cp-part,.painted-creature-performance[data-animate="true"] .cp-inner-light{animation-timing-function:var(--ease-organic,cubic-bezier(.37,0,.63,1));animation-iteration-count:infinite;animation-delay:var(--cp-offset,0ms)}
+
+/* Shell loops are breath-level texture only. The legible state motion is
+   the whole-body family loop on .cp-pose (painted-creature-frames.js) and the
+   recipe-clocked lean on .cp-gesture, so these never compete with either.
+   Nothing here skews a painted bitmap. */
+/* Folio · folded paper. Light and crisp: pages ease at the spine, then a
+   small tip-toe rise; thinking is a long head tilt that flicks back. */
+.painted-creature-performance[data-creature="folio"][data-pose="working"][data-animate="true"] .cp-shell{animation-name:painted-cp-paper-open-left;animation-duration:3.6s}
+.painted-creature-performance[data-creature="folio"][data-pose="thinking"][data-animate="true"] .cp-shell{animation-name:painted-cp-paper-consider;animation-duration:5s}
+.painted-creature-performance[data-creature="folio"][data-pose="attention"][data-animate="true"] .cp-shell{animation-name:painted-cp-paper-crumple;animation-duration:2.6s}
+@keyframes painted-cp-paper-open-left{0%,28%,100%{transform:none}36%{transform:scale(1.02,.975)}45%{transform:translateY(-1.5px) rotate(-.6deg) scale(.985,1.02)}54%{transform:scale(1.015,.985)}63%{transform:none}}
+@keyframes painted-cp-paper-consider{0%,100%{transform:none}18%{transform:rotate(.8deg)}32%,58%{transform:rotate(-3deg) translateY(-.8px)}64%{transform:rotate(1.2deg)}70%{transform:rotate(-.5deg)}76%{transform:none}}
+@keyframes painted-cp-paper-crumple{0%,38%,100%{transform:none}45%{transform:rotate(-1.6deg) scale(.965,1.025)}50%{transform:rotate(1.7deg) scale(.97,1.02)}55%{transform:rotate(-1.4deg)}60%{transform:rotate(1deg)}65%{transform:scale(1.015,.985)}72%{transform:none}}
+@keyframes painted-cp-folio-idle{0%,58%,86%,100%{transform:none}28%{transform:translateY(-1.5px) scale(.985,1.022)}66%{transform:rotate(-3deg) translateY(-.5px)}72%{transform:rotate(2.4deg)}78%{transform:rotate(-1deg)}}
+@keyframes painted-cp-folio-rest{0%,100%{transform:none}50%{transform:translateY(.4px) scale(1.045,.94)}}
+@keyframes painted-cp-folio-done{0%,38%,78%,100%{transform:none}45%{transform:scale(1.06,.92)}53%{transform:translateY(-6px) rotate(-7.5deg) scale(.95,1.06)}62%{transform:translateY(-5.5px) rotate(6deg)}70%{transform:scale(1.045,.955)}}
+
+/* Ink · liquid droplet. Low and fluid: a slow pooling breath with jelly
+   follow-through; thinking melts sideways, errors boil in short ripples.
+   Its soft feet tap on the recipe clock, not on a free-running loop. */
+.painted-creature-performance[data-creature="ink"][data-pose="working"][data-animate="true"] .cp-shell{animation-name:painted-cp-ink-pool;animation-duration:2.8s}
+.painted-creature-performance[data-creature="ink"][data-pose="thinking"][data-animate="true"] .cp-shell{animation-name:painted-cp-ink-think;animation-duration:4.4s}
+.painted-creature-performance[data-creature="ink"][data-pose="attention"][data-animate="true"] .cp-shell{animation-name:painted-cp-ink-boil;animation-duration:2.2s}
+@keyframes painted-cp-ink-pool{0%,44%,78%,100%{transform:none}14%{transform:scale(1.04,.96)}24%{transform:translateY(-.8px) scale(.975,1.03)}34%{transform:scale(1.02,.98)}58%{transform:scale(1.035,.965)}68%{transform:translateY(-.4px) scale(.98,1.02)}}
+@keyframes painted-cp-ink-think{0%,84%,100%{transform:none}28%{transform:rotate(-1.5deg) scale(1.025,.975)}50%{transform:translateY(-.8px) rotate(1.1deg) scale(.985,1.02)}70%{transform:rotate(-.5deg)}}
+@keyframes painted-cp-ink-boil{0%,52%,100%{transform:none}10%{transform:scale(1.03,.97)}20%{transform:translateY(-.5px) scale(.975,1.03)}30%{transform:scale(1.025,.975)}40%{transform:scale(.985,1.015)}}
+@keyframes painted-cp-ink-idle{0%,100%{transform:none}25%{transform:scale(1.05,.95)}50%{transform:translateY(-1.2px) scale(.975,1.03)}75%{transform:scale(1.02,.985)}}
+@keyframes painted-cp-ink-rest{0%,100%{transform:none}50%{transform:scale(1.11,.88)}}
+@keyframes painted-cp-ink-done{0%,34%,72%,100%{transform:none}41%{transform:scale(1.14,.84)}50%{transform:translateY(-6px) scale(.88,1.16)}58%{transform:scale(1.09,.91)}65%{transform:scale(.96,1.04)}}
+
+/* Moss · clay box with a sprout. Rigid and weighty: no jelly, a lift and a
+   thud. Skew sways the sprout over planted feet. */
+.painted-creature-performance[data-creature="moss"][data-pose="working"][data-animate="true"] .cp-shell{animation-name:painted-cp-moss-settle;animation-duration:4.4s}
+.painted-creature-performance[data-creature="moss"][data-pose="thinking"][data-animate="true"] .cp-shell{animation-name:painted-cp-moss-listen;animation-duration:6s}
+.painted-creature-performance[data-creature="moss"][data-pose="attention"][data-animate="true"] .cp-shell{animation-name:painted-cp-moss-sigh;animation-duration:4s}
+@keyframes painted-cp-moss-settle{0%,18%,56%,100%{transform:none}30%{transform:translateY(-1.1px) rotate(-1.1deg)}39%{transform:translateY(.4px) scale(1.02,.98)}44%{transform:rotate(.5deg) scale(1.008,.992)}49%{transform:rotate(-.3deg)}}
+@keyframes painted-cp-moss-listen{0%,85%,100%{transform:none}34%,60%{transform:rotate(-1.6deg) translateY(-.3px)}74%{transform:rotate(.5deg)}}
+@keyframes painted-cp-moss-sigh{0%,100%{transform:none}28%,70%,84%{transform:translateY(1.2px) scale(1.025,.97)}74%{transform:translateY(1.2px) rotate(.8deg) scale(1.025,.97)}78%{transform:translateY(1.2px) rotate(-.8deg) scale(1.025,.97)}}
+@keyframes painted-cp-moss-idle{0%,50%,100%{transform:none}25%{transform:translateY(-.5px) rotate(-2deg)}75%{transform:translateY(-.5px) rotate(2deg)}}
+@keyframes painted-cp-moss-rest{0%,100%{transform:none}50%{transform:translateY(.6px) scale(1.03,.965)}}
+@keyframes painted-cp-moss-done{0%,38%,70%,100%{transform:none}46%{transform:translateY(-5px) rotate(-2deg)}55%{transform:translateY(1px) scale(1.06,.93)}62%{transform:scale(.985,1.015)}}
+
+/* Thread · yarn ball. Elastic and rolling: bounces, rolls and leans into its
+   loose strand, then winds back with overshoot. */
+.painted-creature-performance[data-creature="thread"][data-pose="thinking"][data-animate="true"] .cp-shell{animation-name:painted-cp-thread-unwind;animation-duration:4.8s}
+.painted-creature-performance[data-creature="thread"][data-pose="working"][data-animate="true"] .cp-shell{animation-name:painted-cp-thread-roll;animation-duration:3.2s}
+.painted-creature-performance[data-creature="thread"][data-pose="attention"][data-animate="true"] .cp-shell{animation-name:painted-cp-thread-tangle;animation-duration:2.4s}
+@keyframes painted-cp-thread-unwind{0%,16%,84%,100%{transform:none}38%,62%{transform:rotate(-3.4deg) translateY(-.5px) scale(.98,1.025)}70%{transform:rotate(1.8deg) scale(1.015,.985)}77%{transform:rotate(-.7deg)}}
+@keyframes painted-cp-thread-roll{0%,72%,100%{transform:none}19%{transform:translateX(-.7px) rotate(-2.4deg)}39%{transform:translateX(.7px) rotate(2.1deg)}55%{transform:translateY(-1.4px) scale(.98,1.025)}64%{transform:scale(1.03,.97)}}
+@keyframes painted-cp-thread-tangle{0%,38%,72%,100%{transform:none}45%{transform:rotate(-2.4deg) scale(1.02,.98)}52%{transform:rotate(2.1deg) scale(.985,1.015)}58%{transform:rotate(-1.4deg)}65%{transform:rotate(.7deg)}}
+@keyframes painted-cp-thread-idle{0%,84%,100%{transform:none}38%{transform:translateY(-3px) rotate(-1.2deg) scale(.975,1.032)}68%{transform:scale(1.04,.96)}}
+@keyframes painted-cp-thread-rest{0%,100%{transform:none}50%{transform:rotate(2.8deg) scale(1.05,.94)}}
+@keyframes painted-cp-thread-done{0%,28%,72%,100%{transform:none}35%{transform:scale(1.09,.91)}44%{transform:translateY(-7px) rotate(-9.5deg) scale(.94,1.07)}52%{transform:scale(1.08,.92)}59%{transform:translateY(-3px) rotate(5deg)}65%{transform:scale(1.03,.97)}}
+
+/* Glow · amber lantern seed. Weightless: it hovers rather than steps, and
+   its inner light breathes, blooms on completion and flickers when blocked. */
+.painted-creature-performance[data-creature="glow"][data-pose="working"][data-animate="true"] .cp-inner-light,.painted-creature-performance[data-creature="glow"][data-pose="thinking"][data-animate="true"] .cp-inner-light{animation-name:painted-cp-glow-warmth;animation-duration:4s}
+.painted-creature-performance[data-creature="glow"][data-pose="working"][data-animate="true"] .cp-shell{animation-name:painted-cp-glow-hover;animation-duration:4s}
+.painted-creature-performance[data-creature="glow"][data-pose="thinking"][data-animate="true"] .cp-shell{animation-name:painted-cp-glow-hold;animation-duration:6s}
+.painted-creature-performance[data-creature="glow"][data-pose="attention"][data-animate="true"] .cp-shell{animation-name:painted-cp-glow-falter;animation-duration:2.4s}
+.painted-creature-performance[data-creature="glow"][data-pose="attention"][data-animate="true"] .cp-inner-light{animation-name:painted-cp-glow-flicker;animation-duration:2.4s}
+.painted-creature-performance[data-creature="glow"][data-live="true"][data-walking="false"]:is([data-pose="idle"],[data-pose="resting"],[data-pose="completed"]) .cp-inner-light{animation-timing-function:var(--cp-sine);animation-iteration-count:infinite;animation-delay:var(--cp-offset,0ms)}
+.painted-creature-performance[data-creature="glow"][data-live="true"][data-walking="false"][data-pose="idle"] .cp-inner-light{animation-name:painted-cp-glow-ember;animation-duration:3.8s}
+.painted-creature-performance[data-creature="glow"][data-live="true"][data-walking="false"][data-pose="resting"] .cp-inner-light{animation-name:painted-cp-glow-dim;animation-duration:6s}
+.painted-creature-performance[data-creature="glow"][data-live="true"][data-walking="false"][data-pose="completed"] .cp-inner-light{animation-name:painted-cp-glow-bloom;animation-duration:3.6s}
+@keyframes painted-cp-glow-warmth{0%,100%{transform:translate(-1px,1px) scale(.85);opacity:.12}50%{transform:translate(1.5px,-1.5px) scale(1.3);opacity:.44}}
+@keyframes painted-cp-glow-hover{0%,100%{transform:none}50%{transform:translateY(-1.6px) rotate(.6deg)}}
+@keyframes painted-cp-glow-hold{0%,100%{transform:none}35%,65%{transform:translateY(-2.4px) rotate(-1deg)}50%{transform:translateY(-3px) rotate(.7deg)}}
+@keyframes painted-cp-glow-falter{0%,14%,40%,100%{transform:none}8%{transform:translateY(1.5px) scale(1.02,.98)}32%{transform:translateY(1.2px) rotate(-1deg)}}
+@keyframes painted-cp-glow-flicker{0%,100%{opacity:.34}8%{opacity:.05}12%{opacity:.32}16%{opacity:.03}30%{opacity:.24}34%{opacity:.04}60%{opacity:.26}}
+@keyframes painted-cp-glow-idle{0%,100%{transform:none}50%{transform:translateY(-3.4px) rotate(.6deg)}}
+@keyframes painted-cp-glow-ember{0%,100%{transform:scale(.88);opacity:.1}50%{transform:scale(1.16);opacity:.28}}
+@keyframes painted-cp-glow-rest{0%,100%{transform:none}50%{transform:translateY(1px) scale(1.015,.985)}}
+@keyframes painted-cp-glow-dim{0%,100%{opacity:.05}50%{opacity:.14}}
+@keyframes painted-cp-glow-done{0%,28%,76%,100%{transform:none}45%,60%{transform:translateY(-6px) scale(1.04)}}
+@keyframes painted-cp-glow-bloom{0%,28%,76%,100%{transform:scale(.9);opacity:.12}45%,60%{transform:scale(1.4);opacity:.54}}
+
+/* Only the existing room ticker advances these paused stride clocks. Every
+   stride is 600ms so the shared distance phase stays in step. */
+.painted-creature-performance[data-walking="true"][data-animate="true"] .cp-shell{animation-name:painted-cp-walk-body;animation-duration:600ms}
+.painted-creature-performance[data-creature="folio"][data-walking="true"][data-animate="true"] .cp-shell{animation-name:painted-cp-walk-folio}
+.painted-creature-performance[data-creature="ink"][data-walking="true"][data-animate="true"] .cp-shell{animation-name:painted-cp-walk-ink}
+.painted-creature-performance[data-creature="moss"][data-walking="true"][data-animate="true"] .cp-shell{animation-name:painted-cp-walk-grounded}
+.painted-creature-performance[data-creature="thread"][data-walking="true"][data-animate="true"] .cp-shell{animation-name:painted-cp-walk-thread}
+.painted-creature-performance[data-creature="glow"][data-walking="true"][data-animate="true"] .cp-shell{animation-name:painted-cp-walk-glow}
+.painted-creature-performance[data-walking="true"][data-animate="true"] :is(.cp-foot-1,.cp-foot-3){animation-name:painted-cp-walk-left;animation-duration:600ms}
+.painted-creature-performance[data-walking="true"][data-animate="true"] :is(.cp-foot-2,.cp-foot-4){animation-name:painted-cp-walk-right;animation-duration:600ms}
+.painted-creature-performance[data-creature="moss"][data-walking="true"][data-animate="true"] :is(.cp-foot-1,.cp-foot-3){animation-name:painted-cp-walk-heavy-left}
+.painted-creature-performance[data-creature="moss"][data-walking="true"][data-animate="true"] :is(.cp-foot-2,.cp-foot-4){animation-name:painted-cp-walk-heavy-right}
+.painted-creature-performance[data-creature="glow"][data-walking="true"][data-animate="true"] :is(.cp-foot-1,.cp-foot-3){animation-name:painted-cp-walk-glide-left}
+.painted-creature-performance[data-creature="glow"][data-walking="true"][data-animate="true"] :is(.cp-foot-2,.cp-foot-4){animation-name:painted-cp-walk-glide-right}
+@keyframes painted-cp-walk-body{0%,50%,100%{transform:scale(1.03,.97)}25%{transform:translate(.6px,-2.8px) rotate(2deg)}75%{transform:translate(-.6px,-2.8px) rotate(-2deg)}}
+@keyframes painted-cp-walk-folio{0%,50%,100%{transform:scale(1.05,.95)}12%,62%{transform:scale(.97,1.04)}25%{transform:translate(.8px,-4.2px) rotate(3.8deg)}75%{transform:translate(-.8px,-4.2px) rotate(-3.8deg)}}
+@keyframes painted-cp-walk-ink{0%,50%,100%{transform:scale(1.11,.89)}25%,75%{transform:translateY(-2.4px) scale(.93,1.08)}}
+@keyframes painted-cp-walk-grounded{0%,50%,100%{transform:translateY(.4px) scale(1.02,.98)}25%{transform:translate(1px,-1.5px) rotate(3.8deg)}75%{transform:translate(-1px,-1.5px) rotate(-3.8deg)}}
+@keyframes painted-cp-walk-thread{0%,50%,100%{transform:scale(1.07,.93)}25%{transform:translate(.8px,-4.6px) rotate(5.8deg) scale(.95,1.06)}75%{transform:translate(-.8px,-4.6px) rotate(-5.8deg) scale(.95,1.06)}}
+@keyframes painted-cp-walk-glow{0%,50%,100%{transform:translateY(-1.8px)}25%{transform:translateY(-3.2px) rotate(2.2deg)}75%{transform:translateY(-3.2px) rotate(-2.2deg)}}
+@keyframes painted-cp-walk-left{0%,50%,100%{transform:none}25%{transform:translate(1.8px,-3.2px) rotate(-7.5deg)}75%{transform:translate(-1px,0) rotate(3.8deg)}}
+@keyframes painted-cp-walk-right{0%,50%,100%{transform:none}25%{transform:translate(-1px,0) rotate(3.8deg)}75%{transform:translate(1.8px,-3.2px) rotate(-7.5deg)}}
+@keyframes painted-cp-walk-heavy-left{0%,50%,100%{transform:none}25%{transform:translate(.9px,-1.6px) rotate(-4deg)}75%{transform:none}}
+@keyframes painted-cp-walk-heavy-right{0%,50%,100%{transform:none}25%{transform:none}75%{transform:translate(.9px,-1.6px) rotate(-4deg)}}
+@keyframes painted-cp-walk-glide-left{0%,50%,100%{transform:none}25%{transform:translateY(-1.2px)}}
+@keyframes painted-cp-walk-glide-right{0%,50%,100%{transform:none}75%{transform:translateY(-1.2px)}}
+@media(prefers-reduced-motion:reduce){.painted-creature-performance .cp-part,.painted-creature-performance .cp-shell,.painted-creature-performance .cp-pose,.painted-creature-performance .cp-lid,.painted-creature-performance .cp-inner-light,.painted-creature-performance .cp-art,.painted-creature-performance .cp-motion{animation:none!important}}

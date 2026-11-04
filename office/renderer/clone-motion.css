@@ -1,15 +1,17 @@
 /* Original local clone material, never an extra actor or real walking. */
 .clone-effect{position:absolute;left:0;top:0;width:0;height:0;z-index:-1;pointer-events:none;color:var(--family-color,#a3ad83)}
 .clone-effect i{position:absolute;display:block;opacity:0;pointer-events:none;transform-origin:center}
-.clone-focus{left:-39px;top:-69px;width:78px;height:55px;border-radius:45%;background:radial-gradient(ellipse,#f6edcb28,transparent 70%)}
-.clone-ring{left:-51px;top:-19px;width:102px;height:25px;border:1px dashed currentColor;border-radius:50%;box-shadow:0 0 0 1px #f0e6c526}
-.clone-ring-inner{left:-35px;top:-15px;width:70px;height:17px;border-style:solid;border-color:#e7ddbba6;box-shadow:none}
-.clone-smoke{width:27px;height:23px;background:#eee8d3d6;box-shadow:inset 0 -4px 0 #a6b39a40;clip-path:polygon(0 37%,15% 37%,15% 17%,34% 17%,34% 0,66% 0,66% 17%,85% 17%,85% 37%,100% 37%,100% 82%,82% 82%,82% 100%,18% 100%,18% 82%,0 82%)}
-.clone-curl{width:20px;height:27px;border:1px solid #f3eaccad;border-right-color:transparent;border-bottom-color:transparent;border-radius:65% 35% 70% 30%}
-.clone-mote{width:3px;height:5px;border:1px solid currentColor;background:#f3e9c988;border-radius:1px}
-.clone-ink-puddle{left:-43px;top:-13px;width:86px;height:20px;border-radius:50%;background:radial-gradient(ellipse at 46% 25%,#5f9ab3 0 6%,#213f65 22%,#101d36 62%,#080f21 100%);box-shadow:inset 0 -2px 0 #060d20}
-.clone-ink-core{left:-17px;top:-23px;width:34px;height:22px;border-radius:48% 52% 42% 58%;background:radial-gradient(ellipse at 38% 23%,#aad9e6 0 5%,#497b9e 12%,#193354 34%,#0b172c 78%)}
-.clone-ink-drop{border-radius:46% 44% 54% 52%;background:radial-gradient(ellipse at 33% 24%,#c0e6ed 0 7%,#619cb9 12% 20%,#213e64 30% 46%,#0b172d 76%);box-shadow:inset 0 -2px 0 #060d20;transform-origin:50% 75%}
+/* The same stair-stepped silhouette carries smoke, focus and ink. */
+.clone-effect{--clone-cel:polygon(0 25%,10% 25%,10% 10%,25% 10%,25% 0,75% 0,75% 10%,90% 10%,90% 25%,100% 25%,100% 75%,90% 75%,90% 90%,75% 90%,75% 100%,25% 100%,25% 90%,10% 90%,10% 75%,0 75%)}
+.clone-focus{left:-39px;top:-69px;width:78px;height:55px;clip-path:var(--clone-cel);background:#e4d9a844;box-shadow:inset 0 -8px #a8b28c33}
+.clone-ring{left:-51px;top:-19px;width:102px;height:25px;clip-path:var(--clone-cel);border:2px dashed currentColor}
+.clone-ring-inner{left:-35px;top:-15px;width:70px;height:17px;border-style:solid;border-color:#e7ddbba6}
+.clone-smoke{width:27px;height:23px;background:#eee8d3;box-shadow:inset 0 -6px #b3bda3,inset 4px 4px #f8ecd0;clip-path:var(--clone-cel)}
+.clone-curl{width:20px;height:20px;background:#f3eacc;clip-path:polygon(0 75%,25% 75%,25% 50%,50% 50%,50% 25%,75% 25%,75% 0,100% 0,100% 50%,75% 50%,75% 75%,50% 75%,50% 100%,0 100%)}
+.clone-mote{width:5px;height:5px;border:1px solid currentColor;background:#f3e9c9}
+.clone-ink-puddle{left:-43px;top:-13px;width:86px;height:20px;clip-path:var(--clone-cel);background:#192b4e;box-shadow:inset 0 -5px #131c34,inset 0 4px #40698c}
+.clone-ink-core{left:-17px;top:-23px;width:34px;height:22px;clip-path:var(--clone-cel);background:#38648e;box-shadow:inset 0 -6px #253b63,inset 5px 4px #619ed0}
+.clone-ink-drop{clip-path:var(--clone-cel);background:#3d73a4;box-shadow:inset 0 -3px #1b2a4d,inset 2px 3px #83b7dc;transform-origin:50% 75%}
 .actor[data-clone-phase="returning"] .nameplate,.actor[data-clone-phase="absorbing"] .nameplate{border-style:dashed}
 .actor[data-clone-hold="true"] .actor-state{color:#737e5d}
 .office[data-reduced-motion="true"] .clone-effect,.office[data-low-power="true"] .clone-effect,.office[data-hidden="true"] .clone-effect{display:none}

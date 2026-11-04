@@ -31,7 +31,7 @@ app.whenReady().then(async () => {
     await run('window.audit={seen:false,done:false,poses:[],times:[],start:performance.now()};function sample(t){const e=document.querySelector(".theme-environment");if(e.dataset.playing==="true"){audit.seen=true;audit.times.push(t);audit.poses.push(JSON.stringify([...document.querySelectorAll("[data-response-region]")].map(n=>getComputedStyle(n).transform)))}else if(audit.seen)audit.done=true;if(!audit.done&&t-audit.start<2400)requestAnimationFrame(sample)}requestAnimationFrame(sample);env.trigger({theme:state.theme,id:"festival-"+state.theme});void 0');
     await until('audit.done', 'the finite ' + recipe.id + ' environment response must complete');
     const movement = await run('({frames:audit.times.length,unique:new Set(audit.poses).size,elapsed:audit.times.at(-1)-audit.times[0],changed:[...document.querySelectorAll("[data-response-region]")].filter(n=>n.dataset.active==="true").map(n=>n.dataset.responseRegion)})');
-    assert.ok(movement.frames >= 31 && movement.unique >= 31 && movement.elapsed >= 800, JSON.stringify({ id: recipe.id, ...movement }));
+    assert.ok(movement.frames >= 31 && movement.unique >= 5 && movement.unique <= 15 && movement.unique < movement.frames && movement.elapsed >= 800, JSON.stringify({ id: recipe.id, ...movement }));
     for (const region of ['window', 'left-wall', 'right-wall']) assert.ok(movement.changed.includes(region), 'the whole room responds in ' + region);
     samples.push({ id: recipe.id, ...movement });
     const png = (await win.webContents.capturePage()).toPNG(); pictures.add(crypto.createHash('sha256').update(png).digest('hex'));
@@ -39,7 +39,7 @@ app.whenReady().then(async () => {
   }
   assert.equal(geometry.size, 43, 'all 43 actual drawn environments differ before comparing palette');
   assert.equal(pictures.size, 43, 'all 43 full-room native renderings differ');
-  checks.push({ name: '43 complete window, two-wall and edge environments; multi-region real frame responses', count: samples.length, minimumFrames: Math.min(...samples.map(s => s.frames)), minimumUnique: Math.min(...samples.map(s => s.unique)) });
+  checks.push({ name: '43 complete window, two-wall and edge environments; multi-region cel responses and repeated holds', count: samples.length, minimumFrames: Math.min(...samples.map(s => s.frames)), minimumUnique: Math.min(...samples.map(s => s.unique)) });
   await run('state={...state,theme:"summer"};env.update(state);env.trigger({theme:"summer"});void 0');
   await pause(190);
   const interruption = await run('(()=>{const nodes=[...document.querySelectorAll("[data-response-region]")],before=nodes.map(n=>new DOMMatrixReadOnly(getComputedStyle(n).transform));env.trigger({theme:"summer"});const after=nodes.map(n=>new DOMMatrixReadOnly(getComputedStyle(n).transform));return before.map((m,i)=>Math.max(Math.abs(m.m41-after[i].m41),Math.abs(m.m42-after[i].m42),Math.abs(m.m11-after[i].m11),Math.abs(m.m12-after[i].m12)))})()');
@@ -57,6 +57,9 @@ app.whenReady().then(async () => {
     await run('env.update({...state,dayPhase:' + JSON.stringify(dayPhase) + '});void 0');
     assert.equal(await run('document.querySelector(".theme-window").dataset.phase'), dayPhase);
   }
+  await run('state={...state,hidden:false,reducedMotion:false,lowPower:false};env.update(state);env.trigger({theme:"spring",source:"keyboard"});void 0');
+  assert.equal(await run('env.state().playing'), false);
+  assert.equal(await run('document.querySelector(".theme-environment").getAnimations({subtree:true}).length'), 0);
   assert.equal(await run('env.trigger({theme:"christmas"})'), false, 'a stale click from another theme cannot change the new room');
   assert.deepEqual(await run('actorMutations'), []); assert.equal(await run('document.getElementById("a")===originalA'), true);
   assert.equal(await run('document.getElementById("clock").textContent.includes("18:30")'), true);

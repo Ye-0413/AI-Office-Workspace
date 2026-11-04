@@ -12,7 +12,7 @@ const run=code=>win.webContents.executeJavaScript(code,true);
 const broadcast=()=>{if(win&&!win.isDestroyed())win.webContents.send('office:snapshot',current());};
 async function until(code,label,ms=18000){const end=Date.now()+ms;while(Date.now()<end){if(await run(code))return;await wait(10);}throw Error(label);}
 async function pausedWorkClocks(label){
- await until(`(()=>{const s=nativeIdentity,live=s.rig.getAnimations({subtree:true});return s.clocks.length>0&&s.clocks.every(a=>live.includes(a)&&a.playState==='paused'&&Number.isFinite(a.currentTime))})()`,label+' pauses original work CSS clocks',500);
+ await until(`(()=>{const s=nativeIdentity,live=s.rig.getAnimations({subtree:true});return s.clocks.length>0&&s.clocks.every(a=>live.includes(a)&&a.playState==='paused'&&Number.isFinite(a.currentTime))})()`,label+' pauses original work clocks',500);
  await run(`void(window.nativeClockHold=nativeIdentity.clocks.map(animation=>({animation,time:animation.currentTime})))`);await wait(90);
  const sample=await run(`nativeClockHold.map(c=>({same:nativeIdentity.rig.getAnimations({subtree:true}).includes(c.animation),paused:c.animation.playState==='paused',drift:Math.abs(c.animation.currentTime-c.time)}))`);
  assert.ok(sample.length>0&&sample.every(c=>c.same&&c.paused&&c.drift<=.2),label+' retains paused original animation objects without drift');
@@ -32,7 +32,7 @@ app.whenReady().then(async()=>{
  await run(`(()=>{window.nativeCue=null;window.nativeCount=0;const layer=document.getElementById('station-arrivals');new MutationObserver(records=>{for(const record of records)for(const node of record.addedNodes)if(node.nodeType===1&&node.matches('.station-arrival')){nativeCount++;nativeCue={node,start:performance.now(),rows:0};const sample=()=>{if(!nativeCue.node.isConnected)return;nativeCue.rows++;requestAnimationFrame(sample)};requestAnimationFrame(sample);}}).observe(layer,{childList:true});})()`);
  sessions=[{id:'codex:visibility-main',provider:'codex',sessionId:'visibility-main',status:'active',activity:'reading',activeTools:1,lastEventAt:Date.now(),events:[],projectPath:'/fixture/native-visibility'}];broadcast();
  await until(`nativeCue&&nativeCue.rows>=5&&Number(getComputedStyle(nativeCue.node).opacity)>.15`,'a real door walk reaches a visible finite station response');
- await run(`(()=>{const node=document.querySelector('.actor[data-session-id="codex:visibility-main"]'),rig=node.querySelector('.ap-rig');window.nativeIdentity={node,body:node.querySelector('.character-body'),image:node.querySelector('.character-body>img'),rig,clocks:rig.getAnimations({subtree:true}).filter(a=>typeof a.animationName==='string'&&a.effect.getTiming().iterations===Infinity&&a.playState==='running'),program:node.dataset.performanceProgram};})()`);
+ await run(`(()=>{const node=document.querySelector('.actor[data-session-id="codex:visibility-main"]'),rig=node.querySelector('.ap-rig');window.nativeIdentity={node,body:node.querySelector('.character-body'),image:node.querySelector('.character-body>img'),rig,clocks:rig.getAnimations({subtree:true}).filter(a=>(typeof a.animationName==='string'||a.effect.target?.matches('.cp-frame'))&&a.effect.getTiming().iterations===Infinity&&a.playState==='running'),program:node.dataset.performanceProgram};})()`);
  // A real hide tests cleanup of the still-active response. Minimize has an
  // OS-owned animation, so its independent gate starts at the actual getter.
  nativeLatency={kind:'hide',requestedAt:Date.now(),events:[]};nativeLatencies.push(nativeLatency);win.hide();

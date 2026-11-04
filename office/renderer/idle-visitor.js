@@ -10,12 +10,12 @@
     let guest=null,disposed=false,lastContext=null,guestSerial=0;
     const make=(tag,cls)=>{const el=document.createElement(tag);if(cls)el.className=cls;return el;};
     const transform=p=>'translate3d('+(p.x*12.8)+'px,'+(p.y*7.2)+'px,0) scale('+(Scene.ROOM_LAYOUT ? .65 : (.76+p.y/500)*.88)+')';
-    function pose(name,replay=false){
+    function pose(name,reaction=''){
       if(!guest)return;const c=lastContext;guest.wantedPose=name;guest.node.dataset.visitorPose=name;
       const activity=({reading:'reading',planning:'planning',tidying:'building'})[name]||'visiting';
       // This private decorative presentation never enters the observation store.
       guest.performance.update({...guest.presentation,activity},{now:Date.now(),reducedMotion:c.reducedMotion,lowPower:c.lowPower,hidden:c.hidden,walking:Boolean(guest.motion)||guest.node.dataset.walking==='true'});
-      if(replay&&!c.reducedMotion&&!c.lowPower&&!c.hidden)guest.performance.cue('attention');
+      if(reaction&&!c.reducedMotion&&!c.lowPower&&!c.hidden)guest.performance.cue(reaction === 'rare' && c.avatarStyle === 'painted' ? 'attention' : reaction);
     }
     function stopMotion(){if(!guest?.motion)return;const matrix=new DOMMatrixReadOnly(getComputedStyle(guest.node).transform);guest.point={x:matrix.m41/12.8,y:matrix.m42/7.2};guest.node.style.transform=transform(guest.point);guest.motion.cancel();guest.motion=null;guest.node.dataset.walking='false';}
     function clearProps(){for(const prop of world.querySelectorAll('[data-visitor-active]'))delete prop.dataset.visitorActive;}
@@ -26,16 +26,16 @@
       const node=make('div','visitor'),button=make('button','actor-button'),body=make('span','character-body'),image=make('img'),plate=make('span','nameplate'),title=make('span','actor-title'),badge=make('span','visitor-badge'),state=make('span','actor-state'),bubble=make('span','actor-bubble'),trinket=make('span','visitor-trinket');
       button.type='button';image.alt='';image.draggable=false;bubble.setAttribute('aria-hidden','true');trinket.setAttribute('aria-hidden','true');
       body.append(image);plate.append(title,badge,state);button.append(body,plate,bubble,trinket);node.append(make('span','actor-shadow'),button);layer.append(node);
-      const designs=root.OfficeAgentAppearance.catalog,design=root.OfficePublicArtwork.design(designs[Math.floor(Math.random()*designs.length)]);
+      const designs=root.OfficeAgentAppearance.catalog,design=root.OfficePublicArtwork.design(designs[Math.floor(Math.random()*designs.length)],lastContext.avatarStyle);
       const presentation={id:'decorative-visitor-'+(++guestSerial),provider:'decorative',status:'active',activity:'visiting'};
       node.dataset.bodyDesign=design.id;node.dataset.bodyAppearance=design.id+':0';
       image.dataset.asset=design.asset;image.src='../assets/avatars/'+design.asset;
-      const performance=root.OfficeCreaturePerformance.create({actorNode:node,body,image,session:presentation,design});
-      guest={node,button,image,title,badge,state,bubble,trinket,performance,presentation,name:names[Math.floor(Math.random()*names.length)],point:{x:Scene.ZONES.exit.x,y:Scene.ZONES.exit.y},motion:null,generation:-1,stopSerial:-1,bubbleTimer:0,quote:null,wantedPose:'looking',leaving:false,lastHello:0};
+      const performance=root.OfficeAvatarPerformance.create({actorNode:node,body,image,session:presentation,design});
+      guest={node,button,image,design,title,badge,state,bubble,trinket,performance,presentation,name:names[Math.floor(Math.random()*names.length)],point:{x:Scene.ZONES.exit.x,y:Scene.ZONES.exit.y},motion:null,generation:-1,stopSerial:-1,bubbleTimer:0,quote:null,wantedPose:'looking',leaving:false,lastHello:0};
       node.style.transform=transform(guest.point);world.dataset.visitor='true';copy();pose('looking');openDoor();
       image.addEventListener('error',()=>{if(guest?.image===image)image.hidden=true;});
       image.addEventListener('load',()=>{if(guest?.image===image&&image.naturalWidth>0)image.hidden=false;});
-      button.addEventListener('click',()=>{if(!guest||guest.leaving||Date.now()-guest.lastHello<3000)return;guest.lastHello=Date.now();speak(guest.stop?.zone||'door');if(!guest.motion)pose('delighted',true);});
+      button.addEventListener('click',()=>{if(!guest||guest.leaving||Date.now()-guest.lastHello<3000)return;guest.lastHello=Date.now();speak(guest.stop?.zone||'door');if(!guest.motion)pose('delighted','wave');});
     }
     async function travel(target,generation,stopSerial,leaving){
       stopMotion();const current=guest;if(!current)return;
@@ -43,7 +43,7 @@
       if(Scene.ROOM_LAYOUT&&path.length<2&&Scene.distance(current.point,target)>.001){remove();director.clear();return;}
       const finish=()=>{if(guest!==current||current.generation!==generation||current.stopSerial!==stopSerial)return false;current.point={x:target.x,y:target.y};current.node.style.transform=transform(current.point);current.node.style.zIndex=String(Math.round(target.y*10));current.node.dataset.walking='false';return true;};
       if(!lastContext.reducedMotion&&length>.65&&path.length>1){
-        let traveled=0;const frames=path.map((point,index)=>{if(index)traveled+=Scene.distance(path[index-1],point);return{transform:transform(point),offset:traveled/length};});
+        let traveled=0;const frames=path.map((point,index)=>{if(index)traveled+=Scene.distance(path[index-1],point);const steps=index<path.length-1?Math.max(1,Math.ceil(Scene.distance(point,path[index+1])*3)):1;return{transform:transform(point),offset:traveled/length,easing:'steps('+steps+',end)'};});
         current.node.dataset.walking='true';pose('looking');
         const motion=current.node.animate(frames,{duration:Math.max(360,Math.min(leaving?2400:6000,length*(leaving?34:65))),easing:'linear',fill:'forwards'});current.motion=motion;
         if(lastContext.hidden)motion.pause();
@@ -51,7 +51,7 @@
         if(!finish())return;current.motion=null;motion.cancel();
       }else if(!finish())return;
       if(leaving){openDoor();remove();director.departed(generation);return;}
-      director.arrived(stopSerial,generation);pose(current.stop.pose,Boolean(current.stop.easterEgg));current.trinket.textContent=current.stop.easterEgg?'✦':({book:'≡',coffee:'☕',plant:'❧',note:'✎',broom:'〰',star:'✦'})[current.stop.prop]||'';
+      director.arrived(stopSerial,generation);pose(current.stop.pose,current.stop.easterEgg?'rare':'');current.trinket.textContent=current.stop.easterEgg?'✚':({book:'≡',coffee:'▪',plant:'♟',note:'▤',broom:'⌁',star:'✚'})[current.stop.prop]||'';
       current.node.dataset.rare=String(Boolean(current.stop.easterEgg));
       const prop=world.querySelector('[data-zone-prop="'+current.stop.zone+'"]');if(prop)prop.dataset.visitorActive='true';
       speak(current.stop.zone);tick();
@@ -64,6 +64,14 @@
       if(state.phase==='absent'){remove();return;}
       if(!guest&&state.phase==='leaving'){director.departed(state.generation);return;}
       if(!guest)create();copy();
+      if(previous&&previous.avatarStyle!==lastContext.avatarStyle){
+        const design=root.OfficePublicArtwork.design(guest.design,lastContext.avatarStyle);
+        if(design.asset!==guest.design.asset){
+          guest.design=design;guest.performance.setDesign(design);
+          guest.image.dataset.asset=design.asset;guest.image.src='../assets/avatars/'+design.asset;
+          pose(guest.wantedPose);
+        }
+      }
       // Hidden guests can leave without running an invisible route. A paused
       // departure must never retain a guest across a later real task.
       if(state.phase==='leaving'&&(lastContext.hidden||lastContext.mode!=='live'||lastContext.reducedMotion)){openDoor();remove();director.departed(state.generation);return;}

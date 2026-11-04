@@ -72,7 +72,7 @@
       if(node.style){
         // A quiet completion must not retroactively start a transition if the
         // next ordinary update has the same target before the next paint.
-        if(changed||result.reducedMotion)node.style.transition=changed&&initialized&&!result.reducedMotion?'transform 520ms cubic-bezier(.23,1,.32,1), opacity 380ms ease':'none';
+        if(changed||result.reducedMotion)node.style.transition=changed&&initialized&&!result.reducedMotion?'transform 520ms steps(6, end), opacity 380ms steps(5, end)':'none';
         node.style.transformBox='view-box';node.style.transformOrigin=origin;
         node.style.transform=transform;node.style.opacity=String(opacity);
       }

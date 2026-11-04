@@ -29,14 +29,14 @@ app.whenReady().then(async()=>{
   assert.equal(await run(`counterCycles.every(row=>{const next=row.node.getAnimations({subtree:true});return next.length===row.motions.length&&next.every(a=>row.motions.includes(a))})`),true,'identical refreshes and bursts cannot restart or queue motion');
   assert.deepEqual(await run(`counterIds.map(id=>document.getElementById(id).textContent)`),['14','2.34M','3.45M']);
   // Sample the actual physical hinge, rather than only checking CSS class names.
-  const hinge=await run(`(()=>{counterCycles.flatMap(r=>r.motions).forEach(a=>a.currentTime=50);return counterCycles.map(row=>{const n=row.node.querySelector('.number-outgoing'),style=getComputedStyle(n),m=new DOMMatrixReadOnly(style.transform);return{tilted:Math.abs(m.m22)<.99,translucent:Number(style.opacity)<1};});})()`);
-  assert.ok(hinge.every(row=>row.tilted&&row.translucent));
+  const cel=await run(`(()=>{counterCycles.flatMap(r=>r.motions).forEach(a=>a.currentTime=50);return counterCycles.map(row=>{const n=row.node.querySelector('.number-outgoing'),style=getComputedStyle(n),m=new DOMMatrixReadOnly(style.transform);return{compressed:m.m22===.75&&m.m42===-4,translucent:Number(style.opacity)<1};});})()`);
+  assert.ok(cel.every(row=>row.compressed&&row.translucent));
   await run(`counterCycles.flatMap(r=>r.motions).forEach(a=>a.finish());void 0`);
   await until(`document.querySelectorAll('.number-outgoing').length===0`,'finished flips clean up');
   assert.deepEqual(await run(`counterIds.map(id=>document.getElementById(id).textContent)`),['14','2.34M','3.45M']);
   const stable=await run(`counterBoxes.every(old=>{const r=document.getElementById(old.id).getBoundingClientRect();return Math.abs(old.top-r.top)<.5&&Math.abs(old.bottom-r.bottom)<.5&&(old.id==='today-total'||Math.abs(old.left-r.left)<.5&&Math.abs(old.right-r.right)<.5)})`);
   assert.equal(stable,true,'flip transforms cannot shift the ledger or clock geometry');
-  checks.push('real 200ms 3D flip, latest accessible values, unchanged heartbeats, burst coalescing and fixed ledger geometry');
+  checks.push('real 200ms pixel counter swap, latest accessible values, unchanged heartbeats, burst coalescing and fixed ledger geometry');
   await send(15,2500000,3500000);
   await run(`document.getElementById('setting-reducedMotion').checked=true;document.getElementById('setting-reducedMotion').dispatchEvent(new Event('change',{bubbles:true}));void 0`);
   await until(`document.getElementById('office').dataset.reducedMotion==='true'`,'reduced motion applies');

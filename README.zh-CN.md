@@ -159,8 +159,8 @@ npm --prefix office run build:mac
 ## 五位伙伴，五种性格
 
 <picture>
-  <source media="(prefers-reduced-motion: reduce)" srcset="docs/animations/workshop-demo.png">
-  <img src="docs/animations/workshop-demo.svg" width="1100" alt="纸团、墨豆、苔盒、线团、灯籽各自的材质动作，以及同族小分身">
+  <source media="(prefers-reduced-motion: reduce)" srcset="docs/animations/pixel-overview.png">
+  <img src="docs/animations/pixel-overview.gif" width="1100" alt="五位原创像素伙伴的活动循环">
 </picture>
 
 | 纸团 · FOLIO | 墨豆 · INK | 苔盒 · MOSS | 线团 · THREAD | 灯籽 · GLOW |
@@ -169,7 +169,7 @@ npm --prefix office run build:mac
 | 文案与资料整理 | 编程与排错 | 长任务与维护 | 设计与创意探索 | 协调与提醒 |
 | 认真 · 一丝不苟 | 安静 · 行动快 | 沉稳 · 有耐心 | 活泼 · 有巧思 | 温和 · 有分寸 |
 
-**550 套动作 = 5 种角色 × 11 类活动 × 10 个变体。** 以上为性格主题，所有角色均支持全部活动。上图使用合成会话离线演示。[动作图鉴](docs/animations/README.md)。
+**默认使用像素风。** 在 macOS 菜单「显示 → 头像风格」或「房间偏好 → 头像风格」可切换手绘风。两种风格各有 55 套动作，覆盖五位伙伴和 11 类活动。上方是合成会话的像素帧演示。[查看两种风格的动作图鉴](docs/animations/README.md)。
 
 前五个主 Agent 外观各异，更多主 Agent 使用配色变体。分身继承主身的**外观与配色，体型小一号**。[完整角色故事与家族规则](docs/companions.md)。
 
@@ -190,7 +190,7 @@ npm --prefix office run build:mac
 | 安装、设置与本地数据 | [应用指南](office/README.md) |
 | 连接 AI 工具 | [兼容与接入](office/docs/upstream-compatibility.md) |
 | 活动、用量与原生问题 | [监测说明](office/docs/monitoring.md) |
-| 角色故事与 550 套动作 | [原创角色](docs/companions.md) · [动作图鉴](docs/animations/README.md) |
+| 角色故事与两种风格的动作图鉴 | [原创角色](docs/companions.md) · [动作图鉴](docs/animations/README.md) |
 | 房间与演示素材 | [房间图鉴](docs/rooms/README.md) · [录制说明](docs/media/README.md) |
 | 版本变化 | [v0.24.0](docs/releases/release-v0.24.0.md) · [发布记录](docs/releases/README.md) |
 
@@ -200,7 +200,7 @@ npm --prefix office run build:mac
 
 ## 许可与致谢
 
-**源码：** [AGPL-3.0-only](LICENSE)，基于 [Clawd on Desk](UPSTREAM-README.md)。**角色美术：** [保留所有权利](office/assets/WORKSHOP-ARTWORK-NOTICE.md)。用户提供角色概念，AI 辅助生成美术，项目编写渲染与动作。
+**源码：** [AGPL-3.0-only](LICENSE)，基于 [Clawd on Desk](UPSTREAM-README.md)。**角色美术：** [保留所有权利](office/assets/WORKSHOP-ARTWORK-NOTICE.md)。用户提供角色概念。手绘风使用 AI 辅助生成的美术，像素风角色在整数网格上逐帧绘制。
 
 [原创与来源](ORIGINALITY.md) · [第三方声明](NOTICE.md) · [应用致谢](office/UPSTREAM-NOTICE.md) · [发布记录](docs/releases/README.md)
 

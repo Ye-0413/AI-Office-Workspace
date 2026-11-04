@@ -1,23 +1,44 @@
-# 工坊动作图鉴 / Workshop animation gallery
+# 工坊动作图鉴 / Workshop motion gallery
 
-当前角色库是五种原创材质伙伴：纸团 **Folio**、墨豆 **Ink**、苔盒 **Moss**、线团 **Thread**、灯籽 **Glow**。每种角色有 11 类活动，每类 10 套动作，共 **550 套状态动作**。角色造型、材质和动作道具不同，不只是换色。
+五位伙伴各有 11 类活动，像素风和手绘风各有 **55 套循环**。默认使用像素风，通过「显示 → 头像风格」或「房间偏好 → 头像风格」可切换。房间偏好中的动作图鉴会显示当前风格。
+
+Five companions perform **55 activity loops per style**. Pixel is the default. Switch with **View → Avatar Style** or **Room preferences → Avatar style**. The motion gallery in Room preferences follows your selection.
+
+## 像素风 / Pixel
 
 <picture>
-  <source media="(prefers-reduced-motion: reduce)" srcset="workshop-demo.png">
-  <img src="workshop-demo.svg" width="1100" alt="五种原创工坊伙伴与同族小分身的生产动画采样，使用固定合成会话">
+  <source media="(prefers-reduced-motion: reduce)" srcset="pixel-overview.png">
+  <img src="pixel-overview.gif" width="1100" alt="像素工坊，五个合成状态 / Pixel Workshop, five synthetic activities">
 </picture>
 
-[静态预览 / Static preview](workshop-demo.png) · [录制清单 / Recording manifest](manifest.json) · [原创角色素材声明](../../office/assets/WORKSHOP-ARTWORK-NOTICE.md)
+五张卡片由原生渲染器使用合成会话采样。预览把循环相位同步到 3 秒，应用按各自的时长播放。The native preview synchronizes five synthetic loops to three seconds. Each activity keeps its own timing in the app.
 
-SVG 展示五个固定合成会话，以及一个同族、更小的 Thread 分身。它来自应用当前 `OfficeCreaturePerformance` 和动作库的原生渲染采样；原生 Animation 的关键帧、时长和缓动被转录为 SVG 内的 CSS 动画。原创 PNG 纹理裁剪后嵌入 SVG；无脚本、`foreignObject`、外部图片或网络请求。SVG 支持减少动态偏好；README 的 `picture` 也会为该偏好明确选择 PNG 静帧。
+[静态预览 / Still](pixel-overview.png) · [原创素材声明 / Artwork notice](../../office/assets/WORKSHOP-ARTWORK-NOTICE.md) · [像素帧节拍 / Cel timings](../../office/renderer/creature-frame-manifest.js)
 
-这些都是**离线演示会话**，不是用户任务截图，不读取本机会话、提示词、路径、工具输出或凭证。道具表示被观察到的活动；测试不预先打勾，等待不伪装运行，异常不假装自行修复。
+每位伙伴的九张表情帧包括眨眼、左右瞥视、两张招手帧、受惊、两张访客彩蛋帧和工具成功后的轻微表情。眨眼只改变眼睛的像素，身体轮廓和脚底沿用待命姿态。装饰访客偶尔会展示纸鹤、墨泡、苔花、纱线爱心或暖光星星。
 
-动作媒体已随身体—道具交互重做重新采样：道具位于角色侧前方的工作区，由角色本体材质（纸片、墨线、根须、纱线、光点）延伸到握持点，身体姿态、前足和头部余动与道具时间线同步。独立角色卡不包含房间名牌，也不证明当前房间布局；家具预览同样不证明角色离场或工位容量。
+Each companion has nine expression cels. The blink changes only the eye pixels. Rare visitor expressions show a paper crane, ink bubble, moss blossom, yarn heart or glowing star. [访客彩蛋预览 / Visitor expression preview](pixel-expressions.png).
+
+## 手绘风 / Painted
+
+<picture>
+  <source media="(prefers-reduced-motion: reduce)" srcset="painted-overview.png">
+  <img src="painted-overview.gif" width="1100" alt="手绘工坊，五个合成状态 / Painted Workshop, five synthetic activities">
+</picture>
+
+上图是原工坊位图渲染器的离线采样。录制用五个合成会话把循环统一为 3 秒、36 帧。应用中的手绘风保留各自原有节拍和帧间过渡。
+
+The archived recording samples five synthetic activities from the painted renderer. The recording normalizes cycles to three seconds and 36 frames for comparison. The app uses each activity's original timing and blends. [静态预览 / Still](painted-overview.png) · [录制清单 / Capture manifest](painted-manifest.json)
+
+手绘风的动作图鉴也保留了每个活动的十套矢量参考动作。The painted gallery also keeps ten vector references per activity.
+
+## 原版录制存档 / Workshop recording archive
+
+以下录制保留原工坊版的 550 套动作库、家具和环境演示，来源见各录制清单。These recordings preserve the previous 550-variation renderer and its furniture and environment demonstrations. [原版总览 / Workshop overview](workshop-demo.svg) · [录制清单 / Recording manifest](manifest.json)
 
 ## 十一类活动 / Eleven observed activities
 
-下列 GIF 每张展示五种角色各一套当前动作，另有一个同族小分身。它们是代表样本，完整 550 套可在应用的动作图鉴中逐项查看。为便于比较，GIF 将每个原生循环的相位同步到 4.2 秒；应用与上方 SVG 保留原有时长。每张图原生采样 42 帧，实际不同画面数量、配方 ID、源码摘要与媒体摘要均记在清单中。
+下列 GIF 每张展示原工坊版的五种角色与一个同族小分身。GIF 将原生循环相位同步到 4.2 秒，每张采样 42 帧。
 
 ### 阅读 / Reading
 
@@ -91,14 +112,18 @@ SVG 展示五个固定合成会话，以及一个同族、更小的 Thread 分�
 ![分身凝聚道具](lifecycle/split.gif)
 ![分身归返道具](lifecycle/absorb.gif)
 
-## 重新导出 / Reproduce
+## 重新导出像素预览 / Reproduce the pixel preview
 
-在仓库根目录运行：
+在仓库根目录运行，使用本地 Electron 与 ffmpeg。
 
 ```sh
-office/node_modules/.bin/electron office/scripts/render-workshop-demo.cjs
+MINI_OFFICE_PREVIEW_DIR=/tmp/office-pixel-preview MINI_OFFICE_CAPTURE_MOTION=1 \
+  office/node_modules/.bin/electron office/test/creature-frames-renderer.cjs
+ffmpeg -framerate 12 -i /tmp/office-pixel-preview/pixel-%03d.png \
+  -filter_complex '[0:v]split[a][b];[a]palettegen=reserve_transparent=0[p];[b][p]paletteuse=dither=none:diff_mode=rectangle' \
+  -loop 0 docs/animations/pixel-overview.gif
+cp /tmp/office-pixel-preview/pixel-lineup.png docs/animations/pixel-overview.png
+cp /tmp/office-pixel-preview/pixel-expressions.png docs/animations/pixel-expressions.png
 ```
 
-导出只创建合成会话，加载五张 `workshop-*.png` 原创材质表和当前生产动作代码。需要本地 Electron 与 ffmpeg；无需连接 AI 服务。脚本验证逐帧变化、静帧偏好、自包含资源和 GitHub README 的 `<img>` 图像语境，并记录可复核的 SHA-256。
-
-[返回项目首页](../../README.md) · [550 套动作目录](../../office/renderer/creature-repertoire.js) · [原生渲染器](../../office/renderer/creature-performance.js) · [导出脚本](../../office/scripts/render-workshop-demo.cjs)
+[返回项目首页 / Project home](../../README.md)

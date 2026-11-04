@@ -1,7 +1,7 @@
 /* Finite decorative pair choreography, isolated from real actor poses/state. */
 (function(root){
   'use strict';
-  const NS='http://www.w3.org/2000/svg',EASE_OUT='cubic-bezier(.23,1,.32,1)',EASE_MOVE='cubic-bezier(.77,0,.175,1)';
+  const NS='http://www.w3.org/2000/svg',EASE_OUT='steps(3,end)',EASE_MOVE='steps(5,end)';
   function create({layer,world,getActors,getContext}={}){
     const Model=root.OfficeSocialInteractions;
     if(!layer||!world||!Model||typeof getActors!=='function'||typeof getContext!=='function')throw new TypeError('Social interactions need the real scene layer, world and actor/context readers');
@@ -82,16 +82,16 @@
       const reserved=root.OfficeScene?.CLOCK_RESERVED||[{left:470,top:65,right:830,bottom:175}];
       const clearClock=(x,y,radius=20*propScale)=>{for(const rect of reserved)if(x+radius>rect.left&&x-radius<rect.right&&y-radius<rect.bottom&&y+radius>rect.top)y=rect.bottom+radius+8;return y;};
       const captionAnchor=at(Math.max(155,Math.min(wa-155,mid.x)),captionY,'social-caption-anchor'),caption=svg('g',{class:'social-caption'},captionAnchor),captionWidth=ctx.language==='en'?282:246;
-      svg('rect',{x:-captionWidth/2,y:-13,width:captionWidth,height:25,rx:6},caption);
+      svg('rect',{x:-captionWidth/2,y:-13,width:captionWidth,height:25,rx:0},caption);
       if(actors.length>12||reserved.some(rect=>mid.x+captionWidth/2>rect.left&&mid.x-captionWidth/2<rect.right&&captionY+13>rect.top&&captionY-13<rect.bottom))caption.style.display='none';
       const title=svg('text',{'text-anchor':'middle',y:4},caption);title.textContent=(ctx.language==='en'?'Studio moment · ':'工作室小互动 · ')+plan.definition[ctx.language==='en'?'labelEn':'labelZh'];
       animate(caption,[{opacity:0,transform:'translateY(3px)',offset:0,easing:EASE_OUT},{opacity:.96,transform:'translateY(0)',offset:.08},{opacity:.96,offset:.92,easing:EASE_OUT},{opacity:0,transform:'translateY(-2px)',offset:1}],'linear');
-      function hand(actor,p,role,frames){const anchor=at(p.x,p.y,`social-gesture-anchor social-${role}`),g=svg('g',{class:'social-hand','data-part':role},anchor);const shape=svg('g',{transform:`scale(${propScale})`},g);svg('path',{d:'M-8 3Q-12-1-8-5L-4-6-3-11Q-1-14 1-11L2-5 7-8Q11-9 11-5L9 5Q7 10 0 10Z',fill:actor.color},shape);svg('path',{d:'M-4 0L2 2 7 0',class:'social-palm-line'},shape);animate(g,frames);return g;}
+      function hand(actor,p,role,frames){const anchor=at(p.x,p.y,`social-gesture-anchor social-${role}`),g=svg('g',{class:'social-hand','data-part':role},anchor);const shape=svg('g',{transform:`scale(${propScale})`},g);svg('path',{d:'M-10 3V-5H-6V-7H-4V-12H0V-6H4V-9H9V-6H11V4H8V8H4V10H-4V7H-8V3Z',fill:actor.color},shape);svg('path',{d:'M-4 0L2 2 7 0',class:'social-palm-line'},shape);animate(g,frames);return g;}
       const give=[{opacity:0,transform:'translate(0px,5px) rotate(-12deg)',offset:0},{opacity:1,transform:'translate(5px,-4px) rotate(5deg)',offset:.18},{opacity:1,transform:'translate(9px,-3px) rotate(12deg)',offset:.44},{opacity:1,transform:'translate(2px,0px) rotate(-4deg)',offset:.74},{opacity:0,transform:'translate(0px,4px) rotate(0deg)',offset:1}];
       const receive=[{opacity:0,transform:'translate(0px,4px) rotate(10deg)',offset:0},{opacity:1,transform:'translate(-4px,-1px) rotate(-8deg)',offset:.28},{opacity:1,transform:'translate(-9px,-5px) rotate(-12deg)',offset:.59},{opacity:1,transform:'translate(-2px,-8px) rotate(6deg)',offset:.78},{opacity:0,transform:'translate(0px,3px)',offset:1}];
       function nod(actor,delay=.58,lookUp=false){
         const anchor=at(actor.anchor.x+actor.anchor.width*.5,actor.anchor.y+actor.anchor.height*.45,'social-reaction-anchor'),g=svg('g',{class:'social-reaction'},anchor),shape=svg('g',{transform:`scale(${propScale})`},g);
-        svg('path',{d:lookUp?'M-13 3L-9-3-5 3M5 3L9-3 13 3':'M-14-1Q-9 5-4-1M4-1Q9 5 14-1'},shape);
+        svg('path',{d:lookUp?'M-13 3L-9-3-5 3M5 3L9-3 13 3':'M-14-1H-12V2H-6V-1H-4M4-1H6V2H12V-1H14'},shape);
         animate(g,[{opacity:0,transform:'translateY(1px)',offset:0},{opacity:0,offset:Math.max(0,delay-.08)},{opacity:1,transform:lookUp?'translateY(-7px) rotate(-3deg)':'translateY(3px) rotate(3deg)',offset:delay},{opacity:1,transform:lookUp?'translateY(-5px) rotate(2deg)':'translateY(-1px) rotate(-2deg)',offset:Math.min(.89,delay+.16)},{opacity:0,transform:'translateY(0)',offset:1}]);
       }
       function prop(x,y,kind,content){const anchor=at(x,y,`social-prop-anchor social-${kind}`),g=svg('g',{class:'social-prop','data-prop':kind},anchor);content(svg('g',{transform:`scale(${propScale})`},g));return g;}
@@ -106,23 +106,23 @@
         animate(plane,[{opacity:0,transform:'translate(-3px,3px) rotate(-12deg)',offset:0},{opacity:1,transform:'translate(2px,-5px) rotate(-12deg)',offset:.16},{opacity:1,transform:`translate(${dx*.55}px,${clearClock(left.x+dx*.55,left.y-12+dy*.55-65*propScale)-(left.y-12)}px) rotate(7deg)`,offset:.45},{opacity:1,transform:`translate(${dx}px,${dy-14}px) rotate(18deg)`,offset:.72},{opacity:0,transform:`translate(${dx+8}px,${dy-2}px) rotate(25deg)`,offset:1}]);nod(b,.78);nod(a,.82);
       }else if(plan.kind==='magnet-puzzle'){
         hand(a,left,'sender',give);hand(b,right,'receiver',receive);
-        const puzzle=(x,y,fill,side)=>prop(x,y,'magnet-'+side,g=>svg('path',{d:side==='left'?'M-15-13H1V-6Q11-10 11-1Q11 8 1 4V13H-15Z':'M15-13H-1V-6Q9-10 9-1Q9 8-1 4V13H15Z',fill,class:'social-magnet'},g));
+        const puzzle=(x,y,fill,side)=>prop(x,y,'magnet-'+side,g=>svg('path',{d:side==='left'?'M-15-13H1V-7H8V-5H11V3H8V5H1V13H-15Z':'M15-13H-1V-7H6V-5H9V3H6V5H-1V13H15Z',fill,class:'social-magnet'},g));
         const l=puzzle(left.x,left.y-10,'#cc8f64','left'),r=puzzle(right.x,right.y-10,'#718f9e','right'),joinY=Math.min(left.y,right.y)-44*propScale;
         for(const[g,p,off]of[[l,left,-9],[r,right,9]])animate(g,[{opacity:0,transform:'translateY(4px) rotate(-6deg)',offset:0},{opacity:1,offset:.2},{opacity:1,transform:`translate(${mid.x-p.x+off}px,${joinY-p.y}px) rotate(0deg)`,offset:.55},{opacity:1,transform:`translate(${mid.x-p.x+off}px,${joinY-p.y-4}px) rotate(0deg)`,offset:.75},{opacity:0,transform:`translate(${mid.x-p.x+off}px,${joinY-p.y+3}px)`,offset:1}]);nod(a,.76);nod(b,.76);
       }else if(plan.kind==='tea-toast'){
-        const cup=(p,side)=>prop(p.x,p.y-10,'teacup-'+side,g=>{svg('path',{d:'M-11-8H9L7 8H-8ZM9-5Q20-7 17 1Q14 5 8 3',class:'social-cup'},g);svg('path',{d:'M-6-13Q-10-18-5-22M3-13Q-1-18 4-22',class:'social-steam'},g);svg('path',{d:'M-14 10H13',class:'social-paper-lines'},g);});
+        const cup=(p,side)=>prop(p.x,p.y-10,'teacup-'+side,g=>{svg('path',{d:'M-11-8H9V4H7V8H-8V4H-11ZM9-5H16V-3H18V1H15V3H9',class:'social-cup'},g);svg('path',{d:'M-6-13V-16H-8V-19H-5V-22M3-13V-16H1V-19H4V-22',class:'social-steam'},g);svg('path',{d:'M-14 10H13',class:'social-paper-lines'},g);});
         for(const[g,side]of[[cup(left,'left'),1],[cup(right,'right'),-1]])animate(g,[{opacity:0,transform:'translateY(5px)',offset:0},{opacity:1,transform:`translate(${side*8}px,-18px) rotate(${side*9}deg)`,offset:.28},{opacity:1,transform:`translate(${side*13}px,-23px) rotate(${side*12}deg)`,offset:.48},{opacity:1,transform:'translateY(-5px) rotate(0deg)',offset:.78},{opacity:0,transform:'translateY(5px)',offset:1}]);
         hand(a,left,'sender',give);hand(b,right,'receiver',receive);nod(a,.55);nod(b,.6);
       }else if(plan.kind==='pastry-pass'){
         hand(a,left,'sender',give);hand(b,right,'receiver',receive);
-        const tray=prop(left.x,left.y-10,'pastry',g=>{svg('ellipse',{cx:0,cy:7,rx:24,ry:6,class:'social-plate'},g);svg('path',{d:'M-14 5V-4Q-9-15 0-7Q9-15 14-4V5Z',class:'social-pastry'},g);svg('path',{d:'M-8-1L-3 2M3-1L8 2',class:'social-paper-lines'},g);});animate(tray,pathFrames(-12,4));nod(b,.8);
+        const tray=prop(left.x,left.y-10,'pastry',g=>{svg('path',{d:'M-24 5H-19V2H19V5H24V9H19V12H-19V9H-24Z',class:'social-plate'},g);svg('path',{d:'M-14 5V-4H-11V-8H-6V-11H-2V-8H2V-11H6V-8H11V-4H14V5Z',class:'social-pastry'},g);svg('path',{d:'M-8-1L-3 2M3-1L8 2',class:'social-paper-lines'},g);});animate(tray,pathFrames(-12,4));nod(b,.8);
       }else if(plan.kind==='chime-duet'){
         hand(a,left,'sender',give);hand(b,right,'receiver',receive);
         for(const[p,index]of[[left,0],[right,1]]){
-          const chime=prop(p.x,p.y-31,'chime-'+index,g=>{svg('path',{d:'M0-22V-14M-13 2Q-12-18 0-15Q12-18 13 2ZM0 2V16',class:'social-chime'},g);svg('path',{d:'M-4 16H5V30H-4Z',class:'social-chime-card'},g);});
+          const chime=prop(p.x,p.y-31,'chime-'+index,g=>{svg('path',{d:'M0-22V-14M-13 2V-4H-10V-9H-6V-13H6V-9H10V-4H13V2ZM0 2V16',class:'social-chime'},g);svg('path',{d:'M-4 16H5V30H-4Z',class:'social-chime-card'},g);});
           animate(chime,[{opacity:0,transform:'rotate(0deg)',offset:0},{opacity:1,transform:'rotate(0deg)',offset:.14+index*.22},{opacity:1,transform:`rotate(${index?-13:15}deg)`,offset:.26+index*.22},{opacity:1,transform:`rotate(${index?8:-8}deg)`,offset:.48+index*.22},{opacity:0,transform:'rotate(0deg)',offset:1}]);
         }
-        const note=prop(left.x,left.y-10,'chime-answer',g=>{const n=svg('text',{x:0,y:0,class:'social-music-note'},g);n.textContent='♪';});animate(note,pathFrames(-36,0));nod(a,.58);nod(b,.82);
+        const note=prop(left.x,left.y-10,'chime-answer',g=>{svg('path',{d:'M0 0H6V-16H18V-12H10V4H8V7H0Z',class:'social-music-note'},g);});animate(note,pathFrames(-36,0));nod(a,.58);nod(b,.82);
       }else if(plan.kind==='star-link'){
         hand(a,left,'sender',give);hand(b,right,'receiver',receive);
         const constellation=at(mid.x,clearClock(mid.x,Math.max(100,Math.min(left.y,right.y)-43*propScale)),'social-constellation'),base=svg('g',{transform:`scale(${propScale})`},constellation),segments=[[-49,7,-20,-17],[-20,-17,10,1],[10,1,39,-18],[39,-18,60,9]];
@@ -133,17 +133,16 @@
         const note=prop(left.x,left.y-11,'star-note',g=>noteShape(g,true));animate(note,pathFrames(-58,16));nod(a,.78,true);nod(b,.74);
       }else if(plan.kind==='meteor-gaze'){
         const y=clearClock(mid.x,Math.max(100,Math.min(left.y,right.y)-85*propScale)),sky=at(mid.x-95*propScale,y,'social-meteor-anchor'),meteor=svg('g',{class:'social-meteor'},sky),meteorShape=svg('g',{transform:`scale(${propScale})`},meteor);
-        svg('path',{d:'M-55-12L2 0',class:'social-meteor-tail'},meteorShape);svg('path',{d:'M-7 0L0-7 7 0 0 7Z',class:'social-star'},meteorShape);
+        svg('path',{d:'M-55-12H-42V-9H-30V-6H-16V-3H-2V0H2',class:'social-meteor-tail'},meteorShape);svg('path',{d:'M-7 0L0-7 7 0 0 7Z',class:'social-star'},meteorShape);
         animate(meteor,[{opacity:0,transform:`translate(${-20*propScale}px,${-16*propScale}px)`,offset:0},{opacity:0,transform:`translate(${-20*propScale}px,${-16*propScale}px)`,offset:.2},{opacity:1,transform:`translate(${22*propScale}px,${-8*propScale}px)`,offset:.35},{opacity:1,transform:`translate(${154*propScale}px,${23*propScale}px)`,offset:.61},{opacity:0,transform:`translate(${210*propScale}px,${40*propScale}px)`,offset:.8},{opacity:0,offset:1}]);
         for(const[actor,p,side]of[[a,left,1],[b,right,-1]])hand(actor,p,side===1?'sender':'receiver',[{opacity:0,transform:'translateY(3px)',offset:0},{opacity:1,transform:`translate(${side*4}px,-20px) rotate(${side*22}deg)`,offset:.28},{opacity:1,transform:`translate(${side*7}px,-27px) rotate(${side*12}deg)`,offset:.67},{opacity:0,transform:'translateY(3px)',offset:1}]);nod(a,.38,true);nod(b,.38,true);
       }else if(['gear-turn','fan-breeze','orbit-join'].includes(plan.kind)){
-        // These are rare finite character stories, not UI transitions. Sample
-        // the existing MOVE token within narrative phases, then interpolate
-        // linearly: restarting that strong curve on every75ms sample would
-        // introduce forty artificial stops. All original nine paths stay above.
+        // Sample the approach, contact and return phases once per sprite cel.
+        // The two participants and their mechanism share these beat offsets.
         const cubic=(u,p,q)=>3*(1-u)*(1-u)*u*p+3*(1-u)*u*u*q+u*u*u;
         const phase=(t,start,end)=>{const x=Math.max(0,Math.min(1,(t-start)/(end-start)));if(x===0||x===1)return x;let lo=0,hi=1;for(let i=0;i<18;i++){const u=(lo+hi)/2;if(cubic(u,.77,.175)<x)lo=u;else hi=u;}return cubic((lo+hi)/2,0,1);};
-        const dense=pose=>Array.from({length:41},(_,i)=>({offset:i/40,easing:'linear',...pose(i/40)}));
+        const beats=28;
+        const cels=pose=>Array.from({length:beats+1},(_,i)=>({offset:i/beats,easing:'steps(1, end)',...pose(i/beats)}));
         const fade=t=>phase(t,0,.12)*(1-phase(t,.86,1));
         const num=n=>Number(n.toFixed(5)),translate=(x,y,angle=0)=>`translate(${num(x)}px,${num(y)}px) rotate(${num(angle)}deg)`;
         const joinY=clearClock(mid.x,Math.max(215,Math.min(left.y,right.y)-28*propScale),42*propScale);
@@ -153,48 +152,48 @@
           const tooth=Array.from({length:8},(_,i)=>[-22.5,-10,-6,6,10,22.5].map((degrees,j)=>{const angle=(i*45+degrees)*Math.PI/180,r=[13,13,17,17,13,13][j];return `${i||j?'L':'M'}${num(Math.cos(angle)*r)} ${num(Math.sin(angle)*r)}`;})).flat().join('')+'Z';
           for(const[actor,p,side,role]of[[a,left,-1,'sender'],[b,right,1,'receiver']]){
             const end={x:mid.x+side*15.6*propScale*Math.cos(axis),y:joinY+side*15.6*propScale*Math.sin(axis)},shift={x:end.x-p.x,y:end.y-(p.y-10)};
-            hand(actor,p,role,dense(t=>({opacity:fade(t),transform:translate(shift.x*engage(t),shift.y*engage(t)-5*propScale,side*spin(t)/7)})));
+            hand(actor,p,role,cels(t=>({opacity:fade(t),transform:translate(shift.x*engage(t),shift.y*engage(t)-5*propScale,side*spin(t)/7)})));
             let rotor;const gear=prop(p.x,p.y-10,'gear-'+role,g=>{rotor=svg('g',{class:'social-gear-rotor'},g);svg('path',{d:tooth,class:side<0?'social-copper-gear':'social-slate-gear'},rotor);svg('path',{d:'M-3-3H3V3H-3Z',class:'social-gear-hub'},rotor);svg('path',{d:'M0-10V-5M0 5V10M-10 0H-5M5 0H10',class:'social-gear-spokes'},rotor);});
-            animate(gear,dense(t=>({opacity:fade(t),transform:translate(shift.x*engage(t),shift.y*engage(t))})),'linear');
+            animate(gear,cels(t=>({opacity:fade(t),transform:translate(shift.x*engage(t),shift.y*engage(t))})),'linear');
             // A half-tooth initial phase and opposite equal rotation preserve
             // the meshed contact instead of one cog cutting through the other.
-            animate(rotor,dense(t=>({transform:`rotate(${num(axisDeg+(side>0?22.5:0)-side*spin(t))}deg)`})),'linear');
+            animate(rotor,cels(t=>({transform:`rotate(${num(axisDeg+(side>0?22.5:0)-side*spin(t))}deg)`})),'linear');
           }
           nod(a,.7);nod(b,.78);
         }else if(plan.kind==='fan-breeze'){
           const carry=t=>phase(t,.06,.3)*(1-phase(t,.8,.98)),opened=t=>phase(t,.17,.4)*(1-phase(t,.75,.96));
           const fanX=mid.x-18*propScale,fanY=joinY+8*propScale,shift={x:fanX-left.x,y:fanY-(left.y-10)};
-          hand(a,left,'sender',dense(t=>({opacity:fade(t),transform:translate(shift.x*carry(t),shift.y*carry(t)-3*propScale,-8*opened(t))})));
-          hand(b,right,'receiver',dense(t=>({opacity:fade(t),transform:translate(-8*phase(t,.38,.66)*propScale,-9*opened(t)*propScale,12*opened(t))})));
+          hand(a,left,'sender',cels(t=>({opacity:fade(t),transform:translate(shift.x*carry(t),shift.y*carry(t)-3*propScale,-8*opened(t))})));
+          hand(b,right,'receiver',cels(t=>({opacity:fade(t),transform:translate(-8*phase(t,.38,.66)*propScale,-9*opened(t)*propScale,12*opened(t))})));
           const fan=prop(left.x,left.y-10,'bamboo-fan',g=>{
             for(let i=0;i<7;i++){
               const rib=svg('g',{class:'social-fan-rib','data-rib':i},g);
               svg('path',{d:'M0 1L-4-35H4L3-15Z',class:i%2?'social-fan-paper-light':'social-fan-paper'},rib);svg('path',{d:'M0 4V-34',class:'social-bamboo-rib'},rib);
-              animate(rib,dense(t=>({transform:`rotate(${num((i-3)*(1+19*opened(t)))}deg)`})),'linear');
+              animate(rib,cels(t=>({transform:`rotate(${num((i-3)*(1+19*opened(t)))}deg)`})),'linear');
             }
             svg('path',{d:'M-3 0H3V9H-3Z',class:'social-fan-pin'},g);
           });
-          animate(fan,dense(t=>({opacity:fade(t),transform:translate(shift.x*carry(t),shift.y*carry(t),5*Math.sin(t*Math.PI*4)*opened(t))})),'linear');
+          animate(fan,cels(t=>({opacity:fade(t),transform:translate(shift.x*carry(t),shift.y*carry(t),5*Math.sin(t*Math.PI*4)*opened(t))})),'linear');
           // Two staggered breaths, not a recycled ballistic hand-off. Their
           // ribbons and a tiny leaf travel only inside this decorative owner.
           for(let i=0;i<2;i++){
             const wind=prop(fanX,fanY-15*propScale,'breeze-'+i,g=>svg('path',{d:'M-15-3H-5L0-7H12L17-3H24M-9 5H7L12 1H25',class:'social-breeze'},g));
-            animate(wind,dense(t=>{const p=phase(t,.37+i*.1,.63+i*.1);return{opacity:Math.sin(p*Math.PI)*.85,transform:translate(18*propScale+(right.x-fanX-28*propScale)*p,-7*Math.sin(p*Math.PI)*propScale,i?-4:4)};}),'linear');
+            animate(wind,cels(t=>{const p=phase(t,.37+i*.1,.63+i*.1);return{opacity:Math.sin(p*Math.PI)*.85,transform:translate(18*propScale+(right.x-fanX-28*propScale)*p,-7*Math.sin(p*Math.PI)*propScale,i?-4:4)};}),'linear');
           }
           const leaf=prop(fanX+14*propScale,fanY-12*propScale,'tea-leaf',g=>{svg('path',{d:'M-6 0L-2-5H5V1L1 5H-4Z',class:'social-tea-leaf'},g);svg('path',{d:'M-5 3L4-3',class:'social-bamboo-rib'},g);});
-          animate(leaf,dense(t=>{const p=phase(t,.43,.79);return{opacity:Math.sin(p*Math.PI),transform:translate((right.x-fanX-14*propScale)*p,(right.y-fanY+12*propScale)*p-18*Math.sin(p*Math.PI)*propScale,24*Math.sin(p*Math.PI*2))};}),'linear');
+          animate(leaf,cels(t=>{const p=phase(t,.43,.79);return{opacity:Math.sin(p*Math.PI),transform:translate((right.x-fanX-14*propScale)*p,(right.y-fanY+12*propScale)*p-18*Math.sin(p*Math.PI)*propScale,24*Math.sin(p*Math.PI*2))};}),'linear');
           nod(a,.64);nod(b,.74);
         }else{
           const joined=t=>phase(t,.06,.36)*(1-phase(t,.82,.98));
           for(const[actor,p,side,role]of[[a,left,-1,'sender'],[b,right,1,'receiver']]){
             const shift={x:mid.x-p.x,y:joinY-(p.y-12)};
-            hand(actor,p,role,dense(t=>({opacity:fade(t),transform:translate((shift.x+side*22*propScale)*joined(t),(shift.y-2*propScale)*joined(t),side*12*(1-joined(t)))})));
+            hand(actor,p,role,cels(t=>({opacity:fade(t),transform:translate((shift.x+side*22*propScale)*joined(t),(shift.y-2*propScale)*joined(t),side*12*(1-joined(t)))})));
             const half=prop(p.x,p.y-12,'paper-orbit-'+role,g=>{const rail=svg('g',{class:'social-orbit-half'},g);svg('path',{d:side<0?'M0-24L-12-22-22-12-24 0-22 12-12 22 0 24':'M0-24L12-22 22-12 24 0 22 12 12 22 0 24',class:side<0?'social-orbit-paper-left':'social-orbit-paper-right'},rail);svg('path',{d:side<0?'M-9-17L-16-8M-16 9L-8 17':'M9-17L16-8M16 9L8 17',class:'social-orbit-fold'},rail);});
-            animate(half,dense(t=>({opacity:fade(t),transform:translate(shift.x*joined(t),shift.y*joined(t),side*24*(1-joined(t)))})),'linear');
+            animate(half,cels(t=>({opacity:fade(t),transform:translate(shift.x*joined(t),shift.y*joined(t),side*24*(1-joined(t)))})),'linear');
           }
           const star=prop(mid.x,joinY,'orbit-star',g=>svg('path',{d:'M0-5L2-2 5 0 2 2 0 5-2 2-5 0-2-2Z',class:'social-orbit-star'},g));
-          animate(star,dense(t=>{const p=phase(t,.4,.8),angle=p*Math.PI*2;return{opacity:phase(t,.36,.44)*(1-phase(t,.8,.87)),transform:translate(Math.sin(angle)*15*propScale,-Math.cos(angle)*15*propScale,p*360)};}),'linear');
-          for(const side of[-1,1]){const tab=prop(mid.x,joinY+side*24*propScale,'orbit-seam-'+side,g=>svg('path',{d:'M-4-2H4V2H-4Z',class:'social-orbit-seam'},g));animate(tab,dense(t=>({opacity:phase(t,.33,.4)*(1-phase(t,.8,.87)),transform:translate(0,0)})),'linear');}
+          animate(star,cels(t=>{const p=phase(t,.4,.8),angle=p*Math.PI*2;return{opacity:phase(t,.36,.44)*(1-phase(t,.8,.87)),transform:translate(Math.sin(angle)*15*propScale,-Math.cos(angle)*15*propScale,p*360)};}),'linear');
+          for(const side of[-1,1]){const tab=prop(mid.x,joinY+side*24*propScale,'orbit-seam-'+side,g=>svg('path',{d:'M-4-2H4V2H-4Z',class:'social-orbit-seam'},g));animate(tab,cels(t=>({opacity:phase(t,.33,.4)*(1-phase(t,.8,.87)),transform:translate(0,0)})),'linear');}
           nod(a,.67,true);nod(b,.73,true);
         }
       }

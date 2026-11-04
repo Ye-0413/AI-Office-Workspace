@@ -6,17 +6,17 @@ The complete character concepts, family rules and motion language behind AI Work
 
 ## Meet the workshop
 
-Five materials, five silhouettes, five ways of paying attention. These portraits describe the **character concepts**, including ideas for signature gestures; the [Motion gallery](#550-ways-to-be-at-work) shows the motions implemented in this release. Their work themes give them personality. Every companion can represent every supported activity, and appearance does not route tasks or change an AI tool's abilities.
+Five materials, five silhouettes, five ways of paying attention. These portraits describe the **character concepts**, including ideas for signature gestures; the [Motion gallery](#55-pixel-performances) shows the motions implemented in this release. Their work themes give them personality. Every companion can represent every supported activity, and appearance does not route tasks or change an AI tool's abilities.
 
 <details>
-<summary>Preview all five companions and a smaller family helper</summary>
+<summary>Preview all five pixel companions</summary>
 
 <picture>
-  <source media="(prefers-reduced-motion: reduce)" srcset="animations/workshop-demo.png">
-  <img src="animations/workshop-demo.svg" width="1100" alt="Five workshop companions in an offline animation demonstration">
+  <source media="(prefers-reduced-motion: reduce)" srcset="animations/pixel-overview.png">
+  <img src="animations/pixel-overview.gif" width="1100" alt="Five original pixel companions in an offline animation demonstration">
 </picture>
 
-Offline native-rendered samples of production character motions, composed with synthetic sessions and a smaller family helper. This is not a recording of live tasks. [Static preview](animations/workshop-demo.png).
+Native samples of five activity loops using synthetic sessions. [Static preview](animations/pixel-overview.png).
 
 </details>
 
@@ -38,7 +38,7 @@ A squat terracotta creature carrying a tiny garden on its back. An uneven patch 
 
 Moss moves slowly and steadily. Leaves hold pages, roots handle small objects, and its design story leaves room for a tentative new shoot during a quiet pause. Reliable and unhurried, it feels at home with work that needs time. Leaf growth and unfurling are expressions of character, never a measure of task progress.
 
-From this release Moss's coding, reading, error, waiting-tool and waiting-user states are performed by painted keyframe strips: a root striking a leaf keypad, a big leaf page turning, a collapse with a snapped root, peering into an empty clay pot, and a leaf raised toward the viewer, each with its own prop and action. Its other states still use the vector prop performances.
+In Painted, Moss turns a leaf page, taps a leaf keypad with a root, and peers into an empty clay pot while waiting. In Pixel, each tool action is drawn into the same cel as Moss. Both styles cover all eleven activities.
 
 ### Thread · 线团 — Design & creative exploration
 
@@ -54,17 +54,17 @@ Gentle and restrained, Glow makes a natural lead-companion personality. Its desi
 
 Main-agent appearances are assigned automatically. The first five families each receive a different base design; additional families use color variants. Every helper inherits its real root's **shape and color at a smaller size**, and existing families keep their appearance as others arrive or leave.
 
-The character concepts and reference were supplied by the user. Sprite sheets were made with AI-assisted image generation, then integrated with project-authored rendering and motion. [Read the bilingual provenance statement](../ORIGINALITY.md).
+The character concepts and reference were supplied by the user. The pixel edition draws its sheets with the project’s integer-grid sprite generator. The Painted style uses the original AI-assisted workshop artwork. [Read the bilingual provenance statement](../ORIGINALITY.md).
 
-## 550 ways to be at work
+## 55 pixel performances
 
-**5 companions × 11 observed activities × 10 distinct performances.** Each material gets its own props, contact sequence and movement: paper folds and feeds, roots touch leaf keypads, yarn threads through small mechanisms, and light follows translucent tracks. Tools sit in a low work zone beside each face, never over the eyes; a limb made of the body's own material reaches from a fixed point on the body to the tool's grip, and the lean, the planted front foot and the trailing ears, leaves or thread end follow the tool's own timeline.
+**5 companions × 11 observed activities.** Every loop has four hand-drawn cels on an integer pixel grid. The body and tool share the same cel so their timing stays aligned.
 
 Reading · Searching · Planning · Coding · Designing · Testing · Building · Running · Waiting for tools · Waiting for you · Error
 
 Coding keeps a recognizable input action; building assembles parts; running maintains an already-started mechanism. Waiting stops the work. Errors keep a visible jam, break or knot without pretending it has been repaired. A confirmed tool success gets a small, deduplicated response; completion requires actual completion evidence.
 
-Open **Room preferences → Workshop companions → Motion gallery** to explore every character, activity and variation, with play/pause controls. [Browse public animation previews](animations/README.md).
+Pixel is the default. Choose **View → Avatar Style → Painted** or use the **Avatar style** control in Room preferences for the original painted look. Painted also covers all 55 activities across the five companions, with soft blends between painted keys. Open the motion gallery for your selected style in Room preferences to play and pause each loop. [Browse both animation previews](animations/README.md).
 
 
 ---
@@ -74,14 +74,14 @@ Open **Room preferences → Workshop companions → Motion gallery** to explore 
 纸、墨、苔藓、毛线与暖光，各有自己的轮廓和动作语言。下面是五位伙伴的**角色与动作设计设定**；文案、编程等方向是它们的性格主题。每只都支持全部 11 类活动，实际任务仍由你使用的 AI 工具决定；当前可播放的动作可在应用图鉴中查看。
 
 <details>
-<summary>展开查看五位伙伴与同族小分身的动作预览</summary>
+<summary>展开查看五位伙伴的动作预览</summary>
 
 <picture>
-  <source media="(prefers-reduced-motion: reduce)" srcset="animations/workshop-demo.png">
-  <img src="animations/workshop-demo.svg" width="1100" alt="五只工坊伙伴的离线动画示意">
+  <source media="(prefers-reduced-motion: reduce)" srcset="animations/pixel-overview.png">
+  <img src="animations/pixel-overview.gif" width="1100" alt="五位原创像素伙伴的离线活动演示">
 </picture>
 
-使用生产动作的原生渲染离线采样，以合成会话安排五位伙伴与同族小分身；不是用户实时任务录屏。[静态预览](animations/workshop-demo.png)。
+五位伙伴的活动由应用渲染器离线采样，使用合成会话。[静态预览](animations/pixel-overview.png)。
 
 </details>
 
@@ -103,7 +103,7 @@ Open **Room preferences → Workshop companions → Motion gallery** to explore 
 
 它用**叶片、短根、托举**完成动作：稳稳走到工位，托起书页，压实模块；设定中，背上的叶片会舒展，等待时偶尔探出一片新芽。可靠、不着急，很适合长久陪伴。叶片的生长表达性格，实际任务进度仍以工具信息为准。
 
-本版本起，苔盒的编程、阅读、异常、等待工具与等待用户由画出来的关键帧条演出：根须敲叶片键盘、翻一片大叶、塌陷断根、探看空陶盆、举叶递向观众，五种道具与动作各不相同。其余状态仍为矢量道具动作。
+手绘风中的苔盒会翻大叶书页、用根须敲叶片键盘，也会在等待时探看空陶盆。像素风把苔盒和道具一同画入每一帧。两种风格都覆盖全部 11 类活动。
 
 ### 04 · 线团 THREAD — 设计与创意探索
 
@@ -119,14 +119,14 @@ Open **Room preferences → Workshop companions → Motion gallery** to explore 
 
 **一个家族，一眼认出。** 主 Agent 随机获得一种角色；前五个家族使用五种不同的原色造型，更多家族复用造型并获得配色变体。同一场景内，主 Agent 的“造型＋配色”各不相同。分身继承真实根家族的外观，体型更小；在场家族不会因为新伙伴加入或离开而换造型。
 
-五位角色来自用户提供的概念与参考，使用 AI 辅助生成姿态图，再由项目实现渲染、动作编排与状态连接。[查看中英双语原创声明](../ORIGINALITY.md)。
+五位角色来自用户提供的概念与参考。像素版使用仓库内的整数网格绘制脚本，手绘风沿用 AI 辅助生成的原工坊姿态图。[查看中英双语原创声明](../ORIGINALITY.md)。
 
-## 550 套动作，让忙碌有细节
+## 55 套像素动作
 
-**5 位伙伴 × 11 类真实活动 × 每类 10 套动作。** 各自使用符合材质的道具、接触顺序和运动路径：纸张折叠与送入，根须敲打叶片键盘，毛线穿过小机构，暖光沿透明轨道运行。道具放在面部旁的低位工作区，不遮眼睛；由本体材质延伸的肢体从身体固定点伸到道具握持处，身体倾斜、前足压地和耳朵、叶片、线头的余动都跟随道具自己的时间线。
+**5 位伙伴 × 11 类真实活动。** 每套动作以四张整数像素网格绘制，身体和道具共用一帧，节拍同步。
 
 阅读 · 搜索 · 思考规划 · 编程 · 设计 · 测试 · 构建 · 执行 · 等待工具 · 等待用户 · 异常
 
 编程保持持续输入，构建组装结构，执行表现已启动的运行回路。等待时工具停下来；异常保留卡纸、断路、断根或线结，不假装已经修好。单次工具成功只有轻微、去重的回应；整轮完成需要真实完成证据。
 
-打开 **房间偏好 → 工坊伙伴 → 动作图鉴**，可逐一选择角色、活动与动作，播放或暂停查看。[浏览公开动画预览](animations/README.md)。
+默认使用像素风。通过「显示 → 头像风格 → 手绘风」或房间偏好里的「头像风格」可切换。手绘风同样有 55 套活动动作，帧间使用柔和过渡。房间偏好中的动作图鉴会显示当前风格，支持播放和暂停。[浏览两种风格的动画预览](animations/README.md)。

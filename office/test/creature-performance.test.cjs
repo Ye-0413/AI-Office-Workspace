@@ -27,6 +27,7 @@ function fixture(id='folio',api=Creature,originalFilter=''){
     setAttribute(name,value){writes++;this.attrs.set(name,String(value));if(name.startsWith('data-'))this.dataset[name.slice(5).replace(/-([a-z])/g,(_,x)=>x.toUpperCase())]=String(value);}
     removeAttribute(name){writes++;this.attrs.delete(name);}
     append(node){writes++;this.children.push(node);node.parentNode=this;}
+    replaceChildren(){writes++;this.children=[];}
     remove(){writes++;if(this.parentNode)this.parentNode.children=this.parentNode.children.filter(n=>n!==this);this.parentNode=null;}
     querySelector(selector){return this.querySelectorAll(selector)[0]||null;}
     querySelectorAll(selector){const result=[];const match=n=>selector.startsWith('.')?n.classList.contains(selector.slice(1)):n.tagName===selector;function walk(n){for(const child of n.children){if(match(child))result.push(child);walk(child);}}walk(this);return result;}
@@ -52,7 +53,7 @@ function activityFixture(){
   return{api:context.OfficeCreaturePerformance,calls};
 }
 
-test('six painted poses use real state evidence, with explicit turn completion required',()=>{
+test('six pixel poses use real state evidence, with explicit turn completion required',()=>{
   assert.equal(Creature.poseFor(observed('unknown')),'idle');
   assert.equal(Creature.poseFor(observed('coding')),'working');
   assert.equal(Creature.poseFor(observed('planning')),'thinking');
@@ -62,14 +63,17 @@ test('six painted poses use real state evidence, with explicit turn completion r
   assert.equal(Creature.poseFor(observed('idle',{status:'idle',turnCompletedAt:1000})),'completed');
   assert.equal(Creature.poseFor(observed('coding',{turnCompletedAt:1000})),'working','old completion metadata cannot overwrite current work');
   assert.equal(Creature.poseFor(observed('idle',{status:'stale',turnCompletedAt:1000})),'resting');
-  for(const activity of ['reading','searching','coding','designing','testing','building','running','waiting-user','waiting-tool'])assert.equal(Creature.sourcePoseFor(observed(activity)),0,activity+' uses the neutral base for its real dynamic props');
-  assert.equal(Creature.sourcePoseFor(observed('planning')),2);assert.equal(Creature.sourcePoseFor(observed('error')),4);
-  assert.equal(Creature.sourcePoseFor(observed('error'),{},'moss'),0,'an error breaks the root mechanism rather than making healthy moss wilt');
+  for(const activity of ['reading','searching','planning']) assert.equal(Creature.sourcePoseFor(observed(activity)),2);
+  for(const activity of ['coding','designing','testing','building','running']) assert.equal(Creature.sourcePoseFor(observed(activity)),1);
+  for(const activity of ['waiting-user','waiting-tool']) assert.equal(Creature.sourcePoseFor(observed(activity)),0);
+  assert.equal(Creature.sourcePoseFor(observed('error'),{},'moss'),4);
+  assert.equal(Creature.sourcePoseFor(observed('error'),{preview:true,legacyRepertoire:true},'moss'),0);
+
 });
 
 test('one clipped cell is selected without changing the source, painted parts or observed identity',()=>{
   const f=fixture(),parts=f.layer.querySelectorAll('use'),source=f.source;
-  for(const [value,index]of[[observed('coding'),0],[observed('planning'),2],[observed('error'),4],[observed('idle',{status:'idle'}),3],[observed('idle',{status:'idle',turnCompletedAt:1000}),5]]){
+  for(const [value,index]of[[observed('coding'),1],[observed('planning'),2],[observed('error'),4],[observed('idle',{status:'idle'}),3],[observed('idle',{status:'idle',turnCompletedAt:1000}),5]]){
     const truth=JSON.stringify(value),plan=f.controller.update(value,{now:index*100});
     assert.equal(plan.poseIndex,index);assert.equal(f.layer.dataset.poseIndex,String(index));
     assert.equal(Number(source.getAttribute('x')),37.5-index%3*80);
@@ -204,7 +208,7 @@ test('tool-success cues baseline history, deduplicate reordered evidence and con
   const old=result('old',100),first=result('new',200),failure=result('fail',210,'error'),unknown=result('unknown',220,undefined);
   f.controller.update(observed('coding',{events:[old],lastEventAt:100}),{now:100});assert.deepEqual(calls.cues,[],'the initial event window is history');
   let plan=f.controller.update(observed('coding',{events:[old,first],lastEventAt:200}),{now:200});assert.deepEqual(calls.cues,['tool-success']);
-  assert.equal(plan.pose,'working');assert.equal(plan.poseIndex,0,'a tool result does not finish the task');
+  assert.equal(plan.pose,'working');assert.equal(plan.poseIndex,1,'a tool result does not finish the task');
   f.controller.update(observed('coding',{events:[first,old],lastEventAt:200}),{now:201});
   unknown.outcome=undefined;f.controller.update(observed('coding',{events:[first,failure,unknown],lastEventAt:220}),{now:220});
   f.controller.update(observed('coding',{events:[result('late-history',205),unknown],lastEventAt:220}),{now:221});
@@ -242,7 +246,7 @@ test('creature playback creates no renderer timer and keys only transforms and o
   const source=fs.readFileSync(path.join(__dirname,'../renderer/creature-performance.js'),'utf8'),css=fs.readFileSync(path.join(__dirname,'../renderer/creature-performance.css'),'utf8');
   assert.doesNotMatch(source,/\b(?:requestAnimationFrame|setTimeout|setInterval)\s*\(/);
   assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
-  for(const name of ['paper-open-left','ink-pool','moss-settle','thread-unwind','glow-warmth'])assert.ok(css.includes('@keyframes cp-'+name));
+  for(const name of ['idle-rise','idle-look','idle-hover','doze','idle-done','walk-body'])assert.ok(css.includes('@keyframes cp-'+name));
   for(const line of css.split('\n').filter(line=>line.startsWith('@keyframes')))assert.doesNotMatch(line,/(?:^|[;{])(?:width|height|left|top|margin|padding):/);
 });
 

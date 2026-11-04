@@ -27,7 +27,7 @@
       add('path',{d:'M44 42v4m6-1v5m-1 4v4',stroke:'#adc4b9','stroke-width':2});
     }else if(id==='summer'){
       path('M56 90h8v11h-8z','#a47b4b');
-      path('M60 89 14 32Q59-9 106 32z','#d9bd86','#745938',primary);
+      path('M60 89h-4v-8h-6v-8h-6v-8h-6v-8h-6v-8h-6v-8h-6v-8h-6v-6h10v-8h12v-6h14v-4h20v4h14v6h12v8h10v6h-6v8h-6v8h-6v8h-6v8h-6v8h-6v8h-6v8z','#d9bd86','#745938',primary);
       for(const [x,y]of [[20,31],[35,20],[51,16],[69,16],[86,21],[100,31]])path(`M60 89 ${x} ${y}`,'none','#9c8151',primary,{'stroke-width':1.5});
       path('M27 36q12-12 25-9m9-2q16-1 27 10M37 48q23-18 46 0','none','#7b9272',primary);
       add('circle',{cx:60,cy:86,r:5,fill:'#a47b4b',stroke:'#745938','stroke-width':2},primary);
@@ -44,10 +44,10 @@
       for(const [x,y]of [[34,35],[78,33],[44,58],[79,61],[60,18],[31,56],[62,72]])add('rect',{x,y,width:3,height:3,fill:'#faf0d1',class:'festival-globe-flake'},primary);
       path('M36 36q-4-14 10-20','none','#edf2d8',primary,{'stroke-width':3});
     }else if(id==='halloween'){
-      path('M31 46q-4-15 29-15t29 15v24q-2 25-29 25T31 70z','#bd7b41','#755136');
+      path('M42 35h36v6h10v8h4v26h-6v10h-8v6H42v-6h-8V75h-6V49h4v-8h10z','#bd7b41','#755136');
       path('M44 37q-9 32 2 54m17-56v59m13-55q13 28-1 52','none','#9d612f');
       parts.light=path('m41 57 10-8 5 12zm23 4 6-12 10 8zM46 73l7 3 6-4 7 5 8-4-6 12H53z','#f0cb78');
-      path('M32 38q29-20 57 0l-6 9H38z','#ce9651','#755136',primary);
+      path('M32 38h8v-6h10v-4h20v4h10v6h9v5h-6v4H38v-4h-6z','#ce9651','#755136',primary);
       path('M58 32v-12h10l-6 14','#71845b','#4a5c40',primary);
       path('m18 20 8 3 5-6 2 9 8 5-12 2-8 7-1-11-6-5z','#66574a','#4b4035');
     }else if(id==='christmas'){
@@ -71,7 +71,7 @@
       for(let i=0;i<10;i++){const a=i*Math.PI*2/10,x=60+Math.cos(a)*37,y=49+Math.sin(a)*33;path(`M${x} ${y}l${Math.cos(a)*8} ${Math.sin(a)*8}`,'none',i%2?'#d1b478':'#d6a376',primary,{'stroke-width':3});}
     }else if(id==='lunarnewyear'){
       path('M60 3v13M44 15h32','none','#a68b57',svg,{'stroke-width':3});
-      path('M37 24q23-12 46 0v43q-23 15-46 0z','#b87055','#784d3a',primary);
+      path('M44 20h32v4h8v8h4v28h-4v8h-8v4H44v-4h-8v-8h-4V32h4v-8h8z','#b87055','#784d3a',primary);
       path('M47 22q-12 27 0 48M60 20v53M73 22q12 27 0 48','none','#d5ad6a',primary);
       path('M39 20h42v8H39zM39 64h42v8H39z','#ccad6f','#7c603b',primary);
       parts.tassel=path('m60 75 10 10-10 10-10-10zM60 94v10','none','#d5b76e',primary,{'stroke-width':3,'data-part':'lantern-tassel'});
@@ -113,7 +113,7 @@
       const fading=[parts.flower,parts.light,parts.lights,parts.crescent,parts.wishes,parts.ribbonA,parts.ribbonB,parts.ribbonAltA,parts.ribbonAltB,parts.tassel,...(parts.blooms||[]),...(parts.marigolds||[])].filter(Boolean);
       // Leaving quiet mode must not retroactively animate its settled state.
       // An unchanged heartbeat also leaves an in-flight transition untouched.
-      if(changed||result.reducedMotion)for(const part of fading)part.style.transition=result.reducedMotion?'none':'opacity 800ms linear, transform 800ms cubic-bezier(.77,0,.175,1)';
+      if(changed||result.reducedMotion)for(const part of fading)part.style.transition=result.reducedMotion?'none':'opacity 480ms steps(5, end), transform 480ms steps(6, end)';
       if(parts.flower)parts.flower.style.opacity=step%3===2?'1':'.15';
       if(parts.light)parts.light.style.opacity=open?'1':'.2';
       if(parts.lights)parts.lights.style.opacity=open?'1':'.2';
@@ -171,6 +171,10 @@
       // Carry the current pose through the entire trajectory. Replacing only
       // frame zero would jump back to the authored frame one after 25ms.
       frames=rebaseFrames(frames,currentTransform,currentOpacity);
+      // The model supplies 41 authored samples. Play every third drawing
+      // as a held cel and keep the exact authored final pose.
+      frames=frames.filter((frame,i)=>i%3===0||i===frames.length-1)
+        .map(frame=>({...frame,easing:'steps(1, end)'}));
       widget.dataset.playing='true';const token=serial,currentArt=art;
       const effect=art.primary.animate(frames,{duration:model.INTERACTION_DURATION,easing:'linear',fill:'forwards'});animation=effect;
       effect.finished.then(()=>{if(destroyed||token!==serial||currentArt!==art)return;art.primary.style.transform=final.transform;art.primary.style.opacity=String(final.opacity);widget.dataset.playing='false';effect.cancel();animation=null;}).catch(()=>{});
@@ -180,10 +184,10 @@
       if(weather==='off')return;
       const sky=svgNode('svg',{viewBox:'0 0 200 330',preserveAspectRatio:'none','aria-hidden':'true',focusable:'false'});
       for(let i=0;i<18;i++){
-        const x=(i*43+11)%195,y=(i*71+13)%310;
+        const x=2*((i*43+11)%98),y=2*((i*71+13)%155);
         const particle=svgNode('g',{class:'festival-weather-particle'});particle.style.animationDelay=(-i*.37)+'s';
-        if(weather==='rain')particle.append(svgNode('path',{d:`M${x} ${y}l-4 17`,stroke:'#d6e3d6','stroke-width':1.4,opacity:.65}));
-        else particle.append(svgNode('path',{d:`M${x-2} ${y}h4m-2-2v4`,stroke:'#f2edd4','stroke-width':1.3,opacity:.85}));
+        if(weather==='rain')particle.append(svgNode('path',{d:`M${x} ${y}h2v6h-2v6h-2v-6h2z`,fill:'#c4e1d9',opacity:.75}));
+        else particle.append(svgNode('path',{d:`M${x} ${y-2}h2v2h2v2h-2v2h-2v-2h-2v-2h2z`,fill:'#f7efd8',opacity:.9}));
         sky.append(particle);
       }
       weatherLayer.append(sky);

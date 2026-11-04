@@ -1,6 +1,6 @@
 /* Furniture-only cues; all real bodies stay on their unchanged z10 plane. */
 .station-arrival-layer{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden;contain:layout style}
-.station-arrival{position:absolute;width:120px;height:80px;overflow:visible;pointer-events:none;opacity:0;fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-width:1.4;shape-rendering:geometricPrecision}
+.station-arrival{position:absolute;width:120px;height:80px;overflow:visible;pointer-events:none;opacity:0;fill:none;stroke-linecap:butt;stroke-linejoin:miter;stroke-width:2;shape-rendering:crispEdges}
 .station-arrival g{transform-box:view-box;transform-origin:0 0}
 .station-arrival .station-paper{fill:#eadbb8;stroke:#786445;stroke-width:1.5}
 .station-arrival .station-line{fill:none;stroke:#77694e;stroke-width:1.25}

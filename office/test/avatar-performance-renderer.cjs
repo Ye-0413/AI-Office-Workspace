@@ -18,6 +18,10 @@ let win;
 const errors = [];
 const watchdog = setTimeout(() => { console.error('Avatar fixture timed out before native verification completed.'); app.exit(1); }, 45000);
 app.whenReady().then(async () => {
+  if (!fs.existsSync(path.join(root, 'assets/avatars/clawd-static-base.svg'))) {
+    console.log(JSON.stringify({ skipped: 'Legacy joint-artwork fixture requires the optional authorized local Clawd atlas.' }));
+    return;
+  }
   const totalPrograms = Object.values(Model.PROGRAMS).reduce((sum, programs) => sum + programs.length, 0);
   const renderer = pathToFileURL(path.join(root, 'renderer')).href + '/';
   const atlas = Object.entries(Model.KINDS).flatMap(([activity, kind]) => Model.PROGRAMS[kind].map(program => {

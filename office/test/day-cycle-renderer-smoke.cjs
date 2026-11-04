@@ -28,8 +28,12 @@ app.whenReady().then(async()=>{
     assert.equal(state.phase,phase);assert.equal(state.preview,'true');assert.equal(state.clock,'23:59');assert.equal(state.date,'2026年10月16日 星期五');assert.equal(state.dateTime,'2026-10-16');assert.equal(state.views,1);assert.equal(await run(`document.getElementById('day-clock').closest('#world')!==null`),true);assert.ok(await run(`parseFloat(getComputedStyle(document.getElementById('hk-clock')).fontSize)>=50`));assert.equal(state.sessions,0);assert.equal(state.error,false);assert.equal(settings.sceneTime,phase);
     await capture('hong-kong-'+phase);
   }
+  const clockArt=()=>run(`getComputedStyle(document.getElementById('hk-clock'),'::after').backgroundImage`);
+  const beforeMidnight=await clockArt();
+  assert.match(beforeMidnight,/data:image\/svg\+xml/);
   await run(`window.dayFixtureNow+=1000`);await wait(1200);
   assert.equal(await run(`document.getElementById('hk-clock').textContent`),'00:00');
+  assert.notEqual(await clockArt(),beforeMidnight,'the visible digit cells update at midnight');
   assert.equal(await run(`document.getElementById('hk-date').textContent`),'2026年10月17日 星期六');
   assert.equal(await run(`document.getElementById('hk-date').dateTime`),'2026-10-17');
   assert.equal(await run(`document.getElementById('office').dataset.dayPhase`),'night');

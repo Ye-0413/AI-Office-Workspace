@@ -48,7 +48,7 @@ app.whenReady().then(async () => {
   await run(`window.initialBodies=[...document.querySelectorAll('.actor[data-session-id]')].map(node=>({node,id:node.dataset.sessionId,key:node.dataset.bodyAppearance,rig:node.querySelector('.ap-rig'),source:node.querySelector('.ap-rig defs image')}));document.getElementById('settings-button').click();void 0`);
   assert.equal(await run(`document.querySelectorAll('.appearance-card').length`), 5);
   assert.equal(await run(`document.querySelector('.appearance-creatures').querySelector('button,input,select')===null`), true, 'the gallery does not assign a fixed body to all families');
-  assert.equal(await run(`[...document.querySelectorAll('.appearance-pose-preview')].every(n=>{const image=n.querySelector('img');return getComputedStyle(n).overflow==='hidden'&&image.complete&&image.naturalWidth===1536&&image.naturalHeight===1024&&parseFloat(image.style.width)===300&&parseFloat(image.style.height)===200;})`), true);
+  assert.equal(await run(`[...document.querySelectorAll('.appearance-pose-preview')].every(n=>{const image=n.querySelector('img');return getComputedStyle(n).overflow==='hidden'&&image.complete&&image.naturalWidth===120&&image.naturalHeight===80&&parseFloat(image.style.width)===300&&parseFloat(image.style.height)===200;})`), true);
   win.setContentSize(1280, 1200); await wait(120); await run(`document.querySelector('.appearance-setting').scrollIntoView({block:'start',behavior:'instant'});void 0`); await capture('workshop-creatures-picker');
   win.setContentSize(1280, 720); await wait(120); await run(`document.querySelector('#settings-dialog [data-close-dialog]').click();void 0`);
   checks.push('five initial mains have distinct base creatures; direct, nested and Claude helpers inherit the exact shape and colour at 65.6% body scale; gallery is read-only');
@@ -99,15 +99,18 @@ app.whenReady().then(async () => {
 
   await run(`document.getElementById('setting-reducedMotion').checked=false;document.getElementById('setting-reducedMotion').dispatchEvent(new Event('change',{bubbles:true}));void 0`);
   // Disabling quiet mode can leave a stationary body with a delayed station
-  // route. Its later locomotion correctly replaces work CSS animations. Wait
+  // route. Its later locomotion correctly replaces work animations. Wait
   // for the actual route owners to drain before testing hidden work clocks.
   await until(`[...document.querySelectorAll('.actor[data-session-id]')].every(node=>{const actor=familyActors.get(node.dataset.sessionId);return actor?.node===node&&!actor.entryPending&&!actor.pendingStation&&!actor.navigation&&!actor.motion&&!actor.routeReservation&&!actor.yielding&&node.dataset.walking!=='true';})`, 'Every real station route drains before capturing stationary work clocks', 25000);
-  await until(`[...document.querySelectorAll('.creature-performance')].some(layer=>layer.getAnimations({subtree:true}).some(a=>a.playState==='running'))`, 'Visible work must have material motion');
-  await run(`window.retainedClocks=[...document.querySelectorAll('.creature-performance')].flatMap(layer=>layer.getAnimations({subtree:true})).filter(a=>typeof a.animationName==='string');void 0`);
+  await until(`[...document.querySelectorAll('.actor .cp-frame')].some(frame=>frame.getAnimations().some(a=>a.playState==='running'))`, 'Visible work owns a live sprite clock');
+  // Keep persistent work owners, including the stepped sprite loops.
+  // Finite transition and reaction clocks may finish normally during a hide.
+  await run(`window.retainedClocks=[...document.querySelectorAll('.creature-performance')].flatMap(layer=>layer.getAnimations({subtree:true})).filter(a=>a.playState==='running'&&a.effect?.getTiming().iterations===Infinity&&(typeof a.animationName==='string'&&a.animationName.startsWith('cp-')||a.effect?.target?.closest('.cp-activity,.cp-reach,.cp-gesture,.cp-pose')));void 0`);
+  assert.equal(await run(`retainedClocks.some(a=>a.effect?.target?.classList.contains('cp-frame'))`), true, 'the hidden-clock check includes actual sprite frame owners');
   await publish(undefined, { windowVisibility: { hidden: true } }); await wait(100);
   assert.equal(await run(`retainedClocks.length>0&&retainedClocks.every(a=>a.playState==='paused')`), true);
   const heldTimes = await run(`retainedClocks.map(a=>a.currentTime)`); await wait(100); assert.deepEqual(await run(`retainedClocks.map(a=>a.currentTime)`), heldTimes);
-  await publish(undefined, { windowVisibility: { hidden: false } }); await until(`retainedClocks.every(a=>a.playState==='running')`, 'Showing resumes the same original clocks');
+  await publish(undefined, { windowVisibility: { hidden: false } }); await until(`retainedClocks.every(a=>a.playState==='running'&&a.effect?.target?.getAnimations().includes(a))`, 'Showing resumes the same original clocks');
   await run(`document.getElementById('setting-lowPower').checked=true;document.getElementById('setting-lowPower').dispatchEvent(new Event('change',{bubbles:true}));void 0`);
   await until(`[...document.querySelectorAll('.creature-performance')].every(layer=>layer.dataset.animate==='false'&&getComputedStyle(layer).display!=='none')`, 'Low power retains visible still poses');
   checks.push('native hiding preserves paused clock identity and exact time; showing resumes them; low power keeps all real family bodies visible');
@@ -118,7 +121,7 @@ app.whenReady().then(async () => {
   assert.equal(await run(`Number(getComputedStyle(healthHandle.body.querySelector('.cp-neutral')).opacity)>.99&&!healthHandle.body.querySelector('.avatar-native-fallback')`), true); expectedFailures.push('workshop-missing-fixture.png');
   await run(`if(!healthHandle.controller.retry(Date.now()+3101))throw Error('Failed original source must permit one trusted retry');void 0`); await until(`healthHandle.body.querySelector('.creature-performance').dataset.artState==='healthy'`, 'Local art recovers');
   assert.equal(await run(`healthHandle.body.querySelector('.ap-rig')===healthRig&&healthHandle.body.querySelector('defs image')===healthSource`), true);
-  await run(`document.getElementById('language-button').click();void 0`); await until(`document.getElementById('appearance-title').textContent==='Workshop companions'`, 'Read-only gallery follows the language');
+  await run(`document.getElementById('language-button').click();void 0`); await until(`document.getElementById('appearance-title').textContent==='Pixel companions'`, 'Read-only gallery follows the language');
   assert.doesNotMatch(await run(`document.querySelector('.appearance-setting').textContent`), /\p{Script=Han}/u);
   assert.ok(calls.every(patch => Object.keys(patch).every(key => ['language', 'reducedMotion', 'lowPower'].includes(key))));
 
