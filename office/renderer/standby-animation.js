@@ -11,11 +11,11 @@
   const MATERIALS = Object.freeze(['folio', 'ink', 'moss', 'thread', 'glow']);
   const PHASES = Object.freeze(['doze', 'doze', 'play']);
   const PROPS = Object.freeze({
-    folio: '<path class="standby-toy" d="m102 87 9-3-3 11-3-4-5 1Z" fill="#efd79d" stroke="#856340" stroke-width=".9"/><path d="m102 87 3 4 6-7" fill="none" stroke="#9e794c" stroke-width=".75"/>',
-    ink: '<g class="standby-toy" fill="#b6cec4" stroke="#365973" stroke-width=".6"><ellipse cx="105" cy="94" rx="3.2" ry="1.3"/><path d="M106 85c-1 2-3 4-3 6a3 3 0 0 0 6 0c0-2-2-4-3-6Z"/></g>',
-    moss: '<g class="standby-toy"><path d="M106 96q-2-8 3-12" fill="none" stroke="#6c7d41" stroke-width="1.2"/><path d="M106 90q-7-5-6-1 1 5 6 1m1-3q5-7 6-3 0 4-6 3" fill="#a8bd78" stroke="#5d6d36" stroke-width=".6"/><ellipse cx="104" cy="97" rx="3.2" ry="1.1" fill="#8a7254"/></g>',
-    thread: '<g class="standby-toy" fill="none" stroke="#d49e85" stroke-width="1.2"><circle cx="106" cy="94" r="4.2"/><path d="m103 91 6 6m-8-3 9-1m-4-3 1 8m-5-2q-5 4-5 0"/></g>',
-    glow: '<g class="standby-toy" fill="#fff4bd33" stroke="#d6af63" stroke-width="1"><path d="m106 84 4 7-4 7-4-7Z"/><ellipse cx="106" cy="92" rx="7" ry="2.2"/></g>'
+    folio: '<path class="standby-toy" d="M98 88H102V86H108V84H114V88H112V94H108V92H104V94H102V90H98Z" fill="#efd79d" stroke="#856340" stroke-width="2"/>',
+    ink: '<path class="standby-toy" d="M104 86H108V90H112V96H110V98H102V96H100V92H102V90H104Z" fill="#78b6dd" stroke="#263856" stroke-width="2"/>',
+    moss: '<g class="standby-toy"><path d="M106 98V90H102V88H100V84H104V86H108V82H114V86H110V90H108V98Z" fill="#a8bd78" stroke="#5d6d36" stroke-width="2"/><path d="M100 96H112V100H100Z" fill="#a97b55"/></g>',
+    thread: '<g class="standby-toy"><path d="M102 86H110V88H112V96H110V98H102V96H100V90H102Z" fill="#df907a" stroke="#6c4653" stroke-width="2"/><path d="M102 90H106V92H110M102 94H108V96H112" fill="none" stroke="#ffbe98" stroke-width="2"/></g>',
+    glow: '<path class="standby-toy" d="M104 84H108V88H112V94H108V98H104V94H100V88H104Z" fill="#f5d47e" stroke="#9f684b" stroke-width="2"/>'
   });
   function seed(value) {
     let hash = 2166136261;
@@ -23,23 +23,15 @@
     return hash >>> 0;
   }
   function frames(material, phase) {
-    // All endpoints return to the authored material silhouette. Gestures stay
-    // inside the body; the actor's own position never translates.
-    const doze = {
-      folio: ['none', 'rotate(-3.2deg) scale(1.03,.95)', 'none'],
-      ink: ['none', 'scale(1.09,.89)', 'none'],
-      moss: ['none', 'translateY(1.6px) scale(1.03,.96)', 'none'],
-      thread: ['none', 'rotate(3.8deg) scale(1.04,.95)', 'none'],
-      glow: ['none', 'translateY(2px) scale(.97,1.03)', 'none']
-    };
     const play = {
-      folio: ['none', 'translateY(-5px) rotate(-6.5deg)', 'rotate(5deg)', 'translateY(-2.5px) rotate(-2.5deg)', 'none'],
-      ink: ['none', 'scale(1.12,.86)', 'translateY(-4px) scale(.9,1.12)', 'scale(1.05,.96)', 'none'],
-      moss: ['none', 'rotate(-3.8deg) skewX(2.6deg)', 'none', 'rotate(3.2deg) skewX(-2.6deg)', 'none'],
-      thread: ['none', 'translateY(-6px) rotate(-9.5deg)', 'scale(1.07,.93)', 'translateY(-2.5px) rotate(6deg)', 'none'],
-      glow: ['none', 'translateY(-5px) rotate(2.8deg) scale(1.03)', 'translateY(-2.5px) rotate(-2.8deg)', 'none']
+      folio: [[0, 0], [-2, -4], [2, 0], [0, -2], [0, 0]],
+      ink: [[0, 0], [-2, 0], [0, -4], [2, 0], [0, 0]],
+      moss: [[0, 0], [-2, 0], [0, 0], [2, 0], [0, 0]],
+      thread: [[0, 0], [2, -6], [-2, 0], [2, -4], [0, 0]],
+      glow: [[0, 0], [0, -2], [2, -4], [0, -2], [0, 0]]
     };
-    return (phase === 'doze' ? doze : play)[material].map(transform => ({ transform }));
+    const cels = phase === 'doze' ? [[0, 0], [0, -2], [0, 0]] : play[material];
+    return cels.map(([x, y]) => ({ transform: 'translate(' + x + 'px,' + y + 'px)' }));
   }
   function create({ actorNode, body, onPhaseChange } = {}) {
     if (!actorNode || !body?.ownerDocument) throw new TypeError('Standby motion needs an observed actor and its body.');
@@ -73,7 +65,7 @@
       clear(); shell = nextShell; material = nextMaterial;
       overlay = document.createElementNS(NS, 'g');
       overlay.setAttribute('class', 'standby-decoration'); overlay.setAttribute('aria-hidden', 'true');
-      overlay.innerHTML = '<g class="standby-sleep"><path d="m106 70 4 0-4 4h4m4-11h5l-5 5h5"/></g><g class="standby-play">' + PROPS[material] + '</g>';
+      overlay.innerHTML = '<g class="standby-sleep"><path d="M106 70H112V72H110V74H108V76H114M114 60H122V62H120V64H118V66H116V68H124"/></g><g class="standby-play">' + PROPS[material] + '</g>';
       rig.append(overlay);
       return true;
     }
@@ -85,25 +77,24 @@
       for (const motion of motions) motion.cancel(); motions = [];
       attribute('standbyMotion', phase);
       overlay.setAttribute('data-phase', phase);
-      const ease = view?.getComputedStyle?.(actorNode).getPropertyValue('--ease-in-out').trim() || 'cubic-bezier(.77,0,.175,1)';
       const add = (target, keyframes) => {
         if (!target?.animate) return;
-        const motion = target.animate(keyframes, { duration: DURATION, easing: ease, fill: 'both' });
+        const motion = target.animate(keyframes.map(frame => ({ ...frame, easing: 'steps(2,end)' })), { duration: DURATION, fill: 'both' });
         motion.finished.catch(() => {});
         if (initial) motion.currentTime = identitySeed % DURATION;
         motions.push(motion);
       };
       add(shell, frames(material, phase));
       add(overlay.querySelector('.standby-sleep'), [
-        { opacity: 0, transform: 'translate(0,2px) scale(.8)' },
-        { opacity: .8, transform: 'translate(2px,-3px) scale(1)', offset: .5 },
-        { opacity: 0, transform: 'translate(4px,-7px) scale(1.1)' }
+        { opacity: 0, transform: 'translate(0,2px)' },
+        { opacity: .8, transform: 'translate(2px,-4px)', offset: .5 },
+        { opacity: 0, transform: 'translate(4px,-8px)' }
       ]);
       add(overlay.querySelector('.standby-toy'), phase === 'play'
         ? [
           { transform: 'none', opacity: .6 },
-          { transform: material === 'thread' ? 'translateX(-5px) rotate(-40deg)' : 'translateY(-5px) rotate(14deg)', opacity: 1, offset: .45 },
-          { transform: 'scale(1.1,.9)', opacity: .9, offset: .65 },
+          { transform: material === 'thread' ? 'translateX(-6px)' : 'translateY(-6px)', opacity: 1, offset: .45 },
+          { transform: 'translateY(-2px)', opacity: .9, offset: .65 },
           { transform: 'none', opacity: .6 }
         ]
         : [{ opacity: 0 }, { opacity: 0 }]);

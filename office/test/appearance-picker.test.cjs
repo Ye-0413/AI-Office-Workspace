@@ -78,7 +78,7 @@ test('each read-only preview crops the single idle cell of its six-pose sheet', 
 test('language changes retain accessible character descriptions without reviving retired controls', () => {
   const { picker, nodes, buttons, changes } = fixture();
   picker.update({ value: 'thread', language: 'en' });
-  assert.equal(nodes().find(node => node.id === 'appearance-title').textContent, 'Workshop companions');
+  assert.equal(nodes().find(node => node.id === 'appearance-title').textContent, 'Pixel companions');
   const note = nodes().find(node => node.id === 'appearance-note').textContent;
   assert.ok(note.includes('Helpers inherit their main agent'));
   assert.ok(note.includes('smaller size')); assert.ok(note.includes('colour variations'));

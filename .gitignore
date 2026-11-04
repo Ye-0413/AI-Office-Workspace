@@ -211,7 +211,12 @@ clawd-emoji-final/
 !/office/assets/avatars/workshop-thread.png
 !/office/assets/avatars/workshop-glow.png
 !/office/assets/avatars/workshop-prompts.json
-# Registered keyframe strips derived from the workshop sheets (scripts/frame-qa.cjs).
+!/office/assets/avatars/pixel-emotes-folio.png
+!/office/assets/avatars/pixel-emotes-ink.png
+!/office/assets/avatars/pixel-emotes-moss.png
+!/office/assets/avatars/pixel-emotes-thread.png
+!/office/assets/avatars/pixel-emotes-glow.png
+# Activity sprite strips drawn by the pixel companion generator.
 !/office/assets/avatars/frames/
 /office/assets/icon.png
 /office/assets/.local-artwork-*/

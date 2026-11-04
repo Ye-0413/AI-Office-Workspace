@@ -169,6 +169,14 @@ app.whenReady().then(async()=>{
   assert.ok(failed[0].every(item=>bodyCoverage(emptyRoom,item).tinted===0),'the actual empty-room negative control cannot satisfy coloured-body coverage');
   checks.push({name:'actual empty-room and orange-head/purple-hands screenshots fail family-body coverage',orangeTinted:orangeCoverage.tinted,orangeCoreTinted:orangeCoverage.coreTinted});
   checks.push({name:'active dual artwork failure retains actual native bodies in 31 captured real frames',frames:failed.length,minColored:Math.min(...failed.flat().map(r=>r.colored))});
+  // A clean checkout can prove native fallback coverage from failed requests.
+  // Healing and subsequent transitions require successful reads of the legacy atlas.
+  if (!fs.existsSync(path.join(__dirname, '../assets/avatars/clawd-static-base.svg'))) {
+    assert.ok(expectedFailures.length >= 4);
+    assert.deepEqual(errors, []);
+    console.log(JSON.stringify({ok:true,checks,skipped:'Legacy artwork healing requires the optional authorized local Clawd atlas.',expectedCanceledArtworkRequests:expectedFailures.length,errors}));
+    return;
+  }
   // Recover during an existing performance, interrupt its material healing
   // with a real stale interval and another observed activity, then fail again.
   await pause(3100);blockArtwork=false;send(tasks.map(t=>({...t,lastEventAt:Date.now()})));

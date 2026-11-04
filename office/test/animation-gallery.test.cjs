@@ -1,6 +1,6 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict');
-const fs=require('node:fs'),path=require('node:path'),{createHash}=require('node:crypto');
+const fs=require('node:fs'),path=require('node:path'),{createHash}=require('node:crypto'),{spawnSync}=require('node:child_process');
 const Repertoire=require('../renderer/creature-repertoire.js');
 const repo=path.resolve(__dirname,'../..'),dir=path.join(repo,'docs/animations');
 function inspectGif(buffer){
@@ -19,6 +19,22 @@ function inspectGif(buffer){
  }
  assert.equal(trailer,true);assert.equal(at,buffer.length);return{width,height,frames,delay,loop,uniqueImages:images.size};
 }
+// Historical recordings refer to the pre-pixel tree. Source archives can
+// still verify the encoded media and the archived hash format without Git.
+const workshopRevision='dcf3941056d3aca36d932b50aef8d108b75d835a';
+const hasWorkshopRevision=spawnSync('git',['cat-file','-e',workshopRevision+'^{commit}'],{cwd:repo,stdio:'ignore'}).status===0;
+const sha256=bytes=>createHash('sha256').update(bytes).digest('hex');
+function workshopSource(name){
+ if(!hasWorkshopRevision)return null;
+ const result=spawnSync('git',['show',workshopRevision+':'+name],{cwd:repo,maxBuffer:16*1024*1024});
+ assert.equal(result.status,0,'Archived source '+name);
+ return result.stdout;
+}
+function assertWorkshopHash(name,hash){
+ assert.match(hash,/^[a-f0-9]{64}$/);
+ const source=workshopSource(name);
+ if(source)assert.equal(sha256(source),hash,name);
+}
 // Archived public recordings retain their actual recording version and
 // hashes. A distribution bump cannot pretend that old frames were captured
 // again. Any source drift needs an exact, reversible provenance certificate.
@@ -34,7 +50,10 @@ function recordedSources(manifest){
  assert.equal(new Set(changes.map(change=>change.file)).size,changes.length);
  for(const change of changes)assert.ok(manifest.sourceHashes[change.file]);
  for(const[name,recorded]of Object.entries(manifest.sourceHashes)){
-  const current=fs.readFileSync(path.join(repo,name)),currentHash=createHash('sha256').update(current).digest('hex'),change=changes.find(change=>change.file===name);
+  const current=workshopSource(name),change=changes.find(change=>change.file===name);
+  assert.match(recorded,/^[a-f0-9]{64}$/);
+  if(!current)continue;
+  const currentHash=sha256(current);
   if(!change){assert.equal(currentHash,recorded,name);continue;}
   assert.equal(currentHash,change.currentSha256,name+' unreviewed source drift');assert.equal(recorded,change.recordedSha256);assert.ok(change.reason.length>20);
   let reconstructed=current.toString('utf8');assert.ok(change.reconstructRecordedSource.length>0);
@@ -42,7 +61,7 @@ function recordedSources(manifest){
   assert.equal(createHash('sha256').update(reconstructed).digest('hex'),recorded,name+' recorded source must reconstruct byte-for-byte');
  }
 }
-test('public gallery records the current five-species, 550-recipe production library',()=>{
+test('archived gallery records the original five-species, 550-recipe library',()=>{
  const manifest=require('../../docs/animations/manifest.json');
  assert.equal(manifest.version,require('../package.json').version);
  assert.deepEqual(manifest.catalog,{species:5,activities:11,variantsPerActivity:10,recipes:550});
@@ -78,7 +97,7 @@ test('every published workshop GIF is a changing, complete native recording',()=
  const manifest=require('../../docs/animations/manifest.json');assert.equal(manifest.assets.length,12);
  for(const item of manifest.assets){const buffer=fs.readFileSync(path.join(dir,item.file)),gif=inspectGif(buffer);assert.equal(buffer.length,item.bytes,item.file);assert.equal(createHash('sha256').update(buffer).digest('hex'),item.sha256);assert.ok(buffer.length<1.6*1024*1024,item.file+' stays under 1.6 MiB (whole-body state families move every frame)');assert.equal(gif.width,item.width);assert.equal(gif.height,item.height);assert.equal(gif.frames,item.frames,item.file);assert.equal(gif.frames,42);assert.ok(item.distinctPngFrames>=31);assert.ok(gif.uniqueImages>=31,item.file+' needs changing encoded pixels');assert.equal(gif.loop,0);assert.ok(Math.abs(gif.delay-item.durationMs/10)<=5,item.file+' duration '+gif.delay);}
 });
-test('README SVG is self-contained, animation-capable and paired with a native reduced-motion fallback',()=>{
+test('archived SVG is self-contained and paired with its native reduced-motion fallback',()=>{
  const manifest=require('../../docs/animations/manifest.json'),demo=manifest.demo,svg=fs.readFileSync(path.join(dir,demo.file),'utf8');
  assert.equal(Buffer.byteLength(svg),demo.bytes);assert.equal(createHash('sha256').update(svg).digest('hex'),demo.sha256);assert.ok(demo.bytes<3*1024*1024);
  assert.doesNotMatch(svg,/<(?:script|foreignObject)\b|(?:href|src)=["'](?:https?:|file:)|url\(["']?(?:https?:|file:)/i);
@@ -87,28 +106,44 @@ test('README SVG is self-contained, animation-capable and paired with a native r
  assert.deepEqual([...new Set(demo.recordedRecipes.map(item=>item.species))],Repertoire.SPECIES);assert.equal(demo.recordedRecipes.length,6);assert.equal(demo.recordedRecipes.find(item=>item.helper).species,'thread');assert.ok(demo.recordedRecipes.some(item=>!item.helper&&item.species==='thread'));
  const png=fs.readFileSync(path.join(dir,demo.fallback));assert.equal(png.toString('hex',0,8),'89504e470d0a1a0a');assert.equal(png.readUInt32BE(16),1100);assert.equal(png.readUInt32BE(20),450);assert.ok(png.length>10000);
 });
-test('README media links resolve and identify the current original synthetic demonstration',()=>{
+test('README media links resolve and select the still when motion is reduced',()=>{
  for(const name of ['README.md','README.zh-CN.md','office/README.md','docs/animations/README.md','docs/releases/release-v0.24.0.md']){
   const file=path.join(repo,name),source=fs.readFileSync(file,'utf8');
   for(const match of source.matchAll(/!?\[[^\]]*\]\(([^)]+)\)|(?:src|srcset)=["']([^"']+)["']/g)){
    const target=match[1]||match[2];if(/^(?:https?:|#|data:)/.test(target))continue;
    assert.ok(fs.existsSync(path.resolve(path.dirname(file),target.split('#')[0])),name+' broken link '+target);
   }
-  assert.match(source,/550/);assert.match(source,/原创|original/i);
-  if(name!=='office/README.md'){assert.match(source,/<picture>/);assert.match(source,/<source\b[^>]*media=["']\(prefers-reduced-motion: reduce\)["'][^>]*srcset=["'][^"']*workshop-demo\.png["']/);assert.match(source,/<img\b[^>]*src=["'][^"']*workshop-demo\.svg["']/);}
+  const archived=name.startsWith('docs/releases/');
+  assert.match(source,archived?/550/:/55/);
+  assert.match(source,/<picture>/);
+  const [still,moving]=archived?['workshop-demo.png','workshop-demo.svg']:['pixel-overview.png','pixel-overview.gif'];
+  assert.match(source,/<source\b[^>]*media=["']\(prefers-reduced-motion: reduce\)["'][^>]*srcset=/);
+  assert.ok(source.includes(still));
+  assert.ok(source.includes(moving));
  }
 });
 
+test('pixel overview pairs a changing native loop with a same-size still',()=>{
+ const png=fs.readFileSync(path.join(dir,'pixel-overview.png'));
+ const gif=inspectGif(fs.readFileSync(path.join(dir,'pixel-overview.gif')));
+ assert.equal(png.toString('hex',0,8),'89504e470d0a1a0a');
+ assert.equal(png.readUInt32BE(16),gif.width);
+ assert.equal(png.readUInt32BE(20),gif.height);
+ assert.equal(gif.loop,0);
+ assert.equal(gif.frames,36);
+ assert.ok(gif.uniqueImages>=10);
+ assert.ok(Math.abs(gif.delay-300)<=5);
+});
 test('seasonal gallery covers every real theme with at least 31 distinct animated frames',()=>{
  const F=require('../lib/festival-model.js'),gallery=path.join(repo,'docs/scenes'),manifest=JSON.parse(fs.readFileSync(path.join(gallery,'manifest.json')));
  assert.ok(F.THEMES.length>=43);assert.deepEqual(manifest.themes.map(t=>t.id),F.THEMES.map(t=>t.id));assert.equal(new Set(manifest.themes.map(t=>t.id)).size,F.THEMES.length);
  assert.equal(manifest.samples,41);assert.ok(manifest.durationMs>=600);
- for(const [name,hash]of Object.entries(manifest.sourceHashes||{}))assert.equal(createHash('sha256').update(fs.readFileSync(path.join(repo,name))).digest('hex'),hash,'re-export scene GIF after changing '+name);
+ for(const [name,hash]of Object.entries(manifest.sourceHashes||{}))assertWorkshopHash(name,hash);
  assert.equal(Object.keys(manifest.sourceHashes||{}).length,4,'the gallery must identify the actual four rendering sources');
  const gif=inspectGif(fs.readFileSync(path.join(gallery,'overview.gif')));assert.equal(gif.frames,41);assert.ok(gif.uniqueImages>=31);assert.equal(gif.loop,0);
  for(const name of ['overview.png','rooms.png']){const bytes=fs.readFileSync(path.join(gallery,name));assert.equal(bytes.toString('hex',0,8),'89504e470d0a1a0a');assert.ok(bytes.length>10000);}
  assert.equal(manifest.rooms.completePaintings,43);assert.equal(createHash('sha256').update(fs.readFileSync(path.join(gallery,'rooms.png'))).digest('hex'),manifest.rooms.sha256);
- for(const [name,hash]of Object.entries(manifest.rooms.sourceHashes))assert.equal(createHash('sha256').update(fs.readFileSync(path.join(repo,name))).digest('hex'),hash,'re-export complete rooms after changing '+name);
+ for(const [name,hash]of Object.entries(manifest.rooms.sourceHashes))assertWorkshopHash(name,hash);
 });
 
 test('archived lifecycle previews retain recorded provenance and at least 31 changing poses',()=>{
@@ -122,7 +157,7 @@ test('archived lifecycle previews retain recorded provenance and at least 31 cha
 });
 
 
-test('station gallery certifies all twelve current furniture programs and actual complete looping media',()=>{
+test('station gallery certifies all twelve archived furniture programs and actual complete looping media',()=>{
  const Station=require('../renderer/station-arrival.js'),Exporter=require('../scripts/render-station-previews.cjs');
  const folder=path.join(dir,'stations'),manifest=JSON.parse(fs.readFileSync(path.join(folder,'manifest.json')));
  archivedSources(manifest);assert.equal(manifest.restrictedImageElements,0);assert.equal(manifest.unlistedResourceRequests,0);
@@ -138,7 +173,7 @@ test('station gallery certifies all twelve current furniture programs and actual
  assert.equal(new Set(manifest.assets.flatMap(a=>a.programs.map(p=>p.program))).size,12);
 });
 
-test('public pair gallery contains all twelve current programs and complete source-bound 48fps samples',()=>{
+test('public pair gallery contains all twelve archived programs and complete source-bound 48fps samples',()=>{
  const Social=require('../lib/social-interactions.js'),Export=require('../scripts/render-social-previews.cjs');
  const manifest=require('../../docs/animations/social/manifest.json');
  archivedSources(manifest);

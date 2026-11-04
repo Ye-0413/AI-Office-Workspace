@@ -159,8 +159,8 @@ Native answers require your explicit submission; tool approvals stay in the orig
 ## Meet the workshop
 
 <picture>
-  <source media="(prefers-reduced-motion: reduce)" srcset="docs/animations/workshop-demo.png">
-  <img src="docs/animations/workshop-demo.svg" width="1100" alt="Folio, Ink, Moss, Thread and Glow perform their distinct material-based motions alongside a smaller family helper">
+  <source media="(prefers-reduced-motion: reduce)" srcset="docs/animations/pixel-overview.png">
+  <img src="docs/animations/pixel-overview.gif" width="1100" alt="Five original pixel companions in observed activity loops">
 </picture>
 
 | Folio · 纸团 | Ink · 墨豆 | Moss · 苔盒 | Thread · 线团 | Glow · 灯籽 |
@@ -169,7 +169,7 @@ Native answers require your explicit submission; tool approvals stay in the orig
 | Writing & research | Coding & debugging | Long tasks & care | Design & exploration | Coordination |
 | Earnest · meticulous | Quiet · determined | Steady · patient | Playful · inventive | Gentle · precise |
 
-**550 motions = 5 companions × 11 activities × 10 variations.** Roles are personality themes; all five support every activity. Offline animation samples with synthetic sessions. [Motion gallery](docs/animations/README.md).
+**55 pixel loops = 5 companions × 11 activities.** Four hand-drawn cels per loop, sampled with synthetic sessions. [Motion gallery](docs/animations/README.md).
 
 First five families: distinct designs; additional families: color variants. Helpers inherit their root's **shape and color, at a smaller size**. [Stories & family rules](docs/companions.md).
 
@@ -190,7 +190,7 @@ From the observatory to **33 daily & holiday rooms**: follow the Hong Kong calen
 | Setup, settings & local data | [App guide](office/README.md) |
 | Connect AI tools | [Compatibility](office/docs/upstream-compatibility.md) |
 | Activity, usage & native questions | [Monitoring](office/docs/monitoring.md) |
-| Character stories & 550 motions | [Companions](docs/companions.md) · [Animation gallery](docs/animations/README.md) |
+| Character stories & 55 pixel loops | [Companions](docs/companions.md) · [Animation gallery](docs/animations/README.md) |
 | Rooms & recordings | [Room gallery](docs/rooms/README.md) · [Media details](docs/media/README.md) |
 | What's changed | [v0.24.0](docs/releases/release-v0.24.0.md) · [Release index](docs/releases/README.md) |
 

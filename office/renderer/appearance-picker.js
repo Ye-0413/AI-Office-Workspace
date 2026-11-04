@@ -21,7 +21,7 @@
       preview.dataset.pose = 'idle';
       const image = document.createElement('img');
       image.src = '../assets/avatars/' + design.asset; image.alt = ''; image.draggable = false;
-      image.decoding = 'async'; image.width = 420; image.height = 280;
+      image.decoding = 'async'; image.width = 120; image.height = 80;
       image.style.width = (design.poseColumns * 100) + '%'; image.style.height = (design.poseRows * 100) + '%';
       preview.append(image);
       const copy = document.createElement('span'); copy.className = 'appearance-option-copy';
@@ -38,7 +38,7 @@
     function update({ language = 'zh', reducedMotion = false, lowPower = false, hidden = false } = {}) {
       motionGallery?.update({ language, reducedMotion, lowPower, hidden });
       const english = language === 'en';
-      title.textContent = english ? 'Workshop companions' : '工坊伙伴';
+      title.textContent = english ? 'Pixel companions' : '像素伙伴';
       note.textContent = english
         ? 'Main agents receive different random appearances. Helpers inherit their main agent’s appearance at a smaller size. More than five mains use colour variations.'
         : '主 Agent 随机分配不同角色；分身继承主身外观，体型更小。超过五位主 Agent 时，以不同配色区分。';

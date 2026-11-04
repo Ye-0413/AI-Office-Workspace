@@ -82,7 +82,7 @@ function observeNewProgram(definition){
       }
       if(endedAt!==null&&!original.isConnected){
         if(social.state().active||social.state().exiting||document.querySelector('.agent-social-vignette'))throw Error('completed new narrative leaked a plan or SVG');
-        if(rows.filter(r=>r.visible).length<31||poses.size<31||handPoses.some(p=>p.size<31))throw Error('new narrative lacks31actual distinct visible prop and dual-hand poses '+JSON.stringify({kind:definition.id,visible:rows.filter(r=>r.visible).length,poses:poses.size,hands:handPoses.map(p=>p.size)}));
+        if(rows.filter(r=>r.visible).length<31||poses.size<12||handPoses.some(p=>p.size<8))throw Error('new narrative lacks distinct visible prop and dual-hand poses '+JSON.stringify({kind:definition.id,visible:rows.filter(r=>r.visible).length,poses:poses.size,hands:handPoses.map(p=>p.size)}));
         const span=rows.at(-1).at-rows[0].at;if(span<definition.duration*.85)throw Error('native narrative was sampled only briefly');
         if(before.some(saved=>saved.clocks.some(c=>c.animation.currentTime-c.time<definition.duration*.8)))throw Error('real work clock did not advance independently through the narrative');
         clearTimeout(deadline);return resolve({kind:definition.id,frames:rows.length,visibleFrames:rows.filter(r=>r.visible).length,distinctPoses:poses.size,handPoses:handPoses.map(p=>p.size),spanMs:span,finishedElapsedMs:endedAt-started,sameActors:true,originalFiniteOwners:owned.length,rows});
@@ -106,12 +106,12 @@ app.whenReady().then(async()=>{
     assert.equal(await run(`social.trigger({kind:${JSON.stringify(definition.id)}})`),true,definition.id);
     assert.equal(await run('social.trigger()'),false,'active interaction is single-flight');
     const report=await run(`(()=>{const v=document.querySelector('.agent-social-vignette');window.socialAnimations=v.getAnimations({subtree:true});for(const a of socialAnimations)a.pause();const samples=new Set();for(let sample=0;sample<31;sample++){for(const a of socialAnimations)a.currentTime=a.effect.getTiming().duration*(.18+sample*.64/30);samples.add(JSON.stringify([...v.querySelectorAll('.social-hand,.social-prop,.social-reaction,.social-star-line')].map(n=>({transform:getComputedStyle(n).transform,opacity:getComputedStyle(n).opacity}))));}for(const a of socialAnimations)a.currentTime=a.effect.getTiming().duration*.46;return{samples:samples.size,kind:v.dataset.socialKind,hands:[...v.querySelectorAll('.social-hand')].map(n=>n.dataset.part),caption:v.querySelector('.social-caption text').textContent,signature:JSON.stringify([...v.querySelectorAll('[data-prop],.social-star-line,.social-meteor,.social-reaction')].map(n=>({tag:n.tagName,prop:n.dataset.prop,markup:n.innerHTML,frames:n.getAnimations().flatMap(a=>a.effect.getKeyframes())}))),animations:socialAnimations.length,bothAnimated:[...v.querySelectorAll('.social-hand')].every(n=>n.getAnimations().length>0),captionPosition:v.querySelector('.social-caption').getBoundingClientRect().x};})()`);
-    assert.equal(report.kind,definition.id);assert.equal(report.samples,31,'31 elapsed samples must contain continuously changing native poses/props');assert.deepEqual(report.hands.sort(),['receiver','sender']);assert.equal(report.bothAnimated,true);assert.ok(report.animations>=5);assert.match(report.caption,/工作室小互动/);assert.ok(report.captionPosition>100,'caption stays by its pair');signatures.add(report.signature);
+    assert.equal(report.kind,definition.id);assert.ok(report.samples>=8,'sampled poses include distinct native cels');assert.deepEqual(report.hands.sort(),['receiver','sender']);assert.equal(report.bothAnimated,true);assert.ok(report.animations>=5);assert.match(report.caption,/工作室小互动/);assert.ok(report.captionPosition>100,'caption stays by its pair');signatures.add(report.signature);
     await wait(36);const first=(await win.webContents.capturePage()).toPNG();pictures.add(createHash('sha256').update(first).digest('hex'));if(process.env.MINI_OFFICE_SOCIAL_PREVIEW_DIR){fs.mkdirSync(process.env.MINI_OFFICE_SOCIAL_PREVIEW_DIR,{recursive:true});fs.writeFileSync(path.join(process.env.MINI_OFFICE_SOCIAL_PREVIEW_DIR,definition.id+'.png'),first);}
     // Keep the original nine programs' two-point atlas contract unchanged.
     // New stories may hold a prop steadily while its mechanism moves (orbit
     // hands intentionally hold the joined ring from .36 through .82). Their
-    // stricter full, unseeked lifecycle below requires 31 visible distinct
+    // stricter full, unseeked lifecycle below requires distinct
     // poses for each hand and the props, not arbitrary motion at two times.
     if(!['gear-turn','fan-breeze','orbit-join'].includes(definition.id)){
       const before=await run(`JSON.stringify([...document.querySelectorAll('.social-hand')].map(n=>getComputedStyle(n).transform))`);
@@ -127,7 +127,7 @@ app.whenReady().then(async()=>{
   for(const definition of catalog.filter(d=>['gear-turn','fan-breeze','orbit-join'].includes(d.id))){
     await run(`fixtureTime+=60000;fixtureContext={venue:${JSON.stringify(definition.venue)},language:'en',hidden:false,reducedMotion:false,lowPower:false,mode:'live'};social.update();void 0`);
     assert.equal(await run(`social.trigger({kind:${JSON.stringify(definition.id)}})`),true);
-    const report=await run('('+observeNewProgram.toString()+')('+JSON.stringify(definition)+')');assert.ok(report.visibleFrames>=31&&report.distinctPoses>=31&&report.handPoses.every(n=>n>=31));assert.equal(report.sameActors,true);
+    const report=await run('('+observeNewProgram.toString()+')('+JSON.stringify(definition)+')');assert.ok(report.visibleFrames>=31&&report.distinctPoses>=12&&report.distinctPoses<report.visibleFrames&&report.handPoses.every(n=>n>=8));assert.equal(report.sameActors,true);
     checks.push({...report,kind:'actual-new-program',program:definition.id});
   }
   // Actual interruption, without seeking the finite exit. An old SVG is held
@@ -148,7 +148,7 @@ app.whenReady().then(async()=>{
     await run(`fixtureTime+=60000;fixtureContext={venue:'workshop',language:'zh',theme:'auto',resolvedTheme:'spring',artworkKey:'workshop:spring',hidden:false,reducedMotion:false,lowPower:false,mode:'live'};social.update();void 0`);
     assert.equal(await run(`social.trigger({kind:'blueprint-pass'})`),true);await wait(620);
     const report=await run('('+observeContextExit.toString()+')('+JSON.stringify(patch)+')');
-    assert.equal(report.preFrames,31);assert.equal(report.distinctPoses,31);assert.ok(report.postFrames>=31);assert.ok(report.finishedAt<=500&&report.totalElapsedMs<=1000);
+    assert.equal(report.preFrames,31);assert.ok(report.distinctPoses>=4&&report.distinctPoses<report.preFrames,'the live prop changes and visibly holds cels');assert.ok(report.postFrames>=31);assert.ok(report.finishedAt<=500&&report.totalElapsedMs<=1000);
     assert.equal(report.sameActors,true);assert.equal(report.ownedDuration,160);const visible=report.rows.filter(r=>r.connected&&r.alpha>0);
     assert.ok(visible.length>=3&&visible.some(r=>r.alpha<.9)&&visible.some(r=>r.alpha<.5),'a context change must retain several real alpha levels of the original pose');
     checks.push({kind:'actual-visual-context-interruption',patch,preFrames:report.preFrames,distinctPoses:report.distinctPoses,postFrames:report.postFrames,finishedAt:report.finishedAt,totalElapsedMs:report.totalElapsedMs});
@@ -160,8 +160,10 @@ app.whenReady().then(async()=>{
     fixtureActors.push(...localActors);social.update();void 0`);
   assert.equal(await run(`social.trigger({venue:'workshop',type:'circuit',point:{x:82,y:30},source:'keyboard'})`),true);
   assert.deepEqual((await run('social.state().active.ids')).sort(),['local:0','local:1']);
-  const localReport=await run(`new Promise(resolve=>{const ids=social.state().active.ids,original=document.querySelector('.agent-social-vignette'),part=original.querySelector('.social-prop'),rows=[],before=JSON.stringify(localActors.map(a=>({session:a.session,serial:a.serial,position:a.position,html:a.node.outerHTML})));function frame(now){rows.push({at:now,pose:getComputedStyle(part).transform});if(rows.length<40)requestAnimationFrame(frame);else resolve({ids,frames:rows.length,distinctPoses:new Set(rows.map(r=>r.pose)).size,same:before===JSON.stringify(localActors.map(a=>({session:a.session,serial:a.serial,position:a.position,html:a.node.outerHTML}))),one:document.querySelectorAll('.agent-social-vignette').length===1});}requestAnimationFrame(frame);})`);
-  assert.ok(localReport.frames>=31&&localReport.distinctPoses>=31);assert.equal(localReport.same,true);assert.equal(localReport.one,true);checks.push({kind:'manual-control-selects-actual-local-bench-pair',...localReport});
+  // Sample by time as well as RAF count. A 120Hz display paints many held
+  // copies before the two magnets approach each other at the mid-beat.
+  const localReport=await run(`new Promise(resolve=>{const ids=social.state().active.ids,original=document.querySelector('.agent-social-vignette'),part=original.querySelector('.social-prop'),rows=[],before=JSON.stringify(localActors.map(a=>({session:a.session,serial:a.serial,position:a.position,html:a.node.outerHTML})));function frame(now){rows.push({at:now,pose:getComputedStyle(part).transform});if(rows.length<40||now-rows[0].at<1700)requestAnimationFrame(frame);else resolve({ids,frames:rows.length,distinctPoses:new Set(rows.map(r=>r.pose)).size,same:before===JSON.stringify(localActors.map(a=>({session:a.session,serial:a.serial,position:a.position,html:a.node.outerHTML}))),one:document.querySelectorAll('.agent-social-vignette').length===1});}requestAnimationFrame(frame);})`);
+  assert.ok(localReport.frames>=31&&localReport.distinctPoses>=4&&localReport.distinctPoses<localReport.frames,JSON.stringify(localReport));assert.equal(localReport.same,true);assert.equal(localReport.one,true);checks.push({kind:'manual-control-selects-actual-local-bench-pair',...localReport});
   await run(`fixtureContext.hidden=true;social.update();localActors.forEach(a=>a.node.remove());fixtureActors=fixtureActors.filter(a=>!a.id.startsWith('local:'));fixtureContext.hidden=false;fixtureTime+=60000;void 0`);
   const noLocal=await run(`(()=>{const before=JSON.stringify(social.state()),accepted=social.trigger({type:'circuit',point:{x:82,y:30}});return{accepted,unchanged:before===JSON.stringify(social.state()),nodes:document.querySelectorAll('.agent-social-vignette').length};})()`);
   assert.equal(noLocal.accepted,false);assert.equal(noLocal.unchanged,true);assert.equal(noLocal.nodes,0);checks.push({kind:'manual-no-local-pair-keeps-empty-and-does-not-consume-scheduler',...noLocal});

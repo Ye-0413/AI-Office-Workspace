@@ -21,7 +21,6 @@
       label.append(text, select); fields.append(label); return { text, select };
     }
     const character = field('repertoire-character', Repertoire.SPECIES), state = field('repertoire-state', Repertoire.ACTIVITIES);
-    const variant = field('repertoire-variant', Array.from({ length: 10 }, (_, index) => String(index)));
     const preview = document.createElement('figure'); preview.className = 'repertoire-preview'; preview.setAttribute('aria-hidden', 'true');
     const body = document.createElement('span'); body.className = 'character-body';
     const image = document.createElement('img'); image.alt = ''; image.draggable = false; body.append(image); preview.append(body);
@@ -37,23 +36,21 @@
       if (!controller || !details.open) return;
       // Document visibility belongs to the controller's live listener. Do not
       // copy it into inherited options or a background refresh becomes sticky.
-      controller.update(session, { now: Date.now(), preview: true, repertoireIndex: Number(variant.select.value), hidden: paused || preferences.hidden === true, reducedMotion: quiet });
+      controller.update(session, { now: Date.now(), preview: true, hidden: paused || preferences.hidden === true, reducedMotion: quiet });
     }
     function paintCopy() {
-      const en = english(), recipe = Repertoire.recipes(character.select.value, state.select.value)[Number(variant.select.value)];
-      if (!recipe) return;
-      summary.textContent = en ? 'Motion gallery · 550 variations' : '动作图鉴 · 550 种变化';
+      const en = english();
+      summary.textContent = en ? 'Pixel motion gallery · 55 activities' : '像素动作图鉴 · 55 套动作';
       note.textContent = en ? 'Animation specimens. These are demonstrations, separate from your real sessions.' : '这里是动作演示，供你查看角色细节，不代表正在运行的真实会话。';
-      character.text.textContent = en ? 'Companion' : '伙伴'; state.text.textContent = en ? 'Activity' : '状态'; variant.text.textContent = en ? 'Variation' : '动作';
+      character.text.textContent = en ? 'Companion' : '伙伴'; state.text.textContent = en ? 'Activity' : '状态';
       for (const option of character.select.options) { const design = Appearance.catalog.find(item => item.id === option.value); option.textContent = en ? design.labelEn : design.labelZh; }
       for (const option of state.select.options) option.textContent = stateLabels[option.value][en ? 1 : 0];
-      for (const option of variant.select.options) { const item = Repertoire.recipes(character.select.value, state.select.value)[Number(option.value)]; option.textContent = String(Number(option.value) + 1).padStart(2, '0') + ' · ' + (en ? item.labelEn : item.labelZh); }
-      title.textContent = en ? recipe.labelEn : recipe.labelZh;
-      description.textContent = en ? stateLabels[state.select.value][1] + ' · ' + recipe.labelEn : recipe.beats.join(' → ');
+      title.textContent = stateLabels[state.select.value][en ? 1 : 0];
+      description.textContent = en ? 'Four hand-drawn pixel frames per loop.' : '每个循环由四张逐帧绘制的像素材质画面组成。';
       previous.textContent = en ? 'Previous' : '上一个'; next.textContent = en ? 'Next' : '下一个';
       play.textContent = quiet ? en ? 'Still pose' : '静态姿态' : paused ? en ? 'Play' : '播放' : en ? 'Pause' : '暂停';
       play.disabled = quiet; play.setAttribute('aria-pressed', String(paused || quiet));
-      caption.textContent = quiet ? en ? 'Reduced motion or low power is on.' : '已遵循减少动态效果或低电耗设置。' : en ? 'Choose a variation to inspect its complete loop.' : '选择动作，观看完整循环。';
+      caption.textContent = quiet ? en ? 'Reduced motion or low power is on.' : '已遵循减少动态效果或低电耗设置。' : en ? 'Choose an activity to inspect its complete loop.' : '选择活动，观看完整循环。';
     }
     function render() {
       paintCopy(); if (!details.open || disposed) return;
@@ -65,9 +62,12 @@
     }
     function stop() { controller?.destroy(); controller = null; session = null; }
     function toggle() { if (details.open) render(); else stop(); }
-    function select() { variant.select.value = '0'; render(); }
-    function choose(delta) { variant.select.value = String((Number(variant.select.value) + delta + 10) % 10); render(); }
-    details.addEventListener('toggle', toggle); character.select.addEventListener('change', select); state.select.addEventListener('change', select); variant.select.addEventListener('change', render);
+    function choose(delta) {
+      const count = state.select.options.length;
+      state.select.selectedIndex = (state.select.selectedIndex + delta + count) % count;
+      render();
+    }
+    details.addEventListener('toggle', toggle); character.select.addEventListener('change', render); state.select.addEventListener('change', render);
     previous.addEventListener('click', () => choose(-1)); next.addEventListener('click', () => choose(1));
     play.addEventListener('click', () => { paused = !paused; syncPlayback(); paintCopy(); });
     const media = document.defaultView.matchMedia('(prefers-reduced-motion: reduce)');

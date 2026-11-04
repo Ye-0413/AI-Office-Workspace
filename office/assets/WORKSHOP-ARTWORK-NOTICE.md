@@ -1,5 +1,12 @@
 # Workshop artwork notice / 工坊角色美术声明
 
+
+## Pixel edition / 像素版
+
+The pixel edition draws five new transparent 3×2 pose sheets and 55 four-cel activity strips and five nine-cel expression strips directly on an integer grid using `office/scripts/draw-pixel-companions.cjs`. The script supplies the pixel contours, palettes and props. The notices below describe the original workshop material and its archived previews.
+
+像素版通过 `office/scripts/draw-pixel-companions.cjs` 在整数像素网格绘制五张 3×2 透明姿态图、55 条四帧活动帧条，以及五条九帧表情帧条。脚本包含轮廓、配色和道具的绘制定义。下列声明记录原工坊版素材及其存档预览。
+
 **Project contribution credit / 项目创作署名：AI Work Space contributors** (formerly credited as / 原署名 AI Office Workspace contributors).
 
 This notice accompanies the five workshop characters in AI Work Space (formerly AI Office Workspace / AI Mini Office): **Folio／纸团, Ink／墨豆, Moss／苔盒, Thread／线团 and Glow／灯籽**. It records their creation process and the existing artwork policy. It does not replace the source-code license or grant a new artwork license.

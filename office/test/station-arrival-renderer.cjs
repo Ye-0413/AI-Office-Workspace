@@ -24,11 +24,11 @@ const actor=id=>`document.querySelector('.actor[data-session-id="${id}"]')`;
 const settled=id=>`(()=>{const n=${actor(id)};return n&&getComputedStyle(n).visibility!=='hidden'&&n.dataset.walking!=='true'&&!['moving','queued','yielding','waiting-space'].includes(n.dataset.traffic)})()`;
 async function control(id,value){await run(`(()=>{const n=document.getElementById(${JSON.stringify(id)});if(!n)throw Error('Missing actual control '+${JSON.stringify(id)});${typeof value==='boolean'?'n.checked='+String(value):'n.value='+JSON.stringify(String(value))};n.dispatchEvent(new Event('change',{bubbles:true}));})()`);}
 async function pausedWorkClocks(label){
- await until(`(()=>{const s=nativeHiddenIdentity,live=s.rig.getAnimations({subtree:true});return s.clocks.length>0&&s.clocks.every(a=>live.includes(a)&&a.playState==='paused'&&Number.isFinite(a.currentTime))})()`,label+' pauses the original work CSS animations',500);
- const held=await run(`(()=>{window.nativeClockHold=nativeHiddenIdentity.clocks.map(animation=>({animation,time:animation.currentTime}));return nativeClockHold.map(c=>({name:c.animation.animationName,time:c.time}));})()`);
+ await until(`(()=>{const s=nativeHiddenIdentity,live=s.rig.getAnimations({subtree:true});return s.clocks.length>0&&s.clocks.every(a=>live.includes(a)&&a.playState==='paused'&&Number.isFinite(a.currentTime))})()`,label+' pauses the original work animation objects',500);
+ const held=await run(`(()=>{window.nativeClockHold=nativeHiddenIdentity.clocks.map(animation=>({animation,time:animation.currentTime}));return nativeClockHold.map(c=>({name:c.animation.animationName||c.animation.effect.target?.getAttribute('data-key'),time:c.time}));})()`);
  await wait(90);
  const after=await run(`nativeClockHold.map(c=>({same:nativeHiddenIdentity.rig.getAnimations({subtree:true}).includes(c.animation),paused:c.animation.playState==='paused',drift:Math.abs(c.animation.currentTime-c.time)}))`);
- assert.ok(after.length>0&&after.every(c=>c.same&&c.paused&&c.drift<=.2),label+' preserves paused CSS clock objects without time drift');
+ assert.ok(after.length>0&&after.every(c=>c.same&&c.paused&&c.drift<=.2),label+' preserves paused work clock objects without time drift');
  return{count:held.length,maxDrift:Math.max(...after.map(c=>c.drift))};
 }
 
@@ -62,7 +62,7 @@ function installStationAudit(){
    }
   }
   for(const part of document.querySelectorAll('.festival-caption,.venue-control-label,.venue-readout,.venue-note-text,.venue-star-target')){
-   if(alpha(part)<=.03||!part.textContent.trim())continue;
+   if(alpha(part)<=.03||!part.matches('.venue-star-target')&&!part.textContent.trim())continue;
    const r=box(part);if(r.width>0&&r.height>0)result.push({...r,owner:part.className,part:'caption/readout'});
   }
   return result;
@@ -71,7 +71,7 @@ function installStationAudit(){
   if(node.dataset.fixtureRecorded)return;node.dataset.fixtureRecorded='true';
   const ownerId=node.dataset.ownerId,owner=stationActors.get(ownerId),actorNode=owner?.node||document.querySelector('.actor[data-session-id="'+ownerId+'"]');
   const original=actorNode&&{node:actorNode,body:actorNode.querySelector('.character-body'),image:actorNode.querySelector('.character-body>img'),rig:actorNode.querySelector('.ap-rig')};
-  const clocks=actorNode?[...actorNode.getAnimations({subtree:true})].filter(a=>typeof a.animationName==='string'&&a.effect.getTiming().iterations===Infinity).map(a=>({animation:a,time:a.currentTime})):[];
+  const clocks=actorNode?[...actorNode.getAnimations({subtree:true})].filter(a=>(typeof a.animationName==='string'||a.effect.target?.matches('.cp-frame'))&&a.effect.getTiming().iterations===Infinity).map(a=>({animation:a,time:a.currentTime})):[];
   const truth=owner&&JSON.stringify([owner.session.id,owner.session.provider,owner.session.parentId||'',owner.session.status,owner.session.activity,owner.session.turnId||'']);
   const trace={ownerId,serial:node.dataset.ownerSerial,zone:node.dataset.zone,venue:node.dataset.venue,program:node.dataset.program,rows:[],violations:[],startedAt:performance.now(),done:false,clockCount:clocks.length};stationTraces.push(trace);
   function sample(now){
@@ -120,7 +120,7 @@ async function completedCue(index,{pixels=true}={}){
  const empty=pixels?freeze(await win.webContents.capturePage(crop)):null;
  const trace=await run(`stationTraces[${index}]`),shown=trace.rows.filter(row=>row.alpha>.03&&row.bounds);
  assert.ok(shown.length>=31,trace.program+' needs >=31 actual visible RAF samples');
- const distinct=new Set(shown.map(row=>row.signature));assert.ok(distinct.size>=31,trace.program+' needs >=31 actual changing prop poses');
+ const distinct=new Set(shown.map(row=>row.signature));assert.ok(distinct.size>=6&&distinct.size<shown.length,trace.program+' needs distinct held prop cels');
  assert.ok(shown.some(row=>row.controlParts>0),'actual visible venue/festival artwork is present during the clearance audit');
  assert.deepEqual(trace.violations,[],JSON.stringify(trace));assert.ok(trace.rows.every(row=>row.identical&&row.truthUnchanged&&row.clockOwned),'decorative response cannot replace bodies, mutate observed facts or reset work clocks');
  assert.ok(trace.endedAt-trace.startedAt<2200,'one response is finite');
@@ -230,7 +230,7 @@ app.whenReady().then(async()=>{
  await until(settled(main.id),'scale retarget completes before a visibility interruption');
  const hidden=await changeActivity(main,'reading',{peers:[child]});main=hidden.session;
  await until(`stationTraces[${hidden.index}].rows.length>=5`,'a visible cue exists before the real window hides');
- await run(`(()=>{const a=stationActors.get(${JSON.stringify(main.id)}),rig=a.body.querySelector('.ap-rig');window.nativeHiddenIdentity={node:a.node,body:a.body,image:a.image,rig,clocks:rig.getAnimations({subtree:true}).filter(a=>typeof a.animationName==='string'&&a.effect.getTiming().iterations===Infinity&&a.playState==='running'),program:a.node.dataset.performanceProgram,programIndex:a.performance.plan.programIndex,session:JSON.stringify([a.session.id,a.session.provider,a.session.parentId||'',a.session.status,a.session.activity,a.session.turnId||''])};})()`);
+ await run(`(()=>{const a=stationActors.get(${JSON.stringify(main.id)}),rig=a.body.querySelector('.ap-rig');window.nativeHiddenIdentity={node:a.node,body:a.body,image:a.image,rig,clocks:rig.getAnimations({subtree:true}).filter(a=>(typeof a.animationName==='string'||a.effect.target?.matches('.cp-frame'))&&a.effect.getTiming().iterations===Infinity&&a.playState==='running'),program:a.node.dataset.performanceProgram,programIndex:a.performance.plan.programIndex,session:JSON.stringify([a.session.id,a.session.provider,a.session.parentId||'',a.session.status,a.session.activity,a.session.turnId||''])};})()`);
  // The unmodified Electron Page Visibility path was separately probed and
  // stays visible after real hide/minimize in this runtime. Exercise the same
  // production read-only native snapshot fallback; never assign document.hidden.
@@ -253,7 +253,7 @@ app.whenReady().then(async()=>{
  await until(`document.getElementById('office').dataset.hidden==='false'`,'a true native restore releases effective room hiding',3000);await wait(300);
  const restored=await run(`(()=>{const a=stationActors.get(${JSON.stringify(main.id)}),s=nativeHiddenIdentity;return{same:a.node===s.node&&a.body===s.body&&a.image===s.image&&a.body.querySelector('.ap-rig')===s.rig,program:a.node.dataset.performanceProgram,oldProgram:s.program,clocks:s.clocks.every(c=>s.rig.getAnimations({subtree:true}).includes(c)&&c.playState==='running'),truth:JSON.stringify([a.session.id,a.session.provider,a.session.parentId||'',a.session.status,a.session.activity,a.session.turnId||''])===s.session};})()`);
  assert.equal(restored.same,true);assert.equal(restored.truth,true);assert.equal(restored.program,restored.oldProgram,'native quiet suspension retains the observed work-program clock lease');
- assert.equal(restored.clocks,true,'real hide/show preserves every original work CSS animation object');
+ assert.equal(restored.clocks,true,'real hide/show preserves every original work animation object');
  assert.equal(await run('stationTraces.length'),hidden.index+1,'visibility restoration cannot replay stale arrival');
  checks.push({name:'theme, venue, shared scale and real native hide cancel active effects before1400ms without replay',nativeVisible:false,nativeEvidence:hiddenEvidence,rawDocumentHidden:nativeHidden.documentHidden,cleanupAgeMs:nativeHidden.age,nativeLatency,pausedWorkClocks:hideClocks,bodyIdentityPreserved:restored.same,observedWorkProgramPreserved:restored.program===restored.oldProgram});
 
@@ -268,7 +268,7 @@ app.whenReady().then(async()=>{
  const minimizeClocks=await pausedWorkClocks('actual minimized window');
  assert.equal(await run('document.querySelectorAll(".station-arrival").length'),0);
  win.restore();win.showInactive();await until(`document.getElementById('office').dataset.hidden==='false'`,'real minimized restore releases effective room visibility',3000);await wait(300);
- const afterMinimize=await run(`(()=>{const a=stationActors.get(${JSON.stringify(main.id)}),s=nativeHiddenIdentity;return{same:a.node===s.node&&a.body===s.body&&a.image===s.image&&a.body.querySelector('.ap-rig')===s.rig,program:a.node.dataset.performanceProgram,oldProgram:s.program,programIndex:a.performance.plan.programIndex,oldProgramIndex:s.programIndex,programCount:OfficeAvatarPerformanceModel.PROGRAMS[a.performance.plan.kind].length,validProgram:OfficeAvatarPerformanceModel.PROGRAMS[a.performance.plan.kind].includes(a.node.dataset.performanceProgram),liveClocks:s.rig.getAnimations({subtree:true}).filter(c=>typeof c.animationName==='string'&&c.effect.getTiming().iterations===Infinity).map(c=>c.playState),clocks:s.clocks.every(c=>s.rig.getAnimations({subtree:true}).includes(c)&&c.playState==='running'),truth:JSON.stringify([a.session.id,a.session.provider,a.session.parentId||'',a.session.status,a.session.activity,a.session.turnId||''])===s.session,remaining:document.querySelectorAll('.station-arrival').length};})()`);
+ const afterMinimize=await run(`(()=>{const a=stationActors.get(${JSON.stringify(main.id)}),s=nativeHiddenIdentity;return{same:a.node===s.node&&a.body===s.body&&a.image===s.image&&a.body.querySelector('.ap-rig')===s.rig,program:a.node.dataset.performanceProgram,oldProgram:s.program,programIndex:a.performance.plan.programIndex,oldProgramIndex:s.programIndex,programCount:OfficeAvatarPerformanceModel.PROGRAMS[a.performance.plan.kind].length,validProgram:OfficeAvatarPerformanceModel.PROGRAMS[a.performance.plan.kind].includes(a.node.dataset.performanceProgram),liveClocks:s.rig.getAnimations({subtree:true}).filter(c=>(typeof c.animationName==='string'||c.effect.target?.matches('.cp-frame'))&&c.effect.getTiming().iterations===Infinity).map(c=>c.playState),clocks:s.clocks.every(c=>s.rig.getAnimations({subtree:true}).includes(c)&&c.playState==='running'),truth:JSON.stringify([a.session.id,a.session.provider,a.session.parentId||'',a.session.status,a.session.activity,a.session.turnId||''])===s.session,remaining:document.querySelectorAll('.station-arrival').length};})()`);
  assert.equal(afterMinimize.same,true);assert.equal(afterMinimize.truth,true);assert.equal(afterMinimize.remaining,0);
  // The OS minimize animation is still visible work time. A due rotation may
  // run on a subsequent visible update after the original pause lease resumes;

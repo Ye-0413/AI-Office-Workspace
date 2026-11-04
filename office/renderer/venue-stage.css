@@ -9,36 +9,37 @@
 .venue-widget{position:absolute;width:100px;height:96px;transform:translate(-50%,-50%);pointer-events:none}
 .venue-control{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;gap:2px;width:100%;height:100%;padding:0;border:0;background:transparent;color:#f4e5c8;pointer-events:auto;outline-offset:2px;-webkit-tap-highlight-color:transparent}
 .venue-control svg{display:block;width:100px;height:72px;flex:none;overflow:visible;filter:drop-shadow(0 2px 0 #3d2b273d);shape-rendering:crispEdges;pointer-events:none}
-.venue-control-label{display:block;max-width:150px;padding:2px 5px;border:1px solid #bc9d6880;border-radius:2px;background:#e8d7b5eb;color:#634c34;font-size:10px;line-height:13px;white-space:nowrap;box-shadow:0 1px 0 #4935243d;opacity:.88}
-.venue-readout{position:absolute;left:50%;top:57px;transform:translateX(-50%);max-width:95px;padding:1px 4px;background:#4a4938e8;border-radius:2px;color:#f8e7b7;font-size:8px;line-height:10px;white-space:nowrap;pointer-events:none}
+.venue-control-label{display:block;max-width:150px;padding:2px 5px;border:1px solid #bc9d6880;background:#e8d7b5eb;color:#634c34;font-size:10px;line-height:13px;white-space:nowrap;box-shadow:2px 2px #49352472;opacity:.88}
+.venue-readout{position:absolute;left:50%;top:57px;transform:translateX(-50%);max-width:95px;padding:1px 4px;background:#4a4938e8;color:#f8e7b7;font-size:8px;line-height:10px;white-space:nowrap;pointer-events:none}
 .venue-readout:empty{display:none}
 .venue-control:focus-visible{outline:2px solid #fff0b3;border-radius:4px}
-.venue-blueprint-sheet{transform:scaleX(.16);transform-origin:14px 37px;transition:transform 800ms var(--ease-out)}
+.venue-blueprint-sheet{transform:scaleX(.16);transform-origin:14px 37px;transition:transform 640ms steps(10,end)}
 .venue-widget[data-state="open"] .venue-blueprint-sheet{transform:scaleX(1)}
-.venue-switch-lever{transform:rotate(-20deg);transform-origin:50px 32px;transition:transform 800ms var(--ease-out)}
+.venue-switch-lever{transform:rotate(-20deg);transform-origin:50px 32px;transition:transform 640ms steps(10,end)}
 .venue-widget[data-state="open"] .venue-switch-lever{transform:rotate(20deg)}
-.venue-circuit-led{opacity:.26;transition:opacity 800ms var(--ease-out)}
+.venue-circuit-led{opacity:.26;transition:opacity 640ms steps(8,end)}
 .venue-circuit-signal{opacity:0;pointer-events:none}
 .venue-widget[data-state="open"] .venue-circuit-led{opacity:1}
-.venue-widget[data-state="open"] .venue-circuit-signal{animation:venue-circuit-pulse 1600ms linear infinite}
+.venue-widget[data-state="open"] .venue-circuit-signal{animation:venue-circuit-pulse 1600ms infinite}
 .venue-hanging{transform-origin:50px 12px}
-.venue-teapot{transform-origin:39px 42px;transform:rotate(0deg);transition:transform 400ms var(--ease-out)}
+.venue-teapot{transform-origin:39px 42px;transform:rotate(0deg);transition:transform 400ms steps(6,end)}
 .venue-widget[data-state="pouring"] .venue-teapot{transform:rotate(18deg)}
-.venue-tea-stream{opacity:0;transition:opacity 160ms var(--ease-out)}
+.venue-tea-stream{opacity:0;transition:opacity 160ms steps(2,end)}
 .venue-widget[data-state="pouring"] .venue-tea-stream{opacity:1}
-.venue-tea-liquid{opacity:.12;transition:opacity 400ms var(--ease-out)}
+.venue-tea-liquid{opacity:.12;transition:opacity 400ms steps(6,end)}
 .venue-widget[data-state="steeping"] .venue-tea-liquid,.venue-widget[data-state="ready"] .venue-tea-liquid{opacity:1}
 .venue-tea-steam{opacity:0;transform-origin:66px 39px}
-.venue-widget[data-state="ready"] .venue-tea-steam{animation:venue-tea-steam 3200ms linear infinite}
-.venue-note-text{position:absolute;top:15px;left:20px;display:flex;align-items:center;justify-content:center;width:62px;min-height:45px;padding:3px;background:#eee1bc;color:#5d533d;box-shadow:1px 2px 0 #69543d88;font-size:8px;line-height:1.8;white-space:pre-line;opacity:0;transform:translateY(2px) scaleY(.94);transform-origin:50% 0;transition:transform 800ms var(--ease-out),opacity 800ms var(--ease-out);pointer-events:none}
-.venue-widget[data-state="open"] .venue-note-text,.venue-widget[data-state="charted"] .venue-note-text{opacity:1;transform:translateY(0) scaleY(1)}
-.venue-note-seal{transition:opacity 160ms var(--ease-out)}
+.venue-widget[data-state="ready"] .venue-tea-steam{animation:venue-tea-steam 3200ms steps(1,end) infinite}
+.venue-note-text{position:absolute;top:15px;left:20px;display:flex;align-items:center;justify-content:center;width:62px;min-height:45px;padding:3px;background:#eee1bc;color:#5d533d;box-shadow:1px 2px 0 #69543d88;font-size:8px;line-height:1.8;white-space:pre-line;opacity:0;transform:translateY(4px);transform-origin:50% 0;transition:transform 640ms steps(10,end),opacity 640ms steps(8,end);pointer-events:none}
+.venue-widget[data-state="open"] .venue-note-text,.venue-widget[data-state="charted"] .venue-note-text{opacity:1;transform:translateY(0)}
+.venue-note-seal{transition:opacity 160ms steps(2,end)}
 .venue-widget[data-state="open"] .venue-note-seal,.venue-widget[data-state="charted"] .venue-note-seal{opacity:0}
-.venue-star-target{position:absolute;width:21px;height:21px;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;padding:0;border:0;border-radius:2px;background:#334a58;color:#abaf94;font-size:16px;line-height:1;pointer-events:auto;-webkit-tap-highlight-color:transparent}
+.venue-star-target{position:absolute;width:21px;height:21px;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;padding:0;border:0;background:#334a58;color:#abaf94;font-size:16px;line-height:1;pointer-events:auto;-webkit-tap-highlight-color:transparent}
+.venue-star-target::before{content:"";width:11px;height:11px;background:currentColor;clip-path:polygon(36% 0,64% 0,64% 36%,100% 36%,100% 64%,64% 64%,64% 100%,36% 100%,36% 64%,0 64%,0 36%,36% 36%)}
 .venue-star-target[aria-pressed="true"]{color:#ffe1a1;background:#53635a}
 .venue-star-target:focus-visible{outline:2px solid #ffe8ab;outline-offset:1px}
-.venue-star-lines{transition:opacity 160ms var(--ease-out)}
-.venue-telescope{transform-origin:50px 37px;transition:transform 800ms var(--ease-in-out)}
+.venue-star-lines{transition:opacity 160ms steps(2,end)}
+.venue-telescope{transform-origin:50px 37px;transition:transform 640ms steps(10,end)}
 .venue-scope-light{opacity:.3}.venue-widget[data-state="bearing-1"] .venue-scope-light{opacity:.65}.venue-widget[data-state="bearing-2"] .venue-scope-light{opacity:1}
 .venue-meteor{opacity:0}
 .venue-detail{position:absolute;inset:0;pointer-events:none;opacity:.6}
@@ -57,8 +58,22 @@
 .venue-stage[data-quiet="true"] *,.venue-widget[data-quiet="true"] *{transition:none!important;animation:none!important}
 .venue-stage[data-quiet="true"] .venue-widget[data-state="ready"] .venue-tea-steam{opacity:.7}
 .venue-stage[data-quiet="true"] .venue-widget[data-state="open"] .venue-circuit-signal{opacity:1}
-@keyframes venue-circuit-pulse{0%{transform:translate(0,0);opacity:0}10%{opacity:1}30%{transform:translate(21px,0)}45%{transform:translate(21px,-16px)}65%{transform:translate(45px,-16px)}80%{transform:translate(45px,0);opacity:1}100%{transform:translate(68px,0);opacity:0}}
-@keyframes venue-tea-steam{0%{transform:translateY(2px);opacity:0}20%{opacity:.8}100%{transform:translateY(-9px);opacity:0}}
+@keyframes venue-circuit-pulse{
+  0%{transform:translate(0,0);opacity:.9;animation-timing-function:steps(7,end)}
+  26%{transform:translate(21px,0);animation-timing-function:steps(4,end)}
+  42%{transform:translate(21px,-16px);animation-timing-function:steps(8,end)}
+  62%{transform:translate(45px,-16px);animation-timing-function:steps(4,end)}
+  78%{transform:translate(45px,0);animation-timing-function:steps(8,end)}
+  96%{transform:translate(69px,0);opacity:.9;animation-timing-function:steps(1,end)}
+  100%{transform:translate(69px,0);opacity:0}
+}
+@keyframes venue-tea-steam{
+  0%,100%{transform:translateY(2px);opacity:0}
+  18%{transform:translateY(-2px);opacity:.85}
+  38%{transform:translate(-2px,-4px);opacity:.6}
+  58%{transform:translateY(-8px);opacity:.35}
+  78%{transform:translate(2px,-12px);opacity:0}
+}
 @media(hover:hover) and (pointer:fine){.venue-control:hover .venue-control-label{background:#fff0ce;opacity:1}.venue-star-target:hover{background:#657264;color:#fff0bb}}
 @media(max-width:1050px){.venue-select{max-width:125px;min-width:100px}.venue-chooser-label{display:none}}
 @media(max-width:800px){.venue-select{max-width:101px;min-width:88px;font-size:10px;padding:5px 3px}.venue-chooser{margin-right:-3px}.venue-feedback{left:12px;bottom:62px;font-size:10px;max-width:280px}}

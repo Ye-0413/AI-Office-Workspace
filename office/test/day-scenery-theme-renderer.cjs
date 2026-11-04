@@ -38,9 +38,31 @@ app.whenReady().then(async()=>{
   for(const flag of ['reducedMotion','lowPower']){await run(`document.getElementById('setting-${flag}').click();void 0`);await chooseTime('morning');await pause(180);assert.equal(await run(`getComputedStyle(document.querySelector('.harbour-ferry')).animationPlayState`),'paused');await run(`document.getElementById('setting-${flag}').click();void 0`);}
   checks.push('rapid re-entry and reduced-motion/low-power retain bounded glass surfaces');
   const switches=await run(`(async()=>{const report=[];const alpha=()=>{const v=document.querySelector('.harbour-view[data-visible="true"]');return[Number(getComputedStyle(v.querySelector('svg')).opacity),Number(getComputedStyle(v,'::after').opacity),Number(getComputedStyle(document.querySelector('.door-window'),'::before').opacity),Number(getComputedStyle(document.querySelector('.door-city')).opacity)];};for(const venue of ['teahouse','workshop','teahouse','workshop']){const before=alpha(),n=document.getElementById('venue-select');n.value=venue;n.dispatchEvent(new Event('change',{bubbles:true}));const immediate=alpha();await new Promise(r=>setTimeout(r,65));report.push({venue,before,immediate,later:alpha()});}return report;})()`);
-  for(const s of switches){assert.ok(s.before.every((v,i)=>Math.abs(v-s.immediate[i])<.025),JSON.stringify(s));assert.ok(s.later[0]>0&&s.later[0]<1,JSON.stringify(s));}
-  checks.push({name:'rapid full-theme/base changes retarget actual glass alpha without a first-frame jump',switches});
+  for(const s of switches){
+    assert.ok(s.before.every((value,index)=>Math.abs(value-s.immediate[index])<.025),JSON.stringify(s));
+    assert.ok(s.later.every(value=>value>=0&&value<=1),JSON.stringify(s));
+  }
+  // Reversals of an unfinished CSS transition can shorten its duration.
+  // Measure the native held cels on a complete transition from settled glass.
+  await until(`document.getElementById('office').dataset.fullTheme==='true'&&Number(getComputedStyle(document.querySelector('.harbour-view[data-visible="true"] svg')).opacity)===0`,'theme glass must settle before sampling a complete transition');
   await run(`document.getElementById('venue-select').value='teahouse';document.getElementById('venue-select').dispatchEvent(new Event('change',{bubbles:true}));void 0`);
+  await until(`document.querySelector('.harbour-view[data-visible="true"] svg').getAnimations().some(animation=>animation.transitionProperty==='opacity')`,'restoring base glass owns a native opacity transition');
+  const cels=await run(`(async()=>{
+    const glass=document.querySelector('.harbour-view[data-visible="true"] svg');
+    const opacity=glass.getAnimations().find(animation=>animation.transitionProperty==='opacity');
+    opacity.pause();await opacity.ready;
+    const duration=opacity.effect.getTiming().duration;
+    const samples=[.18,.20,.34,.36,.51,.53,.69,.71].map(phase=>{
+      opacity.currentTime=duration*phase;
+      return Number(getComputedStyle(glass).opacity);
+    });
+    opacity.play();
+    return samples;
+  })()`);
+  const poses=cels.filter((_,index)=>index%2===0);
+  assert.deepEqual(poses,cels.filter((_,index)=>index%2===1),'each sampled glass cel holds for multiple playhead samples');
+  assert.ok(poses.every((value,index)=>value>0&&value<1&&(index===0||value>poses[index-1])),JSON.stringify(cels));
+  checks.push({name:'rapid theme changes retain the first glass alpha and a complete transition holds distinct native cels',switches,cels});
   await until(`document.getElementById('office').dataset.fullTheme==='false'&&document.querySelector('.venue-stage').dataset.artState==='ready'`,'base room must restore');await pause(300);
   assert.equal(await run(`Number(getComputedStyle(document.querySelector('.harbour-view[data-visible="true"] svg')).opacity)`),1);
   assert.equal(await run(`Number(getComputedStyle(document.querySelector('.harbour-view[data-visible="true"]'),'::after').opacity)`),0);

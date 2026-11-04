@@ -5,10 +5,9 @@
 .repertoire-note,.repertoire-caption{font-size:10px;line-height:1.6;color:#7b6749;margin:0 0 12px}
 .repertoire-fields{display:grid;grid-template-columns:1fr 1fr;gap:9px}
 .repertoire-fields>label{display:flex;flex-direction:column;gap:5px;min-width:0;font-size:10px;color:#7b6749}
-.repertoire-fields>label:last-child{grid-column:1/-1}
 .repertoire-fields select{min-width:0;width:100%;min-height:32px;border:1px solid #bba47b8a;border-radius:4px;background:#fff9ea;color:#5b472f;font:inherit;font-size:11px;padding:5px}
-.repertoire-preview{position:relative;margin:12px 0 10px;height:224px;overflow:hidden;border-radius:6px;background:radial-gradient(ellipse at 50% 43%,#fff8e8,#ead9b5)}
-.repertoire-preview::before{content:"";position:absolute;left:calc(50% - 80px);top:185px;width:160px;height:14px;border-radius:50%;background:radial-gradient(ellipse,#74533526,transparent 70%)}
+.repertoire-preview{position:relative;margin:12px 0 10px;height:224px;overflow:hidden;border:2px solid #bda57e;border-radius:0;background:linear-gradient(#fff3d7 0 82%,#e7cea1 82% 84%,#efe0bb 84%)}
+.repertoire-preview::before{content:"";position:absolute;left:calc(50% - 80px);top:185px;width:160px;height:14px;clip-path:polygon(10% 0,90% 0,90% 25%,100% 25%,100% 75%,90% 75%,90% 100%,10% 100%,10% 75%,0 75%,0 25%,10% 25%);background:#74533526}
 .repertoire-preview .character-body{position:absolute;left:calc(50% - 77.5px);top:79px;--avatar-presentation-scale:2.2;overflow:visible}
 .repertoire-gallery h4{margin:0 0 6px;font-size:13px;font-weight:650}
 .repertoire-description{font-size:11px;line-height:1.8;min-height:40px;margin:0 0 12px;color:#7b6749}

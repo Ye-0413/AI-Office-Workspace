@@ -11,9 +11,21 @@ app.disableHardwareAcceleration();
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 const output = process.env.MINI_OFFICE_VISITOR_STRESS_REPORT || path.resolve(__dirname, '../../../../work/visitor-stress-0.3.0.json');
 const checks = [], errors = [], requestedArtwork = [];
+const avatarsDir = path.resolve(__dirname, '../assets/avatars');
+const allowedArtwork = new Set(require('../lib/release-artwork.cjs').ASSET_FILES
+  .filter(asset => asset.startsWith('assets/avatars/'))
+  .map(asset => asset.slice('assets/avatars/'.length)));
 let win;
 const evaluate = source => win.webContents.executeJavaScript(source, true);
 async function check(name, fn) { await fn(); checks.push(name); }
+async function until(source, label) {
+  const deadline = Date.now() + 3500;
+  while (Date.now() < deadline) {
+    if (await evaluate(source)) return;
+    await wait(20);
+  }
+  throw Error(label);
+}
 
 app.whenReady().then(async () => {
   const settings = { language: 'zh', idleVisitor: false, reducedMotion: false, lowPower: false };
@@ -36,8 +48,8 @@ app.whenReady().then(async () => {
     if (/^https?:/.test(details.url)) { errors.push('Unexpected network: ' + details.url); done({ cancel: true }); return; }
     const pathname = decodeURIComponent(new URL(details.url).pathname);
     if (pathname.includes('/assets/avatars/')) {
-      const asset = path.basename(pathname); requestedArtwork.push(asset);
-      if (!require('../lib/public-artwork.js').ASSETS.includes(asset)) { errors.push('Unexpected character resource: ' + asset); done({ cancel: true }); return; }
+      const asset = path.relative(avatarsDir, pathname).split(path.sep).join('/'); requestedArtwork.push(asset);
+      if (!allowedArtwork.has(asset)) { errors.push('Unexpected character resource: ' + asset); done({ cancel: true }); return; }
     }
     done({});
   });
@@ -105,17 +117,22 @@ app.whenReady().then(async () => {
     assert.equal((await evaluate(`stressRead()`)).exists, false);
     await wait(250); assert.equal((await evaluate(`stressRead()`)).exists, false);
   });
-  await check('door and window stops retain their zone data and keep speech inside the display', async () => {
+  await check('door and window stops keep speech inside the display and greet with a pixel wave', async () => {
     await evaluate(`stressCreate(.71);void(0)`); await wait(100);
     let bounds = await evaluate(`(()=>{const node=stress.layer.querySelector('.visitor'),bubble=node.querySelector('.actor-bubble'),r=bubble.getBoundingClientRect();return{zone:node.dataset.zone,quote:bubble.dataset.quoteId,left:r.left,right:r.right,width:innerWidth};})()`);
     assert.equal(bounds.zone, 'door'); assert.ok(bounds.quote); assert.ok(bounds.left >= 0 && bounds.right <= bounds.width, JSON.stringify(bounds));
+    await until(`stress.layer.querySelector('.visitor')?.dataset.walking!=='true'&&!!stress.layer.querySelector('.cp-emotes[data-ready="true"]')`, 'The settled visitor decodes its local expression atlas');
+    await evaluate(`stress.layer.querySelector('.visitor .actor-button').click();void 0`);
+    await until(`[...stress.layer.querySelectorAll('.cp-emotes image[data-pixel-emote]')].some(image=>Number(getComputedStyle(image).opacity)===1&&image.getAnimations().some(animation=>animation.playState==='running'))`, 'A greeting paints a visible sprite cel with a live native clock');
+    await evaluate(`stress.context.reducedMotion=true;stress.controller.tick();void 0`);
+    assert.equal(await evaluate(`stress.layer.querySelector('.cp-emotes').getAnimations({subtree:true}).length`), 0, 'Reduced motion releases the greeting clock');
     await evaluate(`stressCreate(.51);stress.context.reducedMotion=true;stress.controller.tick();void(0)`); await wait(100);
     bounds = await evaluate(`(()=>{const node=stress.layer.querySelector('.visitor'),r=node.querySelector('.actor-bubble').getBoundingClientRect();return{zone:node.dataset.zone,left:r.left,right:r.right,width:innerWidth};})()`);
     assert.equal(bounds.zone, 'window'); assert.ok(bounds.left >= 0 && bounds.right <= bounds.width, JSON.stringify(bounds));
   });
   await evaluate(`stress.controller.destroy();void(0)`);
   assert.deepEqual(errors, []);
-  assert.ok(requestedArtwork.length > 0);
+  assert.ok(requestedArtwork.some(asset => /^pixel-emotes-[a-z]+\.png$/.test(asset)), 'At least one guest requested a whitelisted expression atlas');
   const report = { ok: true, nativeElectron: process.versions.electron, platform: process.platform, checks, requestedArtwork: [...new Set(requestedArtwork)], rendererErrors: errors };
   fs.mkdirSync(path.dirname(output), { recursive: true }); fs.writeFileSync(output, JSON.stringify(report, null, 2) + '\n');
   console.log(JSON.stringify(report, null, 2)); win.destroy(); app.quit();

@@ -51,20 +51,21 @@
       outgoing.dataset.number = previous;
       const style = node.ownerDocument.defaultView?.getComputedStyle(node);
       if (style) outgoing.style.font = style.font;
-      const easeOut = style?.getPropertyValue('--ease-out').trim() || 'cubic-bezier(.23,1,.32,1)';
-      const easeInOut = style?.getPropertyValue('--ease-in-out').trim() || 'cubic-bezier(.77,0,.175,1)';
       node.append(outgoing); state.outgoing = outgoing; node.dataset.flipping = 'true';
       const generation = ++state.generation;
       try {
         const leaving = outgoing.animate([
-          { transform: 'perspective(320px) rotateX(0deg)', opacity: 1 },
-          { transform: 'perspective(320px) rotateX(85deg)', opacity: 0 }
-        ], { duration: 100, easing: easeInOut, fill: 'both' });
+          { transform: 'translateY(0) scaleY(1)', opacity: 1, easing: 'steps(1, end)' },
+          { transform: 'translateY(-4px) scaleY(.75)', opacity: .55, offset: .35, easing: 'steps(1, end)' },
+          { transform: 'translateY(-6px) scaleY(.5)', opacity: 0 }
+        ], { duration: 100, fill: 'both' });
         state.motions = [leaving];
         const entering = state.face.animate([
-          { transform: 'perspective(320px) rotateX(-85deg)', opacity: 0 },
-          { transform: 'perspective(320px) rotateX(0deg)', opacity: 1 }
-        ], { duration: 100, delay: 100, easing: easeOut, fill: 'both' });
+          { transform: 'translateY(6px) scaleY(.5)', opacity: 0, easing: 'steps(1, end)' },
+          { transform: 'translateY(2px) scaleY(.75)', opacity: .8, offset: .25, easing: 'steps(1, end)' },
+          { transform: 'translateY(0) scaleY(1)', opacity: 1, offset: .7 },
+          { transform: 'translateY(0) scaleY(1)', opacity: 1 }
+        ], { duration: 100, delay: 100, fill: 'both' });
         state.motions.push(entering);
         Promise.all(state.motions.map(motion => motion.finished)).catch(() => {}).then(() => {
           if (state.generation === generation) settle(state);

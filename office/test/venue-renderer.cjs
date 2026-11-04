@@ -157,13 +157,13 @@ app.whenReady().then(async () => {
     await run(`HTMLImageElement.prototype.decode=realDecode;void 0`);
     await venue('workshop');await venue('teahouse');
   });
-  await check('all nine local mechanisms show at least 31 distinct continuously sampled poses',async()=>{
+  await check('all nine local mechanisms show distinct poses with deliberate holds',async()=>{
     for(const item of Venues.CATALOG)for(const interaction of item.interactions){
       await venue(item.id,{reducedMotion:false,lowPower:false,hidden:false});
       await run(`window.venueAudit={frames:[],done:false,start:performance.now()};window.auditObject=${widget(interaction.id)};function sampleVenue(t){const signature=[...auditObject.querySelectorAll('*')].map(n=>{const s=getComputedStyle(n);return s.transform+'|'+s.opacity}).join(';');venueAudit.frames.push({at:t,signature});if(t-venueAudit.start>=850)venueAudit.done=true;else requestAnimationFrame(sampleVenue)}requestAnimationFrame(sampleVenue);auditObject.querySelector('.venue-control').dispatchEvent(new MouseEvent('click',{bubbles:true,detail:1}));void 0`);
       await until('venueAudit.done','the '+interaction.id+' sampled action must finish');
       const report=await run(`({id:auditObject.dataset.interaction,frames:venueAudit.frames.length,elapsed:venueAudit.frames.at(-1).at-venueAudit.frames[0].at,unique:new Set(venueAudit.frames.map(f=>f.signature)).size})`);
-      assert.ok(report.frames>=31,JSON.stringify(report));assert.ok(report.elapsed>=600,JSON.stringify(report));assert.ok(report.unique>=31,JSON.stringify(report));samples.push(report);
+      assert.ok(report.frames>=31,JSON.stringify(report));assert.ok(report.elapsed>=600,JSON.stringify(report));assert.ok(report.unique>=6&&report.unique<report.frames,JSON.stringify(report));samples.push(report);
     }
   });
   await check('callbacks are decorative and scene changes retain the original body node and visibility', async () => {

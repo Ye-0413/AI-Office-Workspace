@@ -1270,7 +1270,12 @@
     actor.arrivedAt = performance.now();
     actor.node.dataset.traffic = 'arrived';
     if (!quietSprites()) {
-      actor.arrival.animate([{ opacity: 0, transform: 'scale(.95)' }, { opacity: .8, offset: .25 }, { opacity: 0, transform: 'scale(1.3)' }], { duration: 500, easing: 'cubic-bezier(.23,1,.32,1)' });
+      actor.arrival.animate([
+        { opacity: .85, transform: 'translateY(0px)', easing: 'step-end' },
+        { opacity: .45, transform: 'translateY(2px)', offset: .42, easing: 'step-end' },
+        { opacity: .25, transform: 'translateY(4px)', offset: .72, easing: 'step-end' },
+        { opacity: 0 }
+      ], { duration: 280 });
     }
     return true;
   }
@@ -1393,50 +1398,52 @@
   }
   function addEffect(kind, point, target) {
     if (quietSprites()) return;
-    const effect = element('span', 'scene-effect ' + (kind === 'delivery' || kind === 'reply' ? 'note-delivery' : 'task-spark'), kind === 'delivery' ? '✓' : kind === 'reply' ? '≡' : kind === 'problem' ? '!' : '✦');
+    const effect = element('span', 'scene-effect ' + (kind === 'delivery' || kind === 'reply' ? 'note-delivery' : 'task-spark'), kind === 'delivery' ? '✓' : kind === 'reply' ? '≡' : kind === 'problem' ? '!' : '');
+    effect.dataset.effect = ['delivery', 'reply', 'problem'].includes(kind) ? kind : 'success';
     $('effects').append(effect);
-    const from = { x: point.x * 12.8, y: point.y * 7.2 - 48 };
-    const to = target ? { x: target.x * 12.8, y: target.y * 7.2 - 45 } : { x: from.x + 7, y: from.y - 40 };
+    const grid = value => Math.round(value / 2) * 2;
+    const from = { x: grid(point.x * 12.8), y: grid(point.y * 7.2 - 48) };
+    const to = target ? { x: grid(target.x * 12.8), y: grid(target.y * 7.2 - 45) } : { x: from.x + 8, y: from.y - 40 };
     const animation = effect.animate([
-      { transform: 'translate(' + from.x + 'px,' + from.y + 'px) rotate(-7deg)', opacity: 0 },
-      { transform: 'translate(' + from.x + 'px,' + (from.y - 7) + 'px) rotate(-3deg)', opacity: 1, offset: .18 },
-      { transform: 'translate(' + to.x + 'px,' + to.y + 'px) rotate(8deg)', opacity: 0 }
-    ], { duration: kind === 'delivery' ? 1400 : 900, easing: 'cubic-bezier(.77,0,.175,1)' });
+      { transform: `translate(${from.x}px,${from.y}px)`, opacity: 1, easing: 'steps(3,end)' },
+      { transform: `translate(${from.x}px,${from.y - 8}px)`, opacity: 1, offset: .18, easing: 'steps(7,end)' },
+      { transform: `translate(${to.x}px,${to.y}px)`, opacity: 0 }
+    ], { duration: kind === 'delivery' ? 1400 : 900 });
     animation.finished.catch(() => {}).finally(() => effect.remove());
   }
   // A turn boundary is the only evidence here; the sparkle never claims success.
   function turnSparkles(point) {
     if (quietSprites()) return;
-    const x = point.x * 12.8, y = point.y * 7.2 - 120;
-    [[-24, 34], [-9, 46], [10, 40], [25, 30]].forEach(([dx, rise], index) => {
-      const spark = element('span', 'scene-effect turn-spark', '✦');
+    const x = Math.round(point.x * 6.4) * 2, y = Math.round((point.y * 7.2 - 120) / 2) * 2;
+    [[-24, 34], [-10, 46], [10, 40], [24, 30]].forEach(([dx, rise], index) => {
+      const spark = element('span', 'scene-effect turn-spark');
       $('effects').append(spark);
       const motion = spark.animate([
-        { transform: `translate(${x + dx * .4}px,${y}px) scale(.6)`, opacity: 0 },
-        { transform: `translate(${x + dx * .8}px,${y - rise * .45}px) scale(1)`, opacity: 1, offset: .35 },
-        { transform: `translate(${x + dx}px,${y - rise}px) scale(.7)`, opacity: 0 }
-      ], { duration: 700, delay: 140 + index * 60, easing: 'cubic-bezier(.23,1,.32,1)', fill: 'backwards' });
+        { transform: `translate(${x}px,${y}px)`, opacity: 0, easing: 'step-end' },
+        { transform: `translate(${x + dx / 2}px,${y - rise / 2}px)`, opacity: 1, offset: .22, easing: 'step-end' },
+        { transform: `translate(${x + dx}px,${y - rise}px)`, opacity: .62, offset: .65, easing: 'step-end' },
+        { transform: `translate(${x + dx}px,${y - rise}px)`, opacity: 0 }
+      ], { duration: 540, delay: 140 + index * 60, fill: 'backwards' });
       motion.finished.catch(() => {}).finally(() => spark.remove());
     });
   }
   const BODY_CUES = Object.freeze({
-    hop: { duration: 640, frames: [
-      { transform: 'translateY(0px) scale(1,1)', easing: 'cubic-bezier(.23,1,.32,1)' },
-      { transform: 'translateY(0px) scale(1.04,.94)', offset: .15, easing: 'cubic-bezier(.23,1,.32,1)' },
-      { transform: 'translateY(-6px) scale(.97,1.04)', offset: .45, easing: 'cubic-bezier(.37,0,.63,1)' },
-      { transform: 'translateY(0px) scale(1.04,.95)', offset: .75, easing: 'cubic-bezier(.37,0,.63,1)' },
-      { transform: 'translateY(0px) scale(1,1)' }] },
-    startle: { duration: 300, frames: [
-      { transform: 'translate(0px,0px)', easing: 'cubic-bezier(.37,0,.63,1)' },
-      { transform: 'translate(-1.5px,-1px)', offset: .2, easing: 'cubic-bezier(.37,0,.63,1)' },
-      { transform: 'translate(1.5px,0px)', offset: .45, easing: 'cubic-bezier(.37,0,.63,1)' },
-      { transform: 'translate(-1px,0px)', offset: .7, easing: 'cubic-bezier(.37,0,.63,1)' },
-      { transform: 'translate(0px,0px)' }] }
+    hop: { duration: 520, frames: [
+      { transform: 'translateY(0px)', easing: 'step-end' },
+      { transform: 'translateY(-4px)', offset: .18, easing: 'step-end' },
+      { transform: 'translateY(-8px)', offset: .38, easing: 'step-end' },
+      { transform: 'translateY(-4px)', offset: .62, easing: 'step-end' },
+      { transform: 'translateY(0px)' }] },
+    startle: { duration: 280, frames: [
+      { transform: 'translate(0px,0px)', easing: 'step-end' },
+      { transform: 'translate(-2px,-2px)', offset: .2, easing: 'step-end' },
+      { transform: 'translate(2px,0px)', offset: .45, easing: 'step-end' },
+      { transform: 'translate(0px,0px)', offset: .7 }] }
   });
   function leanFrames(direction) {
-    const lean = `rotate(${Math.sign(direction) * 2}deg)`;
-    return [{ transform: 'rotate(0deg)', easing: 'cubic-bezier(.37,0,.63,1)' }, { transform: lean, offset: .25 },
-      { transform: lean, offset: .7, easing: 'cubic-bezier(.37,0,.63,1)' }, { transform: 'rotate(0deg)' }];
+    const lean = `translateX(${Math.sign(direction) * 2}px)`;
+    return [{ transform: 'translateX(0px)', easing: 'step-end' }, { transform: lean, offset: .2, easing: 'step-end' },
+      { transform: 'translateX(0px)', offset: .7 }];
   }
   // Body cues add onto whatever the body is doing and own no route or clock.
   function bodyCue(actor, kind, direction = 0) {
@@ -1444,12 +1451,11 @@
     const cue = kind === 'glance' ? direction && { duration: 1200, frames: leanFrames(direction) } : BODY_CUES[kind];
     if (!cue) return;
     actor.bodyCue?.cancel();
+    if (kind !== 'hop' && actor.performance?.cue?.(kind, { direction })) return;
     const motion = actor.body.animate(cue.frames, { duration: cue.duration, composite: 'add' });
     actor.bodyCue = motion;
     motion.finished.catch(() => {}).finally(() => { if (actor.bodyCue === motion) actor.bodyCue = null; });
-    requestAnimationFrame(() => {
-      if (actor.bodyCue === motion && kind !== 'hop') actor.performance?.cue?.(kind, { direction });
-    });
+
   }
   function parentGlance(parent, child, toward) {
     if (!parent || parent === child || parent.motion) return;
@@ -1759,20 +1765,7 @@
     const p = persona(actor.session);
     const pose = ['teacup','bookmark','leaf'].includes(p.keepsake) ? 'clawd-aegyo-shy.svg' : ['paperboat','lantern','bell'].includes(p.keepsake) ? 'clawd-react-double.svg' : 'clawd-react-double-jump.svg';
     setPose(actor, pose, true);
-    if (!quietSprites()) {
-      if (actor.design?.renderer === 'creature') actor.performance?.cue?.('wave');
-      const arm = actor.body.querySelector('.ap-arm-right');
-      if (arm) {
-        const wave = arm.animate([{ transform: 'translate(0px,0px) rotate(0deg)' },
-          { transform: 'translate(0px,-5px) rotate(-12deg)', offset: .25 },
-          { transform: 'translate(0px,-4px) rotate(6deg)', offset: .5 },
-          { transform: 'translate(0px,-5px) rotate(-10deg)', offset: .75 },
-          { transform: 'translate(0px,0px) rotate(0deg)' }],
-        { duration: 1000, composite: 'add', easing: 'cubic-bezier(.77,0,.175,1)' });
-        const effect = { cancel: () => wave.cancel() }; actor.cloneEffects.add(effect);
-        wave.finished.catch(() => {}).finally(() => { actor.cloneEffects.delete(effect); wave.cancel(); });
-      }
-    }
+    if (!quietSprites()) actor.performance?.cue?.('wave');
     say(actor, language === 'en' ? p.greetingEn : p.greetingZh, 3000);
     if (!await delay(actor, 3000, serial)) return;
     actor.node.dataset.reaction = 'false';

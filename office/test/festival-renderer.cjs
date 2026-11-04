@@ -34,7 +34,7 @@ app.whenReady().then(async()=>{
     assert.equal(await run(`document.querySelector('.festival-chooser').open`),false);
     assert.equal(await run(`document.activeElement.classList.contains('festival-summary')`),true);
   });
-  await check('every authored theme has different SVG geometry and at least 31 actual continuous frames',async()=>{
+  await check('every theme has different geometry and holds its pixel poses across paint frames',async()=>{
     for(const theme of F.THEMES){
       await update({theme:theme.id,weather:'off',reducedMotion:false,lowPower:false,hidden:false});
       assert.equal(await run(`document.querySelector('.festival-control').getAttribute('aria-label')`),theme.actionZh);
@@ -43,7 +43,7 @@ app.whenReady().then(async()=>{
       await run(`window.audit={seen:false,done:false,frames:[],start:performance.now()};function sampleFestival(t){const w=document.querySelector('.festival-widget'),p=document.querySelector('.festival-primary');if(w?.dataset.playing==='true'){audit.seen=true;const s=getComputedStyle(p);audit.frames.push({at:t,transform:s.transform,opacity:s.opacity});}else if(audit.seen){audit.done=true;audit.end=t;}if(!audit.done&&t-audit.start<2400)requestAnimationFrame(sampleFestival)}requestAnimationFrame(sampleFestival);document.querySelector('.festival-control').dispatchEvent(new MouseEvent('click',{bubbles:true,detail:1}));void 0`);
       await until(`audit.done`,'the '+theme.id+' interaction must finish a real presentation');
       const report=await run(`({id:document.querySelector('.festival-stage').dataset.theme,frames:audit.frames.length,elapsed:audit.frames.at(-1).at-audit.frames[0].at,unique:new Set(audit.frames.map(f=>f.transform+'|'+f.opacity)).size,at:audit.frames.map(f=>f.at)})`);
-      assert.equal(report.id,theme.id);assert.ok(report.frames>=31,JSON.stringify(report));assert.ok(report.unique>=31,JSON.stringify(report));assert.ok(report.elapsed>=600,JSON.stringify(report));
+      assert.equal(report.id,theme.id);assert.ok(report.frames>=31,JSON.stringify(report));assert.ok(report.unique>=10&&report.unique<=15&&report.unique<report.frames,JSON.stringify(report));assert.ok(report.elapsed>=600,JSON.stringify(report));
       assert.ok(report.at.every((at,i)=>!i||at>report.at[i-1]),'samples must come from consecutive actual RAF callbacks');samples.push(report);
       if(F.CORE_THEMES.some(core=>core.id===theme.id))await capture('festival-'+theme.id);
       if(preview){const source=await run(`(()=>{const svg=document.querySelector('.festival-art').cloneNode(true);svg.setAttribute('xmlns','http://www.w3.org/2000/svg');return svg.outerHTML})()`);fs.mkdirSync(preview,{recursive:true});fs.writeFileSync(path.join(preview,'festival-'+theme.id+'.svg'),source);}

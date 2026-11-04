@@ -242,7 +242,7 @@
       layer.dataset.theme=recipe.id;windowLayer.dataset.theme=recipe.id;
       apply(records.get(recipe.id)||0);
     }
-    function apply(step) {
+    function apply(step, instant = false) {
       layer.dataset.step=String(step); windowLayer.dataset.step=String(step);
       const even=step%2===0;
       for(const item of moving){item.node.dataset.active=String(!even);item.node.style.setProperty('--theme-response',String(step%4));}
@@ -265,6 +265,7 @@
         else if(name==='chess'){x=[0,7,17,5][phase];y=[0,-12,-5,-15][phase];}
         else if(['lamp','candle','lantern','star','moon'].includes(name)){sy=[.91,1,.96,1.02][phase];y=[0,-2,1,-1][phase];}
         else{x=[0,-3,5,1][phase];y=[0,-2,-5,-1][phase];r=[0,3,-4,1][phase];}
+        ink.style.transition=instant?'none':'';
         ink.style.transform='translate('+x+'px,'+y+'px) rotate('+r+'deg) scale('+sx+','+sy+')';
         ink.dataset.phase=String(phase);
       }
@@ -287,16 +288,17 @@
         const matrix=new view.DOMMatrixReadOnly(view.getComputedStyle(item.node).transform);
         return{x:matrix.m41,y:matrix.m42,rotation:Math.atan2(matrix.m12,matrix.m11)*180/Math.PI,scale:Math.hypot(matrix.m11,matrix.m12)};
       });
-      const step=(records.get(selected)||0)+1;records.set(selected,step);cancel();apply(step);
-      if(quiet())return true;
+      const instant=quiet()||payload.source==='keyboard';
+      const step=(records.get(selected)||0)+1;records.set(selected,step);cancel();apply(step,instant);
+      if(instant)return true;
       const token=serial;layer.dataset.playing='true';
       // Every response moves the window habitat and both wall groups. The
-      // action-specific geometry has independent paths instead of a blanket
-      // translate/rotate applied to the complete room or any real character.
-      const kind=recipe.response;
+      // action-specific geometry has independent cels, including the visible
+      // pose at interruption. Only the decorative layers participate.
+      const kind=recipe.response, cells=14;
       moving.forEach((item,index)=>{
-        const frames=Array.from({length:41},(_,i)=>{
-          const p=i/40,s=Math.sin(p*Math.PI),settle=Math.sin(p*Math.PI*4)*(1-p);
+        const frames=Array.from({length:cells+1},(_,i)=>{
+          const p=i/cells,s=Math.sin(p*Math.PI),settle=Math.sin(p*Math.PI*4)*(1-p);
           let x=0,y=0,r=0,scale=1;
           if(['grow','bloom','open','find'].includes(kind)){y=-s*(index%2?5:9);scale=1+s*(index%2?.035:.08);}
           else if(['breeze','weave','answer-wind','tie','braid'].includes(kind)){x=Math.sin(p*Math.PI*3+index*.7)*(1-p)*s*7;r=settle*(index%2?-5:5);}
@@ -306,7 +308,8 @@
           else{x=Math.sin(p*Math.PI*2)*(1-p)*(index%2?-4:4);y=-s*(3+index%3);r=settle*(index%2?-3:3);}
           const progress=Math.min(1,p/.24),bridge=1-progress*progress*(3-2*progress),prior=before[index];
           x+=prior.x*bridge;y+=prior.y*bridge;r+=prior.rotation*bridge;scale+=(prior.scale-1)*bridge;
-          return{offset:p,transform:'translate('+x.toFixed(4)+'px,'+y.toFixed(4)+'px) rotate('+r.toFixed(4)+'deg) scale('+scale.toFixed(5)+')',opacity:1};
+          if(i){x=Math.round(x/2)*2;y=Math.round(y/2)*2;r=Math.round(r/2)*2;scale=Math.round(scale*32)/32;}
+          return{offset:p,transform:'translate('+x+'px,'+y+'px) rotate('+r+'deg) scale('+scale+')',opacity:1,easing:'steps(1, end)'};
         });
         const a=item.node.animate(frames,{duration:1100,easing:'linear'});animations.push(a);
       });
