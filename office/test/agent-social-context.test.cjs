@@ -56,7 +56,7 @@ test('visual language/theme/artwork changes use one original160ms frozen-pose ex
     Object.assign(f.settings,patch);f.api.update();
     assert.equal(f.api.state().active,null);assert.equal(f.api.state().exiting.token,token);assert.equal(f.layer.children[0],original);
     owned.forEach((a,i)=>{assert.equal(a.playState,'paused');assert.equal(a.currentTime,times[i]);});assert.equal(f.work.playState,'running');
-    const fade=f.motions.at(-1);assert.equal(fade.effect.target,original);assert.equal(fade.options.duration,160);assert.equal(fade.options.easing,'steps(3,end)');
+    const fade=f.motions.at(-1);assert.equal(fade.effect.target,original);assert.equal(fade.options.duration,160);assert.equal(fade.options.easing,'cubic-bezier(.23,1,.32,1)');
     const stateBefore=f.api.state();assert.equal(f.api.trigger({kind:'paperplane-nod'}),false);assert.deepEqual(f.api.state(),stateBefore,'outgoing cannot consume another scheduler start');
     await f.step(80);f.api.update();assert.equal(f.layer.children.length,1);assert.ok(fade.alpha()>0&&fade.alpha()<1);owned.forEach((a,i)=>assert.equal(a.currentTime,times[i]));assert.ok(f.work.currentTime>workAt);
     await f.step(81);assert.equal(f.layer.children.length,0);assert.equal(f.api.state().exiting,null);assert.equal(f.raf.size,0);f.api.update();assert.equal(f.layer.children.length,0,'context updates never replay the old invitation');f.api.destroy();
@@ -96,13 +96,14 @@ test('actual artwork confirmation is a visual change while rawauto resolving to 
 
 const additions=[['workshop','gear-turn',3000,'.social-gear-rotor',2],['teahouse','fan-breeze',3200,'.social-fan-rib',7],['observatory','orbit-join',3200,'.social-orbit-half',2]];
 for(const[venue,kind,duration,part,count]of additions){
-  test(`${kind} has its own authored 28-beat pixel geometry and finite overlay owner while real actors keep their work`,async()=>{
+  test(`${kind} has its own authored motion at 30 samples per second and finite overlay owner while real actors keep their work`,async()=>{
     const f=fixture();f.settings.venue=venue;const before=f.actors.map(a=>({session:structuredClone(a.session),position:{...a.position},serial:a.serial,node:a.node,body:a.body})),work=f.work,workAt=work.currentTime;
     assert.equal(f.api.trigger({kind}),true);assert.equal(f.api.state().active.kind,kind);const original=f.layer.children[0],owned=original.getAnimations({subtree:true});
     assert.equal(original.querySelectorAll(part).length,count);assert.equal(original.querySelectorAll('.social-hand').length,2);assert.equal(original.querySelectorAll('.social-reaction').length,2);
-    const tracks=owned.filter(m=>m.frames.length===29);assert.ok(tracks.length>=3,'the mechanism has independently authored held-cel tracks');
-    for(const motion of tracks){assert.equal(motion.options.duration,duration);assert.equal(motion.options.iterations,undefined);assert.equal(motion.frames[0].offset,0);assert.equal(motion.frames.at(-1).offset,1);for(let i=0;i<29;i++){const frame=motion.frames[i];assert.ok(!/NaN|Infinity/.test(frame.transform||''));if(i)assert.ok(frame.offset>motion.frames[i-1].offset);assert.equal(frame.easing,'steps(1, end)','each authored prop cel is held until the next beat');}}
-    const combined=Array.from({length:29},(_,i)=>tracks.map(m=>JSON.stringify({transform:m.frames[i].transform})).join('|'));assert.ok(new Set(combined).size>=18);
+    const samples=Math.ceil(duration*30/1000)+1;
+    const tracks=owned.filter(m=>m.frames.length===samples);assert.ok(tracks.length>=3,'the mechanism has independently authored motion tracks');
+    for(const motion of tracks){assert.equal(motion.options.duration,duration);assert.equal(motion.options.iterations,undefined);assert.equal(motion.frames[0].offset,0);assert.equal(motion.frames.at(-1).offset,1);for(let i=0;i<samples;i++){const frame=motion.frames[i];assert.ok(!/NaN|Infinity/.test(frame.transform||''));if(i)assert.ok(frame.offset>motion.frames[i-1].offset);assert.equal(frame.easing,'linear','neighboring samples interpolate continuously');}}
+    const combined=Array.from({length:samples},(_,i)=>tracks.map(m=>JSON.stringify({transform:m.frames[i].transform})).join('|'));assert.ok(new Set(combined).size>=18);
     await f.step(740);assert.equal(f.layer.children[0],original);assert.equal(work,f.work);assert.equal(work.playState,'running');assert.ok(work.currentTime>workAt);
     f.actors.forEach((a,i)=>{assert.deepEqual(a.session,before[i].session);assert.deepEqual(a.position,before[i].position);assert.equal(a.serial,before[i].serial);assert.equal(a.node,before[i].node);assert.equal(a.body,before[i].body);});
     await f.step(duration-740+1);assert.equal(f.layer.children.length,0);assert.equal(f.api.state().active,null);assert.equal(f.raf.size,0);assert.equal(work.playState,'running');f.api.destroy();

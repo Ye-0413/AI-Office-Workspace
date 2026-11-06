@@ -8,9 +8,9 @@ This notice accompanies the five workshop characters in AI Work Space (formerly 
 
 ## Pixel style / 像素风
 
-The Pixel style is drawn on an integer grid by `office/scripts/draw-pixel-companions.cjs`. It generates five transparent 3×2 pose atlases (`avatars/workshop-<species>.png`), 55 four-cel activity strips (`avatars/frames/<species>/<activity>.png`) and five nine-cel expression strips (`avatars/pixel-emotes-<species>.png`). The generator defines the character contours, palettes and props directly in code.
+The Pixel style is drawn on an integer grid by `office/scripts/draw-pixel-companions.cjs`. It generates five transparent 3×2 pose atlases (`avatars/workshop-<species>.png`), 55 activity sheets with 30 pixel cels per second (`avatars/frames/<species>/<activity>.png`) and five expression and gait sheets (`avatars/pixel-emotes-<species>.png`). The generator defines the character contours, palettes and props directly in code.
 
-像素风由 `office/scripts/draw-pixel-companions.cjs` 在整数像素网格上绘制，生成五张 3×2 透明姿态图集（`avatars/workshop-<species>.png`）、55 条四帧活动帧条（`avatars/frames/<species>/<activity>.png`）和五条九帧表情帧条（`avatars/pixel-emotes-<species>.png`）。角色轮廓、配色与道具由脚本直接定义。
+像素风由 `office/scripts/draw-pixel-companions.cjs` 在整数像素网格上绘制，生成五张 3×2 透明姿态图集（`avatars/workshop-<species>.png`）、55 张每秒 30 帧的活动图集（`avatars/frames/<species>/<activity>.png`）和五张表情与步态图集（`avatars/pixel-emotes-<species>.png`）。角色轮廓、配色与道具由脚本直接定义。
 
 ## Painted style / 手绘风
 

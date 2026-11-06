@@ -1,5 +1,5 @@
 'use strict';
-// Five real painted companions, isolated passive visual observations only.
+// Five pixel companions, isolated passive visual observations only.
 const { app, BrowserWindow } = require('electron');
 const fs = require('node:fs'), os = require('node:os'), path = require('node:path'), assert = require('node:assert/strict');
 const { pathToFileURL } = require('node:url');
@@ -21,7 +21,7 @@ app.whenReady().then(async () => {
   win.webContents.on('console-message', detail => { if (detail.level === 'error') errors.push(detail.message); });
   await win.loadFile(file);
   const end = Date.now() + 10000;
-  while (!await run(`entries.every(e=>e.body.querySelector('.creature-performance').dataset.artState==='healthy')`)) { if (Date.now() > end) throw Error('Painted standby bodies did not load'); await pause(30); }
+  while (!await run(`entries.every(e=>e.body.querySelector('.creature-performance').dataset.artState==='healthy')`)) { if (Date.now() > end) throw Error('Pixel standby bodies did not load'); await pause(30); }
   assert.equal(await run(`entries.every(e=>e.body.querySelector('.creature-performance').dataset.pose===(e.standby.state.phase==='play'?'idle':'resting')&&e.standby.state.animations===3)`), true);
   const fixed = await run(`entries.map(e=>({box:e.node.getBoundingClientRect().toJSON(),label:e.node.querySelector('.label').getBoundingClientRect().toJSON(),session:JSON.stringify(e.session)}))`);
   await run(`window.owners=entries.map(e=>e.body.getAnimations({subtree:true}).filter(a=>a.effect?.target?.matches('.cp-shell,.standby-sleep,.standby-toy')));for(const e of entries)e.standby.update({standby:true,hidden:true});void 0`);
@@ -31,6 +31,18 @@ app.whenReady().then(async () => {
   assert.equal(await run(`entries.every((e,i)=>owners[i].every(a=>e.body.getAnimations({subtree:true}).includes(a)))`), true, 'unhiding retains exact native owners');
   for (const phase of ['doze', 'play']) {
     await run(`(async()=>{for(const e of entries){while(e.standby.state.phase!==${JSON.stringify(phase)}){e.body.getAnimations({subtree:true}).find(a=>a.effect?.target===e.body.querySelector('.cp-shell')).finish();await Promise.resolve();}e.standby.update({standby:true,hidden:true});for(const a of e.body.getAnimations({subtree:true}).filter(a=>a.effect?.target?.matches('.cp-shell,.standby-sleep,.standby-toy')))a.currentTime=3000;}return true})()`);
+    const motion = await run(`entries.map(e=>{
+      const shell=e.body.querySelector('.cp-shell'),clock=shell.getAnimations()[0];
+      const samples=Array.from({length:12},(_,i)=>{
+        clock.currentTime=800+i*1000/30;
+        const foot=new DOMPoint(77.5,115).matrixTransform(shell.getScreenCTM());
+        return {transform:getComputedStyle(shell).transform,x:foot.x,y:foot.y};
+      });
+      clock.currentTime=3000;
+      return {poses:new Set(samples.map(s=>s.transform)).size,
+        drift:Math.max(...samples.map(s=>Math.hypot(s.x-samples[0].x,s.y-samples[0].y)))};
+    })`);
+    assert.ok(motion.every(sample=>sample.poses>=10&&sample.drift<.03),phase+' has continuous shape changes about the fixed foot: '+JSON.stringify(motion));
     fs.writeFileSync('/tmp/office-standby-' + phase + '.png', (await win.webContents.capturePage()).toPNG());
     await run(`for(const e of entries)e.standby.update({standby:true});void 0`);
   }
@@ -42,5 +54,5 @@ app.whenReady().then(async () => {
   await run(`for(const e of entries){e.standby.update({standby:true});e.standby.update({standby:false,walking:true});}void 0`);
   assert.equal(await run(`entries.every(e=>!e.standby.state.active&&!e.body.querySelector('.standby-decoration'))`), true);
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ ok: true, species: designs.length, nativePauseExact: true, reducedMotionStatic: true, workingArrivalCancels: true, observedSessionsUnchanged: true, previews: ['/tmp/office-standby-doze.png','/tmp/office-standby-play.png'], errors }));
+  console.log(JSON.stringify({ ok: true, species: designs.length, nativePauseExact: true, anchoredIntermediatePoses: true, reducedMotionStatic: true, workingArrivalCancels: true, observedSessionsUnchanged: true, previews: ['/tmp/office-standby-doze.png','/tmp/office-standby-play.png'], errors }));
 }).catch(error => { console.error(error); process.exitCode = 1; }).finally(() => { clearTimeout(guard); win?.destroy(); fs.rmSync(scratch, { recursive: true, force: true }); app.exit(process.exitCode || 0); });

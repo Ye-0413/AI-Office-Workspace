@@ -12,6 +12,20 @@
 .clone-ink-puddle{left:-43px;top:-13px;width:86px;height:20px;clip-path:var(--clone-cel);background:#192b4e;box-shadow:inset 0 -5px #131c34,inset 0 4px #40698c}
 .clone-ink-core{left:-17px;top:-23px;width:34px;height:22px;clip-path:var(--clone-cel);background:#38648e;box-shadow:inset 0 -6px #253b63,inset 5px 4px #619ed0}
 .clone-ink-drop{clip-path:var(--clone-cel);background:#3d73a4;box-shadow:inset 0 -3px #1b2a4d,inset 2px 3px #83b7dc;transform-origin:50% 75%}
+/* One hand-off piece per material, drawn as flat pixel clusters; the family tint follows the body. */
+.clone-material-effect i{left:0;top:0;transform-origin:50% 50%}
+.clone-piece-folio{margin:-4px 0 0 -11px;width:22px;height:8px;background:#fff0c5;box-shadow:inset 0 -2px #c89672,inset 2px 0 #fff8e4,0 0 0 2px #242439}
+.clone-piece-moss{margin:-6px 0 0 -4px;width:8px;height:11px;clip-path:var(--clone-cel);background:#4a3328;box-shadow:inset 2px 2px #79aa58}
+.clone-piece-thread{margin:-3px 0 0 -8px;width:16px;height:6px;clip-path:var(--clone-cel);background:#f38279;box-shadow:inset 0 -2px #c65064,inset 4px 0 #ffb68f}
+.clone-piece-glow{margin:-5px 0 0 -5px;width:10px;height:10px;clip-path:polygon(30% 0,70% 0,70% 30%,100% 30%,100% 70%,70% 70%,70% 100%,30% 100%,30% 70%,0 70%,0 30%,30% 30%);background:#ffce63;box-shadow:inset 3px 3px #fff1d0}
+.clone-scrap{margin:-2px 0 0 -3px;width:6px;height:4px;background:#fff0c5;box-shadow:inset 0 -1px #c89672}
+.clone-spore{margin:-2px 0 0 -2px;width:4px;height:4px;background:#79aa58;box-shadow:inset 1px 1px #bdd979}
+.clone-fiber{margin:-1px 0 0 -4px;width:8px;height:2px;background:#f38279;box-shadow:inset 3px 0 #ffb68f}
+.clone-spark{margin:-2px 0 0 -2px;width:4px;height:4px;background:#ffce63;box-shadow:inset 1px 1px #fff1d0}
+[data-creature-design] :is(.clone-piece-folio,.clone-piece-moss,.clone-piece-thread,.clone-piece-glow,.clone-scrap,.clone-spore,.clone-fiber,.clone-spark){filter:var(--creature-color-filter,none)}
+/* A helper's label waits until its body has gathered and it starts walking. */
+.actor[data-clone-phase="splitting"] .nameplate{transition:opacity 220ms ease-out,background-color 140ms var(--pixel-press),border-color 140ms var(--pixel-press)}
+.actor[data-clone-charge="true"] .nameplate{opacity:0;transition:none}
 .actor[data-clone-phase="returning"] .nameplate,.actor[data-clone-phase="absorbing"] .nameplate{border-style:dashed}
 .actor[data-clone-hold="true"] .actor-state{color:#737e5d}
 .office[data-reduced-motion="true"] .clone-effect,.office[data-low-power="true"] .clone-effect,.office[data-hidden="true"] .clone-effect{display:none}

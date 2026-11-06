@@ -24,6 +24,7 @@ const task = (id, details = {}) => ({
 });
 const sessions = [task(mainId), task(helperId, { parentId: mainId, activity: 'reading' })];
 let win, sessionsReady = false;
+const captureColors = [[244, 24, 56], [24, 244, 56], [24, 56, 244]];
 const settingsWrites = [], errors = [];
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 const run = source => win.webContents.executeJavaScript(source, true);
@@ -33,6 +34,14 @@ const snapshot = () => ({
 });
 const publish = () => win.webContents.send('office:snapshot', snapshot());
 const control = 'document.getElementById("setting-avatarStyle")';
+const chromeStyle = `(() => ({
+  style: document.documentElement.dataset.avatarStyle,
+  tray: getComputedStyle(document.querySelector('.top-actions')).borderRadius,
+  dialog: getComputedStyle(document.getElementById('settings-dialog')).borderRadius,
+  questions: getComputedStyle(document.getElementById('manual-questions-dialog')).borderRadius,
+  icon: getComputedStyle(document.querySelector('#settings-button svg')).display
+}))()`;
+const pixelChrome = { style: 'pixel', tray: '0px', dialog: '0px', questions: '0px', icon: 'none' };
 
 async function until(source, label) {
   const deadline = Date.now() + 12000;
@@ -60,6 +69,7 @@ function ready(style) {
     const source=layer?.querySelector('defs image'), frame=layer?.querySelector('.cp-frame');
     return getComputedStyle(node).visibility==='visible'&&node.dataset.walking!=='true'&&
       layer?.dataset.avatarStyle===${JSON.stringify(style)}&&layer.dataset.artState==='healthy'&&layer.dataset.frames==='true'&&
+      (${JSON.stringify(style)}!=='pixel'||frame?.parentNode.dataset.ready==='true')&&
       image.naturalWidth===${width}&&image.src.endsWith('/'+${JSON.stringify(prefix)}+node.dataset.bodyDesign+'.png')&&
       source?.getAttribute('href').endsWith('/'+${JSON.stringify(prefix)}+node.dataset.bodyDesign+'.png')&&
       frame?.getAttribute('href').includes('/'+${JSON.stringify(directory)}+node.dataset.bodyDesign+'/');
@@ -72,12 +82,44 @@ async function toggleSettings() {
 async function closeSettings() {
   await run(`document.querySelector('#settings-dialog [data-close-dialog]').click();void 0`);
 }
-async function paint() {
-  await run(`new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))`);
-}
 async function capture(rect) {
-  await paint();
-  return Buffer.from((await win.webContents.capturePage(rect)).toBitmap());
+  // Electron may return an older compositor frame after a dialog closes.
+  // Require a new painted swatch outside the actor crop for each comparison.
+  const color = captureColors.shift();
+  const dominant = 2 - color.indexOf(244);
+  const viewport = await run(`(() => {
+    let marker = document.getElementById('compositor-marker');
+    if (!marker) {
+      marker = document.createElement('span');
+      marker.id = 'compositor-marker';
+      marker.style.cssText = 'position:fixed;left:0;top:160px;width:12px;height:12px;z-index:2147483647;pointer-events:none';
+      document.body.append(marker);
+    }
+    marker.style.backgroundColor = 'rgb(${color.join(',')})';
+    return { width: innerWidth, height: innerHeight };
+  })()`);
+  const deadline = Date.now() + 3000;
+  let lastPixel;
+  while (Date.now() < deadline) {
+    await run('new Promise(resolve => requestAnimationFrame(resolve))');
+    const frame = await win.webContents.capturePage();
+    const size = frame.getSize();
+    const sx = size.width / viewport.width, sy = size.height / viewport.height;
+    const at = (Math.floor(165 * sy) * size.width + Math.floor(5 * sx)) * 4;
+    const bgra = frame.toBitmap().subarray(at, at + 4);
+    lastPixel = [...bgra];
+    // Identify the saturated channel rather than exact RGB. The host display
+    // profile can shift bytes, but only one channel can dominate by 100.
+    if (bgra[3] === 255 && bgra[dominant] >= 175 &&
+      bgra.subarray(0, 3).every((value, index) => index === dominant || bgra[dominant] - value >= 100)) {
+      return frame.crop({
+        x: Math.round(rect.x * sx), y: Math.round(rect.y * sy),
+        width: Math.floor(rect.width * sx), height: Math.floor(rect.height * sy)
+      }).toBitmap();
+    }
+    await wait(30);
+  }
+  throw Error('The compositor did not paint the current swatch ' + JSON.stringify({ color, lastPixel }));
 }
 function changedPixels(before, after) {
   assert.equal(before.length, after.length);
@@ -108,7 +150,7 @@ app.whenReady().then(async () => {
   }
   ipcMain.on('office:renderer-error', (_, error) => errors.push(error));
   win = new BrowserWindow({
-    width: 1280, height: 900, show: false, useContentSize: true,
+    width: 1280, height: 900, show: true, focusable: false, useContentSize: true,
     webPreferences: { preload: path.join(__dirname, '../preload.cjs'), sandbox: true, contextIsolation: true, nodeIntegration: false, backgroundThrottling: false }
   });
   win.webContents.on('console-message', detail => { if (detail.level === 'error') errors.push(detail.message); });
@@ -121,6 +163,7 @@ app.whenReady().then(async () => {
   await win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
   await until(`Boolean(${control})&&document.documentElement.lang==='en'`, 'Avatar style control mounts and loads the saved language');
   assert.equal(await run(`${control}.value`), 'pixel');
+  assert.deepEqual(await run(chromeStyle), pixelChrome, 'Pixel styling reaches the tray and both dialog roots');
   assert.deepEqual(await run(`[...${control}.options].map(option=>[option.value,option.textContent])`), [['pixel', 'Pixel'], ['painted', 'Painted']]);
 
   sessionsReady = true;
@@ -154,6 +197,7 @@ app.whenReady().then(async () => {
   assert.equal(await run(`sameFamily()&&familyEvidence.every(({node,layer})=>!layer.isConnected&&!node.querySelector('.cp-emotes'))`), true);
   await until(`[...document.querySelectorAll('.appearance-pose-preview img')].every(img=>img.naturalWidth===1536)`, 'Painted style cards also decode their painted atlases');
   assert.equal(await run(`${control}.value`), 'painted');
+  assert.deepEqual(await run(chromeStyle), { style: 'painted', tray: '5px', dialog: '4px', questions: '5px', icon: 'block' }, 'Settings restore the Painted chrome and original toolbar icons');
   assert.equal(await run(`[...document.querySelectorAll('.actor .creature-performance')].every(layer=>layer.getAnimations({subtree:true}).length===0)`), true, 'Reduced motion holds the painted work cels');
   await run(`document.querySelector('.repertoire-gallery').open=true;void 0`);
   await until(`document.querySelector('.repertoire-preview .painted-creature-performance')?.dataset.frames==='true'&&
@@ -178,10 +222,16 @@ app.whenReady().then(async () => {
   publish();
   await until(ready('pixel'), 'A native settings snapshot switches the same family back to Pixel');
   assert.equal(await run(`${control}.value`), 'pixel');
+  assert.deepEqual(await run(chromeStyle), pixelChrome, 'The macOS menu snapshot restores Pixel UI too');
   assert.equal(await run(`${variation}===null`), true, 'Pixel gallery exposes only its production strips');
   assert.equal(await run(`sameFamily()&&paintedLayers.every(layer=>!layer.isConnected)&&paintedClocks.length>0&&paintedClocks.every(animation=>animation.playState==='idle')`), true, 'Detached painted owners cannot leave stale visible frames or clocks');
   await run(`document.getElementById('setting-reducedMotion').click();void 0`);
-  await until(`[...document.querySelectorAll('.actor .creature-performance')].every(layer=>layer.dataset.frames==='true'&&layer.getAnimations({subtree:true}).length===0&&[...layer.querySelectorAll('.cp-frame')].filter(frame=>Number(getComputedStyle(frame).opacity)>0).length===1)`, 'Reduced motion keeps one opaque pixel cel and releases all native motion');
+  await until(`[...document.querySelectorAll('.actor .creature-performance')].every(layer=>{
+    const frames=layer.querySelectorAll('.cp-frame');
+    if(frames.length!==1||layer.dataset.frames!=='true'||frames[0].parentNode.dataset.ready!=='true'||layer.getAnimations({subtree:true}).length!==0)return false;
+    const style=getComputedStyle(frames[0]);
+    return Number(style.opacity)===1&&new DOMMatrixReadOnly(style.transform).isIdentity;
+  })`, 'Reduced motion holds the first opaque pixel cel and releases all native motion');
   await closeSettings();
   const returnedPixels = await capture(rect);
   const returnDelta = changedPixels(initialPixels, returnedPixels);

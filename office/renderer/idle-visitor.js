@@ -17,7 +17,50 @@
       guest.performance.update({...guest.presentation,activity},{now:Date.now(),reducedMotion:c.reducedMotion,lowPower:c.lowPower,hidden:c.hidden,walking:Boolean(guest.motion)||guest.node.dataset.walking==='true'});
       if(reaction&&!c.reducedMotion&&!c.lowPower&&!c.hidden)guest.performance.cue(reaction === 'rare' && c.avatarStyle === 'painted' ? 'attention' : reaction);
     }
-    function stopMotion(){if(!guest?.motion)return;const matrix=new DOMMatrixReadOnly(getComputedStyle(guest.node).transform);guest.point={x:matrix.m41/12.8,y:matrix.m42/7.2};guest.node.style.transform=transform(guest.point);guest.motion.cancel();guest.motion=null;guest.node.dataset.walking='false';}
+    function stopGaitSample(current) {
+      if (!current?.gaitFrame) return;
+      cancelAnimationFrame(current.gaitFrame);
+      current.gaitFrame = 0;
+    }
+    function syncGait(current) {
+      const route = current.gaitRoute;
+      if (guest !== current || !current.motion || !route || lastContext.hidden || lastContext.lowPower || lastContext.reducedMotion) {
+        stopGaitSample(current);
+        return;
+      }
+      if (current.gaitFrame) return;
+      current.gaitFrame = requestAnimationFrame(function sample() {
+        current.gaitFrame = 0;
+        if (guest !== current || current.motion !== route.owner) return;
+        const progress = route.owner.effect.getComputedTiming().progress;
+        if (Number.isFinite(progress)) {
+          const end = route.points.findIndex(point => point.offset > progress);
+          if (end < 1) current.performance.locomotion({ owner: route.owner, distanceWorld: route.points.at(-1).distanceWorld, speedWorld: 0 });
+          else {
+            const to = route.points[end], from = route.points[end - 1], interval = to.offset - from.offset;
+            const fraction = (progress - from.offset) / interval, distance = to.distanceWorld - from.distanceWorld;
+            current.performance.locomotion({ owner: route.owner, distanceWorld: from.distanceWorld + distance * fraction,
+              speedWorld: distance * 1000 / (interval * route.duration) });
+          }
+        }
+        syncGait(current);
+      });
+    }
+    function releaseGait(current) {
+      stopGaitSample(current);
+      current.performance.locomotion(null, current.motion);
+      current.gaitRoute = null;
+    }
+    function stopMotion() {
+      if (!guest?.motion) return;
+      const matrix = new DOMMatrixReadOnly(getComputedStyle(guest.node).transform);
+      guest.point = { x: matrix.m41 / 12.8, y: matrix.m42 / 7.2 };
+      guest.node.style.transform = transform(guest.point);
+      releaseGait(guest);
+      guest.motion.cancel();
+      guest.motion = null;
+      guest.node.dataset.walking = 'false';
+    }
     function clearProps(){for(const prop of world.querySelectorAll('[data-visitor-active]'))delete prop.dataset.visitorActive;}
     function remove(){if(!guest)return;stopMotion();clearTimeout(guest.bubbleTimer);guest.performance.destroy();guest.node.remove();guest=null;clearProps();world.dataset.visitor='false';}
     function copy(){if(!guest)return;const en=lastContext.language==='en';guest.title.textContent=guest.name[en?1:0];guest.badge.textContent=en?'VISITOR':'串门访客';guest.state.textContent=guest.leaving?(en?'Heading out':'下次再来'):en?'Just visiting':'随便逛逛';guest.button.setAttribute('aria-label',(en?'Decorative visitor ':'装饰访客 ')+guest.title.textContent+(en?'; click to say hello':'；点击打招呼'));if(guest.quote)guest.bubble.textContent=guest.quote[en?'en':'zh'];}
@@ -31,7 +74,7 @@
       node.dataset.bodyDesign=design.id;node.dataset.bodyAppearance=design.id+':0';
       image.dataset.asset=design.asset;image.src='../assets/avatars/'+design.asset;
       const performance=root.OfficeAvatarPerformance.create({actorNode:node,body,image,session:presentation,design});
-      guest={node,button,image,design,title,badge,state,bubble,trinket,performance,presentation,name:names[Math.floor(Math.random()*names.length)],point:{x:Scene.ZONES.exit.x,y:Scene.ZONES.exit.y},motion:null,generation:-1,stopSerial:-1,bubbleTimer:0,quote:null,wantedPose:'looking',leaving:false,lastHello:0};
+      guest={node,button,image,design,title,badge,state,bubble,trinket,performance,presentation,name:names[Math.floor(Math.random()*names.length)],point:{x:Scene.ZONES.exit.x,y:Scene.ZONES.exit.y},motion:null,gaitRoute:null,gaitFrame:0,generation:-1,stopSerial:-1,bubbleTimer:0,quote:null,wantedPose:'looking',leaving:false,lastHello:0};
       node.style.transform=transform(guest.point);world.dataset.visitor='true';copy();pose('looking');openDoor();
       image.addEventListener('error',()=>{if(guest?.image===image)image.hidden=true;});
       image.addEventListener('load',()=>{if(guest?.image===image&&image.naturalWidth>0)image.hidden=false;});
@@ -43,12 +86,30 @@
       if(Scene.ROOM_LAYOUT&&path.length<2&&Scene.distance(current.point,target)>.001){remove();director.clear();return;}
       const finish=()=>{if(guest!==current||current.generation!==generation||current.stopSerial!==stopSerial)return false;current.point={x:target.x,y:target.y};current.node.style.transform=transform(current.point);current.node.style.zIndex=String(Math.round(target.y*10));current.node.dataset.walking='false';return true;};
       if(!lastContext.reducedMotion&&length>.65&&path.length>1){
-        let traveled=0;const frames=path.map((point,index)=>{if(index)traveled+=Scene.distance(path[index-1],point);const steps=index<path.length-1?Math.max(1,Math.ceil(Scene.distance(point,path[index+1])*3)):1;return{transform:transform(point),offset:traveled/length,easing:'steps('+steps+',end)'};});
-        current.node.dataset.walking='true';pose('looking');
-        const motion=current.node.animate(frames,{duration:Math.max(360,Math.min(leaving?2400:6000,length*(leaving?34:65))),easing:'linear',fill:'forwards'});current.motion=motion;
-        if(lastContext.hidden)motion.pause();
-        try{await motion.finished;}catch{return;}
-        if(!finish())return;current.motion=null;motion.cancel();
+        let traveled = 0, distanceWorld = 0;
+        const points = path.map((point, index) => {
+          if (index) {
+            const previous = path[index - 1];
+            traveled += Scene.distance(previous, point);
+            distanceWorld += Math.hypot((point.x - previous.x) * 12.8, (point.y - previous.y) * 7.2);
+          }
+          return { transform: transform(point), offset: traveled / length, distanceWorld };
+        });
+        const duration = Math.max(360, Math.min(leaving ? 2400 : 6000, length * (leaving ? 34 : 65)));
+        const frames = points.map(({ transform, offset }) => ({ transform, offset }));
+        current.node.dataset.walking = 'true';
+        pose('looking');
+        const motion = current.node.animate(frames, { duration, easing: 'linear', fill: 'forwards' });
+        current.motion = motion;
+        current.gaitRoute = { owner: motion, points, duration };
+        if (lastContext.hidden) motion.pause();
+        syncGait(current);
+        try { await motion.finished; } catch { return; }
+        if (current.motion !== motion) return;
+        releaseGait(current);
+        if (!finish()) return;
+        current.motion = null;
+        motion.cancel();
       }else if(!finish())return;
       if(leaving){openDoor();remove();director.departed(generation);return;}
       director.arrived(stopSerial,generation);pose(current.stop.pose,current.stop.easterEgg?'rare':'');current.trinket.textContent=current.stop.easterEgg?'✚':({book:'≡',coffee:'▪',plant:'♟',note:'▤',broom:'⌁',star:'✚'})[current.stop.prop]||'';
@@ -81,6 +142,7 @@
       if(previous&&(previous.hidden!==lastContext.hidden||previous.reducedMotion!==lastContext.reducedMotion||previous.lowPower!==lastContext.lowPower)){
         if(guest.motion){if(lastContext.hidden)guest.motion.pause();else guest.motion.play();if(lastContext.reducedMotion){const target=guest.stop.point;stopMotion();travel(target,state.generation,state.stopSerial,false);}}
         pose(guest.wantedPose);
+        syncGait(guest);
         if(lastContext.hidden)guest.bubble.dataset.show='false';
       }
       if(state.stop&&guest.stopSerial!==state.stopSerial){guest.leaving=false;guest.generation=state.generation;guest.stopSerial=state.stopSerial;

@@ -145,8 +145,8 @@ function relocation(){
   const actors=new Map(sessions.map((session,i)=>[session.id,{id:session.id,session,position:{x:20+i*20,y:65},node:{dataset:{},style:{}},image:{},performance:{clock:492.4},workSince:123456,helper:Boolean(session.parentId)}]));
   const room=Rooms.get('orbital-bridge'),seats=new Map(sessions.map((s,i)=>[s.id,{x:40+i*15,y:70,zone:i?'board':'library'}]));
   const fitted={seats,uniformScale:.8,entryPoint:{x:48,y:78},visible:sessions},calls=[],frames=[];
-  const base={},nextScene={},layout={layoutFullSizeWalking:cast=>{calls.push(['fit',...cast.map(s=>s.id)]);return fitted;}};
-  const c={activeRoom:Rooms.get('rain-courtyard'),actors,BaseScene:base,BaseWalkingLayout:{forScene:scene=>{assert.equal(scene,nextScene);return layout;}},Scene:base,WalkingLayout:{},traffic:{},settings:{agentScale:1.25},actorFootprints:new Map(),CLOCK_RESERVED:[],office:{dataset:{}},destroyed:false,finite:false,returning:false,
+  const base={},nextScene={},layout={scaleHelperFootprints:Walking.scaleHelperFootprints,layoutFullSizeWalking:cast=>{calls.push(['fit',...cast.map(s=>s.id)]);return fitted;}};
+  const c={activeRoom:Rooms.get('rain-courtyard'),actors,BaseScene:base,BaseWalkingLayout:{forScene:scene=>{assert.equal(scene,nextScene);return layout;}},Scene:base,WalkingLayout:{},traffic:{},settings:{agentScale:1.25},actorFootprints:new Map(),helperScale:1,physicalFootprints:new Map(),CLOCK_RESERVED:[],office:{dataset:{}},destroyed:false,finite:false,returning:false,
     hasFiniteClone:()=>c.finite,cloneAwaitingReturn:()=>c.returning,window:{OfficeRoomDesigns:{createScene:(scene,r)=>{assert.equal(scene,base);assert.equal(r,room);return nextScene;}}},
     cancelPhysicalRoutes:()=>calls.push(['cancel-routes']),makeTraffic:()=>({fresh:true}),actorTransform:(p,helper)=>JSON.stringify({p,helper}),updateRoomSigns:()=>calls.push(['signs']),visitor:{tick:()=>calls.push(['visitor'])},render:()=>calls.push(['render']),requestAnimationFrame:fn=>frames.push(fn)};
   vm.createContext(c);vm.runInContext(production('commitRoomArtwork'),c);return{c,room,actors,seats,fitted,calls,frames,commit:()=>c.commitRoomArtwork({layout:room})};

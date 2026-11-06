@@ -1,0 +1,57 @@
+/* Press depth changes the painted surface, keeping its pointer target fixed. */
+html[data-avatar-style="pixel"] :is(.office,.manual-questions-dialog) .button:active {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-avatar-style="pixel"]:has(> body > .office:not([data-reduced-motion="true"],[data-low-power="true"],[data-hidden="true"]))
+  :is(.office,.manual-questions-dialog) [data-pixel-pressed]:active {
+    box-shadow: inset 2px 2px var(--pixel-ui-shadow), inset -1px -1px #fff4ca70;
+  }
+}
+
+/* Keep the horizontal transform set by the room's collision-aware speech
+   anchor. Only the small rise from the tail and the opacity interpolate. */
+html[data-avatar-style="pixel"] .office :is(.actor,.visitor) .actor-bubble {
+  translate: none;
+  transition: none;
+}
+
+html[data-avatar-style="pixel"] .office .actor[data-attention] .actor-mark {
+  animation: none;
+  transition: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-avatar-style="pixel"] .office:not([data-reduced-motion="true"],[data-low-power="true"],[data-hidden="true"],[data-pixel-keyboard-cue])
+  :is(.actor,.visitor) .actor-bubble {
+    translate: 0 4px;
+    transition: opacity 150ms steps(5,end), translate 150ms steps(4,end);
+  }
+
+  html[data-avatar-style="pixel"] .office:not([data-reduced-motion="true"],[data-low-power="true"],[data-hidden="true"],[data-pixel-keyboard-cue])
+  :is(.actor,.visitor) .actor-bubble[data-show="true"] {
+    translate: 0 0;
+  }
+
+  @starting-style {
+    html[data-avatar-style="pixel"] .office:not([data-reduced-motion="true"],[data-low-power="true"],[data-hidden="true"],[data-pixel-keyboard-cue])
+    .visitor .actor-bubble[data-show="true"] {
+      opacity: 0;
+      translate: 0 4px;
+    }
+  }
+
+  html[data-avatar-style="pixel"] .office:not([data-reduced-motion="true"],[data-low-power="true"],[data-hidden="true"])
+  .actor[data-attention] .actor-mark {
+    translate: 0 4px;
+    scale: .92;
+    transition: opacity 160ms steps(5,end), translate 160ms steps(4,end), scale 160ms steps(4,end);
+  }
+
+  html[data-avatar-style="pixel"] .office:not([data-reduced-motion="true"],[data-low-power="true"],[data-hidden="true"])
+  .actor[data-attention="true"] .actor-mark {
+    translate: 0 0;
+    scale: 1;
+  }
+}

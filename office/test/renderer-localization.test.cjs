@@ -17,7 +17,7 @@ function context(language='en'){
 }
 function summary(c,{roots=0,helpers=0,quiet=0,scale=1,requested=1,overflow=0}={}){
  c.currentPage.overflowIds=Array.from({length:overflow},(_,i)=>'waiting-'+i);c.bodyIds=new Set(c.currentPage.overflowIds);
- Object.assign(c,{rootCount:roots,helpers,quiet,roomSessions:Array.from({length:roots+helpers},()=>({})),uniformScale:scale,settings:{agentScale:requested}});
+ Object.assign(c,{rootCount:roots,helpers,quiet,roomSessions:Array.from({length:roots+helpers},()=>({})),uniformScale:scale,settings:{agentScale:requested},overflowIds:new Set(c.currentPage.overflowIds),foldedCount:0});
  vm.runInContext('{'+summaryPath+'}',c);return c.nodes.get('room-summary');
 }
 function titles(c,title){

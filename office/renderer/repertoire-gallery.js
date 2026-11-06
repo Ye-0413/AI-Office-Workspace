@@ -64,7 +64,7 @@
       title.textContent = reference ? (en ? reference.labelEn : reference.labelZh) : stateLabel;
       description.textContent = reference ? (en ? stateLabel + ' · ' + reference.labelEn : reference.beats.join(' → ')) : painted
         ? (en ? 'Four painted poses per loop.' : '每个循环由四张手绘姿态组成。')
-        : (en ? 'Four hand-drawn pixel frames per loop.' : '每个循环由四张逐帧绘制的像素材质画面组成。');
+        : (en ? 'Pixel art drawn at 30 frames per second.' : '活动以每秒 30 张像素帧绘制。');
       previous.textContent = en ? 'Previous' : '上一个'; next.textContent = en ? 'Next' : '下一个';
       play.textContent = quiet ? en ? 'Still pose' : '静态姿态' : paused ? en ? 'Play' : '播放' : en ? 'Pause' : '暂停';
       play.disabled = quiet; play.setAttribute('aria-pressed', String(paused || quiet));

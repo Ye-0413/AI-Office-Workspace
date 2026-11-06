@@ -9,8 +9,8 @@
     "generator": "scripts/draw-pixel-companions.cjs",
     "method": "Integer-grid RGBA drawings with code-defined contours, palettes and props",
     "poseAtlas": "avatars/workshop-<species>.png, 3 columns x 2 rows of 40 x 40 cels",
-    "activityStrip": "avatars/frames/<species>/<activity>.png, 4 cels of 60 x 60",
-    "expressionStrip": "avatars/pixel-emotes-<species>.png, 9 cels of 48 x 48"
+    "activityStrip": "avatars/frames/<species>/<activity>.png, 12 columns of 68 x 68 cels drawn at 30 fps",
+    "expressionStrip": "avatars/pixel-emotes-<species>.png, 18 columns of 96 x 96 expression and gait cels drawn at 30 fps or more"
   },
   "tool": "built-in image_gen",
   "layout": "3 columns x 2 rows: idle, working, thinking, resting, error, completed",

@@ -70,6 +70,9 @@
   let page = 0;
   let seats = new Map();
   let uniformScale = 1;
+  let helperScale = 1;
+  let foldedHelperIds = new Set();
+  let foldedClonesByRoot = new Map();
   let admissionFrame = 0;
   let fitting = false;
   let navigationTimer = 0;
@@ -80,6 +83,7 @@
   let clearingActors = false;
   let propsPending = false;
   const actorFootprints = new Map();
+  let physicalFootprints = actorFootprints;
   const footprintCache = new Map();
   let rooms = [];
   let currentPage = { page: 0, pages: 1, roots: [], visible: [], hidden: 0, helperOverflow: 0 };
@@ -147,7 +151,8 @@
     }
     cancelPhysicalRoutes();
     Scene=nextScene;WalkingLayout=nextLayout;activeRoom=room;traffic=makeTraffic();
-    currentPage=fitted;seats=fitted.seats;uniformScale=fitted.uniformScale;fitting=false;
+    currentPage=fitted;seats=fitted.seats;uniformScale=fitted.uniformScale;helperScale=fitted.helperScale ?? 1;fitting=false;
+    physicalFootprints=nextLayout.scaleHelperFootprints(cast,actorFootprints,helperScale);
     ENTRY_POINT={...fitted.entryPoint,zone:'exit'};
     office.dataset.roomChanging='true';
     if(room)office.dataset.roomDesign=room.id;else delete office.dataset.roomDesign;
@@ -259,6 +264,9 @@
     }
     return I18n.t(language, mode === 'compact' ? 'family.clonesSummaryCompact' : 'family.clonesSummary', cloneLedger.stats(session.id));
   }
+  function foldedCloneLabel(count) {
+    return language === 'en' ? count + ' active ' + (count === 1 ? 'clone' : 'clones') + ' here' : '收纳 ' + count + ' 位活跃分身';
+  }
   function nameplateFamilyBadgeText(session) {
     const family = familyGraph.info.get(session.id);
     const rootId = cloneLedger.rootFor(session.id) || (family ? family.rootId : session.id);
@@ -329,7 +337,8 @@
     $('world-frame').style.transform = 'translate(-50%,-50%) scale(' + scale + ')';
   }
   function actorTransform(point, helper) {
-    return 'translate3d(' + (point.x * 12.8).toFixed(2) + 'px,' + (point.y * 7.2).toFixed(2) + 'px,0) scale(' + uniformScale.toFixed(6) + ')';
+    const scale = uniformScale * (helper ? helperScale : 1);
+    return 'translate3d(' + (point.x * 12.8).toFixed(2) + 'px,' + (point.y * 7.2).toFixed(2) + 'px,0) scale(' + scale.toFixed(6) + ')';
   }
   function nextEntryCandidate(incoming) {
     const sessions = incoming ? new Map(incoming.map(session => [session.id, session])) : null;
@@ -432,7 +441,7 @@
     return JSON.stringify([settings.agentScale, settings.sceneVenue, settings.sceneTheme, language,
       incoming.slice().sort((a,b) => a.id.localeCompare(b.id)).map(session => {
         session = observed.get(session.id) || session;
-        const actor = actors.get(session.id), footprint = actorFootprints.get(session.id);
+        const actor = actors.get(session.id), footprint = physicalFootprints.get(session.id);
         return [session.id, session.provider || null, session.parentId || null, session.status || null, session.activity || null,
           session.turnId || null, session.turnCompletedAt || null, Boolean(session.attention), Boolean(session.disconnected), Boolean(session.closed),
           present.has(session.id), observed.has(session.id), footprint && ['left','right','top','bottom'].map(key => footprint[key]),
@@ -593,10 +602,10 @@
     if (summary.dataset.baseSummary) summary.textContent = summary.dataset.baseSummary
       + (count ? ' · ' + (language === 'en' ? count + ' entering the room' : count + ' 位正在入场') : '');
   }
-  function actorGeometry(actor) { return { helper: actor.helper, uniformScale, layoutMode: currentPage.layoutMode, footprint: actorFootprints.get(actor.id) }; }
+  function actorGeometry(actor) { return { helper: actor.helper, uniformScale, layoutMode: currentPage.layoutMode, footprint: physicalFootprints.get(actor.id) }; }
   function walkingRoute(from, to, actor) {
     const proof = currentPage.routeGeometry, seat = currentPage.seats?.get(actor.id);
-    const footprint = actorFootprints.get(actor.id), recorded = proof?.footprints.get(actor.id);
+    const footprint = physicalFootprints.get(actor.id), recorded = proof?.footprints.get(actor.id);
     const samePoint = (a, b) => a && b && Math.abs(a.x - b.x) < 1e-7 && Math.abs(a.y - b.y) < 1e-7;
     // The allocator already proved this exact entrance route. Reuse only its
     // own geometry revision; Traffic still checks every leg against the real
@@ -888,7 +897,7 @@
     if (!parent || parent === actor || actor.entryPending) { actor.endpointOverlap = null; delete actor.node.dataset.endpointOverlap; return null; }
     const actualGeometry = value => {
       const matrix = new DOMMatrixReadOnly(getComputedStyle(value.node).transform);
-      return { ...actorGeometry(value), uniformScale: Math.hypot(matrix.m11, matrix.m12) };
+      return { ...actorGeometry(value), footprint: actorFootprints.get(value.id), uniformScale: Math.hypot(matrix.m11, matrix.m12) };
     };
     if (!Scene.actorsOverlap(currentPosition(actor), actualGeometry(actor), currentPosition(parent), actualGeometry(parent), currentPage.gap)) {
       actor.endpointOverlap = null; delete actor.node.dataset.endpointOverlap; return null;
@@ -922,10 +931,22 @@
     const effect = window.OfficeCloneMotion.burst({ anchor: anchor.node, kind, ownerId: actor.id });
     actor.cloneEffects.add(effect);
     effect.finished.finally(() => actor.cloneEffects.delete(effect));
+    // Both real bodies perform their own authored material beats beside the
+    // piece: the parent lets go or takes back, the helper gathers or dissolves.
+    // A renderer without those cels simply keeps its body and the piece.
+    if (anchor !== actor) materialCue(anchor, kind);
+    materialCue(actor, kind === 'split' ? 'condense' : 'dissolve');
     if (kind === 'split' && anchor !== actor) effect.ready.then(() => {
       if (actor.target && actors.get(actor.id) === actor) parentGlance(anchor, actor, actor.target);
     }).catch(() => {});
     return effect;
+  }
+  function materialCue(actor, kind) {
+    if (quietSprites() || !actor || actors.get(actor.id) !== actor || !actor.performance?.cue) return false;
+    // A staged helper was hidden until this frame; refresh its observation
+    // state so the cue sees the body it is about to form.
+    setPose(actor, 'clawd-static-base.svg');
+    return Boolean(actor.performance.cue(kind, {}));
   }
   function relatedClones(actor) {
     return [...actors.values()].filter(child => child.helper && child !== actor && cloneLedger.parentChain(child.id).includes(actor.id));
@@ -1271,9 +1292,9 @@
     actor.node.dataset.traffic = 'arrived';
     if (!quietSprites()) {
       actor.arrival.animate([
-        { opacity: .85, transform: 'translateY(0px)', easing: 'step-end' },
-        { opacity: .45, transform: 'translateY(2px)', offset: .42, easing: 'step-end' },
-        { opacity: .25, transform: 'translateY(4px)', offset: .72, easing: 'step-end' },
+        { opacity: .85, transform: 'translateY(0px)', easing: 'cubic-bezier(.23,1,.32,1)' },
+        { opacity: .45, transform: 'translateY(2px)', offset: .42, easing: 'cubic-bezier(.23,1,.32,1)' },
+        { opacity: .25, transform: 'translateY(4px)', offset: .72, easing: 'cubic-bezier(.23,1,.32,1)' },
         { opacity: 0 }
       ], { duration: 280 });
     }
@@ -1299,7 +1320,8 @@
     if (freshCue && !quietSprites()) {
       actor.lastCue = plan.cueKey;
       say(actor, plan.caption, 2100);
-      addEffect(actor.session.activity === 'error' ? 'problem' : 'reply', actor.position);
+      const problem = settings.avatarStyle === 'pixel' && plan.phase === 'cue/tool-failure';
+      addEffect(problem ? 'problem' : 'reply', actor.position);
     } else if (actor.lastPhase && actor.lastPhase !== plan.phase && !quietSprites() && Date.now() - (actor.lastChatter || 0) > 12000) {
       say(actor, plan.caption, 1800);
       actor.lastChatter = Date.now();
@@ -1404,11 +1426,30 @@
     const grid = value => Math.round(value / 2) * 2;
     const from = { x: grid(point.x * 12.8), y: grid(point.y * 7.2 - 48) };
     const to = target ? { x: grid(target.x * 12.8), y: grid(target.y * 7.2 - 45) } : { x: from.x + 8, y: from.y - 40 };
-    const animation = effect.animate([
-      { transform: `translate(${from.x}px,${from.y}px)`, opacity: 1, easing: 'steps(3,end)' },
-      { transform: `translate(${from.x}px,${from.y - 8}px)`, opacity: 1, offset: .18, easing: 'steps(7,end)' },
+    let frames = [
+      { transform: `translate(${from.x}px,${from.y}px)`, opacity: 1, easing: 'cubic-bezier(.23,1,.32,1)' },
+      { transform: `translate(${from.x}px,${from.y - 8}px)`, opacity: 1, offset: .18, easing: 'cubic-bezier(.37,0,.63,1)' },
       { transform: `translate(${to.x}px,${to.y}px)`, opacity: 0 }
-    ], { duration: kind === 'delivery' ? 1400 : 900 });
+    ];
+    let duration = kind === 'delivery' ? 1400 : 900;
+    if (settings.avatarStyle === 'pixel' && kind === 'problem') {
+      const raised = `translate(${from.x}px,${from.y - 18}px)`;
+      // An observed error gets a single anchored impact, then holds long enough to read.
+      frames = [
+        { transform: `translate(${from.x}px,${from.y}px) scale(.94)`, opacity: .2, easing: 'cubic-bezier(.23,1,.32,1)' },
+        { transform: raised + ' scale(1.12)', opacity: 1, offset: .2, easing: 'cubic-bezier(.23,1,.32,1)' },
+        { transform: raised, opacity: 1, offset: .4 },
+        { transform: raised, opacity: 1, offset: .73 },
+        { transform: raised, opacity: 0 }
+      ];
+      duration = 820;
+    } else if (settings.avatarStyle === 'pixel' && kind === 'reply') {
+      // A note peels away from the source while the original caption stays readable.
+      frames[0].transform += ' rotate(-10deg)';
+      frames[1].transform += ' rotate(3deg)';
+      frames[2].transform += ' rotate(10deg)';
+    }
+    const animation = effect.animate(frames, { duration });
     animation.finished.catch(() => {}).finally(() => effect.remove());
   }
   // A turn boundary is the only evidence here; the sparkle never claims success.
@@ -1419,9 +1460,9 @@
       const spark = element('span', 'scene-effect turn-spark');
       $('effects').append(spark);
       const motion = spark.animate([
-        { transform: `translate(${x}px,${y}px)`, opacity: 0, easing: 'step-end' },
-        { transform: `translate(${x + dx / 2}px,${y - rise / 2}px)`, opacity: 1, offset: .22, easing: 'step-end' },
-        { transform: `translate(${x + dx}px,${y - rise}px)`, opacity: .62, offset: .65, easing: 'step-end' },
+        { transform: `translate(${x}px,${y}px)`, opacity: 0, easing: 'cubic-bezier(.37,0,.63,1)' },
+        { transform: `translate(${x + dx / 2}px,${y - rise / 2}px)`, opacity: 1, offset: .22, easing: 'cubic-bezier(.37,0,.63,1)' },
+        { transform: `translate(${x + dx}px,${y - rise}px)`, opacity: .62, offset: .65, easing: 'cubic-bezier(.37,0,.63,1)' },
         { transform: `translate(${x + dx}px,${y - rise}px)`, opacity: 0 }
       ], { duration: 540, delay: 140 + index * 60, fill: 'backwards' });
       motion.finished.catch(() => {}).finally(() => spark.remove());
@@ -1429,20 +1470,20 @@
   }
   const BODY_CUES = Object.freeze({
     hop: { duration: 520, frames: [
-      { transform: 'translateY(0px)', easing: 'step-end' },
-      { transform: 'translateY(-4px)', offset: .18, easing: 'step-end' },
-      { transform: 'translateY(-8px)', offset: .38, easing: 'step-end' },
-      { transform: 'translateY(-4px)', offset: .62, easing: 'step-end' },
+      { transform: 'translateY(0px)', easing: 'cubic-bezier(.37,0,.63,1)' },
+      { transform: 'translateY(-4px)', offset: .18, easing: 'cubic-bezier(.37,0,.63,1)' },
+      { transform: 'translateY(-8px)', offset: .38, easing: 'cubic-bezier(.37,0,.63,1)' },
+      { transform: 'translateY(-4px)', offset: .62, easing: 'cubic-bezier(.37,0,.63,1)' },
       { transform: 'translateY(0px)' }] },
     startle: { duration: 280, frames: [
-      { transform: 'translate(0px,0px)', easing: 'step-end' },
-      { transform: 'translate(-2px,-2px)', offset: .2, easing: 'step-end' },
-      { transform: 'translate(2px,0px)', offset: .45, easing: 'step-end' },
+      { transform: 'translate(0px,0px)', easing: 'cubic-bezier(.37,0,.63,1)' },
+      { transform: 'translate(-2px,-2px)', offset: .2, easing: 'cubic-bezier(.37,0,.63,1)' },
+      { transform: 'translate(2px,0px)', offset: .45, easing: 'cubic-bezier(.37,0,.63,1)' },
       { transform: 'translate(0px,0px)', offset: .7 }] }
   });
   function leanFrames(direction) {
     const lean = `translateX(${Math.sign(direction) * 2}px)`;
-    return [{ transform: 'translateX(0px)', easing: 'step-end' }, { transform: lean, offset: .2, easing: 'step-end' },
+    return [{ transform: 'translateX(0px)', easing: 'cubic-bezier(.37,0,.63,1)' }, { transform: lean, offset: .2, easing: 'cubic-bezier(.37,0,.63,1)' },
       { transform: 'translateX(0px)', offset: .7 }];
   }
   // Body cues add onto whatever the body is doing and own no route or clock.
@@ -1736,9 +1777,12 @@
     actor.node.dataset.hasFamily = 'true';
     actor.node.dataset.activeClones = String(counts.active);
     actor.node.dataset.totalClones = String(counts.total);
-    actor.relation.textContent = nameplateRelation(session, parent, office.dataset.nameplateMode || 'full');
+    const foldedCount = session.parentId ? 0 : foldedClonesByRoot.get(session.id) || 0;
+    actor.node.dataset.foldedClones = String(foldedCount);
+    const foldedLabel = foldedCount ? foldedCloneLabel(foldedCount) : '';
+    actor.relation.textContent = foldedLabel || nameplateRelation(session, parent, office.dataset.nameplateMode || 'full');
     actor.node.dataset.hasRelation = String(Boolean(actor.relation.textContent));
-    const fullRelation = nameplateRelation(session, parent);
+    const fullRelation = [nameplateRelation(session, parent), foldedLabel].filter(Boolean).join(' · ');
     actor.relation.title = fullRelation + (session.parentId ? '' : ' · ' + I18n.t(language, 'family.clonesHint'));
     text(actor.provider, (session.provider === 'claude-code' ? 'Claude' : Scene.providerName(session.provider)).replace(/ \(experimental\)$/, ''));
     actor.provider.title = Scene.providerName(session.provider);
@@ -1833,7 +1877,7 @@
     const cast = [...actors.values()].map(actor => {
       const matrix = new DOMMatrixReadOnly(getComputedStyle(actor.node).transform);
       const scale = Math.hypot(matrix.m11, matrix.m12);
-      return { scale };
+      return { scale, expected: uniformScale * (actor.helper ? helperScale : 1) };
     });
     // A newcomer uses the destination scale. Keep its finite arrival at that
     // same scale as everyone else; do not expose a smaller body halfway through
@@ -1841,7 +1885,7 @@
     // Chromium serializes matrix() with limited significant digits: a scale
     // above 1 can round by 0.000005. Exact string equality would strand a new
     // body forever even after its transition has completely finished.
-    const sameScale = cast.every(item => Math.abs(item.scale - uniformScale) <= .00001);
+    const sameScale = cast.every(item => Math.abs(item.scale - item.expected) <= .00001);
     if (sameScale) { fitting = false; if (layoutRefreshRequested) queueLayoutRefresh(); else resumeNavigation(); }
     else queueAdmission();
   }
@@ -1865,13 +1909,25 @@
     const sessionMap = new Map(snapshot.sessions.map(session => [session.id, session]));
     const visibleIds = new Set(currentPage.visible.map(session => session.id));
     const nextSeats = currentPage.seats;
-    const scaleChanged = Math.abs(uniformScale - currentPage.uniformScale) > .000001;
+    const nextHelperScale = currentPage.helperScale ?? 1;
+    const nextHelper = actor => sessionMap.has(actor.id) ? Boolean(sessionMap.get(actor.id).parentId) : actor.helper;
+    const roleResized = nextHelperScale < 1 && [...actors.values()].some(actor => nextHelper(actor) !== actor.helper);
+    const scaleChanged = Math.abs(uniformScale - currentPage.uniformScale) > .000001 || helperScale !== nextHelperScale || roleResized;
     if (scaleChanged) { cancelPhysicalRoutes(); fitting = true; }
     uniformScale = currentPage.uniformScale;
+    helperScale = nextHelperScale;
     // Snapshot reconciliation never writes a desired station into a physical
     // foot point. Only a completed/interrupted real walk owns that coordinate.
-    if (scaleChanged) for (const actor of actors.values()) actor.node.style.transform = actorTransform(actor.position, actor.helper);
+    if (scaleChanged) for (const actor of actors.values()) actor.node.style.transform = actorTransform(actor.position, nextHelper(actor));
     for (const actor of [...actors.values()]) if (!visibleIds.has(actor.id)) {
+      if (foldedHelperIds.has(actor.id)) {
+        // Folding is a display decision. Do not emit a clone return or
+        // mark this still-active session as finished.
+        const { activity, status, turnId } = actor.session;
+        presentationReentries.set(actor.id, actor.presentationReentry || { activity, status, turnId });
+        removeActor(actor.id);
+        continue;
+      }
       const next = sessionMap.get(actor.id);
       refreshActorSession(actor, next || actor.session);
       // A retained real ancestor still shows current ledger facts and language.
@@ -1929,7 +1985,10 @@
         }
         if (old.activity !== session.activity) social?.update();
         if (!actor.departing && actor.node.dataset.reaction !== 'true') finishAtStation(actor);
-        if (old.activity !== 'error' && session.activity === 'error' && !actor.motion) bodyCue(actor, 'startle');
+        if (old.activity !== 'error' && session.activity === 'error' && !actor.motion) {
+          bodyCue(actor, 'startle');
+          if (settings.avatarStyle === 'pixel') addEffect('problem', actor.position);
+        }
         requestStation(actor, seat, Boolean(endpointParent(actor)));
       }
     }
@@ -1937,6 +1996,7 @@
     office.dataset.layout = currentPage.layoutMode;
     office.dataset.flat = 'true';
     office.dataset.fitScale = uniformScale.toFixed(4);
+    office.dataset.helperScale = helperScale.toFixed(4);
     queueAdmission(); if (!fitting) resumeNavigation(); queueNavigation(); queueTraffic(); updateEntranceLane();
     renderHelperLinks(); updateProps();
   }
@@ -2238,6 +2298,7 @@
     // Count cannot change plate metrics underneath a fixed-size resident.
     office.dataset.nameplateMode = nameplateMode(1);
     measureActorFootprints(presentBodies.concat(retiringBodies));
+    physicalFootprints = WalkingLayout.scaleHelperFootprints(presentBodies.concat(retiringBodies), actorFootprints, helperScale);
     currentPage.scaleCeiling = sizeStability.maximum();
     if (transferOwner && !transferValid(transferOwner, layoutBodies)) revokeTransfer('snapshot-or-geometry', null, false);
     if (transferOwner) currentPage = { ...currentPage, visible: presentBodies };
@@ -2248,7 +2309,8 @@
       // viewport edge before depart() even creates its motion owner.
       const heldPhysicalScale = deferredPhysicalScale ?? (exitingMains.size || hasFiniteClone() || cloneAwaitingReturn() ? uniformScale : null);
       const options = { ...sceneOptions(layoutBodies, finiteExitIds(presentBodies)),
-        ...(heldPhysicalScale !== null ? { requestedScale: settings.agentScale, physicalScale: heldPhysicalScale, maximumScale: heldPhysicalScale } : {}) };
+        previousHelperScale: helperScale,
+        ...(heldPhysicalScale !== null ? { requestedScale: settings.agentScale, physicalScale: heldPhysicalScale, maximumScale: heldPhysicalScale, footprints: physicalFootprints } : {}) };
       try { currentPage = WalkingLayout.layoutAdaptiveWalking && heldPhysicalScale === null ? WalkingLayout.layoutAdaptiveWalking(layoutBodies, options) : WalkingLayout.layoutFullSizeWalking(layoutBodies, options); }
       catch (error) {
         if (error.code !== 'FIXED_SIZE_CAPACITY') throw error;
@@ -2256,6 +2318,7 @@
         // clone dock or changed floor cannot yet admit a new observation.
         currentPage = WalkingLayout.layoutFixedWalking(layoutBodies, { ...options, fullSize: true });
       }
+      if (heldPhysicalScale !== null) currentPage.helperScale = helperScale;
       if (currentPage.adaptiveNeedsReflow && currentPage.adaptiveReflowPage && !exitingMains.size
         && !hasFiniteClone() && !cloneAwaitingReturn() && ![...actors.values()].some(actor => actor.departing)) {
         // A changed common display scale may no longer clear an old edge
@@ -2268,11 +2331,28 @@
       if (currentPage.transferCertificate && !acceptTransfer(currentPage.transferCertificate, layoutBodies)) {
         // An unequipped/quiet/changed physical cast cannot execute a certificate.
         // Ask for the ordinary proof instead of issuing its two blocked goals.
-        currentPage = WalkingLayout.layoutFullSizeWalking(layoutBodies, { ...options, allowTransfers: false });
+        const retryHelperScale = currentPage.helperScale ?? 1;
+        const footprints = WalkingLayout.scaleHelperFootprints(layoutBodies, actorFootprints, retryHelperScale);
+        currentPage = { ...WalkingLayout.layoutFullSizeWalking(layoutBodies, { ...options, footprints, allowTransfers: false }), helperScale: retryHelperScale };
         currentPage.visible = presentBodies.filter(session => currentPage.seats.has(session.id));
       }
+      physicalFootprints = WalkingLayout.scaleHelperFootprints(presentBodies.concat(retiringBodies), actorFootprints, currentPage.helperScale ?? 1);
       currentPage.routeGeometry = { paths: currentPage.pathsById, scale: currentPage.uniformScale,
-        footprints: new Map([...actorFootprints].map(([id, footprint]) => [id, { ...footprint }])) };
+        footprints: new Map([...physicalFootprints].map(([id, footprint]) => [id, { ...footprint }])) };
+    }
+    const overflowIds = new Set(currentPage.overflowIds || []);
+    const visibleMains = new Set(currentPage.visible.filter(session => !session.parentId).map(session => session.id));
+    for (const id of foldedHelperIds) if (!bodyIds.has(id)) presentationReentries.delete(id);
+    foldedHelperIds = new Set();
+    foldedClonesByRoot = new Map();
+    let foldedCount = 0;
+    for (const session of presentBodies) {
+      if (!session.parentId || !overflowIds.has(session.id) || !hasBodyActivity(session)) continue;
+      foldedHelperIds.add(session.id);
+      const rootId = cloneLedger.rootFor(session.id) || familyGraph.info.get(session.id)?.rootId;
+      if (!visibleMains.has(rootId)) continue;
+      foldedClonesByRoot.set(rootId, (foldedClonesByRoot.get(rootId) || 0) + 1);
+      foldedCount++;
     }
     sizeStability.observe({ count: layoutBodies.length, uniformScale: currentPage.uniformScale, targetUniformScale: currentPage.targetUniformScale });
     currentPage.scaleCeiling = sizeStability.maximum();
@@ -2308,8 +2388,9 @@
     office.dataset.readability = crowded ? 'crowded' : 'readable';
     if (crowded) summary += ' · ' + I18n.t(language, 'room.crowded', { percent: Math.max(1, Math.round(uniformScale * 100)) });
     if (deferredPhysicalScale !== null) summary += language === 'en' ? ' · size change after clone transition' : ' · 等分身过渡完成后调整大小';
-    const waitingForDock = currentPage.overflowIds?.length || 0;
+    const waitingForDock = overflowIds.size - foldedCount;
     office.dataset.overflowCount = String(waitingForDock);
+    office.dataset.foldedCloneCount = String(foldedCount);
     if (waitingForDock) summary += language === 'en' ? ' · ' + waitingForDock + ' awaiting a work dock' : ' · ' + waitingForDock + ' 位等候工位';
     $('room-summary').textContent = summary;
     $('room-summary').dataset.baseSummary = summary;
@@ -2350,7 +2431,10 @@
     snapshotReceived += 1;
     snapshot = { ...next, mode: 'live', sessions: next.sessions.filter((session) => session && typeof session.id === 'string'), connections: Array.isArray(next.connections) ? next.connections : [] };
     const styleChanged = (next.avatarStyle === 'pixel' || next.avatarStyle === 'painted') && settings.avatarStyle !== next.avatarStyle;
-    if (styleChanged) settings = { ...settings, avatarStyle: next.avatarStyle };
+    if (styleChanged) {
+      settings = { ...settings, avatarStyle: next.avatarStyle };
+      document.documentElement.dataset.avatarStyle = settings.avatarStyle;
+    }
     usageHistory?.updateStatus(snapshot.usageLog);
     homeTokenUsage?.update(snapshot);
     manualQuestions?.update(snapshot);
@@ -2402,6 +2486,7 @@
     }
     if (transferOwner && (next?.reducedMotion || next?.lowPower || mediaReduce.matches || sceneHidden())) revokeTransfer('quiet', null, false);
     settings = { ...settingsDefaults, ...next, agentScale: nextScale, avatarStyle: window.OfficePublicArtwork?.normalizeStyle(next?.avatarStyle) || 'pixel' };
+    document.documentElement.dataset.avatarStyle = settings.avatarStyle;
     numberFlip?.sync();
     const previousLanguage = language;
     language = settings.language === 'en' ? 'en' : 'zh';

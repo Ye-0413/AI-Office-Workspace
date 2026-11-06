@@ -58,7 +58,7 @@ The character concepts and reference were supplied by the user. The pixel editio
 
 ## 55 pixel performances
 
-**5 companions × 11 observed activities.** Every loop has four hand-drawn cels on an integer pixel grid. The body and tool share the same cel so their timing stays aligned.
+**5 companions × 11 observed activities.** Pixel loops run at 30 frames per second. The body and tool share the same integer-grid cel so their timing stays aligned.
 
 Reading · Searching · Planning · Coding · Designing · Testing · Building · Running · Waiting for tools · Waiting for you · Error
 
@@ -123,7 +123,7 @@ Pixel is the default. Choose **View → Avatar Style → Painted** or use the **
 
 ## 55 套像素动作
 
-**5 位伙伴 × 11 类真实活动。** 每套动作以四张整数像素网格绘制，身体和道具共用一帧，节拍同步。
+**5 位伙伴 × 11 类真实活动。** 像素动作以每秒 30 帧播放。身体和道具共用同一张像素帧，动作同步。
 
 阅读 · 搜索 · 思考规划 · 编程 · 设计 · 测试 · 构建 · 执行 · 等待工具 · 等待用户 · 异常
 

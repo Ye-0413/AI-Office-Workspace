@@ -46,7 +46,7 @@ function observeContextExit(patch){
           if(post.length>=31&&finishedAt!==null){
             if(original.isConnected||document.querySelector('.agent-social-vignette')||social.state().active||social.state().exiting)throw Error('old context replayed or failed to clean up');
             if(performance.now()-clickedAt>1000)throw Error('context31RAF tail exceeded1000ms');
-            clearTimeout(deadline);return resolve({patch,preFrames:pre.length,preElapsedMs:pre.at(-1).at-pre[0].at,distinctPoses:new Set(pre.map(r=>r.pose)).size,heldPose:pre.some((r,i)=>i>0&&r.pose===pre[i-1].pose),postFrames:post.length,held,rows:post,finishedAt,totalElapsedMs:performance.now()-clickedAt,denied,sameActors:true,ownedDuration:fade.effect.getTiming().duration});
+            clearTimeout(deadline);return resolve({patch,preFrames:pre.length,preElapsedMs:pre.at(-1).at-pre[0].at,distinctPoses:new Set(pre.map(r=>r.pose)).size,postFrames:post.length,held,rows:post,finishedAt,totalElapsedMs:performance.now()-clickedAt,denied,sameActors:true,ownedDuration:fade.effect.getTiming().duration});
           }
         }
         requestAnimationFrame(sample);
@@ -129,7 +129,7 @@ app.whenReady().then(async()=>{
   for(const definition of catalog.filter(d=>['gear-turn','fan-breeze','orbit-join'].includes(d.id))){
     await run(`fixtureTime+=60000;fixtureContext={venue:${JSON.stringify(definition.venue)},language:'en',hidden:false,reducedMotion:false,lowPower:false,mode:'live'};social.update();void 0`);
     assert.equal(await run(`social.trigger({kind:${JSON.stringify(definition.id)}})`),true);
-    const report=await run('('+observeNewProgram.toString()+')('+JSON.stringify(definition)+')');assert.ok(report.visibleFrames>=31&&report.distinctPoses>=12&&report.distinctPoses<report.visibleFrames&&report.handPoses.every(n=>n>=8));assert.equal(report.sameActors,true);
+    const report=await run('('+observeNewProgram.toString()+')('+JSON.stringify(definition)+')');assert.ok(report.visibleFrames>=31&&report.distinctPoses>=12&&report.handPoses.every(n=>n>=8));assert.equal(report.sameActors,true);
     checks.push({...report,kind:'actual-new-program',program:definition.id});
   }
   // Actual interruption, without seeking the finite exit. An old SVG is held
@@ -151,7 +151,7 @@ app.whenReady().then(async()=>{
     assert.equal(await run(`social.trigger({kind:'blueprint-pass'})`),true);await wait(620);
     const report=await run('('+observeContextExit.toString()+')('+JSON.stringify(patch)+')');
     assert.ok(report.preFrames>=31&&report.preElapsedMs>=700);
-    assert.ok(report.distinctPoses>=4&&report.heldPose,'the live prop changes and visibly holds cels: '+JSON.stringify({patch,frames:report.preFrames,elapsedMs:report.preElapsedMs,poses:report.distinctPoses}));
+    assert.ok(report.distinctPoses*1000/report.preElapsedMs>=24,'the moving prop advances at least 24 distinct poses per second: '+JSON.stringify({patch,frames:report.preFrames,elapsedMs:report.preElapsedMs,poses:report.distinctPoses}));
     assert.ok(report.postFrames>=31);assert.ok(report.finishedAt<=500&&report.totalElapsedMs<=1000);
     assert.equal(report.sameActors,true);assert.equal(report.ownedDuration,160);const visible=report.rows.filter(r=>r.connected&&r.alpha>0);
     assert.ok(visible.length>=3&&visible.some(r=>r.alpha<.9)&&visible.some(r=>r.alpha<.5),'a context change must retain several real alpha levels of the original pose');
@@ -164,10 +164,9 @@ app.whenReady().then(async()=>{
     fixtureActors.push(...localActors);social.update();void 0`);
   assert.equal(await run(`social.trigger({venue:'workshop',type:'circuit',point:{x:82,y:30},source:'keyboard'})`),true);
   assert.deepEqual((await run('social.state().active.ids')).sort(),['local:0','local:1']);
-  // Sample by time as well as RAF count. A 120Hz display paints many held
-  // copies before the two magnets approach each other at the mid-beat.
+  // Sample by time as well as RAF count. A high refresh rate produces extra samples before the two magnets approach each other at the mid-beat.
   const localReport=await run(`new Promise(resolve=>{const ids=social.state().active.ids,original=document.querySelector('.agent-social-vignette'),part=original.querySelector('.social-prop'),rows=[],before=JSON.stringify(localActors.map(a=>({session:a.session,serial:a.serial,position:a.position,html:a.node.outerHTML})));function frame(now){rows.push({at:now,pose:getComputedStyle(part).transform});if(rows.length<40||now-rows[0].at<1700)requestAnimationFrame(frame);else resolve({ids,frames:rows.length,distinctPoses:new Set(rows.map(r=>r.pose)).size,same:before===JSON.stringify(localActors.map(a=>({session:a.session,serial:a.serial,position:a.position,html:a.node.outerHTML}))),one:document.querySelectorAll('.agent-social-vignette').length===1});}requestAnimationFrame(frame);})`);
-  assert.ok(localReport.frames>=31&&localReport.distinctPoses>=4&&localReport.distinctPoses<localReport.frames,JSON.stringify(localReport));assert.equal(localReport.same,true);assert.equal(localReport.one,true);checks.push({kind:'manual-control-selects-actual-local-bench-pair',...localReport});
+  assert.ok(localReport.frames>=31&&localReport.distinctPoses>=4,JSON.stringify(localReport));assert.equal(localReport.same,true);assert.equal(localReport.one,true);checks.push({kind:'manual-control-selects-actual-local-bench-pair',...localReport});
   await run(`fixtureContext.hidden=true;social.update();localActors.forEach(a=>a.node.remove());fixtureActors=fixtureActors.filter(a=>!a.id.startsWith('local:'));fixtureContext.hidden=false;fixtureTime+=60000;void 0`);
   const noLocal=await run(`(()=>{const before=JSON.stringify(social.state()),accepted=social.trigger({type:'circuit',point:{x:82,y:30}});return{accepted,unchanged:before===JSON.stringify(social.state()),nodes:document.querySelectorAll('.agent-social-vignette').length};})()`);
   assert.equal(noLocal.accepted,false);assert.equal(noLocal.unchanged,true);assert.equal(noLocal.nodes,0);checks.push({kind:'manual-no-local-pair-keeps-empty-and-does-not-consume-scheduler',...noLocal});

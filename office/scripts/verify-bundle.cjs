@@ -38,6 +38,7 @@ required.push('lib/agent-appearance.js','renderer/appearance-picker.js','rendere
   ...require('../lib/agent-appearance.js').catalog.map(shape=>'assets/avatars/'+shape.asset));
 required.push('renderer/station-arrival.js','renderer/station-arrival.css','lib/window-visibility.cjs');
 required.push('renderer/number-flip.js','renderer/number-flip.css');
+required.push('renderer/pixel-ui.css','renderer/pixel-ui-dialogs.css','renderer/pixel-ui-motion.css','renderer/pixel-ui-motion.js');
 required.push('lib/scene-artwork.js','assets/scenes/themes/generation.json',...require('../lib/scene-artwork.js').CATALOG.map(item=>'assets/scenes/themes/'+item.id+'.jpg'));
 required.push('lib/room-calendar.js','lib/room-holiday-designs.js','lib/room-designs.js','renderer/room-designs.css',
   'assets/scenes/rooms/generation.json','docs/room-designs.md',

@@ -18,11 +18,11 @@ app.whenReady().then(async()=>{
   assert.equal(await run('document.hidden'),false);
   for(const kind of ['split','absorb']){
     const report=await run(`(async()=>{const started=performance.now(),effect=OfficeCloneMotion.burst({anchor:parentActor,kind:${JSON.stringify(kind)},ownerId:'fixture:child'}),node=parentActor.querySelector('.clone-effect');window.activeClone=effect;const poses=new Set(),bad=[];let frames=0,readyAt=null;effect.ready.then(value=>{if(value)readyAt=performance.now()-started});let sampling=true;const sample=now=>{if(!sampling)return;frames++;poses.add(JSON.stringify([...node.children].map(n=>[getComputedStyle(n).transform,getComputedStyle(n).opacity])));if(parentActor.firstElementChild!==originalBody||originalBody.outerHTML!==originalBodyHTML||Number(getComputedStyle(parentActor).opacity)!==1)bad.push('parent changed');requestAnimationFrame(sample)};requestAnimationFrame(sample);const finished=await effect.finished;sampling=false;return{frames,distinct:poses.size,readyAt,duration:performance.now()-started,finished,bad:[...new Set(bad)],remaining:parentActor.querySelectorAll('.clone-effect').length,networkImages:parentActor.querySelectorAll('img,image').length}})()`);
-    assert.equal(report.finished,true);assert.ok(report.frames>=31,JSON.stringify(report));assert.ok(report.distinct>=31,JSON.stringify(report));assert.deepEqual(report.bad,[]);assert.equal(report.remaining,0);assert.equal(report.networkImages,0);assert.ok(report.duration>=880&&report.duration<1500);
-    const expected=kind==='split'?300:680;assert.ok(report.readyAt>=expected-20&&report.readyAt<expected+150,JSON.stringify(report));
+    assert.equal(report.finished,true);assert.ok(report.frames>=31,JSON.stringify(report));assert.ok(report.distinct>=31,JSON.stringify(report));assert.deepEqual(report.bad,[]);assert.equal(report.remaining,0);assert.equal(report.networkImages,0);assert.ok(report.duration>=1180&&report.duration<1800);
+    const expected=kind==='split'?1200:800;assert.ok(report.readyAt>=expected-20&&report.readyAt<expected+150,JSON.stringify(report));
     checks.push({kind,...report});
     if(process.env.MINI_OFFICE_CLONE_PREVIEW_DIR){
-      await run(`window.previewClone=OfficeCloneMotion.burst({anchor:parentActor,kind:${JSON.stringify(kind)}});void 0`);await wait(kind==='split'?380:610);
+      await run(`window.previewClone=OfficeCloneMotion.burst({anchor:parentActor,kind:${JSON.stringify(kind)}});void 0`);await wait(kind==='split'?560:720);
       fs.mkdirSync(process.env.MINI_OFFICE_CLONE_PREVIEW_DIR,{recursive:true});fs.writeFileSync(path.join(process.env.MINI_OFFICE_CLONE_PREVIEW_DIR,kind+'.png'),(await win.webContents.capturePage()).toPNG());
       await run(`previewClone.cancel();void 0`);
     }

@@ -7,6 +7,8 @@ const entry={x:87,y:78},target={x:30,y:78},footprint={left:20,right:20,top:20,bo
 function harness(){
   let fallbacks=0;const hint=[entry,{x:60,y:78},target],paths=new Map([['actor',hint]]);
   const context={ENTRY_POINT:entry,uniformScale:1,actorFootprints:new Map([['actor',{...footprint}]]),currentPage:{seats:new Map([['actor',target]]),uniformScale:1,pathsById:paths,routeGeometry:{paths,scale:1,footprints:new Map([['actor',{...footprint}]])}},WalkingLayout:{route:(from,to)=>{fallbacks++;return[from,to];}}};
+  // The ordinary-size cast shares the measured and physical footprint map.
+  context.physicalFootprints=context.actorFootprints;
   vm.createContext(context);vm.runInContext(route,context);
   const actor={id:'actor',position:entry,uniformScale:1,footprint:{...footprint},staged:true,canYield:false};
   return{context,actor,hint,call:(from=entry,to=target,actorOptions=actor)=>context.walkingRoute(from,to,actorOptions),fallbacks:()=>fallbacks};

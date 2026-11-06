@@ -35,6 +35,7 @@
     glow: { greet: [[0, -2], [2, -6], [0, -4]], attention: [[0, -6], [0, -8]], startle: [[-2, 0], [0, -4]], success: [[0, -4], [0, -8]] }
   });
   const CUE_DURATION = Object.freeze({ glance: 480, startle: 420, greet: 620, attention: 680, success: 560 });
+  const CLONE_CUES = new Set(Emotes?.CLONE_CLIPS || ['split', 'absorb', 'condense', 'dissolve']);
   let serial = 0;
   function poseFor(session = {}, options = {}) {
     if (session.disconnected || session.status === 'stale' || options.stale) return 'resting';
@@ -247,7 +248,7 @@
     function react(kind, direction = 0) {
       const side = Math.sign(direction) || 1;
       const beats = kind === 'glance' ? [[side * 2, 0], [side * 2, 0]] : CUES[currentDesign.id][kind];
-      const frames = [[0, 0], ...beats, [0, 0]].map(([x, y]) => ({ transform: 'translate(' + x + 'px,' + y + 'px)', easing: 'step-end' }));
+      const frames = [[0, 0], ...beats, [0, 0]].map(([x, y]) => ({ transform: 'translate(' + x + 'px,' + y + 'px)', easing: 'cubic-bezier(.37,0,.63,1)' }));
       stopCues();
       const animation = motion.animate(frames, { duration: CUE_DURATION[kind] });
       cues.add(animation); animation.finished.catch(() => {}).finally(() => cues.delete(animation));
@@ -255,6 +256,10 @@
     }
     function cue(kind, { direction = 0 } = {}) {
       if (destroyed || hidden || quiet || gait || health !== 'healthy' || typeof motion.animate !== 'function') return false;
+      // A clone boundary is a shared moment with another real body: it only
+      // plays as authored material cels, and ordinary reactions wait for it.
+      if (CLONE_CUES.has(kind)) return Boolean(emotes?.cue(kind));
+      if (emotes?.locked?.()) return false;
       if (kind === 'wave') kind = 'greet';
       if (kind === 'tool-success') {
         activity?.cue?.(kind, { direction });

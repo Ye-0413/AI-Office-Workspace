@@ -1,0 +1,492 @@
+/* Pixel windows and callouts. The native dialog, focus and layout stay in place. */
+html[data-avatar-style="pixel"] .office-dialog {
+  --dialog-inset: clamp(14px, 2.5vw, 22px);
+  --dialog-rule: #a38f81;
+  --dialog-quiet: #62516b;
+  --dialog-error: #842c45;
+  background: var(--pixel-ui-paper);
+  border: 2px solid var(--pixel-ui-ink);
+  border-radius: 0;
+  box-shadow: 0 0 0 2px var(--pixel-ui-gold), 7px 7px 0 2px var(--pixel-ui-shadow);
+  color: var(--pixel-ui-ink);
+  color-scheme: light;
+  padding: var(--dialog-inset);
+  scrollbar-color: #947a80 var(--pixel-ui-paper-dim);
+}
+
+html[data-avatar-style="pixel"] .office-dialog::backdrop {
+  background: #18152580;
+  backdrop-filter: none;
+}
+
+html[data-avatar-style="pixel"] :is(.settings-dialog, .connections-dialog)::backdrop {
+  background: #18152536;
+}
+
+html[data-avatar-style="pixel"] .office-dialog .dialog-header {
+  align-items: center;
+  gap: 12px;
+  margin: calc(-1 * var(--dialog-inset)) calc(-1 * var(--dialog-inset)) 14px;
+  padding: 13px var(--dialog-inset);
+  background: var(--pixel-ui-night);
+  border-bottom: 2px solid var(--pixel-ui-ink);
+  box-shadow: inset 0 -3px 0 var(--pixel-ui-panel), inset 4px 0 0 var(--pixel-ui-gold);
+  color: var(--pixel-ui-paper);
+}
+
+html[data-avatar-style="pixel"] .office-dialog .dialog-header h2 {
+  margin: 2px 0 0;
+  color: var(--pixel-ui-paper);
+  font-size: clamp(19px, 3vw, 23px);
+  font-weight: 700;
+  letter-spacing: .015em;
+}
+
+html[data-avatar-style="pixel"] .office-dialog .dialog-eyebrow {
+  color: var(--pixel-ui-gold);
+  font: 600 10px / 1.5 var(--pixel-ui-mono);
+  letter-spacing: .03em;
+}
+
+html[data-avatar-style="pixel"] .office-dialog .dialog-close {
+  display: grid;
+  place-items: center;
+  flex: none;
+  margin: 0;
+  padding: 0 0 2px;
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--pixel-ui-gold);
+  border-radius: 0;
+  box-shadow: 2px 2px 0 #151221;
+  background: var(--pixel-ui-panel);
+  color: var(--pixel-ui-paper);
+  font-size: 24px;
+}
+
+html[data-avatar-style="pixel"] .office-dialog :is(.dialog-intro, .dialog-footnote, .dialog-bottom > span) {
+  color: var(--dialog-quiet);
+}
+
+html[data-avatar-style="pixel"] .office-dialog :is(.dialog-bottom, .setting-row, .display-setting) {
+  border-color: var(--dialog-rule);
+}
+
+html[data-avatar-style="pixel"] .office-dialog :is(input[type="search"], input[type="date"], select, textarea) {
+  border: 2px solid #776482;
+  border-radius: 0;
+  color: var(--pixel-ui-ink);
+  background: #fff9e7;
+  box-shadow: inset 2px 2px 0 #5f4b5b18;
+}
+
+html[data-avatar-style="pixel"] .office-dialog input[type="search"]::placeholder {
+  color: #675870;
+  opacity: 1;
+}
+
+html[data-avatar-style="pixel"] .office-dialog :is(input[type="range"], input[type="checkbox"], input[type="radio"]) {
+  accent-color: var(--pixel-ui-focus);
+}
+
+html[data-avatar-style="pixel"] :is(.office-dialog, .inspector) :is(button, input, select, textarea, summary, [tabindex]):focus-visible,
+html[data-avatar-style="pixel"] .inspector:focus-visible {
+  outline: 2px solid var(--pixel-ui-focus);
+  outline-offset: 3px;
+}
+
+html[data-avatar-style="pixel"] .office-dialog :is(.dialog-header, .setup-assistant) :focus-visible {
+  outline-color: var(--pixel-ui-light-focus);
+}
+
+html[data-avatar-style="pixel"] .office-dialog .button {
+  border-radius: 0;
+}
+
+html[data-avatar-style="pixel"] .settings-dialog :is(.setting-row label, .display-setting > label, .agent-size-control output, .day-reset) {
+  color: var(--pixel-ui-ink);
+}
+
+html[data-avatar-style="pixel"] .settings-dialog :is(.setting-row span, .display-setting > span) {
+  color: var(--dialog-quiet);
+}
+
+@media (forced-colors: none) {
+  html[data-avatar-style="pixel"] .settings-dialog input[type="checkbox"] {
+    appearance: none;
+    margin: 0;
+    border: 2px solid var(--pixel-ui-ink);
+    border-radius: 0;
+    background: linear-gradient(var(--pixel-ui-ink), var(--pixel-ui-ink)) left 2px center / 8px 7px no-repeat var(--pixel-ui-paper-dim);
+    box-shadow: 2px 2px #a38f8166;
+  }
+
+  html[data-avatar-style="pixel"] .settings-dialog input[type="checkbox"]:checked {
+    background-position: right 2px center;
+    background-color: var(--pixel-ui-mint);
+  }
+
+  html[data-avatar-style="pixel"] .settings-dialog input[type="range"] {
+    appearance: none;
+    background: transparent;
+  }
+
+  html[data-avatar-style="pixel"] .settings-dialog input[type="range"]::-webkit-slider-runnable-track {
+    height: 8px;
+    border: 2px solid var(--pixel-ui-ink);
+    background: var(--pixel-ui-paper-dim);
+  }
+
+  html[data-avatar-style="pixel"] .settings-dialog input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    margin-top: -5px;
+    border: 2px solid var(--pixel-ui-ink);
+    background: var(--pixel-ui-gold);
+    box-shadow: 2px 2px #a38f81;
+  }
+}
+
+/* Connected providers and onboarding */
+html[data-avatar-style="pixel"] .connections-dialog .provider-row {
+  border: 2px solid var(--dialog-rule);
+  border-radius: 0;
+  background: #fff9e7;
+  box-shadow: 2px 2px 0 #a38f8166;
+}
+
+html[data-avatar-style="pixel"] .connections-dialog .provider-icon {
+  border-width: 2px;
+  border-radius: 0;
+}
+
+html[data-avatar-style="pixel"] .connections-dialog :is(.provider-status, .provider-detail) {
+  color: var(--dialog-quiet);
+}
+
+html[data-avatar-style="pixel"] .connections-dialog .provider-status i {
+  width: 6px;
+  height: 6px;
+  border-radius: 0;
+  background: #91774d;
+}
+
+html[data-avatar-style="pixel"] .connections-dialog .provider-status[data-connected="true"] i {
+  background: #24745f;
+}
+
+html[data-avatar-style="pixel"] .setup-assistant {
+  border: 2px solid var(--pixel-ui-ink);
+  border-radius: 0;
+  background: var(--pixel-ui-panel);
+  box-shadow: inset 3px 0 0 var(--pixel-ui-mint), 3px 3px 0 #28243755;
+  color: var(--pixel-ui-paper);
+}
+
+html[data-avatar-style="pixel"] .setup-assistant :is(.setup-description, .setup-result span) {
+  color: var(--pixel-ui-muted);
+}
+
+html[data-avatar-style="pixel"] .setup-assistant :is(.setup-results > summary, .setup-result[data-state="configuring"] strong) {
+  color: var(--pixel-ui-mint);
+}
+
+html[data-avatar-style="pixel"] .setup-assistant .setup-result {
+  border-top-color: #817591;
+}
+
+html[data-avatar-style="pixel"] .setup-assistant :is(.setup-summary[data-error="true"], .setup-result[data-state="failed"] strong) {
+  color: #ffb5b9;
+}
+
+/* Roster and session data */
+html[data-avatar-style="pixel"] :is(.roster-row, .usage-agent-row) {
+  border-radius: 0;
+  border-block-color: var(--dialog-rule);
+  border-inline-end-color: var(--dialog-rule);
+  background: #fff9e7;
+  color: var(--pixel-ui-ink);
+}
+
+html[data-avatar-style="pixel"] :is(.roster-row[data-selected="true"], .usage-agent-row[aria-expanded="true"], .roster-toolbar .button[aria-pressed="true"]) {
+  background: #caedda;
+  border-block-color: #327d6a;
+  border-inline-end-color: #327d6a;
+  color: var(--pixel-ui-ink);
+  box-shadow: inset 0 -2px 0 #65aa9380;
+}
+
+html[data-avatar-style="pixel"] .office-dialog :is(.roster-result-bar, .roster-keyboard-hint, #roster-reset, .roster-empty, .usage-empty) {
+  color: var(--dialog-quiet);
+}
+
+html[data-avatar-style="pixel"] .office-dialog :is(.roster-empty, .usage-empty) {
+  border-radius: 0;
+  border-color: var(--dialog-rule);
+  background: #f6e5c1;
+}
+
+html[data-avatar-style="pixel"] .usage-history-dialog :is(.usage-filters label, .usage-dates label, .usage-section-heading h3, .usage-agent-heading strong, .usage-event-headline) {
+  color: var(--pixel-ui-ink);
+}
+
+html[data-avatar-style="pixel"] .usage-history-dialog :is(.usage-token-note, .usage-section-heading > span, .usage-agent-relation, .usage-agent-project, .usage-agent-id, .usage-agent-last, .usage-agent-state, .usage-event time, .usage-event-detail, .usage-timezone, .usage-pagination > span, .usage-actions > span) {
+  color: var(--dialog-quiet);
+}
+
+html[data-avatar-style="pixel"] .usage-history-dialog .usage-metric {
+  border: 2px solid var(--pixel-ui-ink);
+  border-radius: 0;
+  background: var(--pixel-ui-panel);
+  box-shadow: 2px 2px 0 #28243755;
+}
+
+html[data-avatar-style="pixel"] .usage-history-dialog .usage-metric :is(dt, small) {
+  color: var(--pixel-ui-muted);
+}
+
+html[data-avatar-style="pixel"] .usage-history-dialog .usage-metric dd {
+  color: var(--pixel-ui-mint);
+  font-family: var(--pixel-ui-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+html[data-avatar-style="pixel"] .usage-history-dialog :is(.usage-token-section, .usage-actions, .usage-timeline-section, .usage-event, .usage-token-table :is(th, td)) {
+  border-color: var(--dialog-rule);
+}
+
+html[data-avatar-style="pixel"] .usage-history-dialog .usage-token-table th {
+  background: var(--pixel-ui-panel);
+  color: var(--pixel-ui-paper);
+}
+
+html[data-avatar-style="pixel"] .usage-history-dialog .usage-token-table td {
+  background: #fff9e7;
+}
+
+html[data-avatar-style="pixel"] .usage-history-dialog :is(.usage-provider-badge, .usage-token-table td:first-child small, .usage-token-table caption) {
+  color: var(--dialog-quiet);
+  border-radius: 0;
+}
+
+html[data-avatar-style="pixel"] .office-dialog [data-error="true"]:not(.setup-summary) {
+  color: var(--dialog-error);
+}
+
+/* Native inputs keep their option, focus and selected behavior. */
+html[data-avatar-style="pixel"] .manual-question-badge {
+  border-color: var(--pixel-ui-ink);
+  border-radius: 0;
+  background: var(--pixel-ui-mint);
+  color: var(--pixel-ui-ink);
+  font-family: var(--pixel-ui-mono);
+}
+
+html[data-avatar-style="pixel"] .manual-questions-dialog :is(.manual-question-scope, .manual-question-feedback, .manual-question-empty, .manual-question-attribution, .manual-question-hint, .manual-question-option-copy small) {
+  color: var(--dialog-quiet);
+}
+
+html[data-avatar-style="pixel"] .manual-questions-dialog :is(.manual-question-fieldset legend, .manual-question-nav, .manual-question-option) {
+  color: var(--pixel-ui-ink);
+}
+
+html[data-avatar-style="pixel"] .manual-questions-dialog :is(.manual-question-nav, .manual-question-option) {
+  background: #fff9e7;
+  border: 2px solid #a38f81;
+  border-radius: 0;
+}
+
+html[data-avatar-style="pixel"] .manual-questions-dialog :is(.manual-question-nav[aria-pressed="true"], .manual-question-option:has(:checked)) {
+  background: #caedda;
+  border-color: #327d6a;
+  box-shadow: inset 3px 0 0 #327d6a;
+}
+
+html[data-avatar-style="pixel"] .manual-questions-dialog .manual-question-option:has(:focus-visible) {
+  outline: 2px solid var(--pixel-ui-focus);
+  outline-offset: 2px;
+}
+
+html[data-avatar-style="pixel"] .manual-questions-dialog .manual-question-actions {
+  border-top-color: var(--dialog-rule);
+}
+
+/* Artwork cards use a light index and a dark specimen stage. */
+html[data-avatar-style="pixel"] .appearance-setting {
+  color: var(--pixel-ui-ink);
+  border-color: var(--dialog-rule);
+}
+
+html[data-avatar-style="pixel"] .appearance-setting :is(h3, .appearance-style, .appearance-option-label, .repertoire-gallery h4) {
+  color: var(--pixel-ui-ink);
+}
+
+html[data-avatar-style="pixel"] .appearance-setting :is(p, .appearance-option-role, .appearance-option-description, .repertoire-fields label) {
+  color: var(--dialog-quiet);
+}
+
+html[data-avatar-style="pixel"] :is(.appearance-card, .repertoire-gallery) {
+  border: 2px solid #786583;
+  border-radius: 0;
+  background: #fff9e7;
+  box-shadow: 2px 2px 0 #78658366;
+}
+
+html[data-avatar-style="pixel"] .appearance-pose-preview {
+  background: linear-gradient(to bottom, #3d3652 82%, #83728d 82% 84%, #2f293e 84%);
+}
+
+html[data-avatar-style="pixel"] .repertoire-gallery > summary {
+  background: var(--pixel-ui-panel);
+  color: var(--pixel-ui-paper);
+}
+
+html[data-avatar-style="pixel"] .repertoire-gallery > summary:focus-visible {
+  outline-color: var(--pixel-ui-light-focus);
+  outline-offset: -4px;
+}
+
+html[data-avatar-style="pixel"] .repertoire-content {
+  padding-top: 11px;
+}
+
+html[data-avatar-style="pixel"] .repertoire-preview {
+  border-color: var(--pixel-ui-ink);
+  background: linear-gradient(#3d3652 0 82%, #83728d 82% 84%, #2f293e 84%);
+}
+
+html[data-avatar-style="pixel"] .repertoire-preview::before {
+  background: #181525b0;
+}
+
+html[data-avatar-style="pixel"] .repertoire-controls button {
+  background: var(--pixel-ui-paper);
+  border: 2px solid #786583;
+  border-radius: 0;
+  color: var(--pixel-ui-ink);
+}
+
+html[data-avatar-style="pixel"] .repertoire-controls button[aria-pressed="true"]:not(:disabled) {
+  background: var(--pixel-ui-gold);
+  border-color: var(--pixel-ui-ink);
+}
+
+/* World callouts use only paint changes so the measured actor envelopes,
+   text sizing, anchor positions and family stripe geometry stay intact. */
+html[data-avatar-style="pixel"] :is(.actor, .visitor) .nameplate {
+  background: var(--pixel-ui-paper);
+  border-radius: 0;
+  border-inline-color: var(--pixel-ui-ink);
+  border-bottom-color: var(--pixel-ui-ink);
+  box-shadow: 2px 2px 0 var(--pixel-ui-shadow), inset 0 1px 0 #fff8e8;
+  color: var(--pixel-ui-ink);
+}
+
+html[data-avatar-style="pixel"] .actor[data-attention="true"] .nameplate { background: #ffe3a3; }
+html[data-avatar-style="pixel"] .actor[data-error="true"] .nameplate { background: #ffd2c5; }
+html[data-avatar-style="pixel"] .actor[data-stale="true"] .nameplate { background: #e6dcea; }
+html[data-avatar-style="pixel"] .actor[data-selected="true"] .nameplate {
+  outline: 2px solid var(--pixel-ui-gold);
+  outline-offset: 1px;
+  box-shadow: 3px 3px 0 var(--pixel-ui-shadow);
+}
+
+html[data-avatar-style="pixel"] .visitor .nameplate {
+  background: #d7efd9;
+}
+
+html[data-avatar-style="pixel"] .actor-bubble {
+  --bubble-paper: var(--pixel-ui-paper);
+  --bubble-accent: var(--pixel-ui-gold);
+  background: var(--bubble-paper);
+  border-color: var(--pixel-ui-ink);
+  border-radius: 0;
+  box-shadow: inset 3px 0 var(--bubble-accent), 3px 3px 0 var(--pixel-ui-shadow);
+  color: var(--pixel-ui-ink);
+}
+
+html[data-avatar-style="pixel"] :is(.actor[data-reaction="true"], .visitor) .actor-bubble {
+  --bubble-paper: #e7f6db;
+  --bubble-accent: #6abb9b;
+}
+
+html[data-avatar-style="pixel"] .actor[data-attention="true"] .actor-bubble {
+  --bubble-paper: #ffe9b3;
+  --bubble-accent: #d39b42;
+}
+
+html[data-avatar-style="pixel"] .actor[data-error="true"] .actor-bubble {
+  --bubble-paper: #ffdfd5;
+  --bubble-accent: #d98883;
+}
+
+html[data-avatar-style="pixel"] .actor-bubble::after {
+  bottom: -7px;
+  width: 12px;
+  height: 7px;
+  border: 0;
+  clip-path: polygon(0 0, 100% 0, 100% 2px, 10px 2px, 10px 4px, 8px 4px, 8px 7px, 4px 7px, 4px 4px, 2px 4px, 2px 2px, 0 2px);
+  background: var(--pixel-ui-ink);
+  transform: none;
+}
+
+html[data-avatar-style="pixel"] .actor-bubble::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  left: calc(var(--bubble-tail-x, 48%) + 2px);
+  bottom: -5px;
+  width: 8px;
+  height: 6px;
+  clip-path: polygon(0 0, 100% 0, 100% 2px, 6px 2px, 6px 4px, 4px 4px, 4px 6px, 2px 6px, 2px 2px, 0 2px);
+  background: var(--bubble-paper);
+}
+
+html[data-avatar-style="pixel"] .inspector {
+  border: 2px solid var(--pixel-ui-ink);
+  border-radius: 0;
+  background: var(--pixel-ui-paper);
+  box-shadow: inset 4px 0 0 var(--pixel-ui-gold), 4px 4px 0 var(--pixel-ui-shadow);
+  backdrop-filter: none;
+  color: var(--pixel-ui-ink);
+}
+
+html[data-avatar-style="pixel"] .inspector :is(.inspector-heading, .inspector-meta, .inspector-actions > span, .inspect-helper, p, .event-details, .evidence-summary, .session-identity) {
+  color: #62516b;
+}
+
+html[data-avatar-style="pixel"] .inspector :is(.provider-badge, .inspect-persona, .animation-evidence) {
+  border-radius: 0;
+}
+
+html[data-avatar-style="pixel"] .inspector .close-inspector {
+  border: 2px solid var(--pixel-ui-ink);
+  border-radius: 0;
+  background: var(--pixel-ui-panel);
+  color: var(--pixel-ui-paper);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  html[data-avatar-style="pixel"] .office-dialog .dialog-close:hover,
+  html[data-avatar-style="pixel"] .inspector .close-inspector:hover {
+    background: var(--pixel-ui-gold);
+    color: var(--pixel-ui-ink);
+  }
+
+  html[data-avatar-style="pixel"] :is(.roster-row, .usage-agent-row, .manual-question-nav, .manual-question-option):hover {
+    border-inline-end-color: var(--pixel-ui-focus);
+    border-block-color: var(--pixel-ui-focus);
+  }
+}
+
+@media (max-width: 560px) {
+  html[data-avatar-style="pixel"] .usage-history-dialog :is(.usage-overview, .usage-filters) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  html[data-avatar-style="pixel"] .usage-history-dialog .usage-dates .button {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}

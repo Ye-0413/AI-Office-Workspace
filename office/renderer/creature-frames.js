@@ -12,14 +12,21 @@
   // The 60-pixel reel and the 40-pixel atlas both use two rig units
   // per texel and share the same physical floor line.
   const FEET_Y = 115, ATLAS_LEFT = 37.5, ATLAS_BODY = 80;
-  const MANIFEST = Manifest || { cell: 60, span: 120, baseline: 56, strips: {} };
+  const MANIFEST = Manifest || { cell: 68, span: 136, baseline: 60, columns: 12, strips: {} };
   const SPAN = MANIFEST.span, FRAME_LEFT = ATLAS_LEFT + ATLAS_BODY / 2 - SPAN / 2;
   const FRAME_TOP = FEET_Y - MANIFEST.baseline * SPAN / MANIFEST.cell;
   function strip(species, activity) { return MANIFEST.strips[species]?.[activity] || null; }
-  function tracks(entry) {
-    return entry.beats.map((_, key) => [...entry.beats.map((offset, index) => ({
-      offset, opacity: index === key ? 1 : 0, easing: 'step-end'
-    })), { offset: 1, opacity: key === 0 ? 1 : 0 }]);
+  const tracks = new WeakMap();
+  function keyframes(entry) {
+    if (!tracks.has(entry)) {
+      const keys = Array.from({ length: entry.frames }, (_, index) => {
+        const x = -(index % MANIFEST.columns) * SPAN;
+        const y = -Math.floor(index / MANIFEST.columns) * SPAN;
+        return { offset: index / entry.frames, transform: `translate(${x}px,${y}px)`, easing: 'step-end' };
+      });
+      tracks.set(entry, [...keys, { ...keys[0], offset: 1 }]);
+    }
+    return tracks.get(entry);
   }
   const SINE = 'cubic-bezier(.37,0,.63,1)', ORGANIC = 'cubic-bezier(.4,0,.2,1)', SETTLE = 'cubic-bezier(.2,.8,.3,1)', SNAP = 'cubic-bezier(.6,0,.9,.6)';
   // Seven families. The family decides the vocabulary; the activity picks a
@@ -78,51 +85,54 @@
   function create({ document, pose, creature = 'folio', shell = null, defs = null, id = 'cp', assetBase = '../assets/avatars/' } = {}) {
     if (!document || !pose) throw new TypeError('Frames need the pose group of an existing creature.');
     let loop = null, key = '', destroyed = false, species = creature;
-    let painted = null, paintedKey = '', reels = [], probe = null;
+    let painted = null, paintedKey = '', reel = null, probe = null;
     const attribute = (node, name, value) => { value = String(value); if (node.getAttribute(name) !== value) node.setAttribute(name, value); };
     const style = (node, name, value) => { if (node.style.getPropertyValue(name) !== value) node.style.setProperty(name, value); };
     const element = (tag, attrs, parent) => { const n = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, String(v)); parent?.append(n); return n; };
-    // Each cel clips the same sheet at a different grid offset.
-    let group = null, frameClip = null, images = [];
+    // The clip stays at the foot anchor while one image moves between
+    // cells. No frame ticker or stack of transparent images per creature.
+    let group = null, frameClip = null, image = null;
     if (shell && defs) {
       frameClip = element('clipPath', { id: id + '-frame-cell' }, defs);
       element('rect', { x: FRAME_LEFT, y: FRAME_TOP, width: SPAN, height: SPAN }, frameClip);
-      group = element('g', { class: 'cp-frames', 'data-active': 'false', 'data-ready': 'false' }, shell);
-    }
-    function image(index) {
-      while (images.length <= index) {
-        const img = element('image', { class: 'cp-frame', 'data-key': images.length, x: FRAME_LEFT - images.length * SPAN, y: FRAME_TOP, height: SPAN, preserveAspectRatio: 'none', 'clip-path': 'url(#' + frameClip.id + ')' }, group);
-        img.style.setProperty('opacity', '0'); images.push(img);
-      }
-      return images[index];
+      group = element('g', { class: 'cp-frames', 'data-active': 'false', 'data-ready': 'false', 'clip-path': 'url(#' + frameClip.id + ')' }, shell);
+      image = element('image', { class: 'cp-frame', x: FRAME_LEFT, y: FRAME_TOP, preserveAspectRatio: 'none' }, group);
     }
     function stopPainted() {
-      for (const reel of reels) reel.cancel(); reels = []; paintedKey = ''; painted = null;
-      for (const img of images) style(img, 'opacity', '0');
-      if (probe) { probe.onload = probe.onerror = null; probe = null; }
+      reel?.cancel(); reel = null; paintedKey = ''; painted = null;
+      if (probe) { probe.onload = null; probe = null; }
       if (group) { attribute(group, 'data-active', 'false'); attribute(group, 'data-ready', 'false'); }
     }
     function paint(activity, phase, still = false) {
-      const entry = group ? strip(species, activity) : null;
-      const nextKey = entry ? [species, activity, entry.frames, entry.duration, still ? 'still' : 'live'].join('|') : '';
+      const entry = strip(species, activity);
+      const nextKey = [species, activity, still ? 'still' : 'live'].join('|');
       if (nextKey === paintedKey) return;
       stopPainted();
-      if (!entry) return;
+      const rows = Math.ceil(entry.frames / MANIFEST.columns);
       const href = assetBase + 'frames/' + species + '/' + activity + '.png';
-      for (let k = 0; k < entry.frames; k++) { const img = image(k); attribute(img, 'href', href); attribute(img, 'width', SPAN * entry.frames); }
-      for (let k = entry.frames; k < images.length; k++) attribute(images[k], 'href', '');
-      attribute(group, 'data-active', 'true'); attribute(group, 'data-strip', activity);
+      attribute(image, 'width', SPAN * MANIFEST.columns);
+      attribute(image, 'height', SPAN * rows);
+      attribute(image, 'href', href);
+      attribute(group, 'data-active', 'true');
+      attribute(group, 'data-strip', activity);
       painted = entry; paintedKey = nextKey;
-      // Keep the atlas visible until the selected reel has decoded. Stale
-      // requests cannot cover the current pose after a state or species swap.
-      probe = document.createElement('img');
-      probe.onload = () => { if (paintedKey === nextKey) attribute(group, 'data-ready', 'true'); };
-      probe.src = href;
-      if (probe.complete && probe.naturalWidth > 0) attribute(group, 'data-ready', 'true');
-      // Quiet preferences get the first key as a still tableau: no reels.
-      if (still || typeof images[0].animate !== 'function') { style(images[0], 'opacity', '1'); return; }
+
+      // The pose atlas stays visible until the current reel has decoded.
+      // Validate the dimensions so a mismatched sheet cannot show blank cels.
+      const request = document.createElement('img');
+      probe = request;
+      const decoded = () => {
+        if (probe === request && request.naturalWidth === MANIFEST.columns * MANIFEST.cell && request.naturalHeight === rows * MANIFEST.cell) {
+          attribute(group, 'data-ready', 'true');
+        }
+      };
+      request.onload = decoded;
+      request.src = href;
+      if (request.complete) decoded();
+      if (still || typeof image.animate !== 'function') return;
       const at = Number.isFinite(phase) ? ((phase % entry.duration) + entry.duration) % entry.duration : 0;
-      reels = tracks(entry).map((frames, k) => { const reel = images[k].animate(frames, { duration: entry.duration, iterations: Infinity, easing: 'linear', fill: 'both' }); reel.currentTime = at; return reel; });
+      reel = image.animate(keyframes(entry), { duration: entry.duration, iterations: Infinity, fill: 'both' });
+      reel.currentTime = at;
     }
     function stopLoop() { if (loop) { loop.cancel(); loop = null; } key = ''; }
     function hold(activity) {
@@ -153,7 +163,7 @@
       return { family: FAMILIES[activity] || 'idle', loop, painted: Boolean(painted) };
     }
     function destroy() { if (destroyed) return; destroyed = true; stopLoop(); stopPainted(); group?.remove(); frameClip?.remove(); }
-    return Object.freeze({ update, destroy, has: activity => Boolean(group && strip(species, activity)), get loop() { return loop; }, get painted() { return painted; }, get reels() { return reels; } });
+    return Object.freeze({ update, destroy, has: activity => Boolean(group && strip(species, activity)), get loop() { return loop; }, get painted() { return painted; }, get reels() { return reel ? [reel] : []; } });
   }
-  return Object.freeze({ create, signature, tracks, strip, FAMILIES, SIDE, PIVOT, SPAN, FRAME_LEFT, FRAME_TOP });
+  return Object.freeze({ create, signature, keyframes, strip, FAMILIES, SIDE, PIVOT, SPAN, FRAME_LEFT, FRAME_TOP });
 });

@@ -11,13 +11,13 @@ Five companions perform **55 activity loops per style**. Pixel is the default. S
   <img src="pixel-overview.gif" width="1100" alt="像素工坊，五个合成状态 / Pixel Workshop, five synthetic activities">
 </picture>
 
-五张卡片由原生渲染器使用合成会话采样。预览把循环相位同步到 3 秒，应用按各自的时长播放。The native preview synchronizes five synthetic loops to three seconds. Each activity keeps its own timing in the app.
+原生渲染器以每秒 30 帧采样 4 秒，五张卡片使用合成会话，各自保留应用内的节拍。The native preview captures four seconds at 30 frames per second. Each synthetic activity keeps its in-app timing.
 
 [静态预览 / Still](pixel-overview.png) · [原创素材声明 / Artwork notice](../../office/assets/WORKSHOP-ARTWORK-NOTICE.md) · [像素帧节拍 / Cel timings](../../office/renderer/creature-frame-manifest.js)
 
-每位伙伴的九张表情帧包括眨眼、左右瞥视、两张招手帧、受惊、两张访客彩蛋帧和工具成功后的轻微表情。眨眼只改变眼睛的像素，身体轮廓和脚底沿用待命姿态。装饰访客偶尔会展示纸鹤、墨泡、苔花、纱线爱心或暖光星星。
+五位伙伴的步态和表情以每秒 30 帧绘制，包含眨眼、左右瞥视、招手、受惊、访客彩蛋和工具成功后的轻微表情。眨眼在闭合和睁开之间加入眼睑的过渡帧。装饰访客偶尔会展示纸鹤、墨泡、苔花、纱线爱心或暖光星星。
 
-Each companion has nine expression cels. The blink changes only the eye pixels. Rare visitor expressions show a paper crane, ink bubble, moss blossom, yarn heart or glowing star. [访客彩蛋预览 / Visitor expression preview](pixel-expressions.png).
+Each companion has 30 fps gait and expression sequences. Eyelids open and close over successive pixel cels. Rare visitor expressions show a paper crane, ink bubble, moss blossom, yarn heart or glowing star. [访客彩蛋预览 / Visitor expression preview](pixel-expressions.png).
 
 ## 手绘风 / Painted
 
@@ -119,7 +119,7 @@ The archived recording samples five synthetic activities from the painted render
 ```sh
 MINI_OFFICE_PREVIEW_DIR=/tmp/office-pixel-preview MINI_OFFICE_CAPTURE_MOTION=1 \
   office/node_modules/.bin/electron office/test/creature-frames-renderer.cjs
-ffmpeg -framerate 12 -i /tmp/office-pixel-preview/pixel-%03d.png \
+ffmpeg -framerate 30 -i /tmp/office-pixel-preview/pixel-%03d.png \
   -filter_complex '[0:v]split[a][b];[a]palettegen=reserve_transparent=0[p];[b][p]paletteuse=dither=none:diff_mode=rectangle' \
   -loop 0 docs/animations/pixel-overview.gif
 cp /tmp/office-pixel-preview/pixel-lineup.png docs/animations/pixel-overview.png

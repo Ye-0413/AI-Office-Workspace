@@ -1,7 +1,7 @@
 /* Finite decorative pair choreography, isolated from real actor poses/state. */
 (function(root){
   'use strict';
-  const NS='http://www.w3.org/2000/svg',EASE_OUT='steps(3,end)',EASE_MOVE='steps(5,end)';
+  const NS='http://www.w3.org/2000/svg',EASE_OUT='cubic-bezier(.23,1,.32,1)',EASE_MOVE='cubic-bezier(.37,0,.63,1)';
   function create({layer,world,getActors,getContext}={}){
     const Model=root.OfficeSocialInteractions;
     if(!layer||!world||!Model||typeof getActors!=='function'||typeof getContext!=='function')throw new TypeError('Social interactions need the real scene layer, world and actor/context readers');
@@ -137,12 +137,12 @@
         animate(meteor,[{opacity:0,transform:`translate(${-20*propScale}px,${-16*propScale}px)`,offset:0},{opacity:0,transform:`translate(${-20*propScale}px,${-16*propScale}px)`,offset:.2},{opacity:1,transform:`translate(${22*propScale}px,${-8*propScale}px)`,offset:.35},{opacity:1,transform:`translate(${154*propScale}px,${23*propScale}px)`,offset:.61},{opacity:0,transform:`translate(${210*propScale}px,${40*propScale}px)`,offset:.8},{opacity:0,offset:1}]);
         for(const[actor,p,side]of[[a,left,1],[b,right,-1]])hand(actor,p,side===1?'sender':'receiver',[{opacity:0,transform:'translateY(3px)',offset:0},{opacity:1,transform:`translate(${side*4}px,-20px) rotate(${side*22}deg)`,offset:.28},{opacity:1,transform:`translate(${side*7}px,-27px) rotate(${side*12}deg)`,offset:.67},{opacity:0,transform:'translateY(3px)',offset:1}]);nod(a,.38,true);nod(b,.38,true);
       }else if(['gear-turn','fan-breeze','orbit-join'].includes(plan.kind)){
-        // Sample the approach, contact and return phases once per sprite cel.
-        // The two participants and their mechanism share these beat offsets.
+        // Sample approach, contact and return together at 30 Hz. The renderer
+        // interpolates the resulting paths at the display refresh rate.
         const cubic=(u,p,q)=>3*(1-u)*(1-u)*u*p+3*(1-u)*u*u*q+u*u*u;
         const phase=(t,start,end)=>{const x=Math.max(0,Math.min(1,(t-start)/(end-start)));if(x===0||x===1)return x;let lo=0,hi=1;for(let i=0;i<18;i++){const u=(lo+hi)/2;if(cubic(u,.77,.175)<x)lo=u;else hi=u;}return cubic((lo+hi)/2,0,1);};
-        const beats=28;
-        const cels=pose=>Array.from({length:beats+1},(_,i)=>({offset:i/beats,easing:'steps(1, end)',...pose(i/beats)}));
+        const beats=Math.ceil(duration*30/1000);
+        const cels=pose=>Array.from({length:beats+1},(_,i)=>({offset:i/beats,easing:'linear',...pose(i/beats)}));
         const fade=t=>phase(t,0,.12)*(1-phase(t,.86,1));
         const num=n=>Number(n.toFixed(5)),translate=(x,y,angle=0)=>`translate(${num(x)}px,${num(y)}px) rotate(${num(angle)}deg)`;
         const joinY=clearClock(mid.x,Math.max(215,Math.min(left.y,right.y)-28*propScale),42*propScale);

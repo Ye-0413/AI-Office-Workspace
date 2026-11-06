@@ -243,8 +243,11 @@ test('stale, completed, reaction and physical walking states stow observed tools
 });
 
 test('creature playback creates no renderer timer and keys only transforms and opacity',()=>{
-  const source=fs.readFileSync(path.join(__dirname,'../renderer/creature-performance.js'),'utf8'),css=fs.readFileSync(path.join(__dirname,'../renderer/creature-performance.css'),'utf8');
-  assert.doesNotMatch(source,/\b(?:requestAnimationFrame|setTimeout|setInterval)\s*\(/);
+  const css=fs.readFileSync(path.join(__dirname,'../renderer/creature-performance.css'),'utf8');
+  for(const name of ['creature-performance','creature-frames','creature-emotes']){
+    const source=fs.readFileSync(path.join(__dirname,'../renderer',name+'.js'),'utf8');
+    assert.doesNotMatch(source,/\b(?:requestAnimationFrame|setTimeout|setInterval)\s*\(/,name);
+  }
   assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
   for(const name of ['idle-rise','idle-look','idle-hover','doze','idle-done','walk-body'])assert.ok(css.includes('@keyframes cp-'+name));
   for(const line of css.split('\n').filter(line=>line.startsWith('@keyframes')))assert.doesNotMatch(line,/(?:^|[;{])(?:width|height|left|top|margin|padding):/);

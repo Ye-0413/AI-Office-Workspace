@@ -106,7 +106,11 @@ app.whenReady().then(async () => {
   // Keep persistent work owners, including the stepped sprite loops.
   // Finite transition and reaction clocks may finish normally during a hide.
   await run(`window.retainedClocks=[...document.querySelectorAll('.creature-performance')].flatMap(layer=>layer.getAnimations({subtree:true})).filter(a=>a.playState==='running'&&a.effect?.getTiming().iterations===Infinity&&(typeof a.animationName==='string'&&a.animationName.startsWith('cp-')||a.effect?.target?.closest('.cp-activity,.cp-reach,.cp-gesture,.cp-pose')));void 0`);
-  assert.equal(await run(`retainedClocks.some(a=>a.effect?.target?.classList.contains('cp-frame'))`), true, 'the hidden-clock check includes actual sprite frame owners');
+  assert.equal(await run(`(()=>{
+    const reels=retainedClocks.filter(a=>a.effect?.target?.classList.contains('cp-frame'));
+    return reels.length>0&&reels.every(a=>a.effect.target.parentNode.querySelectorAll('.cp-frame').length===1&&
+      Math.abs(a.effect.getTiming().duration/(a.effect.getKeyframes().length-1)-1000/30)<.001);
+  })()`), true, 'the hidden-clock check includes the native 30 Hz frame owners');
   await publish(undefined, { windowVisibility: { hidden: true } }); await wait(100);
   assert.equal(await run(`retainedClocks.length>0&&retainedClocks.every(a=>a.playState==='paused')`), true);
   const heldTimes = await run(`retainedClocks.map(a=>a.currentTime)`); await wait(100); assert.deepEqual(await run(`retainedClocks.map(a=>a.currentTime)`), heldTimes);

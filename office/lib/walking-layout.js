@@ -868,9 +868,23 @@
     return{...page,requestedScale:requested,uniformScale:requested,targetUniformScale:requested,fixedScale:true,fitAll:true,fullSize:true,
       entryPoint:{...ENTRY_POINT},overflowIds:[],hidden:0,helperOverflow:0,fitReason:page.transitionDeferred?page.fitReason:'fixed-user-size'};
   }
-  // Capacity may borrow one tenth of the saved manual size. Only independent
-  // mains choose that common scale; helpers keep their ordinary relative size
-  // and still participate in the complete, actual collision/route proof.
+  function scaleHelperFootprints(cast, footprints, helperScale) {
+    if (helperScale === 1) return footprints;
+    const scaled = new Map(footprints);
+    const defaults = footprintDefaults?.() || Scene.ACTOR_FOOTPRINT;
+    for (const session of cast) {
+      if (!session.parentId) continue;
+      const measured = footprints?.get(session.id);
+      const footprint = validFootprint(measured) ? measured : defaults.helper;
+      scaled.set(session.id, Object.fromEntries(
+        ['left', 'right', 'top', 'bottom'].map(edge => [edge, footprint[edge] * helperScale])
+      ));
+    }
+    return scaled;
+  }
+
+  // Only mains choose the common scale. If the mixed cast cannot fit, try
+  // smaller helper bodies and labels with the same collision and route proof.
   // A fresh main-only probe avoids deriving size from transient clone docks or
   // repeatedly multiplying the already reduced physical scale.
   function layoutAdaptiveWalking(present,options={}) {
@@ -888,25 +902,47 @@
       catch(error){if(error.code!=='FIXED_SIZE_CAPACITY')throw error;adaptiveTargetScale=minimumScale;}
     }
     const actualOptions={...options,requestedScale:manualScale,physicalScale:adaptiveTargetScale};
-    let page,adaptiveReflowPage=null;
-    try{page=layoutFullSizeWalking(cast,actualOptions);}
-    catch(error){
-      if(error.code!=='FIXED_SIZE_CAPACITY')throw error;
-      page=layoutFixedWalking(cast,{...actualOptions,fullSize:true});
-      if(Number.isFinite(options.previousScale)&&Math.abs(options.previousScale-adaptiveTargetScale)>EPS){
-        // A changed physical size may invalidate edge feet or an old traffic
-        // arrangement even though the full target cast fits. The renderer may
-        // choose its existing presentation-only readmission once finite clone
-        // and exit owners have released. A heartbeat at the same scale never
-        // receives this permission to replace already admitted bodies.
-        try{adaptiveReflowPage=layoutFullSizeWalking(cast,{...capacityOptions,physicalScale:adaptiveTargetScale});}
-        catch(reflowError){if(reflowError.code!=='FIXED_SIZE_CAPACITY')throw reflowError;}
+    const previousHelperScale=options.previousHelperScale ?? 1;
+    const full=opts=>{
+      try{return layoutFullSizeWalking(cast,opts);}
+      catch(error){if(error.code!=='FIXED_SIZE_CAPACITY')throw error;return null;}
+    };
+    let helperScale=1, page=full(actualOptions), adaptiveReflowPage=null;
+    const hasHelpers=cast.length>mains.length;
+    const scaleChanged=Number.isFinite(options.previousScale)&&Math.abs(options.previousScale-adaptiveTargetScale)>EPS;
+    let normalCapacity=null;
+    if(!page && (scaleChanged || previousHelperScale < 1 || (hasHelpers && options.currentPositions?.size))){
+      // A blocked entrance or moving clone is not, by itself, a full room.
+      normalCapacity=full({...capacityOptions,physicalScale:adaptiveTargetScale});
+      if(normalCapacity && (scaleChanged || previousHelperScale < 1)) adaptiveReflowPage={...normalCapacity,helperScale:1};
+    }
+    if(!page && hasHelpers && !normalCapacity){
+      helperScale=.7;
+      const compactOptions={...actualOptions,footprints:scaleHelperFootprints(cast,options.footprints,helperScale)};
+      page=full(compactOptions);
+      if(!page){
+        // Existing helper docks may yield to a main waiting to enter. Keep
+        // existing mains resident and try helpers after all pending mains.
+        page=layoutFixedWalking(cast,{...compactOptions,fullSize:true,prioritizeMains:true});
       }
     }
-    const describe=result=>({...result,requestedScale:manualScale,manualScale,minimumScale,adaptiveTargetScale,effectiveScale:result.uniformScale,
+    if(!page)page=layoutFixedWalking(cast,{...actualOptions,fullSize:true,prioritizeMains:hasHelpers});
+    if(hasHelpers && !adaptiveReflowPage && mains.some(main=>!page.seats.has(main.id)) && options.currentPositions?.size){
+      // Existing stations can block a main even after helpers give up their
+      // docks. Re-admit only when a fresh route proof seats more mains.
+      const fresh=normalCapacity || layoutFixedWalking(cast,{
+        ...capacityOptions,physicalScale:adaptiveTargetScale,fullSize:true,prioritizeMains:true,
+        footprints:scaleHelperFootprints(cast,options.footprints,helperScale)
+      });
+      if(mains.filter(main=>fresh.seats.has(main.id)).length > mains.filter(main=>page.seats.has(main.id)).length){
+        adaptiveReflowPage={...fresh,helperScale};
+      }
+    }
+    if(page.layoutDeferred)helperScale=previousHelperScale;
+    const describe=(result, helperScale)=>({...result,helperScale,requestedScale:manualScale,manualScale,minimumScale,adaptiveTargetScale,effectiveScale:result.uniformScale,
       scaleReduced:result.uniformScale<manualScale-EPS,sizingMainCount:mains.length,
       sizingReason:adaptiveTargetScale<manualScale-EPS?'main-capacity':'manual-size'});
-    return{...describe(page),adaptiveNeedsReflow:Boolean(adaptiveReflowPage),adaptiveReflowPage:adaptiveReflowPage?describe(adaptiveReflowPage):null};
+    return{...describe(page,helperScale),adaptiveNeedsReflow:Boolean(adaptiveReflowPage),adaptiveReflowPage:adaptiveReflowPage?describe(adaptiveReflowPage,adaptiveReflowPage.helperScale):null};
   }
   // Keep every real resident in the geometry problem. New observations wait
   // outside when the selected size cannot safely fit them; no fact is dropped
@@ -916,7 +952,9 @@
       const unique=new Map((Array.isArray(present)?present:[]).filter(s=>s&&typeof s.id==='string'&&s.id).map(s=>[s.id,s]));
       const cast=[...unique.values()],previous=options.previousSeats instanceof Map?options.previousSeats:new Map();
       const residentIds=options.residentIds instanceof Set?options.residentIds:new Set(previous.keys());
-      const admitted=cast.filter(s=>residentIds.has(s.id)),pending=cast.filter(s=>!residentIds.has(s.id));
+      const admitted=cast.filter(s=>residentIds.has(s.id)&&(!options.prioritizeMains||!s.parentId));
+      const admittedIdsAtStart=new Set(admitted.map(s=>s.id));
+      const pending=cast.filter(s=>!admittedIdsAtStart.has(s.id));
       let page;
       try{page=layoutFullSizeWalking(admitted,options);}
       catch(error){
@@ -940,7 +978,15 @@
           pathsById:new Map(),holdingPoints:[],holdingPaths:[],transitionProof:null,scheduledProof:null,proofMode:'retained-residents',fitReason:'fixed-size-residents-held'};
       }
       const depth=session=>{const seen=new Set();let at=session,count=0;while(at?.parentId&&!seen.has(at.id)){seen.add(at.id);count++;at=unique.get(at.parentId);}return count;};
-      for(const session of pending.sort((a,b)=>depth(a)-depth(b)||a.id.localeCompare(b.id))){
+      const pendingMains=options.prioritizeMains?pending.filter(session=>!session.parentId):[];
+      if(pendingMains.length){
+        try{
+          page=layoutFullSizeWalking(admitted.concat(pendingMains),{...options,retainStations:false});
+          admitted.push(...pendingMains);
+        }catch(error){if(error.code!=='FIXED_SIZE_CAPACITY')throw error;}
+      }
+      for(const session of pending.sort((a,b)=>depth(a)-depth(b)||Number(residentIds.has(b.id))-Number(residentIds.has(a.id))||a.id.localeCompare(b.id))){
+        if(admitted.includes(session))continue;
         if(session.parentId&&unique.has(session.parentId)&&!admitted.some(s=>s.id===session.parentId))continue;
         try{page=layoutFullSizeWalking(admitted.concat(session),{...options,previousSeats:page.seats,retainStations:true});admitted.push(session);}
         catch(error){if(error.code!=='FIXED_SIZE_CAPACITY')throw error;}
@@ -994,6 +1040,6 @@
   }
   const sceneLayouts=new WeakMap();
   function forScene(scene){if(scene===Scene)return api;if(!sceneLayouts.has(scene))sceneLayouts.set(scene,createLayout(scene,Traffic,undefined,footprintDefaults));return sceneLayouts.get(scene);}
-  const api=Object.freeze({layoutWalking,layoutAllWalking,layoutFullSizeWalking,layoutAdaptiveWalking,layoutFixedWalking,forScene,gapForScale:defaultGapForScale,legalPoint,route,retiringRoute,ENTRY_POINT,OBSTACLES,ZONE_AREAS,ZONE_ANCHORS,HOLDING_CANDIDATES,CORRIDORS});
+  const api=Object.freeze({layoutWalking,layoutAllWalking,layoutFullSizeWalking,layoutAdaptiveWalking,layoutFixedWalking,scaleHelperFootprints,forScene,gapForScale:defaultGapForScale,legalPoint,route,retiringRoute,ENTRY_POINT,OBSTACLES,ZONE_AREAS,ZONE_ANCHORS,HOLDING_CANDIDATES,CORRIDORS});
   return api;
 });

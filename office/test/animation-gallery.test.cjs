@@ -139,16 +139,16 @@ test('the painted overview preserves its captures and all 55 relocated source st
   assert.equal(bytes.length,asset.bytes);assert.equal(sha256(bytes),asset.sha256,asset.file);
  }
 });
-test('pixel overview pairs a changing native loop with a same-size still',()=>{
+test('pixel overview shows four seconds of 30 fps native playback with a same-size still',()=>{
  const png=fs.readFileSync(path.join(dir,'pixel-overview.png'));
  const gif=inspectGif(fs.readFileSync(path.join(dir,'pixel-overview.gif')));
  assert.equal(png.toString('hex',0,8),'89504e470d0a1a0a');
  assert.equal(png.readUInt32BE(16),gif.width);
  assert.equal(png.readUInt32BE(20),gif.height);
  assert.equal(gif.loop,0);
- assert.equal(gif.frames,36);
- assert.ok(gif.uniqueImages>=10);
- assert.ok(Math.abs(gif.delay-300)<=5);
+ assert.equal(gif.frames,120);
+ assert.ok(gif.uniqueImages>=96);
+ assert.ok(Math.abs(gif.delay-400)<=5);
 });
 test('seasonal gallery covers every real theme with at least 31 distinct animated frames',()=>{
  const F=require('../lib/festival-model.js'),gallery=path.join(repo,'docs/scenes'),manifest=JSON.parse(fs.readFileSync(path.join(gallery,'manifest.json')));

@@ -169,7 +169,7 @@ Native answers require your explicit submission; tool approvals stay in the orig
 | Writing & research | Coding & debugging | Long tasks & care | Design & exploration | Coordination |
 | Earnest · meticulous | Quiet · determined | Steady · patient | Playful · inventive | Gentle · precise |
 
-**Pixel is the default.** Switch to **Painted** from **View → Avatar Style** or **Room preferences → Avatar style**. Each style has 55 loops across five companions and eleven activities. The preview above shows pixel cels sampled with synthetic sessions. [See both styles in the motion gallery](docs/animations/README.md).
+**Pixel is the default.** Switch to **Painted** from **View → Avatar Style** or **Room preferences → Avatar style**. Each style has 55 loops across five companions and eleven activities. Pixel activity loops play at 30 frames per second. The preview uses synthetic sessions. [See both styles in the motion gallery](docs/animations/README.md).
 
 First five families: distinct designs; additional families: color variants. Helpers inherit their root's **shape and color, at a smaller size**. [Stories & family rules](docs/companions.md).
 

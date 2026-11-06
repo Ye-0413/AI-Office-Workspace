@@ -5,7 +5,8 @@ const source=fs.readFileSync(path.join(__dirname,'../renderer/app.js'),'utf8');
 const endpointSource=source.slice(source.indexOf('  function cloneBusy('),source.indexOf('  function completedCloneTurn('));
 function setup(){
   const actors=new Map(),parent={id:'root',position:{x:30,y:60},node:{dataset:{},matrix:{m11:1,m12:0}}},child={id:'clone',helper:true,serial:4,position:{x:30.5,y:60},node:{dataset:{},matrix:{m11:1,m12:0}},clonePhase:'returning',entryPending:false};actors.set(parent.id,parent);actors.set(child.id,child);
-  const context={actors,Scene,currentPage:{gap:2},cloneAncestor:()=>parent,currentPosition:actor=>actor.position,actorGeometry:()=>({uniformScale:1,footprint:{left:10,right:10,top:10,bottom:10}}),getComputedStyle:node=>({transform:node.matrix}),DOMMatrixReadOnly:class{constructor(value){Object.assign(this,value);}}};
+  const actorFootprints=new Map([...actors.keys()].map(id=>[id,{left:10,right:10,top:10,bottom:10}]));
+  const context={actors,Scene,actorFootprints,currentPage:{gap:2},cloneAncestor:()=>parent,currentPosition:actor=>actor.position,actorGeometry:()=>({uniformScale:1,footprint:{left:10,right:10,top:10,bottom:10}}),getComputedStyle:node=>({transform:node.matrix}),DOMMatrixReadOnly:class{constructor(value){Object.assign(this,value);}}};
   vm.createContext(context);vm.runInContext(endpointSource,context);return{actors,parent,child,read:()=>context.endpointParent(child)};
 }
 test('a genuine clone endpoint keeps finite separation evidence across fresh work until actual envelopes separate',()=>{

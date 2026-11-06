@@ -7,17 +7,44 @@
 })(typeof globalThis === 'object' ? globalThis : this, function () {
   'use strict';
   const NS = 'http://www.w3.org/2000/svg';
-  const SPAN = 96, LEFT = 29.5, TOP = 27, COUNT = 9;
-  const CEL = Object.freeze({
-    blink: 0, left: 1, right: 2, greetIn: 3, greetOut: 4, startle: 5, rareIn: 6, rareOut: 7, success: 8
-  });
-  const OFF = -1;
-  const CUES = Object.freeze({
-    greet: [620, [[0, CEL.greetIn], [.24, CEL.greetOut], [.48, CEL.greetIn], [.69, CEL.greetOut], [.89, OFF]]],
-    startle: [360, [[0, CEL.startle], [.47, CEL.blink], [.72, OFF]]],
-    rare: [1260, [[0, CEL.rareIn], [.23, CEL.rareOut], [.55, CEL.rareIn], [.68, CEL.rareOut], [.87, OFF]]],
-    success: [520, [[0, CEL.success], [.76, OFF]]]
-  });
+  const SPAN = 96, LEFT = 29.5, TOP = 27, COLUMNS = 18, FPS = 30;
+  // OFF shows the ordinary body; BLANK shows neither body nor cel, so a
+  // helper can stay unseen until its own material has gathered.
+  const OFF = -1, BLANK = -2;
+  // The first row is the 600ms stride. The renderer drives it by distance,
+  // and the remaining clips share the same texture and cell registration.
+  // Clone choreography clips run at 60 fps. `lead` and `tail` are timeline
+  // beats without cels: the parent keeps its body during a lead, a forming
+  // helper stays blank, and a dissolved helper stays blank through its tail.
+  let count = 0;
+  const CLIPS = Object.freeze(Object.fromEntries(Object.entries({
+    walk: 600, blink: 200, 'glance-left': 480, 'glance-right': 480,
+    greet: 620, startle: 420, rare: 1260, success: 560,
+    split: { duration: 700, fps: 60 },
+    absorb: { duration: 400, fps: 60, lead: 800 },
+    condense: { duration: 500, fps: 60, lead: 700, leadBlank: true },
+    dissolve: { duration: 500, fps: 60, tail: 700 }
+  }).map(([name, spec]) => {
+    const { duration, fps = FPS, lead = 0, tail = 0, leadBlank = false } = typeof spec === 'number' ? { duration: spec } : spec;
+    const frames = Math.ceil(duration * fps / 1000);
+    const clip = Object.freeze({ duration, fps, frames, first: count, lead, tail, leadBlank, total: lead + duration + tail });
+    count += frames;
+    return [name, clip];
+  })));
+  const ROWS = Math.ceil(count / COLUMNS);
+  // Clone clips are a shared physical moment with another real body; ordinary
+  // reactions wait rather than cutting them.
+  const CLONE_CLIPS = Object.freeze(['split', 'absorb', 'condense', 'dissolve']);
+  function appendClip(timeline, name, at, duration) {
+    const clip = CLIPS[name];
+    if (clip.lead) { timeline.push([at / duration, clip.leadBlank ? BLANK : OFF]); at += clip.lead; }
+    for (let i = 0; i < clip.frames; i++) {
+      timeline.push([(at + i * clip.duration / clip.frames) / duration, clip.first + i]);
+    }
+    let end = (at + clip.duration) / duration;
+    if (clip.tail) { timeline.push([end, BLANK]); end = (at + clip.duration + clip.tail) / duration; }
+    if (end < 1) timeline.push([end, OFF]);
+  }
   function hash(value) {
     let seed = 2166136261;
     for (const letter of value) seed = Math.imul(seed ^ letter.charCodeAt(0), 16777619);
@@ -34,7 +61,9 @@
     const clip = node('clipPath', { id: id + '-emote-cell' }, defs);
     node('rect', { x: LEFT, y: TOP, width: SPAN, height: SPAN }, clip);
     const group = node('g', { class: 'cp-emotes', 'clip-path': 'url(#' + clip.id + ')', 'data-ready': 'false' }, parent);
-    const image = node('image', { x: LEFT, y: TOP, width: SPAN * COUNT, height: SPAN, opacity: 0, 'data-pixel-emote': '' }, group);
+    const image = node('image', { x: LEFT, y: TOP, width: SPAN * COLUMNS, height: SPAN * ROWS, opacity: 0, 'data-pixel-emote': '' }, group);
+    image.style.setProperty('--cp-walk-cels', String(CLIPS.walk.frames));
+    image.style.setProperty('--cp-walk-strip-width', CLIPS.walk.frames * SPAN + 'px');
     let config = {}, owner = null, probe = null, idleTime = null, ready = false, destroyed = false;
 
     function stop() {
@@ -47,9 +76,11 @@
       if (typeof image.animate !== 'function' || typeof body.animate !== 'function') return false;
       const timeline = [...beats, [1, OFF]];
       const bodyFrames = timeline.map(([offset, cel]) => ({ offset, opacity: Number(cel === OFF), easing: 'step-end' }));
-      const expressionFrames = timeline.map(([offset, cel]) => ({
-        offset, opacity: Number(cel !== OFF), transform: 'translateX(' + (-Math.max(0, cel) * SPAN) + 'px)', easing: 'step-end'
-      }));
+      const expressionFrames = timeline.map(([offset, cel]) => {
+        const index = Math.max(0, cel);
+        const x = -(index % COLUMNS) * SPAN, y = -Math.floor(index / COLUMNS) * SPAN;
+        return { offset, opacity: Number(cel >= 0), transform: 'translate(' + x + 'px,' + y + 'px)', easing: 'step-end' };
+      });
       const timing = { duration, iterations, fill: 'both' };
       const animations = [body.animate(bodyFrames, timing), image.animate(expressionFrames, timing)];
       const record = { name, animations };
@@ -71,10 +102,11 @@
     function refresh() {
       if (destroyed || owner || !ready || !config.idle || !canStart()) return;
       const seed = hash(config.identity + '/' + config.species), period = 6400 + seed % 1900;
-      const glance = seed % 2 ? CEL.left : CEL.right;
-      play('idle', period, [[0, OFF], [.29, CEL.blink], [.29 + 110 / period, OFF],
-        [.68, glance], [.68 + 300 / period, OFF], [.87, CEL.blink], [.87 + 100 / period, OFF]],
-      Infinity, idleTime ?? seed % period);
+      const timeline = [[0, OFF]];
+      appendClip(timeline, 'blink', period * .29, period);
+      appendClip(timeline, seed % 2 ? 'glance-left' : 'glance-right', period * .68, period);
+      appendClip(timeline, 'blink', period * .87, period);
+      play('idle', period, timeline, Infinity, idleTime ?? seed % period);
       idleTime = null;
     }
 
@@ -87,7 +119,7 @@
       const request = document.createElement('img');
       probe = request;
       const decoded = () => {
-        if (destroyed || probe !== request || ready || request.naturalWidth !== SPAN * COUNT / 2 || request.naturalHeight !== SPAN / 2) return;
+        if (destroyed || probe !== request || ready || request.naturalWidth !== SPAN * COLUMNS || request.naturalHeight !== SPAN * ROWS) return;
         ready = true;
         group.setAttribute('data-ready', 'true');
         refresh();
@@ -111,16 +143,20 @@
       refresh();
     }
 
+    function locked() { return Boolean(owner) && CLONE_CLIPS.includes(owner.name); }
     function cue(name, direction) {
       if (!ready || !canStart() || owner?.name === 'rare' && name !== 'rare') return false;
-      const entry = name === 'glance' ? [480, [[0, direction < 0 ? CEL.left : CEL.right], [.84, OFF]]] : CUES[name];
-      if (!entry) return false;
+      if (locked() && !CLONE_CLIPS.includes(name)) return false;
+      const clipName = name === 'glance' ? (direction < 0 ? 'glance-left' : 'glance-right') : name;
+      if (clipName === 'walk' || !Object.hasOwn(CLIPS, clipName)) return false;
+      const duration = CLIPS[clipName].total, timeline = [];
+      appendClip(timeline, clipName, 0, duration);
       if (owner?.name === 'idle') idleTime = owner.animations[0].currentTime;
       stop();
-      return play(name, ...entry);
+      return play(name, duration, timeline);
     }
 
-    return Object.freeze({ update, cue, refresh, destroy() {
+    return Object.freeze({ update, cue, refresh, locked, destroy() {
       destroyed = true;
       stop();
       if (probe) probe.onload = null;
@@ -128,5 +164,5 @@
       clip.remove();
     } });
   }
-  return Object.freeze({ create });
+  return Object.freeze({ create, CLIPS, CLONE_CLIPS, SPAN, COLUMNS, ROWS });
 });

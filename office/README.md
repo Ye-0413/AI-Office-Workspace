@@ -92,17 +92,19 @@ Daily room uses a stable Hong Kong date schedule: six different everyday interio
 
 每个主 Agent 家族随机分配五只工坊伙伴之一：**纸团**（奶油白折纸）、**墨豆**（深蓝墨滴）、**苔盒**（陶土与苔藓）、**线团**（珊瑚色毛线）、**灯籽**（透明琥珀与暖光）。Claude 也使用新角色。分身继承主身的造型与配色，体型更小；同一场景中每个主 Agent 的「造型＋配色」唯一。先分配五种原色造型，超过五个家族时复用造型并添加配色变体。在场家族不随新成员加入或离开而换外观，离场过渡结束前仍保留其外观名额。名牌家族色与编号继续区分真实身份和父子关系。用途说明是角色性格设定，不会改变工具能力或任务分配。
 
-「房间偏好」提供当前风格的五种角色大图。默认的像素风使用六格 40×40 透明姿态，分别呈现待命、工作、思考、休息、需留意与确认完成。手绘风保留原工坊姿态与活动帧条，播放时在帧之间柔和过渡。两种风格都支持节能和减少动作，切换只影响同一组家族的外观与动作呈现。
+「房间偏好」提供当前风格的五种角色大图。默认的像素风使用六格 40×40 透明姿态，分别呈现待命、工作、思考、休息、需留意与确认完成。工具栏、对话框、名牌和气泡使用同一套像素界面。手绘风使用原工坊的界面、角色姿态与活动帧条，播放时在帧之间柔和过渡。切换风格保留同一组家族和任务。
 
-像素风的 55 条活动帧条各有四张 60×60 像素画面。角色和道具同步硬切，在隐藏时暂停同一组时钟，在节能和减少动作模式停在首帧。到站、分身、待命、访客、天气、节庆和数字翻页使用阶梯节奏和方块轮廓。素材由 `scripts/draw-pixel-companions.cjs` 在整数网格绘制。帧条损坏时保留对应姿态；整张姿态图无法加载时显示像素备用头像。五位伙伴另有逐像素绘制的眨眼、左右偷看、招手、受惊和轻微成功反馈。点击伙伴可打招呼，装饰访客偶尔会展示角色专属彩蛋。
+像素风的 55 套活动以每秒 30 张 60×60 像素帧播放。身体与道具在同一张帧上绘制，走路、眨眼、招手和访客彩蛋也有逐帧过渡。隐藏窗口会暂停原有时钟，节能和减少动作会保留静态姿态。素材由 `scripts/draw-pixel-companions.cjs` 在整数网格绘制。帧条无法读取时显示对应姿态，姿态图无法读取时显示像素备用头像。点击伙伴可打招呼。
 
 按 **⌘K / Ctrl+K** 打开伙伴搜索，可按昵称、任务、工具、项目或真实 ID 查找，并筛选「仅需留意」。方向键、Home / End 可浏览结果，Enter 查看详情，Esc 关闭后返回来源；实时更新保留列表焦点和滚动位置。选中伙伴有静态脚底光圈，便于在房间中定位。
 
 Each real main-agent family receives one randomly assigned workshop companion: **Folio**, a folded paper creature; **Ink**, a low fluid pebble; **Moss**, a moss-backed terracotta creature; **Thread**, a coral yarn creature; or **Glow**, a translucent amber seed. Claude also uses these characters. Helpers inherit their main agent’s shape and color at a smaller size. Every main agent on the floor has a unique shape-and-color combination: the first five families use distinct original designs; additional families reuse those shapes with new color variants. Existing families keep their appearance as others arrive or leave, and departing bodies retain their reservation until they leave the floor. Nameplate colors and numbers preserve family identification and actual ancestry. Role descriptions express character, without changing provider capability or task assignment.
 
-Open **View → Avatar Style** in the macOS menu bar or **Room preferences → Avatar style** to switch between Pixel and Painted. The app remembers the choice locally. Both styles cover the same five companions and eleven activities, and the room preferences show the selected style’s motion gallery. Pixel companions have six 40×40 poses and 55 activity strips, each with four 60×60 cels that cut on each beat. Painted companions use the original workshop poses and 55 activity strips with soft transitions between keys. Both styles pause playback when hidden and show a still pose in reduced motion or low power.
+Open **View → Avatar Style** in the macOS menu bar or **Room preferences → Avatar style** to switch between Pixel and Painted. The app remembers the choice locally. Both styles cover the same five companions and eleven activities, and the room preferences show the selected style’s motion gallery. Pixel companions have six 40×40 poses and 55 activity loops drawn as 68×68 cels at 30 frames per second. Painted companions use the original workshop poses and 55 activity strips with soft transitions between keys. Both styles pause playback when hidden and show a still pose in reduced motion or low power.
 
-`scripts/draw-pixel-companions.cjs` draws the original artwork directly on a pixel grid. A missing strip leaves the corresponding atlas pose visible. A missing atlas shows the pixel backup body. Each species has nine additional expression cels for blinking, sideways glances, greetings, startles, a small reaction to confirmed tool success, and a rare decorative visitor surprise. Click a companion to say hello. Both styles are included in the same app and share its local profile and observation hooks.
+Pixel also styles the toolbar, dialogs, nameplates, and speech bubbles. Pointer clicks open different surfaces with short, distinct motions. Keyboard activation and reduced-motion mode open them immediately. Painted uses the original workshop interface.
+
+`scripts/draw-pixel-companions.cjs` draws the original artwork directly on a pixel grid. A missing strip leaves the corresponding atlas pose visible. A missing atlas shows the pixel backup body. Each species has 30 fps pixel sequences for walking, blinking, sideways glances, greetings, startles, confirmed tool feedback, and a rare visitor surprise. Click a companion to say hello. Both styles are included in the same app and share its local profile and observation hooks.
 
 Use **⌘K / Ctrl+K** to search the roster by nickname, task, tool, project or real ID. Filter to agents needing attention, browse with arrows or Home / End, and press Enter for details. Focus and scroll survive live updates, and closing details restores focus.
 
@@ -126,7 +128,7 @@ The resource-health controller observes only its image, source and presence owne
 
 脚底而非角色画布下缘锚定地面，持续约 1.7 秒的真实功能变化会安排身体走向相应家具区域，短暂工具切换先合并。行路与换路从当前实际脚点续接；最多八条路线可并行，角色行走时允许相互穿过，家具与时钟保留区仍会阻挡路径，最终停靠位置按完整包络分开安排。普通心跳和场景切换保留原身体、图片、关节动画与已累计的播放时间。
 
-只有主 Agent 的身体从门口走入；新分身在已观察到的实际父级位置凝聚，再真实走向工作区，归位也回到实际父级。分身凝聚与吸收特效持续 900 毫秒，凝聚阶段后才起步，走回父级后才吸收。已入场身体不会因为交通阻塞而隐身。已确认退场的主 Agent 保留真实身体并走向门口，但不再占用活跃角色的静止工位；多个离场角色可经过同一门口，不会因终点重叠互相阻塞。有真实分身仍需归位时保留祖先锚点，新工作或迟到的分身可以中断离场。已完成分身保留底层开放会话，后续收到明确活跃但尚未分类的活动也会重新显现，不会被“工作种类未知”误藏。
+只有主 Agent 的身体从门口走入；新分身在已观察到的实际父级位置凝聚，再真实走向工作区，归位也回到实际父级。分身凝聚与吸收各持续 1200 毫秒：父体先用自身材质做 700 毫秒的分身预备（纸页折叠、墨豆压扁、苔藓落籽、线团抽线、光粒凝晶），子体在后 500 毫秒从同一材质凝成身体，成形后才起步；归位时子体先用 500 毫秒化回材质，父体在 800 毫秒处迎接并吸收。已入场身体不会因为交通阻塞而隐身。已确认退场的主 Agent 保留真实身体并走向门口，但不再占用活跃角色的静止工位；多个离场角色可经过同一门口，不会因终点重叠互相阻塞。有真实分身仍需归位时保留祖先锚点，新工作或迟到的分身可以中断离场。已完成分身保留底层开放会话，后续收到明确活跃但尚未分类的活动也会重新显现，不会被“工作种类未知”误藏。
 
 本次观察中已完成的主 Agent 会留在台前待机，安静地打瞌睡或闲玩；没有新会话活动时持续保留。新的真实主 Agent 或分身开始活动时，待机角色退场让位，其真实祖先仍保留到分身归位。待机不增加工作时长或今日活跃计数，历史闲置记录不会因此重新入场。隐藏时暂停待机动画，减少动作和节能时保留静态姿态。
 

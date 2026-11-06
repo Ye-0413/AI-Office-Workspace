@@ -4,8 +4,21 @@
   if(typeof module==='object'&&module.exports)module.exports=api;else root.OfficeCloneMotion=api;
 })(typeof globalThis==='object'?globalThis:this,function(){
   'use strict';
-  const EASE_OUT='steps(3,end)',EASE_MOVE='steps(4,end)';
-  const DURATION=900,READY=Object.freeze({split:300,absorb:680});
+  const EASE_OUT='cubic-bezier(.23,1,.32,1)',EASE_MOVE='cubic-bezier(.37,0,.63,1)';
+  // Split: the parent anticipates (0–400), its material leaves the body
+  // (400–700) and the helper gathers at its feet (700–1200); the helper may
+  // walk only once it is whole. Absorb: the helper dissolves (0–500), the
+  // material rises back into the parent (500–800, ready) and the parent
+  // answers (800–1200). The authored body cels belong to the creatures.
+  const DURATION=1200,READY=Object.freeze({split:1200,absorb:800});
+  const MATERIALS=Object.freeze(['folio','moss','thread','glow']);
+  // Parent-local pixels: the body centre sits near (0,-40), feet at (0,0).
+  const PIECES=Object.freeze({
+    folio:{part:'clone-piece-folio',out:[[0,-40,0,.7],[-8,-29,-12,1],[6,-17,10,1],[0,-6,0,1]],in:[[0,-6,0,1],[7,-18,10,1],[-6,-30,-9,1],[0,-40,0,.7]],bits:'clone-scrap',count:5},
+    moss:{part:'clone-piece-moss',out:[[0,-40,0,.7],[0,-9,0,1],[0,-14,0,1],[0,-6,0,1]],in:[[0,-6,0,1],[0,-16,0,1],[0,-30,0,1],[0,-40,0,.7]],bits:'clone-spore',count:6},
+    thread:{part:'clone-piece-thread',out:[[-10,-36,0,.7],[-7,-24,-20,1],[-3,-12,-40,1],[0,-6,-60,1]],in:[[0,-6,0,1],[-3,-16,30,1],[-8,-28,60,1],[-10,-36,90,.7]],bits:'clone-fiber',count:5},
+    glow:{part:'clone-piece-glow',out:[[0,-38,0,.6],[5,-27,0,1.2],[-3,-15,0,1.1],[0,-6,0,1]],in:[[0,-6,0,1],[-4,-16,0,1.1],[4,-28,0,1.2],[0,-38,0,.6]],bits:'clone-spark',count:6}
+  });
   function burst({anchor,kind='split',ownerId='',reducedMotion=false,lowPower=false,hidden=false}={}){
     if(!anchor?.ownerDocument)throw new TypeError('A clone effect needs its actual scene anchor.');
     if(kind!=='split'&&kind!=='absorb')throw new TypeError('Unknown clone boundary.');
@@ -33,28 +46,52 @@
       const motion=element.animate(timed,{duration,easing:'linear',fill:'both'});motions.push(motion);return motion;
     }
     let readyMotion;
-    if(anchor.dataset?.bodyDesign==='ink'){
+    const design=anchor.dataset?.bodyDesign;
+    const pose=(dx,dy,sx=1,sy=1,angle=0)=>`translate3d(${dx}px,${dy}px,0) rotate(${angle}deg) scale(${sx},${sy})`;
+    if(design==='ink'){
       node.className+=' clone-ink-effect';node.dataset.creatureEffect='ink';
-      const puddle=part('clone-ink-puddle'),core=part('clone-ink-core');
-      // The little core owns the same ready boundary as the legacy focus.
-      // The puddle and droplets keep their own finite trailing phase.
+      const puddle=part('clone-ink-puddle'),core=part('clone-ink-core');core.dataset.cloneReady='true';
+      // The core owns the ready boundary. On a split the puddle spreads while
+      // the parent flattens, drops bud outward as the material leaves, and the
+      // helper gathers from 700ms. On an absorb the drops merge from 500ms and
+      // the puddle swells into the parent at 800ms.
       readyMotion=run(core,kind==='split'
-        ?[{opacity:0,transform:'scale(.95,.9)'},{opacity:.9,transform:'scale(1.08,1.12)',offset:.64},{opacity:0,transform:'scale(1.14,.92)'}]
-        :[{opacity:0,transform:'scale(1.08,.94)'},{opacity:.82,transform:'scale(1,1.12)',offset:.68},{opacity:0,transform:'scale(1.12,.92)'}],READY[kind],EASE_OUT);
+        ?[{opacity:0,transform:'scale(.95,.9)'},{opacity:0,transform:'scale(.95,.9)',offset:.3},{opacity:.9,transform:'scale(1.08,1.12)',offset:.52},{opacity:.7,transform:'scale(1.1,.96)',offset:.6},{opacity:0,transform:'scale(1.14,.92)',offset:.72},{opacity:0,transform:'scale(1.14,.92)'}]
+        :[{opacity:0,transform:'scale(1.08,.94)'},{opacity:0,transform:'scale(1.08,.94)',offset:.6},{opacity:.82,transform:'scale(1,1.12)',offset:.84},{opacity:0,transform:'scale(1.12,.92)'}],READY[kind],EASE_OUT);
       run(puddle,kind==='split'
-        ?[{opacity:0,transform:'scale(.94,.9)'},{opacity:.88,transform:'scale(1.06,1.08)',offset:.22},{opacity:.84,transform:'scale(1.13,.96)',offset:.58},{opacity:0,transform:'scale(1.18,.9)'}]
-        :[{opacity:0,transform:'scale(1.1,.92)'},{opacity:.7,transform:'scale(1.04,1)',offset:.2},{opacity:.94,transform:'scale(1.15,1.12)',offset:.72},{opacity:0,transform:'scale(1.06,.94)'}],DURATION,EASE_OUT);
+        ?[{opacity:0,transform:'scale(.94,.9)'},{opacity:.88,transform:'scale(1.06,1.08)',offset:.28},{opacity:.84,transform:'scale(1.13,.96)',offset:.58},{opacity:0,transform:'scale(1.18,.9)',offset:.78},{opacity:0,transform:'scale(1.18,.9)'}]
+        :[{opacity:0,transform:'scale(1.1,.92)'},{opacity:0,transform:'scale(1.1,.92)',offset:.4},{opacity:.7,transform:'scale(1.04,1)',offset:.58},{opacity:.94,transform:'scale(1.15,1.12)',offset:.72},{opacity:0,transform:'scale(1.06,.94)'}],DURATION,EASE_OUT);
       const drops=[[-53,-16,11],[-29,-40,14],[2,-51,9],[29,-38,13],[53,-15,10]];
       for(const [index,[x,y,size]]of drops.entries()){
         const drop=part('clone-ink-drop');drop.style.left=(-size/2)+'px';drop.style.top=(-12-size/2)+'px';drop.style.width=size+'px';drop.style.height=(size*1.22)+'px';
-        const pose=(dx,dy,sx=1,sy=1,angle=0)=>`translate3d(${dx}px,${dy}px,0) rotate(${angle}deg) scale(${sx},${sy})`;
         const angle=x*.35,stagger=index*.012;
         run(drop,kind==='split'
-          ?[{opacity:0,transform:pose(0,0,.95,.9)},{opacity:.84,transform:pose(x*.22,y*.25,.96,1.12,angle*.2),offset:.16+stagger},{opacity:.98,transform:pose(x*.82,y*.93,1.02,1.08,angle*.8),offset:.38+stagger},{opacity:.86,transform:pose(x,y,1.04,.95,angle),offset:.68},{opacity:0,transform:pose(x*.98,y+14,.96,.9,angle*.8)}]
-          :[{opacity:0,transform:pose(x,y+4,.96,.9,angle)},{opacity:.94,transform:pose(x,y,.96,1.08,angle),offset:.14+stagger},{opacity:.98,transform:pose(x*.5,y*.6,.94,1.16,angle*.5),offset:.48+stagger},{opacity:.9,transform:pose(x*.06,-3,1.08,.82,0),offset:.72},{opacity:.24,transform:pose(0,0,1.13,.9),offset:.84},{opacity:0,transform:pose(0,2,1.04,.92)}]);
+          ?[{opacity:0,transform:pose(0,0,.95,.9)},{opacity:0,transform:pose(0,0,.95,.9),offset:.3},{opacity:.84,transform:pose(x*.22,y*.25,.96,1.12,angle*.2),offset:.38+stagger},{opacity:.98,transform:pose(x*.82,y*.93,1.02,1.08,angle*.8),offset:.52+stagger},{opacity:.86,transform:pose(x,y,1.04,.95,angle),offset:.72},{opacity:0,transform:pose(x*.98,y+14,.96,.9,angle*.8)}]
+          :[{opacity:0,transform:pose(x,y+4,.96,.9,angle)},{opacity:0,transform:pose(x,y+4,.96,.9,angle),offset:.4},{opacity:.94,transform:pose(x,y,.96,1.08,angle),offset:.46+stagger},{opacity:.98,transform:pose(x*.5,y*.6,.94,1.16,angle*.5),offset:.58+stagger},{opacity:.9,transform:pose(x*.06,-3,1.08,.82,0),offset:.68},{opacity:.24,transform:pose(0,0,1.13,.9),offset:.76},{opacity:0,transform:pose(0,2,1.04,.92)}]);
+      }
+    }else if(MATERIALS.includes(design)){
+      const spec=PIECES[design];
+      node.className+=' clone-material-effect';node.dataset.creatureEffect=design;
+      // One piece of the parent's own material carries the hand-off: it
+      // leaves the body during 400–700ms, or rises back during 500–800ms.
+      // The bodies themselves are authored cels owned by the creatures.
+      const piece=part(spec.part);piece.dataset.cloneReady='true';
+      const path=kind==='split'?spec.out:spec.in;
+      const at=([x,y,angle,scale])=>pose(x,y,scale,scale,angle);
+      readyMotion=run(piece,kind==='split'
+        ?[{opacity:0,transform:at(path[0])},{opacity:0,transform:at(path[0]),offset:.33},{opacity:.95,transform:at(path[0]),offset:.37},{opacity:1,transform:at(path[1]),offset:.44},{opacity:1,transform:at(path[2]),offset:.51},{opacity:1,transform:at(path[3]),offset:.58},{opacity:0,transform:at(path[3]),offset:.63},{opacity:0,transform:at(path[3])}]
+        :[{opacity:0,transform:at(path[0])},{opacity:0,transform:at(path[0]),offset:.62},{opacity:1,transform:at(path[0]),offset:.67},{opacity:1,transform:at(path[1]),offset:.78},{opacity:1,transform:at(path[2]),offset:.9},{opacity:.9,transform:at(path[3]),offset:.98},{opacity:0,transform:at(path[3])}],READY[kind],EASE_MOVE);
+      // Loose bits of the same material: scraps, spores, fibres or sparks.
+      for(let index=0;index<spec.count;index++){
+        const bit=part(spec.bits),side=index-(spec.count-1)/2,sway=(index%2?1:-1)*3;
+        const near=pose(side*4,-8,.8,.8,0),far=pose(side*16+sway,-30-Math.abs(side)*6,1,1,side*30),away=pose(side*22+sway,-44-Math.abs(side)*8,.7,.7,side*55);
+        const stagger=index*.02;
+        run(bit,kind==='split'
+          ?[{opacity:0,transform:near},{opacity:0,transform:near,offset:.56+stagger},{opacity:.9,transform:near,offset:.62+stagger},{opacity:.7,transform:far,offset:.82+stagger},{opacity:0,transform:away}]
+          :[{opacity:0,transform:away},{opacity:0,transform:away,offset:.64+stagger},{opacity:.8,transform:far,offset:.72+stagger},{opacity:.9,transform:pose(side*3,-36,.9,.9,0),offset:.9},{opacity:0,transform:pose(0,-40,.6,.6,0)}],DURATION,EASE_OUT);
       }
     }else{
-    const focus=part('clone-focus'),ring=part('clone-ring'),second=part('clone-ring clone-ring-inner');
+    const focus=part('clone-focus'),ring=part('clone-ring'),second=part('clone-ring clone-ring-inner');focus.dataset.cloneReady='true';
     readyMotion=run(focus,kind==='split'
       ?[{opacity:0,transform:'scale(.95)'},{opacity:.7,transform:'scale(1)',offset:.65},{opacity:0,transform:'scale(1.04)'}]
       :[{opacity:0,transform:'scale(1.06)'},{opacity:.55,transform:'scale(1)',offset:.7},{opacity:.18,transform:'scale(.96)'}],READY[kind],EASE_OUT);

@@ -31,7 +31,12 @@ app.whenReady().then(async () => {
     await select('state', 'coding');
     await until(`[...document.querySelectorAll('.repertoire-preview .cp-frame')].some(frame=>frame.getAttribute('href')?.endsWith('/${species}/coding.png'))`, 'Every companion shows its own production coding strip');
     assert.equal(await run(`document.querySelectorAll('.repertoire-preview .creature-performance').length`), 1);
-    assert.equal(await run(`[...document.querySelectorAll('.repertoire-preview .cp-frame')].filter(frame=>Number(getComputedStyle(frame).opacity)>0).length`), 1, 'only one pixel key owns the image');
+    assert.equal(await run(`(()=>{
+      const frames=document.querySelectorAll('.repertoire-preview .cp-frame'),frame=frames[0];
+      const clock=frame?.getAnimations()[0],keyCount=clock?.effect.getKeyframes().length-1;
+      return frames.length===1&&Number(getComputedStyle(frame).opacity)===1&&
+        Math.abs(clock.effect.getTiming().duration/keyCount-1000/30)<.001;
+    })()`), true, 'one opaque 30 Hz image owns the preview');
   }
   await select('state', 'error');
   await run(`document.querySelector('.repertoire-controls button:last-child').click()`);
