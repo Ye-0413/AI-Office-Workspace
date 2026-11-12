@@ -7,6 +7,8 @@ const path = require('node:path');
 const { createHash, randomUUID } = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 const jsonc = require('./plugin-jsonc.cjs');
+const { openLock } = require('./stale-lock.cjs');
+const { configPathState, staleSummary } = require('./observer-command-owner.cjs');
 const OWNER = 'ai-mini-office-passive-plugin-v1';
 const PROVIDERS = ['deepseek-harness', 'opencode', 'mimocode', 'pi', 'omp', 'openclaw'];
 const ID = 'ai-mini-office', DSH_PACKAGE = '@ai-mini-office/dsh-observer';
@@ -176,7 +178,9 @@ function inspectPlugin(options) {
     const list = targets(options), records = list.map(target => ({ target, manifest: owned(target.target) }));
     const installed = records.length > 0 && records.every(({ target, manifest }) => registration(target, manifest));
     const available = Boolean(program(options.provider, options)) || list.some(target => stat(path.dirname(target.config || path.dirname(target.target))));
-    return { available, installed, provisioned: records.some(record => record.manifest), targetPaths: list.map(target => target.target), detail: installed ? 'Passive plugin installed; start a new host session to load it. Actual events confirm the connection.' : list.length ? 'Connect installs an owned passive activity plugin; existing plugins and approvals are preserved.' : 'Initialize the host profile before connecting.' };
+    const current = ['dataDir', 'electronPath', 'appRoot'].every(key => typeof options[key] === 'string') ? options : null;
+    const stale = current ? staleSummary(records.filter(record => record.manifest?.files['observer-config.json']).map(({ target }) => configPathState(read(path.join(target.target, 'observer-config.json')), current))) : {};
+    return { available, installed, ...stale, provisioned: records.some(record => record.manifest), targetPaths: list.map(target => target.target), detail: installed ? 'Passive plugin installed; start a new host session to load it. Actual events confirm the connection.' : list.length ? 'Connect installs an owned passive activity plugin; existing plugins and approvals are preserved.' : 'Initialize the host profile before connecting.' };
   } catch (error) { return { available: Boolean(program(options.provider, options)), installed: false, detail: error.message }; }
 }
 function values(options, target) {
@@ -224,7 +228,8 @@ async function mutatePlugin(options, install) {
     }
     const list = targets(normalized); if (!list.length) throw new Error('Initialize the host profile before connecting');
     directory(options.dataDir, true); lock = path.join(options.dataDir, `.passive-${options.provider}.lock`);
-    lockFd = fs.openSync(lock, fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_WRONLY | (fs.constants.O_NOFOLLOW || 0), 0o600);
+    lockFd = openLock(lock, fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_WRONLY | (fs.constants.O_NOFOLLOW || 0), 0o600);
+    fs.writeFileSync(lockFd, JSON.stringify({ owner: OWNER, pid: process.pid }));
     // Validate every target/config before making the first change.
     const prepared = list.map(target => { const before = owned(target.target); return { target, before, configs: configPlans(target, before, install), files: install ? values(options, target) : null }; });
     for (const { target, before, configs, files } of prepared) {

@@ -5,6 +5,7 @@
 const fs=require('node:fs');
 const path=require('node:path');
 const {getProvider}=require('./provider-catalog.cjs');
+const {parseObserverCommand,parseObserverArgs,ownedInvocation,invocationPathState,staleSummary}=require('./observer-command-owner.cjs');
 const GROUP='mini-office-observer-v1';
 const COMMON_EVENTS=['SessionStart','SessionEnd','UserPromptSubmit','PreToolUse','PostToolUse','PostToolUseFailure','Stop','StopFailure','SubagentStart','SubagentStop','Notification','PreCompact','PostCompact'];
 const DEFINITIONS=Object.freeze({
@@ -54,14 +55,27 @@ function createUpstreamIntegrations(options={}){
   if(provider==='grok-build'||shape==='antigravity')return{type:'command',command,timeout:2};
   return{type:'command',command};
  }
- function owned(value,provider){
-  if(!object(value))return false;
+ function exact(value,provider){
   return events[provider].some(event=>{
    const expected=handler(provider,event);
    if(expected.type==='process')return value.type==='process'&&value.command===expected.command&&JSON.stringify(value.args)===JSON.stringify(expected.args);
    return expected.bash?value.bash===expected.bash:value.command===expected.command;
   });
  }
+ // Earlier app copies wrote the same grammar with other absolute paths.
+ function invocation(value,provider){
+  const shape=definition(provider).shape;
+  const parsed=shape==='process'?value.type==='process'&&value.command==='/usr/bin/env'&&parseObserverArgs(value.args)
+   :parseObserverCommand(shape==='copilot'?value.bash:value.command);
+  return ownedInvocation(parsed||null,{provider,events:events[provider]})?parsed:null;
+ }
+ function pathState(value,provider){
+  if(!object(value))return null;
+  if(exact(value,provider))return'current';
+  const parsed=invocation(value,provider);
+  return parsed&&options.commandOptions?invocationPathState(parsed,options.commandOptions):parsed?'other-copy':null;
+ }
+ function owned(value,provider){return pathState(value,provider)!==null;}
  function groups(value,def,create){
   if(def.shape==='antigravity'){
    if(value[GROUP]!==undefined&&!object(value[GROUP]))throw new Error('Observer group has an unknown structure');
@@ -73,19 +87,20 @@ function createUpstreamIntegrations(options={}){
   if(hooks.events!==undefined&&!object(hooks.events))throw new Error('AI hooks.events has an unknown structure');
   if(!hooks.events&&create)hooks.events={};return hooks.events||{};
  }
- function installed(provider,value){
-  const group=groups(value,definition(provider),false);let count=0;
+ function states(provider,value){
+  const group=groups(value,definition(provider),false),found=[];
   for(const event of events[provider]){
    if(!Array.isArray(group[event]))continue;
    for(const entry of group[event]){
-    if(owned(entry,provider))count++;
-    else if(object(entry)&&Array.isArray(entry.hooks))count+=entry.hooks.filter(item=>owned(item,provider)).length;
+    const state=pathState(entry,provider);
+    if(state)found.push(state);
+    else if(object(entry)&&Array.isArray(entry.hooks))for(const item of entry.hooks){const nested=pathState(item,provider);if(nested)found.push(nested);}
    }
-  }return count;
+  }return found;
  }
  function inspect(provider){
-  const {file,dir}=target(provider),before=readConfig(file,homeDir);
-  return{provider,installed:installed(provider,before.value)>0,available:before.exists||fs.existsSync(dir),detail:'被动观察配置；仅收到真实事件后确认客户端生效'};
+  const {file,dir}=target(provider),before=readConfig(file,homeDir),found=states(provider,before.value);
+  return{provider,installed:found.length>0,...staleSummary(found),available:before.exists||fs.existsSync(dir),detail:'被动观察配置；仅收到真实事件后确认客户端生效'};
  }
  function plan(provider,install){
   const def=definition(provider),{file}=target(provider),before=readConfig(file,homeDir),value=structuredClone(before.value);

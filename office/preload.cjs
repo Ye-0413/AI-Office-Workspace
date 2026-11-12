@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('office',Object.freeze({
   getSettings:()=>invoke('settings'),setSettings:patch=>invoke('set-settings',patch),
   connectProvider:provider=>invoke('connect',provider),
   disconnectProvider:provider=>invoke('disconnect',provider),
+  sendTestEvent:provider=>invoke('test-event',provider),
   listDisplays:()=>invoke('displays'),moveToDisplay:id=>invoke('move-display',id),
   openSource:id=>invoke('open-source',id),
   getUsageHistory:filters=>invoke('usage-history',filters),
@@ -18,6 +19,9 @@ contextBridge.exposeInMainWorld('office',Object.freeze({
   returnQuestionToNative:id=>invoke('question-native',id),
   exportUsageHistory:filters=>invoke('usage-export',filters),
   openUsageFolder:()=>invoke('usage-open-folder'),
+  getUsageRecap:input=>invoke('usage-recap',input),
+  exportUsageRecap:input=>invoke('usage-recap-export',input),
+  getProgression:()=>invoke('progression'),
   getProviderSetup:()=>invoke('setup-status'),
   initializeProviders:options=>invoke('setup-initialize',options),
 }));

@@ -239,8 +239,9 @@ test('standby policy retains observed idle and closed mains without adding work 
  const history=task('old',{closed:true,status:'closed'});model.update([task('main'),history]);
  time=2000;const closed=Object.freeze(task('main',{status:'closed',closed:true,activity:'idle',lastEventAt:time}));
  let result=model.update([closed,history]);assert.deepEqual(result.standby,['main']);assert.deepEqual(result.present,[closed]);assert.deepEqual(result.leaving,[]);
- time=1000000;result=model.update([closed,history]);assert.deepEqual(result.standby,['main']);assert.deepEqual(result.leaving,[]);assert.equal(closed.status,'closed');
+ time=500000;result=model.update([closed,history]);assert.deepEqual(result.standby,['main']);assert.deepEqual(result.leaving,[]);assert.equal(closed.status,'closed');
  result=model.update([]);assert.deepEqual(result.standby,['main']);assert.equal(result.present[0],closed,'pruning the source does not erase a retained visual standby body');
+ time=603000;result=model.update([]);assert.deepEqual(result.leaving,['main'],'ten quiet minutes on standby end with a walk out');assert.equal(closed.status,'closed');
 });
 
 test('new independent work releases standby mains while ordinary metadata does not',()=>{

@@ -7,6 +7,8 @@ const {createSessionStore}=require('./lib/session-store.cjs');
 const {createActivityStats}=require('./lib/activity-stats.cjs');
 const {createUsageLog}=require('./lib/usage-log.cjs');
 const {createUsageApi}=require('./lib/usage-api.cjs');
+const {createUsageRecap}=require('./lib/usage-recap.cjs');
+const {createUnlockLedger}=require('./lib/unlock-ledger.cjs');
 const {createSessionUsageStore}=require('./lib/session-usage-store.cjs');
 const {createSessionUsageMonitor}=require('./lib/session-usage-monitor.cjs');
 const {createManualQuestions}=require('./lib/manual-questions.cjs');
@@ -18,6 +20,10 @@ const {createObserverBridge}=require('./lib/observer-bridge.cjs');
 const {getProvider}=require('./lib/provider-catalog.cjs');
 const {withNativeLock}=require('./lib/native-lock.cjs');
 const {createWindowVisibility}=require('./lib/window-visibility.cjs');
+const {createDiagnosticLog}=require('./lib/diagnostic-log.cjs');
+const {createConnectionLedger}=require('./lib/connection-ledger.cjs');
+const {createDropReader}=require('./lib/collector-drops.cjs');
+const {createRendererRecovery}=require('./lib/renderer-recovery.cjs');
 
 // Keep the legacy profile and single-instance lock when branding changes.
 // Electron caches userData, so setName alone cannot preserve this path.
@@ -27,8 +33,11 @@ fs.mkdirSync(dataDir,{recursive:true,mode:0o700});
 app.setPath('userData',dataDir);
 if(!app.requestSingleInstanceLock()){app.quit();}
 else {
-let win=null,windowVisibility=null,settings,liveStore,activityStats,usageLog,usageApi,tokenStore,tokenMonitor,additionalMonitor,manualQuestions,setupManager,monitor,bridge,pruneTimer=null,refreshTimer=null,ready=false,providerMutation=false;
+let win=null,windowVisibility=null,recovery=null,settings,liveStore,activityStats,usageLog,usageApi,usageRecap,unlockLedger,tokenStore,tokenMonitor,additionalMonitor,manualQuestions,setupManager,monitor,bridge,pruneTimer=null,refreshTimer=null,ready=false,providerMutation=false;
 const rendererErrors=[];
+const diagnostics=createDiagnosticLog({dir:path.join(dataDir,'usage-history')});
+process.on('uncaughtException',error=>{console.error('[AI Work Space]',error);diagnostics.write('main-exception',{error});});
+process.on('unhandledRejection',error=>{console.error('[AI Work Space]',error);diagnostics.write('main-rejection',{error});});
 function current(){
   const liveSessions=liveStore.snapshot();
   const monitorStatus=monitor.status(),extraStatus=additionalMonitor.status(),connections=bridge.getConnections().map(c=>mergeObservationHealth(c,c.provider==='codex'?monitorStatus:extraStatus,liveSessions));
@@ -91,11 +100,14 @@ app.whenReady().then(async()=>{
   tokenMonitor=createSessionUsageMonitor({store:tokenStore});
   manualQuestions=createManualQuestions({dataDir:app.getPath('userData'),onChange:broadcast});
   usageApi=createUsageApi({log:usageLog,openFolder:folder=>shell.openPath(folder),chooseExport:defaultPath=>dialog.showSaveDialog(win,{title:settings.get().language==='en'?'Export observed Agent usage':'导出已观测 Agent 使用记录',defaultPath,filters:[{name:'CSV',extensions:['csv']}],properties:['createDirectory','showOverwriteConfirmation']})});
+  usageRecap=createUsageRecap({log:usageLog,tokens:tokenStore,chooseExport:defaultPath=>dialog.showSaveDialog(win,{title:settings.get().language==='en'?'Export daily recap':'导出每日回顾',defaultPath,filters:[{name:'PNG',extensions:['png']}],properties:['createDirectory','showOverwriteConfirmation']})});
+  unlockLedger=createUnlockLedger({file:path.join(app.getPath('userData'),'usage-history','unlocks.json'),log:usageLog});
   liveStore=createSessionStore({staleMs:180000});
   additionalMonitor=createAdditionalSessionMonitor({store:tokenStore,onEvent:observe});
   liveStore.onAccepted(event=>{activityStats.record(event);usageLog.record(event,liveStore.snapshot());});
   monitor=createCodexMonitor({onEvent:observe});
-  bridge=createObserverBridge({dataDir:app.getPath('userData'),appRoot:__dirname,electronPath:process.execPath,withNativeLock,onEvent:observe});
+  const dropReader=createDropReader({eventsDir:path.join(app.getPath('userData'),'events')});dropReader.poll();
+  bridge=createObserverBridge({dataDir:app.getPath('userData'),appRoot:__dirname,electronPath:process.execPath,withNativeLock,onEvent:observe,dropReader,ledger:createConnectionLedger({file:path.join(app.getPath('userData'),'connection-evidence.json')})});
   setupManager=createSetupManager({getConnections:()=>bridge.getConnections(),connect:provider=>bridge.connect(provider),onChange:broadcast});
   liveStore.onChange(()=>broadcast());
   win=new BrowserWindow({width:1280,height:720,minWidth:800,minHeight:450,title:'AI Work Space',backgroundColor:'#251d17',titleBarStyle:'hiddenInset',autoHideMenuBar:true,webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,webSecurity:true}});
@@ -103,14 +115,20 @@ app.whenReady().then(async()=>{
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   win.webContents.on('will-navigate',event=>event.preventDefault());
   win.webContents.on('render-process-gone',(_event,details)=>{rendererErrors.push('renderer:'+details.reason);writeSmokeReport();});
-  ipcMain.on('office:preload-ready',event=>{if(event.sender!==win.webContents)return;ready=true;broadcast();setTimeout(writeSmokeReport,1500);});
-  ipcMain.on('office:renderer-error',(event,message)=>{if(event.sender===win.webContents){rendererErrors.push(String(message).slice(0,300));writeSmokeReport();}});
+  const loadRoom=()=>win.loadFile(path.join(__dirname,'renderer','index.html'));
+  recovery=createRendererRecovery({webContents:win.webContents,reload:loadRoom,log:diagnostics.write,onReset:()=>{ready=false;},
+    onExhausted:()=>dialog.showErrorBox(settings.get().language==='en'?'The studio stopped responding':'工作室界面无法恢复',settings.get().language==='en'?'The window crashed repeatedly. Reopen AI Work Space; details are in the usage history folder (diagnostics.log).':'窗口多次崩溃，请重新打开 AI Work Space；记录保存在使用记录文件夹的 diagnostics.log。')});
+  ipcMain.on('office:preload-ready',event=>{if(event.sender!==win.webContents)return;ready=true;recovery.ready();broadcast();setTimeout(writeSmokeReport,1500);});
+  ipcMain.on('office:renderer-error',(event,message)=>{if(event.sender===win.webContents){rendererErrors.push(String(message).slice(0,300));diagnostics.write('renderer-error');writeSmokeReport();}});
   bind('snapshot',current);bind('settings',()=>settings.get());
   bind('usage-history',filters=>usageApi.history(filters));
   bind('usage-events',filters=>usageApi.events(filters));
   bind('usage-status',()=>usageApi.status());
   bind('usage-export',filters=>usageApi.export(filters));
   bind('usage-open-folder',()=>usageApi.openFolder());
+  bind('usage-recap',input=>usageRecap.daily(input));
+  bind('usage-recap-export',input=>usageRecap.exportPng(input));
+  bind('progression',()=>unlockLedger.refresh());
   bind('token-usage',filters=>({...tokenStore.query(filters),status:combinedTokenStatus()}));
   bind('token-refresh',async()=>{await Promise.all([tokenMonitor.refresh(),additionalMonitor.refresh()]);return combinedTokenStatus();});
   bind('answer-question',input=>manualQuestions.submit(input));
@@ -121,16 +139,21 @@ app.whenReady().then(async()=>{
   async function configureProvider(provider,remove){if(!getProvider(provider))throw new Error('Unknown provider');if(setupManager.running||providerMutation)throw new Error('A provider configuration change is already running');providerMutation=true;try{return await bridge[remove?'disconnect':'connect'](provider);}finally{providerMutation=false;broadcast();}}
   bind('connect',provider=>configureProvider(provider,false));
   bind('disconnect',provider=>configureProvider(provider,true));
+  bind('test-event',async provider=>{if(!getProvider(provider))throw new Error('Unknown provider');try{return await bridge.testEvent(provider);}finally{broadcast();}});
   bind('displays',()=>screen.getAllDisplays().map(d=>({id:d.id,label:d.label||`${d.size.width}×${d.size.height}`,width:d.size.width,height:d.size.height,primary:d.id===screen.getPrimaryDisplay().id})));
   bind('move-display',id=>{if(!Number.isInteger(id))throw new Error('Invalid display');return moveToDisplay(id);});
   bind('open-source',async id=>{if(typeof id!=='string'||id.length>512)throw new Error('Invalid session');const session=liveStore.snapshot().find(s=>s.id===id);if(!session||!path.isAbsolute(session.projectPath||''))throw new Error('该会话没有可打开的本地项目');const stat=await fs.promises.stat(session.projectPath);if(!stat.isDirectory())throw new Error('项目目录不存在');const error=await shell.openPath(session.projectPath);if(error)throw new Error(error);return{opened:true};});
   applySettings();bridge.start();monitor.start();tokenMonitor.start();additionalMonitor.start();await manualQuestions.start();
   const displayId=settings.get().displayId;if(displayId!==null&&screen.getAllDisplays().some(d=>d.id===displayId))moveToDisplay(displayId);
-  win.loadFile(path.join(__dirname,'renderer','index.html')).catch(error=>{rendererErrors.push(error.message);writeSmokeReport();});
+  diagnostics.write('app-start',{reason:app.isPackaged?'packaged':'source'});
+  loadRoom().catch(error=>{rendererErrors.push(error.message);diagnostics.write('load-failed',{error});writeSmokeReport();});
   if(process.env.MINI_OFFICE_SMOKE_REPORT&&process.env.MINI_OFFICE_SMOKE_EXIT_MS){const delay=Number(process.env.MINI_OFFICE_SMOKE_EXIT_MS);if(Number.isFinite(delay)&&delay>=3000&&delay<=30000)setTimeout(async()=>{await writeSmokeReport();app.quit();},delay);}
-  pruneTimer=setInterval(()=>{liveStore.prune();usageLog.reconcile(liveStore.snapshot());broadcast();},5000);
+  let pruneTicks=0,loggedRejections={};
+  const logRejections=()=>{const total=liveStore.rejections(),delta={};for(const [reason,count] of Object.entries(total))if(count>(loggedRejections[reason]||0))delta[reason]=count-(loggedRejections[reason]||0);loggedRejections=total;if(Object.keys(delta).length)diagnostics.write('ingest-rejections',{counts:delta});
+    const drops={};for(const [provider,row] of Object.entries(dropReader.poll()))for(const [reason,count] of Object.entries(row))drops[provider+':'+reason]=count;if(Object.keys(drops).length)diagnostics.write('collector-drops',{counts:drops});};
+  pruneTimer=setInterval(()=>{liveStore.prune();usageLog.reconcile(liveStore.snapshot());broadcast();if(++pruneTicks%12===0)logRejections();},5000);
   refreshTimer=setInterval(()=>broadcast(),2000);
-  win.on('closed',()=>{windowVisibility?.dispose();win=null;});
+  win.on('closed',()=>{recovery?.dispose();windowVisibility?.dispose();win=null;});
 }).catch(error=>{console.error('[AI Work Space]',error);app.quit();});
 app.on('window-all-closed',()=>app.quit());
 app.on('before-quit',()=>{ready=false;windowVisibility?.dispose();if(pruneTimer)clearInterval(pruneTimer);if(refreshTimer)clearInterval(refreshTimer);monitor?.stop();tokenMonitor?.stop();additionalMonitor?.stop();tokenStore?.close();manualQuestions?.stop();bridge?.stop();usageLog?.close();activityStats?.close();});

@@ -9,11 +9,14 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="token-usage.css">
   <link rel="stylesheet" href="home-token-usage.css">
+  <link rel="stylesheet" href="usage-recap.css">
   <link rel="stylesheet" href="number-flip.css">
   <link rel="stylesheet" href="manual-questions.css">
   <link rel="stylesheet" href="avatar-performance.css">
   <link rel="stylesheet" href="creature-performance.css">
   <link rel="stylesheet" href="painted-creature-performance.css">
+  <link rel="stylesheet" href="companion-play.css">
+  <link rel="stylesheet" href="progression.css">
   <link rel="stylesheet" href="standby-animation.css">
   <link rel="stylesheet" href="creature-activity.css">
   <link rel="stylesheet" href="avatar-fallback.css">
@@ -38,6 +41,9 @@
   <script defer src="../lib/size-stability.js"></script>
   <script defer src="../lib/walk-timing.js"></script>
   <script defer src="../lib/attendance-model.js"></script>
+  <script defer src="../lib/state-explanation.js"></script>
+  <script defer src="../lib/connection-status.js"></script>
+  <script defer src="../lib/reaction-model.js"></script>
   <script defer src="../lib/animation-director.js"></script>
   <script defer src="../lib/avatar-performance-model.js"></script>
   <script defer src="../lib/agent-appearance.js"></script>
@@ -56,6 +62,9 @@
   <script defer src="painted-creature-frame-manifest.js"></script>
   <script defer src="painted-creature-frames.js"></script>
   <script defer src="painted-creature-performance.js"></script>
+  <script defer src="companion-play.js"></script>
+  <script defer src="../lib/progression-model.js"></script>
+  <script defer src="progression-view.js"></script>
   <script defer src="avatar-performance.js"></script>
   <script defer src="standby-animation.js"></script>
   <script defer src="avatar-fallback.js"></script>
@@ -71,6 +80,7 @@
   <script defer src="day-scenery.js"></script>
   <script defer src="idle-visitor.js"></script>
   <script defer src="usage-history.js"></script>
+  <script defer src="usage-recap.js"></script>
   <script defer src="number-flip.js"></script>
   <script defer src="home-token-usage.js"></script>
   <script defer src="manual-questions.js"></script>
@@ -151,7 +161,7 @@
       <div class="inspector-actions"><button id="greet-agent" type="button" class="button button-paper">打个招呼</button><button id="open-source" type="button" class="button button-warm">打开项目文件夹 ↗</button><span id="inspect-action-note">角色行动来自观察事件</span></div>
       <button id="close-inspector" type="button" class="close-inspector" aria-label="关闭任务详情">×</button>
       <div id="inspect-persona" class="inspect-persona"><span id="inspect-keepsake" aria-hidden="true"></span><div><strong id="inspect-persona-name"></strong><span id="inspect-persona-trait"></span></div><small>工作室里的小性格</small></div>
-      <details id="event-details" class="event-details"><summary>最近活动与判断依据</summary><div class="evidence-summary"><span id="inspect-source"></span><span id="inspect-confidence"></span></div><div id="inspect-animation" class="animation-evidence"></div><ol id="inspect-events"></ol><div id="inspect-session-id" class="session-identity"></div></details>
+      <details id="event-details" class="event-details"><summary>最近活动与判断依据</summary><div class="evidence-summary"><span id="inspect-source"></span><span id="inspect-confidence"></span></div><div id="inspect-animation" class="animation-evidence"></div><ul id="inspect-explanation" class="state-explanation" hidden></ul><ol id="inspect-events"></ol><div id="inspect-session-id" class="session-identity"></div></details>
     </aside>
 
     <dialog id="connections-dialog" class="office-dialog connections-dialog" aria-labelledby="connections-title">

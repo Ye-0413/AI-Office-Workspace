@@ -29,8 +29,12 @@
    * (production source: 100; default attendance memory: 256).
    * entering/leaving are edge-triggered IDs; retired describes this snapshot.
    */
-  function createAttendance({ idleMs = 20000, signalGraceMs = 20000, keepIdle = false, now = Date.now, maxEntries = 256 } = {}) {
+  // standbyMs: a finished main dozes on the floor this long without new work,
+  // then walks out. It stays in the roster and returns on fresh real work.
+  function createAttendance({ idleMs = 20000, signalGraceMs = 20000, keepIdle = false, standbyMs = 600000, now = Date.now, maxEntries = 256 } = {}) {
     const grace = Number.isFinite(Number(idleMs)) ? Math.max(0, Number(idleMs)) : 20000;
+    const standbyLimit = standbyMs === Infinity || standbyMs === null ? Infinity
+      : Number.isFinite(Number(standbyMs)) ? Math.max(0, Number(standbyMs)) : 600000;
     const signalGrace = Number.isFinite(Number(signalGraceMs)) ? Math.max(0, Number(signalGraceMs)) : 20000;
     const capacity = Number.isInteger(maxEntries) && maxEntries > 0 ? maxEntries : 256;
     const clock = () => { const at = Number(now()); return Number.isFinite(at) ? at : 0; };
@@ -135,6 +139,7 @@
             // Retain only an already observed real body. Cold idle/closed
             // history still never gets a new floor actor on application start.
             entry.standby = true; entry.idleSince = null; entry.uncertainSince = null;
+            entry.standbySince ??= time;
           } else if (closed(session)) {
             if (entry.phase === 'present') leaving.push(id);
             entry.phase = 'retired'; entry.reason = 'closed'; entry.idleSince = null;
@@ -167,7 +172,7 @@
             entry.uncertainSince = uncertain(session) ? entry.uncertainSince ?? time : null;
           }
           if (working(session) || uncertain(session) && !standbyTimerLoss || session.parentId) {
-            entry.standby = false;
+            entry.standby = false; delete entry.standbySince;
             if (working(session)) entry.releaseRequested = false;
           }
           entry.lastEventAt = Math.max(entry.lastEventAt, at);
@@ -197,9 +202,11 @@
       }
       if (keepIdle) for (const [id, entry] of entries) {
         if (!entry.standby || entry.phase !== 'present') continue;
-        if (!arrivalAncestors.has(id) && newWorkers.some(session => session.id !== id)) entry.releaseRequested = true;
+        if (!arrivalAncestors.has(id) && newWorkers.some(session => session.id !== id)) entry.releaseRequested = 'new-work';
+        else if (!entry.releaseRequested && time - (entry.standbySince ?? time) >= standbyLimit) entry.releaseRequested = 'quiet';
         if (!entry.releaseRequested || protectedParents.has(id)) continue;
-        entry.phase = 'retired'; entry.reason = 'standby-released'; entry.standby = false;
+        entry.phase = 'retired'; entry.reason = 'standby-released'; entry.releaseCause = entry.releaseRequested;
+        entry.standby = false; delete entry.standbySince;
         const index = present.findIndex(session => session.id === id);
         if (index >= 0) present.splice(index, 1);
         if (!leaving.includes(id)) leaving.push(id);

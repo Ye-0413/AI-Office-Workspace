@@ -66,6 +66,7 @@
 .character-body img[data-asset="clawd-static-base.svg"]{width:48.3871%;height:61.5385%;left:25.8064%;top:30.7692%}
 .inspect-nickname{font-weight:650;color:#645334;font-size:13px}
 .animation-evidence{font-size:10px;line-height:1.65;color:#907952;margin:5px 0 9px}
+.state-explanation{font-size:10px;line-height:1.6;color:#7a5f3a;margin:0 0 9px;padding-left:14px}
 .language-button{font-size:11px;min-width:32px;padding:4px 6px}
 .studio-door{position:absolute;z-index:5;left:89.1%;top:55.55%;width:6.45%;height:24.05%;perspective:340px;pointer-events:none}
 .door-darkness,.door-leaf{position:absolute;inset:0;border-radius:1px}

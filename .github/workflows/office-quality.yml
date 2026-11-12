@@ -40,3 +40,29 @@ jobs:
       # These tests use metadata and temporary fixtures, never restored artwork.
       - name: Check provider catalog and run regression tests
         run: npm --prefix office test
+
+  renderer:
+    name: Electron renderer fixtures
+    # Opens the production room in real Electron windows with synthetic snapshots.
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: office/package-lock.json
+
+      # Lifecycle scripts are required here: they download the pinned Electron binary.
+      - name: Install locked dependencies with the Electron binary
+        run: npm --prefix office ci
+
+      - name: Build native lock helper for the runner architecture
+        run: node office/scripts/build-native.cjs
+
+      - name: Run renderer fixtures against public artwork only
+        run: npm --prefix office run verify:renderer

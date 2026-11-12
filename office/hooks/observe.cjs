@@ -4,9 +4,12 @@
 // Passive hook: the only response is {}. Never decide approvals or create a turn.
 const fs = require('node:fs');
 const path = require('node:path');
+const { randomBytes } = require('node:crypto');
 let normalizeEvent;
 try { ({ normalizeEvent } = require('../lib/provider-events.cjs')); }
 catch { process.stdout.write('{}\n', () => process.exit(0)); return; }
+let recordDrop = () => false, openLock = (file, flags, mode) => fs.openSync(file, flags, mode);
+try { ({ recordDrop } = require('../lib/collector-drops.cjs')); ({ openLock } = require('../lib/stale-lock.cjs')); } catch {}
 const MAX_INPUT = 512 * 1024;
 const MAX_SPOOL = 8 * 1024 * 1024;
 const MAX_RECORD = 16 * 1024;
@@ -75,7 +78,7 @@ function appendBounded(events, normalized) {
   const backup = `${file}.1`;
   const lock = path.join(events, `.${provider}.append.lock`);
   const line = Buffer.from(`${JSON.stringify(normalized)}\n`);
-  if (line.length > MAX_RECORD) return;
+  if (line.length > MAX_RECORD) return 'oversize-record';
   let lockFd, lockStat, fd;
   try {
     fd = fs.openSync(file, fs.constants.O_RDWR | fs.constants.O_APPEND | fs.constants.O_CREAT | (fs.constants.O_NOFOLLOW || 0), 0o600);
@@ -83,7 +86,8 @@ function appendBounded(events, normalized) {
     let named = fs.lstatSync(file);
     if (!recognizableSpool(fd, stat, true) || stat.ino !== named.ino || stat.dev !== named.dev) throw new Error('Unrecognized current spool');
     if (stat.size + line.length > MAX_SPOOL) {
-      lockFd = fs.openSync(lock, fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_WRONLY | (fs.constants.O_NOFOLLOW || 0), 0o600);
+      try { lockFd = openLock(lock, fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_WRONLY | (fs.constants.O_NOFOLLOW || 0), 0o600); }
+      catch (err) { if (err.code === 'EEXIST') return 'rotation-busy'; throw err; }
       lockStat = fs.fstatSync(lockFd);
       fs.writeFileSync(lockFd, JSON.stringify({ marker: MARKER, provider, pid: process.pid }));
       // Another rotator may have finished between the first stat and this lock.
@@ -126,18 +130,40 @@ function appendBounded(events, normalized) {
   }
 }
 
-function finish(accept) {
+function eventsDirectory(dataDir) {
+  directory(dataDir);
+  privateDirectory(dataDir);
+  const events = path.join(dataDir, 'events');
+  directory(events);
+  privateDirectory(events);
+  return events;
+}
+
+// The app's Send test event: a marked record the bridge consumes itself, so it
+// never reaches the session store, a companion or usage records.
+function testRecord(raw) {
+  const nonce = raw.mini_office_test;
+  if (typeof nonce !== 'string' || !/^[a-f0-9]{32}$/.test(nonce) || !/^[a-z0-9][a-z0-9-]{0,63}$/.test(provider || '')) return null;
+  return { id: `${provider}:mini-office-test`, eventId: `${provider}-${randomBytes(12).toString('hex')}`, provider, sessionId: 'mini-office-test',
+    at: Date.now(), event: 'metadata', activity: 'unknown', toolCallId: nonce, summary: 'AI Work Space test event',
+    evidence: { source: 'hook', rawEvent: 'MiniOfficeTest', confidence: 'high' } };
+}
+
+function finish(accept, reason = 'other') {
   if (finished) return;
   finished = true;
   clearTimeout(deadline);
   process.stdin.pause();
-  if (accept) try {
-    const dataDir = process.env.MINI_OFFICE_DATA_DIR;
-    if (!args.includes(MARKER) || typeof dataDir !== 'string' || !path.isAbsolute(dataDir) || /[\u0000-\u001f]/.test(dataDir)) throw new Error('Unconfigured observer');
+  const dataDir = process.env.MINI_OFFICE_DATA_DIR;
+  const configured = args.includes(MARKER) && typeof dataDir === 'string' && path.isAbsolute(dataDir) && !/[\u0000-\u001f]/.test(dataDir);
+  let drop = accept ? null : reason, events;
+  if (configured && accept) try {
+    drop = 'invalid-json';
     const input=Buffer.concat(chunks).toString('utf8');
     // CodeWhale's documented command hooks are environment-only. Copy only
     // its bounded routing/state metadata; model, prompt and error text stay out.
     const raw = provider==='codewhale' && !input.trim() ? {} : JSON.parse(input);
+    drop = 'invalid-event';
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Invalid event');
     if(provider==='codewhale'){
       for(const name of ['DEEPSEEK_SESSION_ID','DEEPSEEK_TOOL_NAME','DEEPSEEK_WORKSPACE','DEEPSEEK_TOOL_SUCCESS','DEEPSEEK_MODE','DEEPSEEK_PREVIOUS_MODE']){
@@ -148,25 +174,25 @@ function finish(accept) {
       if(raw.exit_code===undefined&&typeof exit==='string'&&/^-?(?:0|[1-9]\d{0,9})$/.test(exit)&&Number(exit)>=-2147483648&&Number(exit)<=2147483647)raw.exit_code=Number(exit);
     }
     if (raw.hook_event_name === undefined && typeof event === 'string') raw.hook_event_name = event;
-    const normalized = normalizeEvent(provider, raw, { receivedAt: Date.now(), source: 'hook' });
+    const normalized = testRecord(raw) || normalizeEvent(provider, raw, { receivedAt: Date.now(), source: 'hook' });
+    drop = 'ignored';
     if (normalized) {
-      directory(dataDir);
-      privateDirectory(dataDir);
-      const events = path.join(dataDir, 'events');
-      directory(events);
-      privateDirectory(events);
-      appendBounded(events, normalized);
+      drop = 'spool-unsafe';
+      events = eventsDirectory(dataDir);
+      drop = appendBounded(events, normalized) || null;
     }
   } catch { /* Failure is observation loss, never an agent decision. */ }
+  // Drops are logged only into an existing spool folder; a rejected event never creates one.
+  if (configured && drop) try { if (events || fs.existsSync(path.join(dataDir, 'events'))) recordDrop(events || eventsDirectory(dataDir), provider, drop); } catch {}
   process.stdout.write('{}\n', () => process.exit(0));
 }
 
-const deadline = setTimeout(() => finish(false), 1000);
+const deadline = setTimeout(() => finish(false, 'timeout'), 1000);
 process.stdin.on('data', chunk => {
   total += chunk.length;
-  if (total > MAX_INPUT) finish(false);
+  if (total > MAX_INPUT) finish(false, 'too-large');
   else chunks.push(chunk);
 });
 process.stdin.on('end', () => finish(true));
-process.stdin.on('error', () => finish(false));
+process.stdin.on('error', () => finish(false, 'stdin-error'));
 process.stdout.on('error', () => process.exit(0));

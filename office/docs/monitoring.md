@@ -86,6 +86,64 @@ ancestry with isolated synthetic observations. The former 55-body renderer
 fixture assumes the retired automatic-fitting policy and does not establish
 current fixed-size room capacity. See [fixed-size admission](#fixed-agent-size-and-floor-admission).
 
+### Reducer recovery and explanations (2026-11-12)
+
+Every ingest returns `accepted` or a fixed reason code (for example
+`duplicate`, `turn-fence`, `hook-lease`, `out-of-order`). Counts per session
+and store-wide appear in the snapshot `diagnostics` field and in the details
+panel, which also lists the last accepted event and the blockers of a pending
+Stop. They hold reasons and counts only, never event content.
+
+- A repeated hook event ID with a strictly newer time in the same open turn is
+  a heartbeat: it refreshes freshness without replaying the event.
+- A hook event with a new, unclosed turn ID and a newer time supersedes an
+  unterminated turn; the old turn's calls are dropped.
+- A hook error that is not a transient API error settles the turn as failed:
+  idle, without a completion time, recorded as `turn-failed`.
+- After Stop, calls that never received a result are released once the
+  session has been quiet for 60 seconds, and counted as abandoned. External
+  pending work still blocks this.
+- A Codex helper closed by its own helper-stop reopens only on hook work with a
+  new turn ID; late events from the closed turn stay rejected.
+
+A source that sent no stop at all is not settled; it still becomes a lost
+signal after three minutes. `node scripts/replay-spool.cjs` replays the local
+spool through the reducer and prints aggregate counts only.
+
+### Connection evidence and repair
+
+Connection status comes from evidence, not from configuration alone:
+`configured` (installed, no event ever), `received` (a real event arrived in
+an earlier run; [`connection-ledger.cjs`](../lib/connection-ledger.cjs) keeps
+first and last event times in `connection-evidence.json`), and `observing` (a
+real event arrived in this run). Every installer family compares the observer
+paths it owns with this app copy through
+[`observer-command-owner.cjs`](../lib/observer-command-owner.cjs) and reports
+`stale` as `missing` or `other-copy`. Repair is the existing explicit Connect:
+it removes owned entries with old paths and writes current ones. A Kimi or
+CodeWhale block whose digest still matches is replaced; an edited block is
+preserved and reported.
+
+Send test event runs this app's observer once with a nonce. The bridge
+consumes the marked record before the session store, so it creates no
+session, companion or usage record. The hook script appends dropped-event
+reason codes to `events/collector-drops.log` only when the spool folder exists;
+main logs new counts as `collector-drops` in `diagnostics.log`, and the panel
+shows a 24-hour total. [`stale-lock.cjs`](../lib/stale-lock.cjs) removes a
+lock only when it is a small regular file owned by this user and its PID has
+exited, its PID is older than an hour, or it has no PID and is older than ten
+minutes.
+
+### Result reactions
+
+[`reaction-model.js`](../lib/reaction-model.js) picks one finite body cue
+from events that are new to a companion: a test or build tool that ends with
+an explicit success celebrates, an explicit failure or a failed turn sulks,
+and a turn that ran at least 15 minutes stretches and shows the persona's
+sign-off. An unknown outcome plays nothing. History, duplicates and results
+that arrive while hidden, walking, in reduced motion or in low power are
+consumed without replay.
+
 [`session-usage-monitor.cjs`](../lib/session-usage-monitor.cjs) imports Codex
 and Claude Code accounting independently from the live reducer.
 [`additional-session-monitor.cjs`](../lib/additional-session-monitor.cjs)
@@ -185,6 +243,40 @@ The retained ledger allows source rescans to upsert native receipts without
 recharging the same history; it records past local reports rather than acting
 as a deletion-synchronized transcript mirror.
 
+### Daily recap
+
+`usage.sqlite3` is at schema version 2. Version 2 adds `check_days`, which
+holds per-actor, per-day counts of test and build tool results that ended
+with an explicit success or failure. Opening a version-1 archive backfills
+it once from the stored tool-end rows; other tables are unchanged, and a
+newer unknown version is refused. A result counts as a check when its own
+classified activity is testing or building, falling back to the session's
+activity when the event has none.
+
+[`usage-recap.cjs`](../lib/usage-recap.cjs) combines the day's observed
+totals, check counts, top three activities and provider counts with the
+token store's daily total. Project names are returned only when the request
+sets `includeProjects`; titles, prompts and paths are never read. The
+renderer draws the card to a canvas and main writes the PNG through the same
+safe-destination, temporary-file and rename path as the CSV export, after
+checking the PNG signature and an 8 MB limit.
+
+### Earned progression
+
+[`progression-model.js`](../lib/progression-model.js) turns lifetime counts
+into unlocks. A keepsake is earned when an actor whose persona carries it has
+an observed `turn-end`. Decorations need 10 turn endings, 100 tool calls, 10
+passed checks, 5 observed days or 10 hours of observed work. Growth stages
+start at 25, 100 and 400 turn endings. [`usage-log.cjs`](../lib/usage-log.cjs)
+`lifetime()` supplies the counts and finished actor identities;
+[`unlock-ledger.cjs`](../lib/unlock-ledger.cjs) keeps only first-earned times
+in `usage-history/unlocks.json` (0600, atomic rename). Deleting or corrupting
+the file loses only those times, and a later refresh rebuilds every unlock the
+log still supports. Earned items are never withdrawn when history is pruned.
+The renderer reads the ledger once a minute while visible; play never writes
+to it. Decoration art is original pixel SVG in `assets/decorations/`,
+registered in the release artwork allowlist.
+
 ## Manual native questions
 
 [`manual-questions.cjs`](../lib/manual-questions.cjs) and the owned plugin
@@ -243,7 +335,11 @@ activity on separate visible rows. Only real parent links or nonzero clone
 counts add a relation row; no hover or click is needed for passive observation.
 
 An observed completed or confirmed-idle main stays on the floor in standby
-until new real work arrives. History-only idle rows never reenter. Standby
+until new real work arrives elsewhere or it has been quiet on standby for 10
+minutes (`standbyMs`), whichever comes first. Both causes use the same
+`standby-released` walk out; the cause is kept as `releaseCause` (`new-work`
+or `quiet`). The identity stays in the roster, and fresh real work from the
+same session brings the same body back. History-only idle rows never reenter. Standby
 uses local doze/play animation, without source events or usage accounting.
 Hidden scenes pause it exactly; reduced motion and low power use a static
 resting pose. A fresh main or helper releases unrelated standby mains while

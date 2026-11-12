@@ -10,6 +10,11 @@ const ACTIVITIES = new Set(['reading', 'searching', 'planning', 'coding', 'desig
 const STATES = new Set(['active', 'waiting', 'idle', 'stale', 'closed']);
 const SETTLEMENTS = new Set(['turn-end', 'interrupted', 'session-end', 'subagent-end']);
 const EVENTS = new Set(['metadata', 'session-start', 'session-end', 'subagent-start', 'subagent-end', 'turn-start', 'turn-end', 'interrupted', 'tool-start', 'tool-end', 'activity', 'waiting-user', 'error']);
+const CHECKS = new Set(['testing', 'building']);
+// Version 2 adds per-day test and build results. Version 1 rows keep only the
+// activity recorded with each result, so the backfill counts those.
+const CHECK_BACKFILL = `INSERT INTO check_days(actor_id,day,passed,failed) SELECT actor_id,day,SUM(outcome='success'),SUM(outcome='failure') FROM events
+      WHERE event='tool-end' AND activity IN ('testing','building') AND outcome IN ('success','failure') GROUP BY actor_id,day;`;
 const hash = value => createHash('sha256').update(value).digest('hex');
 const text = (value, max = 256) => typeof value === 'string' ? value.replace(/[\u0000-\u001f\u007f-\u009f]/g, '').slice(0, max) : '';
 const identifier = (value, max = 256) => typeof value === 'string' && value.length > 0 && value.length <= max && !/[\s\u0000-\u001f\u007f-\u009f]/.test(value);
@@ -78,7 +83,7 @@ function createUsageLog({ dataDir, now = Date.now, staleMs = 180000 } = {}) {
     const { DatabaseSync } = require('node:sqlite'); db = new DatabaseSync(file);
     db.exec('PRAGMA foreign_keys=ON; PRAGMA busy_timeout=1000;');
     const version = db.prepare('PRAGMA user_version').get().user_version;
-    if (version !== 0 && version !== 1) throw new Error('Unsupported usage history schema');
+    if (![0, 1, 2].includes(version)) throw new Error('Unsupported usage history schema');
     db.exec(`PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;
       BEGIN IMMEDIATE;
       CREATE TABLE IF NOT EXISTS actors(id TEXT PRIMARY KEY, provider TEXT NOT NULL, parent_id TEXT NOT NULL DEFAULT '', project_name TEXT NOT NULL DEFAULT '', first_seen_at INTEGER NOT NULL, last_seen_at INTEGER NOT NULL, status TEXT NOT NULL, activity TEXT NOT NULL);
@@ -92,7 +97,9 @@ function createUsageLog({ dataDir, now = Date.now, staleMs = 180000 } = {}) {
       INSERT OR IGNORE INTO archive_totals SELECT 1,(SELECT COUNT(*) FROM actors),(SELECT COUNT(*) FROM events);
       CREATE TABLE IF NOT EXISTS observed_turns(actor_id TEXT PRIMARY KEY REFERENCES actors(id), identity TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS boundaries(actor_id TEXT NOT NULL REFERENCES actors(id), kind TEXT NOT NULL, identity TEXT NOT NULL, PRIMARY KEY(actor_id,kind,identity));
-      PRAGMA user_version=1; COMMIT;`);
+      CREATE TABLE IF NOT EXISTS check_days(actor_id TEXT NOT NULL REFERENCES actors(id), day TEXT NOT NULL, passed INTEGER NOT NULL DEFAULT 0, failed INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(actor_id,day));
+      ${version < 2 ? CHECK_BACKFILL : ''}
+      PRAGMA user_version=2; COMMIT;`);
     checkFiles();
   } catch (cause) { fail('open', cause); try { db?.close(); } catch {} db = null; }
   const emptyTotals = () => ({ agents: 0, roots: 0, helpers: 0, events: 0, turns: 0, toolCalls: 0, failures: 0, activeMs: 0, waitingMs: 0 });
@@ -200,6 +207,9 @@ function createUsageLog({ dataDir, now = Date.now, staleMs = 180000 } = {}) {
       if (['tool-start', 'tool-end', 'waiting-user'].includes(event.event) && (permitted.toolCallId || event.event === 'tool-start')) tools = mark('tool', callKey);
       const work = !['metadata', 'session-start', 'session-end', 'subagent-end'].includes(event.event);
       const failures = work && (permitted.outcome === 'failure' || event.event === 'error') ? mark('failure', callKey) : 0;
+      if (event.event === 'tool-end' && CHECKS.has(permitted.activity !== 'unknown' ? permitted.activity : state.activity) && ['success', 'failure'].includes(permitted.outcome)) {
+        db.prepare('INSERT INTO check_days(actor_id,day,passed,failed) VALUES(?,?,?,?) ON CONFLICT(actor_id,day) DO UPDATE SET passed=passed+excluded.passed,failed=failed+excluded.failed').run(id, day, Number(permitted.outcome === 'success'), Number(permitted.outcome === 'failure'));
+      }
       db.prepare('INSERT INTO actor_days(actor_id,day,events,turns,tool_calls,failures) VALUES(?,?,1,?,?,?) ON CONFLICT(actor_id,day) DO UPDATE SET events=events+1,turns=turns+excluded.turns,tool_calls=tool_calls+excluded.tool_calls,failures=failures+excluded.failures').run(id, day, turns, tools, failures);
       next = advance(sessions, Math.max(time, lastClock), time < lastClock ? lastClock : Math.min(at, time), { id, parentId: identifier(observedParent, 8192) ? observedParent : '', event: event.event });
       return true;
@@ -242,6 +252,38 @@ function createUsageLog({ dataDir, now = Date.now, staleMs = 180000 } = {}) {
       return { ...response, ok: !error, ...(error ? { error } : {}) };
     } catch (cause) { fail('read', cause); return { ...response, error }; }
   }
+  // Counts and durations only; project names are opt-in and titles never leave.
+  function recap(day, { includeProjects = false } = {}) {
+    const f = validateFilters({ from: day, to: day });
+    const response = { ok: false, scope: 'observed', timeZone: TIME_ZONE, day: f.from, totals: emptyTotals(), checks: { passed: 0, failed: 0 }, activities: [], providers: [], ...(includeProjects ? { projects: [] } : {}) };
+    if (!f.from) throw new TypeError('Invalid usage date');
+    if (!db || closed) return { ...response, error: error || 'Usage history is closed' };
+    try {
+      checkFiles();
+      const joined = 'FROM actor_days d JOIN actors a ON a.id=d.actor_id WHERE d.day=?';
+      response.totals = { ...db.prepare(`SELECT COUNT(*) agents,COALESCE(SUM(CASE WHEN a.parent_id='' THEN 1 ELSE 0 END),0) roots,COALESCE(SUM(CASE WHEN a.parent_id<>'' THEN 1 ELSE 0 END),0) helpers,COALESCE(SUM(d.events),0) events,COALESCE(SUM(d.turns),0) turns,COALESCE(SUM(d.tool_calls),0) toolCalls,COALESCE(SUM(d.failures),0) failures,COALESCE(SUM(d.active_ms),0) activeMs,COALESCE(SUM(d.waiting_ms),0) waitingMs ${joined}`).get(f.from) };
+      response.checks = { ...db.prepare('SELECT COALESCE(SUM(passed),0) passed,COALESCE(SUM(failed),0) failed FROM check_days WHERE day=?').get(f.from) };
+      response.activities = db.prepare('SELECT activity,SUM(ms) ms FROM activity_days WHERE day=? GROUP BY activity HAVING SUM(ms)>0 ORDER BY SUM(ms) DESC,activity LIMIT 3').all(f.from).map(row => ({ ...row }));
+      response.providers = db.prepare(`SELECT a.provider,COUNT(*) agents ${joined} GROUP BY a.provider ORDER BY agents DESC,a.provider LIMIT 8`).all(f.from).map(row => ({ ...row }));
+      if (includeProjects) response.projects = db.prepare(`SELECT a.project_name name,SUM(d.active_ms) ms ${joined} AND a.project_name<>'' GROUP BY a.project_name ORDER BY ms DESC,name LIMIT 3`).all(f.from).map(row => ({ ...row }));
+      return { ...response, ok: !error, ...(error ? { error } : {}) };
+    } catch (cause) { fail('read', cause); return { ...response, error }; }
+  }
+  // Lifetime counts for earned progression. Turns are observed turn endings;
+  // finished actors are identities with at least one, newest first.
+  function lifetime() {
+    const response = { ok: false, turns: 0, toolCalls: 0, checksPassed: 0, days: 0, activeMs: 0, finishedActors: [] };
+    if (!db || closed) return { ...response, error: error || 'Usage history is closed' };
+    try {
+      checkFiles();
+      const days = db.prepare('SELECT COALESCE(SUM(tool_calls),0) toolCalls,COALESCE(SUM(active_ms),0) activeMs,COUNT(DISTINCT day) days FROM actor_days').get();
+      response.turns = db.prepare("SELECT COUNT(*) n FROM events WHERE event='turn-end'").get().n;
+      response.checksPassed = db.prepare('SELECT COALESCE(SUM(passed),0) n FROM check_days').get().n;
+      Object.assign(response, { toolCalls: days.toolCalls, activeMs: days.activeMs, days: days.days });
+      response.finishedActors = db.prepare("SELECT a.id,a.provider FROM actors a WHERE EXISTS(SELECT 1 FROM events e WHERE e.actor_id=a.id AND e.event='turn-end') ORDER BY a.last_seen_at DESC,a.id LIMIT 5000").all().map(row => ({ ...row }));
+      return { ...response, ok: !error, ...(error ? { error } : {}) };
+    } catch (cause) { fail('read', cause); return { ...response, error }; }
+  }
   function status() {
     let agents = 0, events = 0;
     if (db && !closed) { try { checkFiles(); const counts = db.prepare('SELECT agents,events FROM archive_totals WHERE singleton=1').get(); agents = counts.agents; events = counts.events; } catch (cause) { fail('read', cause); } }
@@ -257,6 +299,6 @@ function createUsageLog({ dataDir, now = Date.now, staleMs = 180000 } = {}) {
     }
     closed = true; return !error;
   }
-  return Object.freeze({ record, reconcile, query, events, status, close });
+  return Object.freeze({ record, reconcile, query, events, recap, lifetime, status, close });
 }
 module.exports = { createUsageLog, TIME_ZONE };

@@ -28,7 +28,7 @@ function context(extra = {}) {
   const nodes = new Map();
   const errors = [];
   const sandbox = {
-    Scene, Director, I18n, activeRoom:null, window: {OfficeVenues:require('../lib/venue-model.js'),OfficeRoomDesigns:require('../lib/room-designs.js')}, cloneLedger:Clones.createLedger().update(extra.snapshot?.sessions || []), restedClones:new Set(), persona:require('../lib/agent-persona.js').forSession, keepsakeIcon:()=> '✦',settings:{},language:'zh', bridge: {}, mutationPending: false, snapshot:{sessions:[],connections:[]},setupAssistant:null,
+    Scene, Director, I18n, activeRoom:null, window: {OfficeConnectionStatus:require('../lib/connection-status.js'),OfficeVenues:require('../lib/venue-model.js'),OfficeRoomDesigns:require('../lib/room-designs.js')}, cloneLedger:Clones.createLedger().update(extra.snapshot?.sessions || []), restedClones:new Set(), persona:require('../lib/agent-persona.js').forSession, keepsakeIcon:()=> '✦',settings:{},language:'zh', bridge: {}, mutationPending: false, snapshot:{sessions:[],connections:[]},setupAssistant:null,
     $: id => { if (!nodes.has(id)) nodes.set(id, node()); return nodes.get(id); },
     text: (target, value) => { target.textContent = String(value ?? ''); },
     element: (tag, className, content) => ({ ...node(content), tagName: tag, className }),
@@ -88,13 +88,14 @@ test('installed connection buttons remove configuration while uninstalled tools 
   sandbox.connect = async (provider, remove) => { calls.push([provider, remove]); };
   vm.runInContext(functionSource('renderConnections'), sandbox);
   sandbox.renderConnections();
-  const buttons = nodes.get('provider-connections').children.map(row => row.children[2]);
+  const buttons = nodes.get('provider-connections').children.map(row => row.children[2]).map(item => item.children.length ? item.children.at(-1) : item);
   assert.deepEqual(buttons.map(button => button.textContent), ['移除配置', '连接', '移除配置']);
+  assert.deepEqual(nodes.get('provider-connections').children[0].children[2].children.map(button => button.dataset.action), ['test', 'remove']);
   for (const button of buttons) await button.click();
   assert.deepEqual(calls, [['codex', true], ['cursor', false], ['claude-code', true]]);
   sandbox.mutationPending = true;
   sandbox.renderConnections();
-  assert.equal(nodes.get('provider-connections').children.every(row => row.children[2].disabled), true);
+  assert.equal(nodes.get('provider-connections').children.every(row => [row.children[2], ...row.children[2].children].every(item => item.tagName !== 'button' || item.disabled)), true);
 });
 
 test('removal uses disconnect IPC, refreshes connections, and preserves Codex read-only observation wording', async () => {
@@ -115,11 +116,20 @@ test('removal uses disconnect IPC, refreshes connections, and preserves Codex re
   assert.deepEqual(errors, []);
 });
 
+test('a stale connection offers Repair through the explicit connect path and hides the test action',async()=>{
+  const {sandbox,nodes}=context({providerIds:['kimi-cli'],snapshot:{connections:[{provider:'kimi-cli',installed:true,stale:true,staleReason:'missing'}]}});
+  const calls=[];sandbox.connect=async(...args)=>calls.push(args);vm.runInContext(functionSource('renderConnections'),sandbox);sandbox.renderConnections();
+  const row=nodes.get('provider-connections').children[0];
+  assert.equal(row.children[1].children[1].dataset.state,'stale');
+  assert.deepEqual(row.children[2].children.map(button=>button.textContent),['修复','移除配置']);
+  for(const button of row.children[2].children)await button.click();assert.deepEqual(calls,[['kimi-cli',false],['kimi-cli',true]]);
+});
+
 test('an installed Hermes plugin can be reloaded without removing its configuration',async()=>{
   const {sandbox,nodes}=context({providerIds:['hermes'],snapshot:{connections:[{provider:'hermes',installed:true,watching:false}]}});
   const calls=[];sandbox.connect=async(...args)=>calls.push(args);vm.runInContext(functionSource('renderConnections'),sandbox);sandbox.renderConnections();
-  const actions=nodes.get('provider-connections').children[0].children[2];assert.deepEqual(actions.children.map(button=>button.textContent),['重新加载','移除配置']);
-  await actions.children[0].click();await actions.children[1].click();assert.deepEqual(calls,[['hermes',false],['hermes',true]]);
+  const actions=nodes.get('provider-connections').children[0].children[2];assert.deepEqual(actions.children.map(button=>button.textContent),['重新加载','发送测试事件','移除配置']);
+  for(const button of actions.children)await button.click();assert.deepEqual(calls,[['hermes',false],['hermes','test'],['hermes',true]]);
   sandbox.mutationPending=true;sandbox.renderConnections();assert.ok(nodes.get('provider-connections').children[0].children[2].children.every(button=>button.disabled));
 });
 

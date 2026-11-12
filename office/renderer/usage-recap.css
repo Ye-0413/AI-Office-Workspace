@@ -1,0 +1,7 @@
+.usage-recap-section{margin:0 0 18px}
+.usage-recap-controls{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 14px;margin:0 0 10px}
+.usage-recap-controls label{display:flex;flex-direction:column;gap:4px;font-size:11px;color:#7f6746}
+.usage-recap-controls .usage-recap-privacy{flex-direction:row;align-items:center;gap:6px}
+.usage-recap-overview{grid-template-columns:repeat(4,minmax(0,1fr))}
+.usage-recap-item dd small{display:block;font-size:10px;color:#927b58;margin-top:2px}
+@media(max-width:560px){.usage-recap-overview{grid-template-columns:repeat(2,minmax(0,1fr))}}

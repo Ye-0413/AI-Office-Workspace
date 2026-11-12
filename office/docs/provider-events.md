@@ -26,7 +26,7 @@
 }
 ```
 
-建议事件：`SessionStart`、`UserPromptSubmit`、`PreToolUse`、`PermissionRequest`、`PostToolUse`、`SubagentStart`、`SubagentStop`、`Stop`、`Interrupt`、`SessionEnd`。普通工具调用不能证明模型正在推理；请求审批也可能被另一 hook 立即批准，等待提示应接受后续事件快速取消。
+建议事件：`SessionStart`、`UserPromptSubmit`、`PreToolUse`、`PermissionRequest`、`PostToolUse`、`SubagentStart`、`SubagentStop`、`Stop`、`Interrupt`、`SessionEnd`。普通工具调用不能证明模型正在推理；请求审批也可能被另一 hook 立即批准：带调用 ID 的等待在同一调用的结果到达时取消；没有调用 ID 的等待只由其对应的结果事件（如 `ElicitationResult`）、中断、会话结束或新一轮取消，无关的后续事件不能证明提示已被回答。
 
 本应用若以后自己承载 Codex 运行，可以消费 app-server 的 `thread/status/changed`、`turn/*`、`item/*`，使用 `threadId`、`turnId`、`itemId`，并根据 `waitingOnApproval` 等状态提高准确性。读取存储历史不等于订阅实时活动；启动新的 app-server 进程也不等于自动附着所有其他客户端的运行。[官方 App Server](https://learn.chatgpt.com/docs/app-server)
 
@@ -122,7 +122,7 @@
 - 确定需要审批或问答：到前台举提示板，保留独立等待徽标；同房其他角色继续自己的工作。
 - 已启动工具仍未结束：站在设备旁等待；不会因等待超过几秒就自己去睡觉。
 - 子任务明确开始：临时小伙伴从入口出现，沿路径到相关区域；仅知道子任务存在而不知道活动时，留在协作桌并显示“协作中”。
-- 结束一轮且没有已知待办：简短收拾与喝水。明确关闭 session 后再离场。完成表现属于本轮，任务卡保留可继续的身份。
+- 结束一轮且没有已知待办：简短收拾与喝水，然后在地板上待机。待机主角色在新的真实工作出现、或安静满 10 分钟后离场；仍有活动子任务的祖先保持在场。离场只是画面，身份留在名册中，新的真实工作会让同一角色回来。完成表现属于本轮，任务卡保留可继续的身份。
 - 工具失败：检查红灯、挠头；下一次有效工具开始即可恢复。单次失败不代表整个任务失败。
 
 动画属于对事件的表达，不应成为编造后续工作的事件源。新事件可以打断走路；角色先抵达合理交互点再触发操作循环。展示可短暂缓动，详情里的真实状态与时间应立即更新。

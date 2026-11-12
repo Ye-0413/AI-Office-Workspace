@@ -3,10 +3,10 @@
 (function (root, factory) {
   'use strict';
   const node = typeof module === 'object' && module.exports;
-  const api = factory(node ? require('../lib/avatar-performance-model.js') : root.OfficeAvatarPerformanceModel, root.OfficeCreatureActivity, node ? require('./creature-frames.js') : root.OfficeCreatureFrames, node ? require('./creature-emotes.js') : root.OfficeCreatureEmotes);
+  const api = factory(node ? require('../lib/avatar-performance-model.js') : root.OfficeAvatarPerformanceModel, root.OfficeCreatureActivity, node ? require('./creature-frames.js') : root.OfficeCreatureFrames, node ? require('./creature-emotes.js') : root.OfficeCreatureEmotes, node ? require('../lib/reaction-model.js') : root.OfficeReactionModel);
   if (node) module.exports = api;
   else root.OfficeCreaturePerformance = api;
-})(typeof globalThis === 'object' ? globalThis : this, function (Model, Activity, Frames, Emotes) {
+})(typeof globalThis === 'object' ? globalThis : this, function (Model, Activity, Frames, Emotes, Reactions) {
   'use strict';
   const NS = 'http://www.w3.org/2000/svg', CELL = 80, LEFT = 37.5, TOP = 35;
   const POSES = Object.freeze(['idle', 'working', 'thinking', 'resting', 'attention', 'completed']);
@@ -27,14 +27,22 @@
     return Object.freeze({ index, hue, filter: 'sepia('+sepia+') saturate('+saturation+') hue-rotate('+hue+'deg) brightness('+Number((light*tone).toFixed(6))+')' });
   }
   // Offsets are whole texels in the 2-unit rig grid. Each beat is held.
+  // Celebrate is a double hop, sulk sinks and droops, stretch rises slowly;
+  // each ends on a held rest beat before the pose returns.
   const CUES = Object.freeze({
-    folio: { greet: [[-2, 0], [0, -6], [2, -2]], attention: [[0, -8], [0, -4]], startle: [[-2, -4], [2, 0]], success: [[0, -6], [2, -2]] },
-    ink: { greet: [[-2, 0], [0, -4], [2, 0]], attention: [[0, -6], [0, -2]], startle: [[0, -4], [-2, 0]], success: [[0, -6], [0, -2]] },
-    moss: { greet: [[0, -2], [-2, 0], [2, 0]], attention: [[0, -4], [0, -2]], startle: [[-2, -2], [2, 0]], success: [[0, -4], [0, -2]] },
-    thread: { greet: [[-2, -6], [0, 0], [2, -4]], attention: [[0, -8], [2, -2]], startle: [[2, -4], [-2, 0]], success: [[-2, -6], [2, -4]] },
-    glow: { greet: [[0, -2], [2, -6], [0, -4]], attention: [[0, -6], [0, -8]], startle: [[-2, 0], [0, -4]], success: [[0, -4], [0, -8]] }
+    folio: { greet: [[-2, 0], [0, -6], [2, -2]], attention: [[0, -8], [0, -4]], startle: [[-2, -4], [2, 0]], success: [[0, -6], [2, -2]],
+      celebrate: [[0, -8], [0, 0], [2, -6], [0, 0]], sulk: [[0, 2], [-2, 4], [-2, 4]], stretch: [[0, -2], [0, -6], [0, -6], [0, -2]] },
+    ink: { greet: [[-2, 0], [0, -4], [2, 0]], attention: [[0, -6], [0, -2]], startle: [[0, -4], [-2, 0]], success: [[0, -6], [0, -2]],
+      celebrate: [[0, -6], [0, 2], [0, -6], [0, 0]], sulk: [[0, 4], [0, 6], [0, 6]], stretch: [[0, 2], [0, -6], [0, -6], [0, 0]] },
+    moss: { greet: [[0, -2], [-2, 0], [2, 0]], attention: [[0, -4], [0, -2]], startle: [[-2, -2], [2, 0]], success: [[0, -4], [0, -2]],
+      celebrate: [[0, -4], [0, 0], [0, -4], [0, 0]], sulk: [[0, 2], [2, 2], [2, 2]], stretch: [[0, -2], [0, -4], [0, -4], [0, 0]] },
+    thread: { greet: [[-2, -6], [0, 0], [2, -4]], attention: [[0, -8], [2, -2]], startle: [[2, -4], [-2, 0]], success: [[-2, -6], [2, -4]],
+      celebrate: [[-2, -8], [0, 0], [2, -8], [0, 0]], sulk: [[2, 2], [-2, 4], [-2, 4]], stretch: [[-2, -4], [2, -6], [2, -6], [0, -2]] },
+    glow: { greet: [[0, -2], [2, -6], [0, -4]], attention: [[0, -6], [0, -8]], startle: [[-2, 0], [0, -4]], success: [[0, -4], [0, -8]],
+      celebrate: [[0, -6], [0, -2], [0, -8], [0, -4]], sulk: [[0, 2], [0, 4], [0, 4]], stretch: [[0, -4], [0, -8], [0, -8], [0, -4]] }
   });
-  const CUE_DURATION = Object.freeze({ glance: 480, startle: 420, greet: 620, attention: 680, success: 560 });
+  const CUE_DURATION = Object.freeze({ glance: 480, startle: 420, greet: 620, attention: 680, success: 560, celebrate: 640, sulk: 700, stretch: 700 });
+  const REACTIONS = new Set(['celebrate', 'sulk', 'stretch']);
   const CLONE_CUES = new Set(Emotes?.CLONE_CLIPS || ['split', 'absorb', 'condense', 'dissolve']);
   let serial = 0;
   function poseFor(session = {}, options = {}) {
@@ -178,15 +186,18 @@
         seenEvents = new Map(events.slice(-128).map(event => [event.eventId, event.at]));
         return;
       }
-      const boundary = eventCursor;
+      const boundary = eventCursor, fresh = [];
       for (const event of events) {
         if (seenEvents.has(event.eventId) || event.at < boundary) continue;
         // Bounded decoration history can conservatively skip a pathological
         // same-timestamp burst; it never replays an ID forgotten by eviction.
         if (seenEvents.size >= 128 && event.at === boundary) continue;
         seenEvents.set(event.eventId, event.at);
-        if (event.event === 'tool-end' && event.outcome === 'success') cue('tool-success');
+        fresh.push(event);
       }
+      const reaction = Reactions ? Reactions.pick(fresh, session)
+        : fresh.some(event => event.event === 'tool-end' && event.outcome === 'success') ? 'tool-success' : null;
+      if (reaction) cue(reaction);
       eventCursor = Math.max(boundary, latest);
       seenEvents = new Map([...seenEvents].filter(([, at]) => at >= eventCursor).slice(-128));
     }
@@ -264,6 +275,12 @@
       if (kind === 'tool-success') {
         activity?.cue?.(kind, { direction });
         return emotes?.cue('success') || react('success');
+      }
+      if (REACTIONS.has(kind)) {
+        if (kind === 'celebrate') activity?.cue?.('tool-success', { direction });
+        react(kind);
+        if (view?.CustomEvent) actorNode.dispatchEvent?.(new view.CustomEvent('office-reaction', { detail: { kind } }));
+        return true;
       }
       if (emotes?.cue(kind === 'attention' ? 'startle' : kind, direction)) return true;
       if (activity?.cue?.(kind, { direction })) return true;

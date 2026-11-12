@@ -1,0 +1,44 @@
+.room-decorations{position:absolute;inset:0;z-index:4;pointer-events:none}
+.room-decoration{position:absolute;width:48px;height:48px;image-rendering:pixelated;transform:translate(-50%,-100%);filter:drop-shadow(2px 3px 0 #2d211b44)}
+.room-decoration[data-decoration="bunting"]{width:144px;height:54px;transform:translate(-50%,0)}
+.keepsake-shelf-button{position:absolute;left:8.6%;top:80.4%;z-index:9;width:34px;height:28px;padding:0;border:2px solid #6b4529;border-radius:3px;background:linear-gradient(#8c5d37 0 3px,transparent 3px 12px,#8c5d37 12px 15px,transparent 15px 24px,#8c5d37 24px);box-shadow:2px 3px 0 #2d211b55;cursor:pointer;pointer-events:auto;outline-offset:3px}
+.keepsake-shelf-button::before{content:"✦ ⛵";position:absolute;left:3px;top:-1px;font-size:9px;line-height:12px;color:#f3d36a;letter-spacing:2px}
+.keepsake-shelf-button:focus-visible{outline:2px solid #ffe7a7}
+.keepsake-shelf-dialog{width:min(560px,calc(100vw - 48px))}
+.keepsake-shelf-section{margin:0 0 16px}
+.keepsake-shelf-section h3{font-size:13px;margin:0 0 8px}
+.keepsake-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;list-style:none;padding:0;margin:0}
+.keepsake-item{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;border:1px solid #c7af8199;border-radius:4px;background:#fff4da77;font-size:11px}
+.keepsake-item[data-earned="false"]{opacity:.55}
+.keepsake-icon{font-size:20px;line-height:1;color:#7e8862}
+.keepsake-hint{font-size:11px;color:#927b58;margin:8px 0 0}
+.decoration-list{list-style:none;padding:0;margin:0;display:grid;gap:6px}
+.decoration-item{display:grid;grid-template-columns:110px minmax(0,1fr) 120px;align-items:center;gap:10px;font-size:12px}
+.decoration-item[data-earned="false"] .decoration-name{opacity:.6}
+.decoration-hint{font-size:11px;color:#927b58}
+.decoration-item progress{width:100%;accent-color:#7e8862}
+.growth-stage{font-size:12px;margin:0}
+
+.office[data-flat="true"] .actor[data-keepsake-earned="true"] .actor-keepsake{display:flex;opacity:1;transform:none}
+
+.office:is([data-growth="1"],[data-growth="2"],[data-growth="3"]) .actor-button::after{position:absolute;left:18px;top:6px;z-index:2;font-size:12px;line-height:1;letter-spacing:1px;pointer-events:none;text-shadow:1px 1px 0 #2d211b66}
+.office:is([data-growth="1"],[data-growth="2"],[data-growth="3"]) .actor[data-creature-design="folio"] .actor-button::after{color:#f3d36a}
+.office:is([data-growth="1"],[data-growth="2"],[data-growth="3"]) .actor[data-creature-design="ink"] .actor-button::after{color:#8fb3e0}
+.office:is([data-growth="1"],[data-growth="2"],[data-growth="3"]) .actor[data-creature-design="moss"] .actor-button::after{color:#a7d08a}
+.office:is([data-growth="1"],[data-growth="2"],[data-growth="3"]) .actor[data-creature-design="thread"] .actor-button::after{color:#e7a3c9}
+.office:is([data-growth="1"],[data-growth="2"],[data-growth="3"]) .actor[data-creature-design="glow"] .actor-button::after{color:#ffe7a7}
+.office[data-growth="1"] .actor[data-creature-design="folio"] .actor-button::after{content:"❖"}
+.office[data-growth="2"] .actor[data-creature-design="folio"] .actor-button::after{content:"❖❖"}
+.office[data-growth="3"] .actor[data-creature-design="folio"] .actor-button::after{content:"❖❖❖"}
+.office[data-growth="1"] .actor[data-creature-design="ink"] .actor-button::after{content:"●"}
+.office[data-growth="2"] .actor[data-creature-design="ink"] .actor-button::after{content:"●●"}
+.office[data-growth="3"] .actor[data-creature-design="ink"] .actor-button::after{content:"●●●"}
+.office[data-growth="1"] .actor[data-creature-design="moss"] .actor-button::after{content:"❀"}
+.office[data-growth="2"] .actor[data-creature-design="moss"] .actor-button::after{content:"❀❀"}
+.office[data-growth="3"] .actor[data-creature-design="moss"] .actor-button::after{content:"❀❀❀"}
+.office[data-growth="1"] .actor[data-creature-design="thread"] .actor-button::after{content:"✿"}
+.office[data-growth="2"] .actor[data-creature-design="thread"] .actor-button::after{content:"✿✿"}
+.office[data-growth="3"] .actor[data-creature-design="thread"] .actor-button::after{content:"✿✿✿"}
+.office[data-growth="1"] .actor[data-creature-design="glow"] .actor-button::after{content:"✦"}
+.office[data-growth="2"] .actor[data-creature-design="glow"] .actor-button::after{content:"✦✦"}
+.office[data-growth="3"] .actor[data-creature-design="glow"] .actor-button::after{content:"✦✦✦"}

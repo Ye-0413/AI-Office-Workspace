@@ -4,6 +4,11 @@ const path = require('node:path');
 const HOOK_LEASE_MS = 10000;
 const DEFERRED_PER_ACTOR = 32;
 const DEFERRED_GLOBAL = 1024;
+// After a native Stop, a call that never reported its result is released as
+// "unknown" once the session has been quiet this long. Never a success.
+const ABANDONED_TOOL_MS = 60000;
+// Native failure terminals end the turn; transient API errors do not.
+const TRANSIENT_ERROR = /api.?error/i;
 
 // The store owns lifecycle, not animation timers. No timeout ever means success.
 function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 100 } = {}) {
@@ -16,6 +21,7 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
   let drainingDeferred = false;
   const maxSeen = Math.max(512, maxSessions * 40);
   const terminal = new Set(['turn-end', 'interrupted', 'session-end', 'subagent-end']);
+  const rejected = new Map();
   const boundedAdd = (set, value, limit = 32) => {
     if (!value) return;
     set.add(value);
@@ -68,6 +74,21 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
     while (deferred.size > DEFERRED_GLOBAL) removeDeferred(deferred.keys().next().value);
   }
 
+  function dropAnonymousTools(s) {
+    for (const [key, tool] of s.tools) if (tool.anonymous) { s.tools.delete(key); s.abandonedTools++; }
+  }
+  // Release calls whose results never arrived after a native Stop. The turn
+  // boundary is real; the calls' outcomes stay unknown.
+  function releaseAbandoned(s, time) {
+    if (!s.pendingEnd || s.closed || !s.tools.size || s.externalPending) return false;
+    if (time - Math.max(s.lastEventAt, s.pendingEndAt || 0) < ABANDONED_TOOL_MS) return false;
+    for (const key of s.tools.keys()) { boundedAdd(s.completedTools, key, 128); s.abandonedTools++; }
+    s.tools.clear();
+    settle(s, s.pendingEndAt || s.lastEventAt);
+    retainPendingState(s);
+    return true;
+  }
+
   function settle(s, at) {
     const explicitClose = s.pendingEnd === 'session-end' || s.pendingEnd === 'subagent-end';
     if (!s.pendingEnd || s.tools.size || s.waits.size || s.externalPending || (!explicitClose && activeChildren(s.id))) return;
@@ -82,15 +103,28 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
     // An observed terminal can settle behind a late child/tool result even
     // while snapshot presentation is stale. Expose that reducer fact without
     // treating an abort/teardown (or restored observed-ended state) as success.
-    if (terminal.has(event)) s.settlementBoundary = { event, at: completedAt };
+    if (terminal.has(event) || event === 'turn-failed') s.settlementBoundary = { event, at: completedAt };
     if (event === 'turn-end') s.turnCompletedAt = completedAt;
     boundedAdd(s.closedTurns, s.turnId);
     s.turnOpen = false;
     discardDeferred(s);
   }
 
-  function ingest(event, replayToken) {
-    if (!event || typeof event !== 'object' || !event.provider || !event.sessionId || !event.event) return false;
+  // Returns 'accepted' or a short rejection code. Rejections are counted per
+  // session and store-wide so the reason a body looks wrong can be shown.
+  function ingestDetailed(event, replayToken) {
+    const result = reduce(event, replayToken);
+    if (result === true) return 'accepted';
+    const reason = result || 'rejected';
+    rejected.set(reason, (rejected.get(reason) || 0) + 1);
+    const s = event && typeof event === 'object' && event.provider && event.sessionId ? sessions.get(actorId(event)) : null;
+    if (s) s.rejected[reason] = (s.rejected[reason] || 0) + 1;
+    return reason;
+  }
+  function ingest(event, replayToken) { return ingestDetailed(event, replayToken) === 'accepted'; }
+
+  function reduce(event, replayToken) {
+    if (!event || typeof event !== 'object' || !event.provider || !event.sessionId || !event.event) return 'invalid';
     const id = actorId(event);
     const atValue = typeof event.at === 'string' ? Date.parse(event.at) : Number(event.at);
     const at = Number.isFinite(atValue) ? atValue : now();
@@ -101,8 +135,17 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
       && Number.isFinite(event.turnStartedAt) && event.turnStartedAt > 0 && event.turnStartedAt <= at
       ? event.turnStartedAt : at;
     const key = event.eventId ? `${id}:${event.eventId}` : null;
-    if (key && seen.has(key)) return false;
     let s = sessions.get(id);
+    if (key && seen.has(key)) {
+      // Some hosts re-deliver the identical native callback while the same
+      // turn keeps running. A strictly newer delivery is a real heartbeat for
+      // that open turn; it never repeats the event or reopens anything.
+      const heartbeat = s && !s.closed && s.status !== 'idle' && isHook(event) && event.turnId && event.turnId === s.turnId
+        && Number.isFinite(atValue) && at > s.lastEventAt && at <= now() + 5000 && at >= now() - staleMs;
+      if (!heartbeat) return 'duplicate';
+      s.lastEventAt = at; s.heartbeats++;
+      return 'duplicate-heartbeat';
+    }
     // Cursor's conservative integration intentionally installs only passive
     // completion hooks on unverified hosts (including CLI versions). A fresh
     // native result is real activity even when its start was not observed.
@@ -114,7 +157,7 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
       && Number.isFinite(atValue) && at >= now() - staleMs && at <= now() + 5000;
     const unpairedCursorResult = cursorResult && !(event.toolCallId && s?.tools.has(event.toolCallId));
     if (unpairedCursorResult && (s?.closed || s?.pendingEnd
-      || event.toolCallId && s?.completedTools.has(event.toolCallId))) return false;
+      || event.toolCallId && s?.completedTools.has(event.toolCallId))) return 'cursor-result-after-end';
     const observedCursorTurn = unpairedCursorResult && s && !s.turnOpen
       && !s.tools.size && !s.waits.size && event.turnId !== s.turnId && at > s.lastEventAt;
     const metadata = event.event === 'metadata';
@@ -130,10 +173,10 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
         || s.closedTurns.has(event.turnId) || !(s.turnStartedAt > 0)
         || !Number.isFinite(event.turnStartedAt) || event.turnStartedAt <= s.turnStartedAt
         || !Number.isFinite(event.turnEndedAt) || event.turnEndedAt < event.turnStartedAt
-        || !Number.isFinite(atValue) || event.turnEndedAt !== at) return false;
+        || !Number.isFinite(atValue) || event.turnEndedAt !== at) return 'snapshot-not-newer';
       if (s.hookReceivedAt !== null) {
         const sameOrUnknownTurn = !s.hookTurnId || event.turnId === s.hookTurnId;
-        if ((sameOrUnknownTurn && now() - s.hookReceivedAt <= HOOK_LEASE_MS) || at < s.hookAt) return false;
+        if ((sameOrUnknownTurn && now() - s.hookReceivedAt <= HOOK_LEASE_MS) || at < s.hookAt) return 'hook-lease';
       }
     }
     // SessionEnd is a native lifecycle fact about the session, not a result
@@ -149,7 +192,7 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
     const starts = event.event === 'turn-start' || event.event === 'session-start' || event.event === 'subagent-start';
     if (!s) {
       // Other dangling results and historical completions cannot create actors.
-      if (event.event === 'tool-end' && !unpairedCursorResult || terminal.has(event.event)) return false;
+      if (event.event === 'tool-end' && !unpairedCursorResult || terminal.has(event.event)) return 'no-actor';
       s = {
         id, provider: event.provider, sessionId: event.sessionId,
         ...(event.subagentId ? { subagentId: event.subagentId } : {}),
@@ -160,7 +203,7 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
         attention: false, closed: false, tools: new Map(), completedTools: new Set(),
         closedTurns: new Set(), events: [], turnId: null, turnStartedAt: 0, turnOpen: false,
         hookAt: 0, hookReceivedAt: null, hookTurnId: null, pendingEnd: null, pendingEndAt: 0, externalPending: false,
-        deferredKeys: new Set(), waits: new Map(),
+        deferredKeys: new Set(), waits: new Map(), rejected: {}, heartbeats: 0, abandonedTools: 0,
       };
       sessions.set(id, s);
     }
@@ -175,11 +218,23 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
     const supplementalResult = correlatedFallbackResult && at < s.lastEventAt;
     const advancesKnownTurn = event.event === 'turn-start' && event.turnId && s.turnId
       && event.turnId !== s.turnId && s.turnStartedAt > 0 && turnStartAt > s.turnStartedAt;
-    if (s.closed && !starts && !metadata && !nativeSessionEnd) return false;
-    if (event.turnId && s.closedTurns.has(event.turnId) && !metadata && !nativeSessionEnd && !nativeSubagentEnd) return false;
-    if (!metadata && !nativeSessionEnd && event.turnId && s.turnId && event.turnId !== s.turnId && event.event !== 'turn-start' && !observedCursorTurn) return false;
-    if (event.event === 'turn-start' && event.turnId !== s.turnId && turnStartAt < s.turnStartedAt) return false;
-    if (!metadata && !nativeSessionEnd && !nativeSubagentEnd && !correlatedFallbackResult && !advancesKnownTurn && at < s.lastEventAt - 2000) return false;
+    // Codex helpers can keep sending native tool hooks after a SubagentStop
+    // without a new SubagentStart. Strictly newer work in a new turn reopens
+    // that identity; a late call from the closed turn stays rejected.
+    const reopensHelper = s.closed && s.provider === 'codex' && Boolean(s.subagentId)
+      && s.settlementBoundary?.event === 'subagent-end' && isHook(event)
+      && Boolean(event.turnId) && event.turnId !== s.turnId && !s.closedTurns.has(event.turnId)
+      && ['tool-start', 'waiting-user', 'activity'].includes(event.event) && Number.isFinite(atValue) && at > s.lastEventAt;
+    // A strictly newer native event from a different turn proves the current
+    // turn is over even when its Stop was never delivered.
+    const supersedesTurn = !s.closed && isHook(event) && !metadata && !starts && !terminal.has(event.event)
+      && event.event !== 'error' && Boolean(event.turnId && s.turnId) && event.turnId !== s.turnId
+      && !s.closedTurns.has(event.turnId) && Number.isFinite(atValue) && at > s.lastEventAt;
+    if (s.closed && !starts && !metadata && !nativeSessionEnd && !reopensHelper) return 'session-closed';
+    if (event.turnId && s.closedTurns.has(event.turnId) && !metadata && !nativeSessionEnd && !nativeSubagentEnd && !reopensHelper) return 'turn-closed';
+    if (!metadata && !nativeSessionEnd && event.turnId && s.turnId && event.turnId !== s.turnId && event.event !== 'turn-start' && !observedCursorTurn && !supersedesTurn && !reopensHelper) return 'turn-fence';
+    if (event.event === 'turn-start' && event.turnId !== s.turnId && turnStartAt < s.turnStartedAt) return 'older-turn-start';
+    if (!metadata && !nativeSessionEnd && !nativeSubagentEnd && !correlatedFallbackResult && !advancesKnownTurn && at < s.lastEventAt - 2000) return 'out-of-order';
     // Official hooks have a bounded primary lease, not permanent ownership:
     // if a hook disappears, a fresh real rollout record may repair that turn.
     // Expiration itself changes no activity and never implies completion.
@@ -188,20 +243,20 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
       const leaseActive = now() - s.hookReceivedAt <= HOOK_LEASE_MS;
       if (sameOrUnknownTurn && leaseActive) {
         if (replayToken !== deferredReplay) deferFallback(s, event, at);
-        return false;
+        return 'deferred-hook-lease';
       }
-      if (at < s.hookAt && !correlatedFallbackResult) return false;
+      if (at < s.hookAt && !correlatedFallbackResult) return 'older-than-hook';
     }
     // The primary lease may expire between a deferred native start and its
     // result, before the next prune replays that start. Retain both facts for
     // ordered replay; dropping this result would later create a phantom call.
     if (correlatedFallbackResult && !pendingTool) {
       if (replayToken !== deferredReplay) deferFallback(s, event, at);
-      return false;
+      return 'deferred-correlation';
     }
     if (isHook(event) && event.event === 'tool-end' && event.toolCallId) discardDeferred(s, event.toolCallId);
-    if (event.event === 'tool-end' && (!event.toolCallId || !s.tools.has(event.toolCallId)) && !unpairedCursorResult) return false;
-    if (event.event === 'tool-start' && event.toolCallId && s.completedTools.has(event.toolCallId)) return false;
+    if (event.event === 'tool-end' && (!event.toolCallId || !s.tools.has(event.toolCallId)) && !unpairedCursorResult) return 'unpaired-result';
+    if (event.event === 'tool-start' && event.toolCallId && s.completedTools.has(event.toolCallId)) return 'completed-call';
     if (event.event === 'tool-end') discardDeferred(s, event.toolCallId);
     if (key) {
       seen.set(key, at);
@@ -209,7 +264,7 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
     }
     // Clear only after acceptance fences: an old/duplicate same-turn start
     // cannot erase the last real settlement merely by being observed again.
-    if (starts || observedCursorTurn) delete s.settlementBoundary;
+    if (starts || observedCursorTurn || supersedesTurn || reopensHelper) delete s.settlementBoundary;
     if (!supplementalResult) {
       if (event.title) s.title = String(event.title).slice(0, 100);
       if (event.projectPath) s.projectPath = String(event.projectPath).slice(0, 2048);
@@ -256,7 +311,7 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
       accepted(event); prune(false); emit(); return true;
     }
     if (isHook(event)) { s.hookAt = Math.max(s.hookAt, at); s.hookReceivedAt = now(); s.hookTurnId = event.turnId || s.turnId; }
-    if (event.event === 'turn-start' || observedCursorTurn || (!s.turnId && event.turnId && !terminal.has(event.event))) {
+    if (event.event === 'turn-start' || observedCursorTurn || supersedesTurn || reopensHelper || (!s.turnId && event.turnId && !terminal.has(event.event))) {
       if (s.turnId && s.turnId !== event.turnId) boundedAdd(s.closedTurns, s.turnId);
       if (s.turnId !== event.turnId || !s.turnOpen) {
         discardDeferred(s);
@@ -274,10 +329,10 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
     s.closed = false;
     const callId = event.toolCallId;
     if (event.event === 'tool-start') {
-      if (callId && s.completedTools.has(callId)) return false;
+      if (callId && s.completedTools.has(callId)) return 'completed-call';
       const queuedStart = [...s.deferredKeys].map(key => deferred.get(key)?.event).find(e => e?.toolCallId === callId && ['tool-start', 'waiting-user'].includes(e.event));
       const startedAt = Math.min(at, pendingTool?.startedAt ?? Infinity, queuedStart?.at ?? Infinity);
-      s.tools.set(callId || event.eventId || `anonymous:${at}`, { name: event.toolName || '', activity: event.activity || 'coding', startedAt });
+      s.tools.set(callId || event.eventId || `anonymous:${at}`, { name: event.toolName || '', activity: event.activity || 'coding', startedAt, ...(callId ? {} : { anonymous: true }) });
       s.status = 'active'; s.attention = false;
       s.activity = event.activity || 'coding'; s.toolName = event.toolName || '';
     } else if (event.event === 'tool-end') {
@@ -333,8 +388,18 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
         s.toolName = '';
         delete s.turnCompletedAt;
         discardDeferred(s);
+      } else {
+        // A start without a call ID can never be correlated with its result.
+        dropAnonymousTools(s);
       }
       if (nativeSessionEnd) boundedAdd(s.closedTurns, event.turnId);
+      settle(s, at);
+    } else if (event.event === 'error' && isHook(event) && !TRANSIENT_ERROR.test(event.evidence?.rawEvent || '')) {
+      // A native failure terminal ends the turn without claiming completion.
+      delete s.settlementBoundary;
+      dropAnonymousTools(s);
+      s.pendingEnd = 'turn-failed'; s.pendingEndAt = at;
+      s.status = 'active'; s.activity = s.tools.size || activeChildren(s.id) ? 'waiting-tool' : 'error'; s.attention = false;
       settle(s, at);
     } else {
       s.status = event.event === 'session-start' && !s.tools.size ? 'idle' : 'active'; s.activity = event.activity || 'planning';
@@ -378,14 +443,26 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
         lastEventAt: s.lastEventAt, toolName: s.toolName, summary: s.summary,
         evidence: { ...s.evidence }, activeTools: s.tools.size,
         attention: s.attention, disconnected, closed: s.closed,
+        ...(s.turnStartedAt > 0 ? { turnStartedAt: s.turnStartedAt } : {}),
         ...(s.turnCompletedAt ? { turnCompletedAt: s.turnCompletedAt } : {}),
         ...(s.settlementBoundary ? { settlementBoundary: { ...s.settlementBoundary } } : {}),
         events: s.events.map(e => ({ ...e, evidence: { ...e.evidence } })),
+        diagnostics: {
+          rejected: { ...s.rejected }, heartbeats: s.heartbeats, abandonedTools: s.abandonedTools,
+          ...(s.pendingEnd ? { blockers: { tools: s.tools.size, waits: s.waits.size, background: s.externalPending, children: childActive } } : {}),
+        },
       };
     }).sort((a, b) => b.lastEventAt - a.lastEventAt || a.id.localeCompare(b.id));
   }
   function prune(notify = true) {
     let changed = false;
+    if (notify) {
+      const time = now();
+      for (const s of sessions.values()) if (releaseAbandoned(s, time)) {
+        changed = true;
+        if (s.parentId) { const parent = sessions.get(s.parentId); if (parent) { settle(parent, time); retainPendingState(parent); } }
+      }
+    }
     if (sessions.size > maxSessions) {
       // This is a history-retention target, not permission to erase live work.
       // Recompute the observed dependency closure on every pass: an actual
@@ -426,7 +503,8 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
     if (notify && (changed || [...sessions.values()].some(s => !s.closed && staleMs > 0 && now() - s.lastEventAt > staleMs))) emit();
     return changed;
   }
-  return { ingest, snapshot, prune, clear() { sessions.clear(); seen.clear(); deferred.clear(); emit(); },
+  return { ingest, ingestDetailed, snapshot, prune, rejections: () => Object.fromEntries(rejected),
+    clear() { sessions.clear(); seen.clear(); deferred.clear(); rejected.clear(); emit(); },
     onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     // Readers see the fully reduced accepted identity before safe history
     // eviction; onChange still receives the post-retention snapshot.
@@ -435,4 +513,4 @@ function createSessionStore({ now = Date.now, staleMs = 120000, maxSessions = 10
     onAccepted(fn) { if (typeof fn !== 'function') throw new TypeError('Callback required'); acceptedListeners.add(fn); return () => acceptedListeners.delete(fn); } };
 }
 
-module.exports = { createSessionStore };
+module.exports = { createSessionStore, ABANDONED_TOOL_MS };

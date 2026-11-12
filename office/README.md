@@ -86,6 +86,8 @@ Daily room uses a stable Hong Kong date schedule: six different everyday interio
 
 此入口复用各工具已有的配置写入机制：保留用户设置与其它 hooks、按需备份、检查文件锁和未知格式，不改变审批策略、不发送 AI 消息。配置完成与真正收到活动分开显示；Codex 的 hooks 信任确认、部分工具的新会话或重启要求，会保留在逐项详情里。无法安全写入的配置会报告失败，不会覆盖修复。
 
+每个工具的状态只依据证据：「已配置」表示观察入口已安装但从未收到事件；「已收到首个事件」表示以前收到过真实事件（时间跨重启保留），本次运行尚未收到；「正在观察」表示本次运行已收到真实事件。应用被移动或换成另一份副本后，旧路径的观察入口会显示「需要修复」；点击「修复」只替换本应用拥有的条目（含旧路径遗留条目），被外部改过的条目仍保留并报错。「发送测试事件」用本应用的观察脚本送出一条带标记的记录，验证管道可用；它不会生成角色、会话或使用记录。观察脚本丢弃事件时只记录原因代码（无内容），面板显示 24 小时内的漏记数；遗留的锁文件仅在其进程已退出时自动回收。
+
 ## Agent 外观与快捷操作
 
 [认识五位伙伴：外形、性格与动作故事](../docs/companions.md#五位伙伴五种性格) · [Meet the five companions](../docs/companions.md#meet-the-workshop) · [支持的 AI 工具与功能](../README.zh-CN.md#支持哪些-ai-工具)
@@ -94,7 +96,7 @@ Daily room uses a stable Hong Kong date schedule: six different everyday interio
 
 「房间偏好」提供当前风格的五种角色大图。默认的像素风使用六格 40×40 透明姿态，分别呈现待命、工作、思考、休息、需留意与确认完成。工具栏、对话框、名牌和气泡使用同一套像素界面。手绘风使用原工坊的界面、角色姿态与活动帧条，播放时在帧之间柔和过渡。切换风格保留同一组家族和任务。
 
-像素风的 55 套活动以每秒 30 张 60×60 像素帧播放。身体与道具在同一张帧上绘制，走路、眨眼、招手和访客彩蛋也有逐帧过渡。隐藏窗口会暂停原有时钟，节能和减少动作会保留静态姿态。素材由 `scripts/draw-pixel-companions.cjs` 在整数网格绘制。帧条无法读取时显示对应姿态，姿态图无法读取时显示像素备用头像。点击伙伴可打招呼。
+像素风的 55 套活动以每秒 30 张 60×60 像素帧播放。身体与道具在同一张帧上绘制，走路、眨眼、招手和访客彩蛋也有逐帧过渡。隐藏窗口会暂停原有时钟，节能和减少动作会保留静态姿态。素材由 `scripts/draw-pixel-companions.cjs` 在整数网格绘制。帧条无法读取时显示对应姿态，姿态图无法读取时显示像素备用头像。单击伙伴查看详情，双击打招呼；鼠标经过时它会看你一眼，不按键来回轻抚会冒出一颗心，点角落的毛线球大家会一起看过去。这些互动只播放外观动作，不改变任务状态、座位或观察时钟，隐藏窗口、节能和减少动作时不会播放。
 
 按 **⌘K / Ctrl+K** 打开伙伴搜索，可按昵称、任务、工具、项目或真实 ID 查找，并筛选「仅需留意」。方向键、Home / End 可浏览结果，Enter 查看详情，Esc 关闭后返回来源；实时更新保留列表焦点和滚动位置。选中伙伴有静态脚底光圈，便于在房间中定位。
 
@@ -104,7 +106,7 @@ Open **View → Avatar Style** in the macOS menu bar or **Room preferences → A
 
 Pixel also styles the toolbar, dialogs, nameplates, and speech bubbles. Pointer clicks open different surfaces with short, distinct motions. Keyboard activation and reduced-motion mode open them immediately. Painted uses the original workshop interface.
 
-`scripts/draw-pixel-companions.cjs` draws the original artwork directly on a pixel grid. A missing strip leaves the corresponding atlas pose visible. A missing atlas shows the pixel backup body. Each species has 30 fps pixel sequences for walking, blinking, sideways glances, greetings, startles, confirmed tool feedback, and a rare visitor surprise. Click a companion to say hello. Both styles are included in the same app and share its local profile and observation hooks.
+`scripts/draw-pixel-companions.cjs` draws the original artwork directly on a pixel grid. A missing strip leaves the corresponding atlas pose visible. A missing atlas shows the pixel backup body. Each species has 30 fps pixel sequences for walking, blinking, sideways glances, greetings, startles, confirmed tool feedback, and a rare visitor surprise. Click a companion for details and double-click to say hello. Hovering earns a glance, stroking back and forth without pressing a button pops a heart, and clicking the yarn ball in the corner makes everyone look. Play only runs cosmetic motion: it never changes task state, seats or observation clocks, and it stays still when the window is hidden, in low power or with reduced motion. Both styles are included in the same app and share its local profile and observation hooks.
 
 Use **⌘K / Ctrl+K** to search the roster by nickname, task, tool, project or real ID. Filter to agents needing attention, browse with arrows or Home / End, and press Enter for details. Focus and scroll survive live updates, and closing details restores focus.
 
@@ -115,6 +117,10 @@ The resource-health controller observes only its image, source and presence owne
 ## 角色辨识、大小与每日活动
 
 右上角的 **使用记录** 保存本机实际观察到的 Agent 档案与事件时间线，可按香港日期、AI 工具和主／分身筛选，分页查看或导出全部筛选结果的 CSV。活跃主体、未解决分身与其真实祖先不会因历史容量回收而丢失；历史容量是可回收记录的目标，必要时保留更多真实工作身份。记录包含身份、父子关系、项目名、活动与末次状态、轮次、工具调用、失败记录，以及分别统计的观测工作和等待时长；昵称跟随中英文界面。档案会在应用重启后保留，不会把历史 Agent 重新放进房间。
+
+使用记录顶部的 **每日回顾** 汇总所选香港日期的 Agent 数（主 Agent／分身）、轮次、工具调用、测试与构建的通过和未通过次数、观测工作和等待时长、会话 Token 以及最常做的三类活动，并可导出为 PNG。卡片默认不含项目名称，勾选「包含项目名称」后才显示前三个项目；任务标题、对话、提示词和路径始终不会进入卡片或图片。测试与构建次数只统计带明确成功或失败结果的工具返回；记录库升级到第 2 版时会从已有事件补算这些次数，其余历史保持不变。
+
+房间左下角的 **纪念品架** 记录真实工作换来的小东西：每位伙伴完成一轮真实对话后会带来自己的纪念品，名牌上随后显示这枚纪念章；累计完成轮次、工具调用、测试或构建通过、观察天数和观测工作时长会解锁蕨叶盆栽、暖光台灯、通过奖杯、五日彩旗和十小时座钟等房间装饰；累计完成 25、100、400 轮时，伙伴依次长出各自物种的小饰物。解锁全部由本机使用记录计算，账本 `usage-history/unlocks.json` 只记录首次获得的时间，删除后会从记录重建；历史回收不会收回已获得的东西，点击、抚摸和玩具也不会增加进度。
 
 数据库保存在本应用用户数据目录的 `usage-history/usage.sqlite3`；面板中的「打开日志文件夹」可直接定位。使用 SQLite 事务与 WAL，目录权限 0700、文件权限 0600，默认保留全部历史。仅接受经会话状态模型确认的观察事件，跨重启去重；不保存对话正文、任务标题、提示词、工具输入输出或完整项目路径。旧版每日统计只有不可逆身份摘要，不能转换成完整使用档案；明细从本版本实际观察起积累。
 
@@ -222,6 +228,8 @@ The default mode is **实时观察**. Existing hooks/plugins and the bounded Cod
 The retained legacy joint renderer has eight reference choreographies for each of eleven activities, for 88 total; the current workshop companions have 55 activity loops per avatar style. In the reference renderer, props and joint motion distinguish reading, search, planning, coding, design, testing, builds, execution, tool waits, user waits and error inspection. A bounded per-identity clock keeps each activity's accumulated visible work across page and room navigation. Offscreen and quiet intervals do not advance the cycle; metadata does not replay it.
 
 The connection panel installs or updates owned integrations only when explicitly selected. It preserves existing hooks and native approval behavior. Supported OpenCode/MiMo plugins also carry the request-scoped manual question channel; update an existing installation with an explicit reconnect or one-click Initialize, then follow the host's normal plugin reload/new-session path. Codex hook trust must still be reviewed in Codex; this app does not write trust hashes or approve tools. Unknown Cursor host versions use a conservative observation subset. A host must be available and run a real session before its end-to-end connection can be considered verified.
+
+Each row shows evidence, not just configuration: **Configured** (installed, no event yet), **First event received** (a real event arrived in an earlier run; the time survives restarts) and **Observing** (a real event arrived in this run). After the app is moved or replaced, observer entries with old paths show **Repair needed**; **Repair** replaces only entries this app owns, including old-path leftovers, and still preserves and reports anything edited outside the app. **Send test event** sends one marked record through this app's observer to check the pipeline; it never creates a companion, a session or a usage record. Dropped hook events are logged as reason codes only and shown as a 24-hour count. A leftover lock file is recovered only when its process has exited.
 
 Tool starts, correlated results, user input, child agents, turn endings and session closures remain distinct. A quiet or stale source is not a completed task. Unrecognized events are retained as diagnostic uncertainty rather than invented animation claims. A successful command does not prove an entire compound test workflow succeeded.
 

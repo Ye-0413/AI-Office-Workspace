@@ -1,0 +1,42 @@
+'use strict';
+// Hover, pet and toss in the production room; prove play leaves real state alone.
+const {app,BrowserWindow,ipcMain}=require('electron');
+const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+const profile=fs.mkdtempSync(path.join(os.tmpdir(),'office-play-'));
+app.setPath('userData',profile);app.disableHardwareAcceleration();
+const settings={language:'zh',idleVisitor:false,reducedMotion:false,lowPower:false,sceneWeather:'off'};
+const now=Date.now();
+const session=(id,activity)=>({id:'codex:'+id,sessionId:id,provider:'codex',status:'active',activity,activeTools:0,lastEventAt:now,events:[]});
+const snapshot={mode:'live',now,sessions:[session('play-a','coding'),session('play-b','reading')],connections:[]};
+const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+let win;const errors=[],writes=[];
+const guard=setTimeout(()=>{console.error('Companion play fixture timed out');app.exit(1);},90000);
+async function until(predicate,label,ms=30000){const end=Date.now()+ms;while(Date.now()<end){if(await predicate())return;await pause(60);}throw Error(label);}
+app.whenReady().then(async()=>{
+  for(const [name,fn]of Object.entries({snapshot:()=>({...snapshot,now:Date.now()}),settings:()=>settings,'set-settings':patch=>{writes.push(patch);return Object.assign(settings,patch);},displays:()=>[]}))ipcMain.handle('office:'+name,(_,...args)=>fn(...args));
+  ipcMain.on('office:renderer-error',(_,error)=>errors.push(error));
+  win=new BrowserWindow({width:1280,height:720,show:true,focusable:false,webPreferences:{preload:path.join(__dirname,'../preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,backgroundThrottling:false}});
+  await win.loadFile(path.join(__dirname,'../renderer/index.html'));
+  const run=source=>win.webContents.executeJavaScript(source,true);
+  const state=()=>run(`JSON.stringify([...document.querySelectorAll('.actor[data-session-id]')].map(node=>({id:node.dataset.sessionId,transform:node.style.transform,walking:node.dataset.walking||'',reaction:node.dataset.reaction||'',selected:node.dataset.selected||''})).sort((a,b)=>a.id.localeCompare(b.id)))`);
+  await until(async()=>(await run(`document.querySelectorAll('.actor[data-session-id]').length`))===2,'both observed sessions are drawn');
+  let previous='',steady=0;
+  await until(async()=>{const value=await state();steady=value===previous&&!value.includes('"walking":"true"')?steady+1:0;previous=value;return steady>=15;},'the cast settles at its stations');
+  const settled=await state();
+  assert.equal(await run(`!!document.querySelector('.companion-toy')&&document.querySelector('.companion-toy').getAttribute('aria-label')`),'毛线球：点一下，大家会看过来');
+  await run(`(()=>{const button=document.querySelector('.actor[data-session-id="codex:play-a"] .actor-button'),box=button.getBoundingClientRect(),y=box.top+box.height/2;
+    const fire=(type,x)=>button.dispatchEvent(new PointerEvent(type,{bubbles:true,clientX:x,clientY:y,pointerType:'mouse',buttons:0}));
+    fire('pointerover',box.left+4);window.playHeartSeen=false;
+    const watch=new MutationObserver(()=>{if(document.querySelector('.companion-heart'))window.playHeartSeen=true;});watch.observe(document.getElementById('world'),{subtree:true,childList:true});window.playWatch=watch;
+    for(const dx of [0,12,0,12,0,12])fire('pointermove',box.left+box.width/2+dx);})()`);
+  await until(()=>run(`window.playHeartSeen===true`),'stroking without a button pets the companion');
+  await run(`document.querySelector('.companion-toy').click()`);
+  await until(()=>run(`!document.querySelector('.companion-heart')`),'the heart is removed after its animation');
+  await pause(1500);
+  assert.equal(await state(),settled,'play never moves, selects or re-stations a real body');
+  assert.deepEqual(writes,[],'play writes no settings');
+  await run(`window.playWatch.disconnect()`);
+  const preview='/tmp/office-companion-play.png';fs.writeFileSync(preview,(await win.webContents.capturePage()).toPNG());
+  assert.deepEqual(errors,[]);
+  console.log(JSON.stringify({ok:true,checks:['hover, petting and the yarn ball play only cosmetic cues; positions, walking, reaction, selection and settings are unchanged'],preview}));
+}).catch(error=>{console.error(error);process.exitCode=1;}).finally(()=>{clearTimeout(guard);win?.destroy();fs.rmSync(profile,{recursive:true,force:true});app.exit(process.exitCode||0);});

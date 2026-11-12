@@ -131,7 +131,7 @@ app.whenReady().then(async () => {
     const before=invokeCalls.filter(call=>call.name==='connect').length;
     await evaluate(`document.querySelector('.provider-actions button').click()`);await wait(150);
     assert.equal(invokeCalls.filter(call=>call.name==='connect').length,before+1);assert.equal(invokeCalls.filter(call=>call.name==='connect').at(-1).args[0],'hermes');
-    assert.equal(await evaluate(`document.querySelectorAll('.provider-actions button').length`),2);
+    assert.equal(await evaluate(`document.querySelectorAll('.provider-actions button').length`),3);
     await evaluate(`document.getElementById('connections-dialog').close();document.getElementById('language-button').click()`);await wait(100);
     assert.equal(await evaluate(`document.querySelector('.provider-actions button').textContent`),'Reload plugin');
     await evaluate(`document.getElementById('language-button').click();document.getElementById('provider-search').value='';document.getElementById('provider-search').dispatchEvent(new Event('input',{bubbles:true}))`);await wait(100);

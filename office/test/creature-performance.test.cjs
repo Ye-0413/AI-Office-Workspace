@@ -271,3 +271,32 @@ test('lifecycle suppression takes priority over retained attention, including re
   assert.equal(calls.cues.filter(kind=>kind==='attention').length,1);
   f.controller.destroy();
 });
+
+function reactionFixture(file,id){
+  const calls={updates:[],cues:[],destroyed:0},Reactions=require('../lib/reaction-model.js');
+  const context={OfficeAvatarPerformanceModel:Model,OfficeReactionModel:Reactions,OfficePaintedCreatureFrames:null,OfficeCreatureActivity:{create(){return{update(value){calls.updates.push({...value});},cue(kind){calls.cues.push(kind);return kind==='tool-success';},destroy(){calls.destroyed++;}};}}};
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../renderer',file),'utf8'),context);
+  const api=context.OfficeCreaturePerformance||context.OfficePaintedCreaturePerformance,f=fixture(id,api);
+  f.document.defaultView.CustomEvent=CustomEvent;const heard=[];f.actor.addEventListener('office-reaction',event=>heard.push(event.detail.kind));
+  emit(f.source,'load');return{f,calls,heard};
+}
+for(const file of ['creature-performance.js','painted-creature-performance.js'])test(file+' reacts only to explicit check results and long completed turns',()=>{
+  const {f,calls,heard}=reactionFixture(file,'thread'),durations=()=>f.animations.map(a=>a.effect.getTiming().duration).filter(Boolean);
+  const end=(eventId,at,activity,outcome)=>({eventId,event:'tool-end',at,observedActivity:activity,outcome});
+  f.controller.update(observed('testing',{events:[end('history',100,'testing','failure')],lastEventAt:100}),{now:100});
+  assert.deepEqual(heard,[],'history never replays as a reaction');
+  f.controller.update(observed('testing',{events:[end('pass',200,'testing','success')],lastEventAt:200}),{now:200});
+  assert.deepEqual(heard,['celebrate']);assert.ok(durations().includes(640));assert.ok(calls.cues.includes('tool-success'));
+  f.controller.update(observed('building',{events:[end('fail',300,'building','failure')],lastEventAt:300}),{now:300});
+  assert.deepEqual(heard,['celebrate','sulk']);assert.ok(durations().includes(700));
+  f.controller.update(observed('testing',{events:[end('unknown',400,'testing',undefined)],lastEventAt:400}),{now:400});
+  assert.deepEqual(heard,['celebrate','sulk'],'an unknown outcome stays silent');
+  const turn={eventId:'done',event:'turn-end',at:500+15*60000};
+  f.controller.update(observed('idle',{status:'idle',turnStartedAt:500,turnCompletedAt:turn.at,events:[turn],lastEventAt:turn.at}),{now:turn.at});
+  assert.deepEqual(heard,['celebrate','sulk','stretch']);
+  for(const [at,options]of[[2e6,{reducedMotion:true}],[2e6+10,{hidden:true}],[2e6+20,{lowPower:true}]]){
+    f.controller.update(observed('testing',{events:[end('quiet-'+at,at,'testing','success')],lastEventAt:at}),{now:at,...options});
+  }
+  assert.deepEqual(heard,['celebrate','sulk','stretch'],'reduced motion, hidden and low power consume results silently');
+  f.controller.destroy();
+});

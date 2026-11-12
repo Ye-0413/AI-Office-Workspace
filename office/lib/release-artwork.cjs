@@ -28,6 +28,8 @@ const ASSET_FILES = Object.freeze([
   ...require('./scene-artwork.js').CATALOG.map(item => 'assets/scenes/themes/' + item.id + '.jpg'),
   'assets/scenes/rooms/generation.json',
   ...require('./room-designs.js').CATALOG.map(item => 'assets/scenes/rooms/' + item.id + '.png'),
+  // Original pixel decorations earned through the unlock ledger.
+  ...require('./progression-model.js').DECORATIONS.map(item => 'assets/decorations/' + item.id + '.svg'),
 ].sort());
 const allowedAssets = new Set(ASSET_FILES);
 const normalize = name => name.replaceAll('\\', '/').replace(/^\/+/, '');

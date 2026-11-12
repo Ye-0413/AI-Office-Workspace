@@ -3,13 +3,15 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { createHash, randomUUID } = require('node:crypto');
+const { createHash, randomUUID, randomBytes } = require('node:crypto');
+const { spawn: spawnProcess } = require('node:child_process');
 const { createClaudeHookOperations } = require('../src/claude-hook-operations.js');
 const { actorKey } = require('./provider-events.cjs');
 const { inspectHermes, mutateHermes } = require('./hermes-observer.cjs');
 const { PROVIDER_IDS, getProvider } = require('./provider-catalog.cjs');
 const { enrichConnections } = require('./provider-detection.cjs');
-const { isObserverCommandTemplate } = require('./observer-command-owner.cjs');
+const { openLock, staleLock } = require('./stale-lock.cjs');
+const { isObserverCommandTemplate, parseObserverCommand, invocationPathState, staleSummary } = require('./observer-command-owner.cjs');
 const { createUpstreamIntegrations, EVENTS: UPSTREAM_EVENTS } = require('./upstream-integrations.cjs');
 const { PROVIDERS: PLUGIN_PROVIDERS, inspectPlugin, mutatePlugin } = require('./plugin-integrations.cjs');
 const { PROVIDERS: SPECIAL_PROVIDERS, EVENTS: SPECIAL_EVENTS, inspectSpecial, mutateSpecial } = require('./special-integrations.cjs');
@@ -222,7 +224,7 @@ function spoolWarning(dataDir, homeDir, provider) {
     const file = path.join(eventsDir, `${provider}.jsonl`);
     const current = lstat(file);
     if (!current || current.size < SPOOL_TARGET) return undefined;
-    if (lstat(path.join(eventsDir, `.${provider}.append.lock`))) return '活动记录的轮换锁仍存在；轮换竞争或遗留锁可能漏记事件，AI 继续正常运行';
+    if (lstat(path.join(eventsDir, `.${provider}.append.lock`)) && !staleLock(path.join(eventsDir, `.${provider}.append.lock`))) return '活动记录的轮换锁仍存在；轮换竞争或遗留锁可能漏记事件，AI 继续正常运行';
     const backup = `${file}.1`;
     const stat = lstat(backup);
     if (!stat) return undefined;
@@ -246,6 +248,8 @@ function createObserverBridge(options = {}) {
   const electronPath = options.electronPath || process.execPath;
   const now = options.now || Date.now;
   const onEvent = typeof options.onEvent === 'function' ? options.onEvent : () => {};
+  const ledger = options.ledger || null, dropReader = options.dropReader || null;
+  const testWaiters = new Map();
   if (!plain(dataDir, 4096) || !path.isAbsolute(dataDir) || !path.isAbsolute(homeDir) || !path.isAbsolute(appRoot) || !path.isAbsolute(electronPath)) throw new Error('观察桥路径必须是绝对路径');
   let running = false, timer = null, cursorVerified = false;
   const latest = new Map(), faults = new Map(), positions = new Map(), queues = new Map();
@@ -256,18 +260,21 @@ function createObserverBridge(options = {}) {
   function commands(provider) { return new Set(EVENTS[provider].map(event => buildObserverCommand(commandOptions, provider, event))); }
   function owned(entry, provider) { return object(entry) && typeof entry.command === 'string' && (commands(provider).has(entry.command) || isObserverCommandTemplate(entry.command, { provider, events: EVENTS[provider] })); }
 
-  function countInstalled(provider, snapshot) {
-    const hooks = snapshot.value.hooks;
-    if (!object(hooks)) return 0;
-    let count = 0;
+  function ownedEntries(provider, snapshot) {
+    const hooks = snapshot.value.hooks, found = [];
+    if (!object(hooks)) return found;
     for (const list of Object.values(hooks)) {
       if (!Array.isArray(list)) continue;
       for (const entry of list) {
-        if (provider === 'cursor') { if (owned(entry, provider)) count += 1; }
-        else if (object(entry) && Array.isArray(entry.hooks)) count += entry.hooks.filter(child => owned(child, provider)).length;
+        if (provider === 'cursor') { if (owned(entry, provider)) found.push(entry); }
+        else if (object(entry) && Array.isArray(entry.hooks)) found.push(...entry.hooks.filter(child => owned(child, provider)));
       }
     }
-    return count;
+    return found;
+  }
+  function countInstalled(provider, snapshot) { return ownedEntries(provider, snapshot).length; }
+  function nativeStale(provider, snapshot) {
+    return staleSummary(ownedEntries(provider, snapshot).map(entry => invocationPathState(parseObserverCommand(entry.command), commandOptions)));
   }
 
   function connection(provider) {
@@ -279,8 +286,8 @@ function createObserverBridge(options = {}) {
       return {provider,...state,watching:Boolean(running&&state.installed&&latest.has(provider)&&!faults.has(provider)&&!warning),lastEventAt:latest.get(provider)||null,
         detail:faults.get(provider)||warning||state.detail};
     }
-    let installed = false, detail;
-    try { installed = countInstalled(provider, readConfig(configPath(provider, homeDir, env), homeDir)) > 0; }
+    let installed = false, detail, stale = {};
+    try { const snapshot = readConfig(configPath(provider, homeDir, env), homeDir); installed = countInstalled(provider, snapshot) > 0; stale = nativeStale(provider, snapshot); }
     catch (err) { detail = err.message; }
     const isAvailable = available(provider, homeDir, env);
     if (!detail) {
@@ -292,7 +299,7 @@ function createObserverBridge(options = {}) {
     if (faults.has(provider)) detail = faults.get(provider);
     const warning = spoolWarning(dataDir, homeDir, provider);
     if (warning) detail = warning;
-    return { provider, installed, watching: running && installed && !faults.has(provider) && !warning, lastEventAt: latest.get(provider) || null, available: isAvailable, detail };
+    return { provider, installed, ...stale, watching: running && installed && !faults.has(provider) && !warning, lastEventAt: latest.get(provider) || null, available: isAvailable, detail };
   }
 
   async function mutate(provider, install) {
@@ -315,7 +322,7 @@ function createObserverBridge(options = {}) {
           if (!plan.changed) return {status:'unchanged',provider,installed:install,detail:connection(provider).detail};
           safeAncestors(path.dirname(plan.file),homeDir,true);
           lockPath=path.join(path.dirname(plan.file),'.mini-office-observer.lock');
-          lockFd=fs.openSync(lockPath,fs.constants.O_CREAT|fs.constants.O_EXCL|fs.constants.O_WRONLY|(fs.constants.O_NOFOLLOW||0),0o600);
+          lockFd=openLock(lockPath,fs.constants.O_CREAT|fs.constants.O_EXCL|fs.constants.O_WRONLY|(fs.constants.O_NOFOLLOW||0),0o600);
           lockStat=fs.fstatSync(lockFd);fs.writeFileSync(lockFd,JSON.stringify({marker:MARKER,pid:process.pid,at:now()}));
           const backupPath=atomicConfig(plan.file,plan.before,plan.value,homeDir,now);
           faults.delete(provider);
@@ -362,7 +369,7 @@ function createObserverBridge(options = {}) {
         if (JSON.stringify(before.value) === JSON.stringify(value)) return { status: 'unchanged', provider, installed: install };
         safeAncestors(path.dirname(file), homeDir, true);
         lockPath = path.join(path.dirname(file), '.mini-office-observer.lock');
-        lockFd = fs.openSync(lockPath, fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_WRONLY | (fs.constants.O_NOFOLLOW || 0), 0o600);
+        lockFd = openLock(lockPath, fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_WRONLY | (fs.constants.O_NOFOLLOW || 0), 0o600);
         lockStat = fs.fstatSync(lockFd);
         fs.writeFileSync(lockFd, JSON.stringify({ marker: MARKER, pid: process.pid, at: now() }));
         const backupPath = atomicConfig(file, before, value, homeDir, now);
@@ -430,7 +437,8 @@ function createObserverBridge(options = {}) {
         if (!position.dropping && line.length <= MAX_LINE && line.length) {
           let parsed; try { parsed = JSON.parse(line.toString('utf8')); } catch {}
           const normalized = validNormalized(parsed, provider);
-          if (normalized) { latest.set(provider, now()); try { onEvent(normalized); } catch {} }
+          if (normalized && isTestRecord(normalized)) receiveTest(provider, normalized);
+          else if (normalized) { latest.set(provider, now()); ledger?.recordEvent(provider, now()); try { onEvent(normalized); } catch {} }
         }
         position.dropping = false;
       }
@@ -439,6 +447,45 @@ function createObserverBridge(options = {}) {
       faults.delete(provider);
     } catch (err) { faults.set(provider, err.message); }
     finally { if (fd !== undefined) try { fs.closeSync(fd); } catch {} }
+  }
+
+  // Send test event runs this app's own observer once with a marked payload.
+  // The bridge consumes the record here; it never reaches onEvent, so it
+  // cannot create a companion, a session or a usage record.
+  function isTestRecord(event) { return event.sessionId === 'mini-office-test' && event.evidence.rawEvent === 'MiniOfficeTest'; }
+  function receiveTest(provider, event) {
+    const waiter = testWaiters.get(event.toolCallId);
+    if (!waiter || waiter.provider !== provider) return;
+    testWaiters.delete(event.toolCallId); clearTimeout(waiter.timer);
+    const at = now(); ledger?.recordTest(provider, at);
+    waiter.resolve({ status: 'ok', provider, at, detail: '测试事件已送达；观察管道可用' });
+  }
+  function testEvent(requested, { timeoutMs = 5000 } = {}) {
+    const provider = requested === 'cursor-agent' ? 'cursor' : requested === 'claude' ? 'claude-code' : requested;
+    if (!PROVIDERS.includes(provider)) return Promise.resolve({ status: 'error', message: '不支持的 AI 工具' });
+    if (!running) return Promise.resolve({ status: 'error', provider, message: '观察尚未启动，请稍后再试' });
+    const nonce = randomBytes(16).toString('hex');
+    return new Promise(resolve => {
+      const timer = setTimeout(() => { testWaiters.delete(nonce); resolve({ status: 'error', provider, message: '测试事件未在 5 秒内到达；请修复观察配置后重试' }); }, timeoutMs);
+      testWaiters.set(nonce, { provider, resolve, timer });
+      try {
+        const child = (options.spawn || spawnProcess)(electronPath, [path.join(appRoot, 'hooks', 'observe.cjs'), '--provider', provider, '--event', EVENTS[provider][0], MARKER], {
+          env: { PATH: env.PATH || '', HOME: homeDir, MINI_OFFICE_DATA_DIR: dataDir, ELECTRON_RUN_AS_NODE: '1' }, stdio: ['pipe', 'ignore', 'ignore'],
+        });
+        child.on?.('error', () => {});
+        child.stdin?.on?.('error', () => {});
+        child.stdin?.end(JSON.stringify({ mini_office_test: nonce }));
+      } catch {
+        clearTimeout(timer); testWaiters.delete(nonce);
+        resolve({ status: 'error', provider, message: '无法启动观察进程；请修复观察配置后重试' });
+      }
+    });
+  }
+  function evidence(row) {
+    const saved = ledger?.get(row.provider) || {};
+    const drops = dropReader?.recent()[row.provider] || 0;
+    return { ...row, ...(saved.firstEventAt ? { firstEventAt: saved.firstEventAt } : {}), ...(saved.lastEventAt ? { observedAt: saved.lastEventAt } : {}),
+      ...(saved.testPassedAt ? { testPassedAt: saved.testPassedAt } : {}), ...(drops ? { drops } : {}) };
   }
 
   function start() {
@@ -454,8 +501,8 @@ function createObserverBridge(options = {}) {
     }, 250);
     timer.unref?.();
   }
-  function stop() { running = false; if (timer) clearInterval(timer); timer = null; positions.clear(); }
-  return { start, stop, getConnections: () => enrichConnections(PROVIDERS.map(connection), { homeDir, env }), connect: provider => mutate(provider, true), disconnect: provider => mutate(provider, false) };
+  function stop() { running = false; if (timer) clearInterval(timer); timer = null; positions.clear(); ledger?.flush(); }
+  return { start, stop, getConnections: () => enrichConnections(PROVIDERS.map(connection), { homeDir, env }).map(evidence), connect: provider => mutate(provider, true), disconnect: provider => mutate(provider, false), testEvent };
 }
 
 module.exports = { createObserverBridge, buildObserverCommand, MARKER, EVENTS };

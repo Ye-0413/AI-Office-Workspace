@@ -53,7 +53,7 @@ async function startMain(t, { now, dataDir: requestedDataDir } = {}) {
   };
   const sandbox = {
     __dirname: path.dirname(mainFile), console,
-    process: { env: { MINI_OFFICE_DATA_DIR: dataDir }, platform: process.platform, arch: process.arch, execPath: process.execPath },
+    process: { env: { MINI_OFFICE_DATA_DIR: dataDir }, platform: process.platform, arch: process.arch, execPath: process.execPath, on() {} },
     setInterval(callback, delay) { const id = ++timerId; timers.set(id, { callback, delay }); return id; },
     clearInterval: id => timers.delete(id),
     setTimeout(callback, delay) { const id = ++timerId; timers.set(id, { callback, delay }); return id; },
@@ -193,7 +193,7 @@ test('the sandbox bridge offers live observation, settings and local actions wit
     window: { addEventListener: (name, listener) => domListeners.set(name, listener) },
   }, { filename: preloadFile });
   assert.ok(Object.isFrozen(exposed));
-  assert.deepEqual(Object.keys(exposed).sort(), ['connectProvider', 'disconnectProvider', 'getSettings', 'getSnapshot', 'listDisplays', 'moveToDisplay', 'onSnapshot', 'openSource', 'setSettings', 'getUsageHistory', 'getUsageEvents', 'getUsageStatus', 'getTokenUsage', 'refreshTokenUsage', 'answerAgentQuestion', 'returnQuestionToNative', 'exportUsageHistory', 'openUsageFolder', 'getProviderSetup', 'initializeProviders'].sort());
+  assert.deepEqual(Object.keys(exposed).sort(), ['connectProvider', 'disconnectProvider', 'sendTestEvent', 'getSettings', 'getSnapshot', 'listDisplays', 'moveToDisplay', 'onSnapshot', 'openSource', 'setSettings', 'getUsageHistory', 'getUsageEvents', 'getUsageStatus', 'getTokenUsage', 'refreshTokenUsage', 'answerAgentQuestion', 'returnQuestionToNative', 'exportUsageHistory', 'openUsageFolder', 'getUsageRecap', 'exportUsageRecap', 'getProgression', 'getProviderSetup', 'initializeProviders'].sort());
   await exposed.getSnapshot();
   assert.deepEqual(calls, [['office:snapshot']]);
   const snapshots = [], unsubscribe = exposed.onSnapshot(value => snapshots.push(value));

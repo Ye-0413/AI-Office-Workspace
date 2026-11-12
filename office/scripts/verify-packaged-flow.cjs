@@ -256,6 +256,15 @@ async function run() {
       packagedTomlVerified=true;
     });
 
+    await check('Send test event reaches the packaged bridge without creating a session or delivering an event', async () => {
+      const before = store.snapshot().length, deliveredBefore = delivered.length;
+      const result = await bridge.testEvent('codex');
+      assert.equal(result.status, 'ok', result.message);
+      assert.equal(delivered.length, deliveredBefore); assert.equal(store.snapshot().length, before);
+      assert.equal(store.snapshot().some(session => session.sessionId === 'mini-office-test'), false);
+    });
+    const packagedTestEventVerified = checks.at(-1).startsWith('Send test event');
+
     assert.equal(fs.readdirSync(isolatedHome).length, 0, 'No provider configuration must be created');
     for (const event of delivered) {
       for (const field of ['prompt', 'user_message','assistant_response','conversation_history','tool_input', 'tool_response', 'tool_output', 'answers']) assert.equal(Object.hasOwn(event, field), false);
@@ -268,7 +277,7 @@ async function run() {
       ok: true, synthetic: true, liveProviderVerification: false, visualInspection: false,
       packagedElectron: process.versions.electron, packagedVersion: require(path.join(archive, 'package.json')).version,
       deliveredEvents: delivered.length, actorStateAssertions: assertions, checks,
-      catalogProvidersVerified,packagedNativeLockVerified,packagedTomlVerified,isolatedConfigurationFixtures:true,
+      catalogProvidersVerified,packagedNativeLockVerified,packagedTomlVerified,packagedTestEventVerified,isolatedConfigurationFixtures:true,
       providerConfigurationUntouched: true, approvalResponses: 'all empty objects',
     }, null, 2));
   } finally {

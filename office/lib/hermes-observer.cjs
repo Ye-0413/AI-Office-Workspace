@@ -6,6 +6,8 @@ const path = require('node:path');
 const { createHash, randomUUID } = require('node:crypto');
 const { execFile } = require('node:child_process');
 const net = require('node:net');
+const { openLock } = require('./stale-lock.cjs');
+const { configPathState, staleSummary } = require('./observer-command-owner.cjs');
 const PLUGIN_ID = 'ai-mini-office';
 const OWNER = 'ai-mini-office-hermes-observer-v1';
 const FILES = ['plugin.yaml','__init__.py','observer-config.json'];
@@ -119,7 +121,8 @@ function inspectHermes(options) {
     available=Boolean(executable(options));
     const home=hermesHome(options), target=path.join(home,'plugins',PLUGIN_ID);
     const manifest=owned(target);
-    return {available,installed:manifest?.activation==='enabled',provisioned:Boolean(manifest),
+    const stale=manifest&&options.appRoot?staleSummary([configPathState(read(path.join(target,'observer-config.json')),options)]):{};
+    return {available,installed:manifest?.activation==='enabled',provisioned:Boolean(manifest),...stale,
       detail:manifest?.activation==='enabled' ? 'Hermes 只读插件已安装；可重新加载运行中的网关，以收到真实事件为准' : '连接后安装 Hermes 只读插件；不接管审批，不自动重启 Hermes',
       ...(manifest?.activation==='enabled' ? gatewayReports.get(home) : {})};
   } catch (error) { return {available,installed:false,detail:error.message}; }
@@ -138,7 +141,7 @@ async function mutateHermes(options, install) {
     if (!install && !hermes) throw new Error('未找到 Hermes CLI；已保留插件，请恢复 Hermes 后移除');
     directory(plugins,true);
     lockFile=path.join(plugins,'.mini-office-hermes.lock');
-    lockFd=fs.openSync(lockFile,fs.constants.O_CREAT|fs.constants.O_EXCL|fs.constants.O_WRONLY|(fs.constants.O_NOFOLLOW||0),0o600);
+    lockFd=openLock(lockFile,fs.constants.O_CREAT|fs.constants.O_EXCL|fs.constants.O_WRONLY|(fs.constants.O_NOFOLLOW||0),0o600);
     lockStat=fs.fstatSync(lockFd); fs.writeFileSync(lockFd,JSON.stringify({owner:OWNER,pid:process.pid}));
     if (install) {
       const source=path.join(options.appRoot,'hooks','hermes-plugin');

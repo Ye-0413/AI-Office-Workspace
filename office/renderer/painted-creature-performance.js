@@ -3,10 +3,10 @@
 (function (root, factory) {
   'use strict';
   const node = typeof module === 'object' && module.exports;
-  const api = factory(node ? require('../lib/avatar-performance-model.js') : root.OfficeAvatarPerformanceModel, root.OfficeCreatureActivity, node ? require('./painted-creature-frames.js') : root.OfficePaintedCreatureFrames);
+  const api = factory(node ? require('../lib/avatar-performance-model.js') : root.OfficeAvatarPerformanceModel, root.OfficeCreatureActivity, node ? require('./painted-creature-frames.js') : root.OfficePaintedCreatureFrames, node ? require('../lib/reaction-model.js') : root.OfficeReactionModel);
   if (node) module.exports = api;
   else root.OfficePaintedCreaturePerformance = api;
-})(typeof globalThis === 'object' ? globalThis : this, function (Model, Activity, Frames) {
+})(typeof globalThis === 'object' ? globalThis : this, function (Model, Activity, Frames, Reactions) {
   'use strict';
   const NS = 'http://www.w3.org/2000/svg', CELL = 80, LEFT = 37.5, TOP = 35;
   const POSES = Object.freeze(['idle', 'working', 'thinking', 'resting', 'attention', 'completed']);
@@ -38,34 +38,50 @@
       greet: ['translateY(1px) rotate(2deg) scale(1.04,.94)', 'translateY(-6px) rotate(-10deg) scale(.96,1.05)', 'translateY(-2px) rotate(8deg)', 'rotate(-3deg)'],
       attention: ['scale(1.07,.91)', 'translateY(-8.5px) rotate(-6deg) scale(.94,1.08)', 'rotate(4.5deg) scale(1.05,.95)', 'rotate(-1.8deg)'],
       startle: ['rotate(-5deg) scale(.88,1.1)', 'rotate(2.5deg) scale(1.06,.94)', 'rotate(-.8deg)'],
-      success: ['scale(1.06,.92)', 'translateY(-6.5px) rotate(-11deg) scale(.96,1.05)', 'translateY(-2.5px) rotate(7deg)', 'scale(1.03,.97)']
+      success: ['scale(1.06,.92)', 'translateY(-6.5px) rotate(-11deg) scale(.96,1.05)', 'translateY(-2.5px) rotate(7deg)', 'scale(1.03,.97)'],
+      celebrate: ['scale(1.07,.91)', 'translateY(-8px) rotate(-12deg) scale(.95,1.06)', 'scale(1.05,.94)', 'translateY(-6px) rotate(10deg)', 'scale(1.02,.98)'],
+      sulk: ['translateY(1.5px) rotate(-3deg) scale(1.03,.96)', 'translateY(3px) rotate(-8deg) scale(1.04,.94)', 'translateY(3px) rotate(-8deg) scale(1.04,.94)', 'translateY(1px) rotate(-2deg)'],
+      stretch: ['scale(1.04,.95)', 'translateY(-3px) scale(.95,1.08)', 'translateY(-3px) rotate(3deg) scale(.95,1.08)', 'scale(1.03,.97)']
     },
     ink: {
       greet: ['scale(1.13,.87)', 'translateY(-4.5px) scale(.9,1.12)', 'scale(1.06,.94)', 'scale(.98,1.02)'],
       attention: ['scale(1.17,.83)', 'translateY(-8.5px) scale(.86,1.17)', 'scale(1.11,.89)', 'scale(.96,1.04)'],
       startle: ['scale(.84,1.17)', 'scale(1.1,.91)', 'scale(.98,1.02)'],
-      success: ['scale(1.15,.85)', 'translateY(-6.5px) scale(.88,1.15)', 'scale(1.07,.93)', 'scale(.98,1.02)']
+      success: ['scale(1.15,.85)', 'translateY(-6.5px) scale(.88,1.15)', 'scale(1.07,.93)', 'scale(.98,1.02)'],
+      celebrate: ['scale(1.18,.82)', 'translateY(-8px) scale(.86,1.17)', 'scale(1.16,.84)', 'translateY(-6px) scale(.9,1.12)', 'scale(.98,1.02)'],
+      sulk: ['scale(1.08,.92)', 'translateY(2.5px) scale(1.2,.8)', 'translateY(2.5px) scale(1.2,.8)', 'scale(1.05,.95)'],
+      stretch: ['scale(1.1,.9)', 'translateY(-4px) scale(.84,1.2)', 'translateY(-4px) scale(.84,1.2)', 'scale(1.06,.94)']
     },
     moss: {
       greet: ['translateY(.8px) scale(1.03,.96)', 'translateY(-3.5px) rotate(-4deg) skewX(3deg)', 'rotate(3deg) skewX(-2.5deg)', 'rotate(-1.2deg)'],
       attention: ['translateY(1px) scale(1.04,.95)', 'translateY(-5.5px) rotate(-2.8deg)', 'translateY(1.2px) scale(1.06,.93)', 'rotate(1.2deg)'],
       startle: ['translateY(-3.5px) rotate(-1.5deg)', 'translateY(1px) scale(1.05,.94)', 'scale(.99,1.01)'],
-      success: ['translateY(.8px) scale(1.03,.96)', 'translateY(-4.5px) rotate(-2deg)', 'translateY(1px) scale(1.05,.94)', 'skewX(-2.5deg)']
+      success: ['translateY(.8px) scale(1.03,.96)', 'translateY(-4.5px) rotate(-2deg)', 'translateY(1px) scale(1.05,.94)', 'skewX(-2.5deg)'],
+      celebrate: ['translateY(1px) scale(1.04,.95)', 'translateY(-5px) rotate(-3deg) skewX(3deg)', 'translateY(1px) scale(1.04,.95)', 'translateY(-4px) rotate(3deg) skewX(-3deg)', 'rotate(-1deg)'],
+      sulk: ['translateY(1px) skewX(2deg)', 'translateY(2.5px) rotate(4deg) skewX(4deg) scale(1.03,.95)', 'translateY(2.5px) rotate(4deg) skewX(4deg) scale(1.03,.95)', 'skewX(1deg)'],
+      stretch: ['translateY(.8px) scale(1.03,.96)', 'translateY(-2.5px) scale(.97,1.05) skewX(-2deg)', 'translateY(-2.5px) scale(.97,1.05) skewX(2deg)', 'scale(1.02,.98)']
     },
     thread: {
       greet: ['scale(1.06,.93)', 'translateY(-6.5px) rotate(-10deg)', 'scale(1.07,.93)', 'translateY(-2.5px) rotate(6deg)', 'scale(1.02,.98)'],
       attention: ['scale(1.1,.9)', 'translateY(-9.5px) rotate(-12deg) scale(.92,1.08)', 'scale(1.09,.91)', 'translateY(-3.5px) rotate(7deg)', 'scale(1.02,.98)'],
       startle: ['translateY(-4.5px) scale(.9,1.1)', 'rotate(-5deg) scale(1.06,.94)', 'rotate(1.5deg)'],
-      success: ['scale(1.09,.91)', 'translateY(-7.5px) rotate(14deg)', 'scale(1.07,.93)', 'translateY(-2.5px) rotate(-5deg)']
+      success: ['scale(1.09,.91)', 'translateY(-7.5px) rotate(14deg)', 'scale(1.07,.93)', 'translateY(-2.5px) rotate(-5deg)'],
+      celebrate: ['scale(1.1,.9)', 'translateY(-9px) rotate(18deg)', 'scale(1.08,.92)', 'translateY(-7px) rotate(-14deg)', 'scale(1.02,.98)'],
+      sulk: ['rotate(5deg)', 'translateY(2.5px) rotate(-9deg) scale(1.05,.94)', 'translateY(2.5px) rotate(-9deg) scale(1.05,.94)', 'rotate(-2deg)'],
+      stretch: ['scale(1.06,.93)', 'translateY(-4px) rotate(-6deg) scale(.93,1.08)', 'translateY(-4px) rotate(6deg) scale(.93,1.08)', 'scale(1.03,.97)']
     },
     glow: {
       greet: ['translateY(1px) scale(.97)', 'translateY(-5.5px) rotate(-4deg) scale(1.04)', 'translateY(-3.5px) rotate(4deg)', 'translateY(-1.2px)'],
       attention: ['translateY(-7.5px) scale(1.07)', 'translateY(-4.5px) rotate(-4deg)', 'translateY(-5.5px) rotate(4deg)', 'translateY(-1.2px)'],
       startle: ['translateY(2.5px) scale(.92)', 'translateY(-4px) scale(1.06)', 'translateY(-.8px)'],
-      success: ['translateY(-6.5px) scale(1.08)', 'translateY(-3.5px) rotate(-2deg)', 'translateY(-1.2px) scale(1.03)']
+      success: ['translateY(-6.5px) scale(1.08)', 'translateY(-3.5px) rotate(-2deg)', 'translateY(-1.2px) scale(1.03)'],
+      celebrate: ['translateY(-7px) scale(1.1)', 'translateY(-3px) rotate(-5deg) scale(1.02)', 'translateY(-8px) rotate(5deg) scale(1.1)', 'translateY(-1.5px)'],
+      sulk: ['translateY(1.5px) scale(.97)', 'translateY(3.5px) scale(.92)', 'translateY(3.5px) scale(.92)', 'translateY(1px) scale(.98)'],
+      stretch: ['translateY(-2px) scale(1.03)', 'translateY(-7px) scale(1.07)', 'translateY(-7px) scale(1.07)', 'translateY(-2px) scale(1.02)']
     }
   });
-  const CUE_DURATION = Object.freeze({ glance: 480, startle: 420, greet: 620, attention: 680, success: 560 });
+  const CUE_DURATION = Object.freeze({ glance: 480, startle: 420, greet: 620, attention: 680, success: 560, celebrate: 640, sulk: 700, stretch: 700 });
+  const REACTIONS = new Set(['celebrate', 'sulk', 'stretch']);
   let serial = 0;
   function poseFor(session = {}, options = {}) {
     if (session.disconnected || session.status === 'stale' || options.stale) return 'resting';
@@ -233,15 +249,18 @@
         seenEvents = new Map(events.slice(-128).map(event => [event.eventId, event.at]));
         return;
       }
-      const boundary = eventCursor;
+      const boundary = eventCursor, fresh = [];
       for (const event of events) {
         if (seenEvents.has(event.eventId) || event.at < boundary) continue;
         // Bounded decoration history can conservatively skip a pathological
         // same-timestamp burst; it never replays an ID forgotten by eviction.
         if (seenEvents.size >= 128 && event.at === boundary) continue;
         seenEvents.set(event.eventId, event.at);
-        if (event.event === 'tool-end' && event.outcome === 'success') cue('tool-success');
+        fresh.push(event);
       }
+      const reaction = Reactions ? Reactions.pick(fresh, session)
+        : fresh.some(event => event.event === 'tool-end' && event.outcome === 'success') ? 'tool-success' : null;
+      if (reaction) cue(reaction);
       eventCursor = Math.max(boundary, latest);
       seenEvents = new Map([...seenEvents].filter(([, at]) => at >= eventCursor).slice(-128));
     }
@@ -322,6 +341,12 @@
     function cue(kind, { direction = 0 } = {}) {
       if (destroyed || hidden || quiet || gait || health !== 'healthy' || typeof motion.animate !== 'function') return false;
       if (kind === 'wave') kind = 'greet';
+      if (REACTIONS.has(kind)) {
+        if (kind === 'celebrate') activity?.cue?.('tool-success', { direction });
+        react(kind);
+        if (view?.CustomEvent) actorNode.dispatchEvent?.(new view.CustomEvent('office-reaction', { detail: { kind } }));
+        return true;
+      }
       if (activity?.cue?.(kind, { direction })) {
         if (kind === 'tool-success') react('success');
         return true;

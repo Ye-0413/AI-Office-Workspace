@@ -32,6 +32,7 @@
   let settingsRequest = 0;
   let language = 'zh';
   const usageHistory = window.OfficeUsageHistory?.create({ bridge, getLanguage: () => language });
+  const usageRecap = window.OfficeUsageRecap?.create({ bridge, dialog: $('usage-history-dialog'), getLanguage: () => language });
   const manualQuestions = window.OfficeManualQuestions?.create({ bridge, language });
   const setupAssistant = window.OfficeSetupAssistant?.create({ bridge, getLanguage: () => language });
   const appearancePicker = window.OfficeAppearancePicker?.create({ container: $('settings-dialog'), onChange: avatarStyle => saveSettings({ avatarStyle }) });
@@ -106,6 +107,8 @@
     language, reducedMotion: reduced(), lowPower: settings.lowPower, hidden: sceneHidden(), fitting, scale: uniformScale, mode: snapshot.mode,
     artworkKey: $('room-art').dataset.artworkKey || '', dayPhase: office.dataset.dayPhase, now: Date.now() });
   const social = window.OfficeAgentSocial?.create({ layer: $('social-effects'), world, getActors: () => actors, getContext: sceneContext });
+  const progression = window.OfficeProgressionView?.create({ bridge, office, world, getLanguage: () => language, isHidden: sceneHidden, persona: id => actors.has(id) ? persona(actors.get(id).session) : null });
+  const play = window.OfficeCompanionPlay?.create({ office: world, getActors: () => actors, getContext: () => ({ hidden: sceneHidden(), reducedMotion: reduced(), lowPower: settings.lowPower }), tr });
   const stationArrival = window.OfficeStationArrival?.create({ layer: $('station-arrivals'), world, getActors: () => actors, getContext: sceneContext });
   const onStationArrival = event => stationArrival?.arrive(event.detail);
   office.addEventListener('office:actor-arrival', onStationArrival);
@@ -223,10 +226,10 @@
     updateRoomSigns();
     $('language-button').textContent = language === 'en' ? '中文' : 'EN';
     $('language-button').setAttribute('aria-label', language === 'en' ? 'Switch to Chinese' : '切换到 English');
-    usageHistory?.updateLanguage();
+    usageHistory?.updateLanguage(); usageRecap?.updateLanguage();
     homeTokenUsage?.updateLanguage(language);
     manualQuestions?.updateLanguage(language);
-    setupAssistant?.updateLanguage();
+    setupAssistant?.updateLanguage(); play?.relabel(); progression?.updateLanguage();
   }
   function openDoor() {
     $('studio-door').dataset.open = 'true';
@@ -1694,6 +1697,7 @@
     });
     button.addEventListener('click', () => selectSession(actor.id));
     button.addEventListener('dblclick', () => react(actor));
+    node.addEventListener('office-reaction', (event) => { if (event.detail?.kind === 'stretch' && actors.get(actor.id) === actor && !destroyed) say(actor, language === 'en' ? persona(actor.session).signoffEn : persona(actor.session).signoffZh, 3000); });
     button.addEventListener('keydown', (event) => { if (event.key === ' ' && event.shiftKey) { event.preventDefault(); react(actor); } });
     updateActorLabel(actor);
     actor.fallback = actor.design?.renderer === 'creature' ? null : window.OfficeAvatarFallback?.create({ actorNode: node, body, image });
@@ -2109,7 +2113,7 @@
     text($('inspect-action-note'), Scene.needsAttention(session) ? '请回到 ' + Scene.providerName(session.provider) + ' 回答或处理审批。' : spec.stale ? '身份和末次状态已保留；信号中断不代表任务结束。' : '此按钮打开 Finder。任务与对话请回到原工具查看。');
     text($('inspect-source'), sourceName(session.evidence && session.evidence.source));
     text($('inspect-confidence'), confidenceName(session.evidence && session.evidence.confidence));
-    text($('inspect-animation'), Director.plan(session, { now: Date.now(), language }).detail);
+    text($('inspect-animation'), Director.plan(session, { now: Date.now(), language }).detail); globalThis.OfficeStateExplanation?.render($('inspect-explanation'), session, { language, now: Date.now() });
     text($('inspect-session-id'), 'Task ID: ' + String(session.sessionId || session.id) + (session.subagentId ? ' · Agent ID: ' + session.subagentId : ''));
     const events = Array.isArray(session.events) ? session.events.slice(-8).reverse() : [];
     const fragment = document.createDocumentFragment();
@@ -2137,24 +2141,19 @@
       icon.dataset.provider = provider;
       const copy = element('div', 'provider-copy');
       const name = element('div', 'provider-name', Scene.providerName(provider));
-      const status = element('div', 'provider-status');
-      status.dataset.connected = String(Boolean(connection.watching));
-      status.append(element('i'), element('span', '', connection.watching ? '正在观察' + (connection.lastEventAt ? ' · ' + timeAgo(connection.lastEventAt) : ' · 等待新会话事件') : connection.installed ? '已配置 · 等待工具产生事件' : '尚未接入'));
+      const status = element('div', 'provider-status'), view = window.OfficeConnectionStatus.describe(connection, { provider, timeAgo });
+      status.dataset.connected = String(view.state === 'observing'); status.dataset.state = view.state;
+      status.append(element('i'), element('span', '', view.status));
       const detail = element('div', 'provider-detail', connection.detail || (provider === 'codex' ? '同一个工具的多个 session 会分别入驻。' : '添加状态观察 hooks，保留原有配置。'));
       copy.append(name, status, detail);
-      const button = element('button', 'button button-paper', connection.installed ? '移除配置' : '连接');
-      button.type = 'button';
-      button.disabled = mutationPending || Boolean(snapshot.setup?.running);
-      button.addEventListener('click', () => connect(provider, Boolean(connection.installed)));
-      if (provider === 'hermes' && connection.installed) {
-        const actions = element('span','provider-actions');
-        const reload = element('button','button button-paper','重新加载');
-        reload.type = 'button';
-        reload.disabled = mutationPending || Boolean(snapshot.setup?.running);
-        reload.addEventListener('click', () => connect('hermes', false));
-        actions.append(reload,button);
-        row.append(icon,copy,actions);
-      } else row.append(icon, copy, button);
+      const actions = element('span', 'provider-actions');
+      for (const action of view.actions) {
+        const button = element('button', 'button button-paper', action.label); button.type = 'button'; button.dataset.action = action.id;
+        button.disabled = mutationPending || Boolean(snapshot.setup?.running);
+        button.addEventListener('click', () => connect(provider, action.id === 'test' ? 'test' : action.id === 'remove'));
+        actions.append(button);
+      }
+      row.append(icon, copy, actions.children.length > 1 ? actions : actions.children[0]);
       fragment.append(row);
     }
     $('provider-connections').replaceChildren(fragment);
@@ -2534,10 +2533,10 @@
     mutationPending = true;
     setupAssistant?.setProviderBusy(true);
     renderConnections();
-    text($('connection-result'), (remove ? '正在移除 ' : '正在连接 ') + Scene.providerName(provider) + (remove ? ' 观察配置…' : '…'));
+    text($('connection-result'), remove === 'test' ? '正在发送测试事件…' : (remove ? '正在移除 ' : '正在连接 ') + Scene.providerName(provider) + (remove ? ' 观察配置…' : '…'));
     try {
-      const result = await call(remove ? 'disconnectProvider' : 'connectProvider', provider);
-      const message = remove ? (provider === 'codex' ? '已移除观察配置；本地只读观察仍可继续' : (result && result.message) || '已移除本应用的观察配置。') : result && (result.message || result.detail) || (provider === 'codex' ? '配置已就绪，请在 Codex 中审核 hooks 信任，再开始新任务。' : '观察配置已就绪，请在原工具开始一个任务。');
+      const result = await call(remove === 'test' ? 'sendTestEvent' : remove ? 'disconnectProvider' : 'connectProvider', provider);
+      const message = remove === 'test' ? result.detail : remove ? (provider === 'codex' ? '已移除观察配置；本地只读观察仍可继续' : (result && result.message) || '已移除本应用的观察配置。') : result && (result.message || result.detail) || (provider === 'codex' ? '配置已就绪，请在 Codex 中审核 hooks 信任，再开始新任务。' : '观察配置已就绪，请在原工具开始一个任务。');
       text($('connection-result'), message);
       await refreshSnapshot();
     } catch (error) { text($('connection-result'), error.message); showError(error); }
@@ -2704,11 +2703,11 @@
     window.removeEventListener('resize', refreshScale);
     document.removeEventListener('visibilitychange', refreshVisibility);
     appearancePicker?.destroy();
-    usageHistory?.dispose();
+    usageHistory?.dispose(); usageRecap?.dispose();
     numberFlip?.destroy();
     manualQuestions?.dispose();
     setupAssistant?.dispose();
-    visitor.destroy();
+    visitor.destroy(); play?.destroy(); progression?.destroy();
     office.removeEventListener('office:actor-arrival', onStationArrival);
     stationArrival?.destroy(); social?.destroy(); venueStage?.destroy(); festivalStage?.destroy(); themeEnvironment?.destroy();
     scenery.destroy();

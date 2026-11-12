@@ -8,6 +8,8 @@ const {execFileSync}=require('node:child_process');
 const toml=require('@iarna/toml');
 const jsonc=require('./plugin-jsonc.cjs');
 const {_files:{directory,read,writeConfig,stat,absolute}}=require('./plugin-integrations.cjs');
+const {openLock}=require('./stale-lock.cjs');
+const {parseObserverCommand,parseObserverArgs,ownedInvocation,invocationPathState,staleSummary}=require('./observer-command-owner.cjs');
 const OWNER='ai-mini-office-special-observer-v1';
 const PROVIDERS=Object.freeze(['kiro-cli','kirocrew','kimi-cli','codewhale','minimax']);
 const EVENTS=Object.freeze({
@@ -62,9 +64,17 @@ function tomlPrepared(options,target,before,install){
  if(provider==='codewhale'&&parsed.hooks?.enabled===false&&install)throw new Error('CodeWhale hooks were disabled by the user; preserved');
  const block=tomlBlock(options,target),marker=`# MINI_OFFICE_OBSERVER_V1 ${provider}`;
  const pattern=new RegExp(`\\n${marker} BEGIN ([a-f0-9]{64})\\n([\\s\\S]*?)${marker} END\\n`,'g');
- let owned=false;
+ let owned=false;const states=[];
  const stripped=source.replace(pattern,(whole,digest,body)=>{
-  if(sha(body)!==digest||body!==block)throw new Error('Observer TOML block changed externally; preserved');
+  if(sha(body)!==digest)throw new Error('Observer TOML block changed externally; preserved');
+  if(body===block)states.push('current');
+  else{
+   // An unedited block from another app copy: same digest proof, only the
+   // observer paths differ. Anything else stays an external change.
+   const state=staleTomlBlock(options,target,body);
+   if(!state)throw new Error('Observer TOML block changed externally; preserved');
+   states.push(state);
+  }
   owned=true;return'';
  });
  if(source.includes(`${marker} BEGIN`)&&!owned)throw new Error('Observer TOML ownership marker is malformed; preserved');
@@ -74,7 +84,23 @@ function tomlPrepared(options,target,before,install){
   next+=`\n${marker} BEGIN ${sha(block)}\n${block}${marker} END\n`;
  }
  toml.parse(next); // Full real parser catches duplicate tables, invalid escapes and unsupported syntax.
- return{file:target.file,before,next,installed:owned};
+ return{file:target.file,before,next,installed:owned,states};
+}
+function staleTomlBlock(options,target,body){
+ let parsed;try{parsed=toml.parse(body);}catch{return null;}
+ const provider=options.provider,list=provider==='codewhale'?parsed.hooks?.hooks:parsed.hooks,events=nativeEvents(options,target);
+ if(!Array.isArray(list)||list.length!==events.length)return null;
+ const invocations=list.map((entry,index)=>{
+  const value=parseObserverCommand(entry?.command);
+  return entry?.event===events[index]&&ownedInvocation(value,{provider,events:[events[index]]})?value:null;
+ });
+ if(invocations.some(value=>!value))return null;
+ const current=options.dataDir&&options.electronPath&&options.appRoot?options:null;
+ const state=invocations.map(value=>current?invocationPathState(value,current):'other-copy');
+ return state.includes('missing')?'missing':state.every(item=>item==='current')?'current':'other-copy';
+}
+function pathStates(options,provider,list){
+ return list.map(command=>{const value=parseObserverCommand(command);return ownedInvocation(value,{provider,events:EVENTS[provider]})?invocationPathState(value,options):null;}).filter(Boolean);
 }
 function mergeKiro(options,before,template,install){
  const value=before?json(before):structuredClone(template||{});
@@ -83,7 +109,7 @@ function mergeKiro(options,before,template,install){
  for(const event of EVENTS['kiro-cli']){
   if(hooks[event]!==undefined&&!Array.isArray(hooks[event]))throw new Error('Kiro hook event is not an array; preserved');
   const expected=command(options,'kiro-cli',event);
-  const entries=(hooks[event]||[]).filter(entry=>!object(entry)||entry.command!==expected);
+  const entries=(hooks[event]||[]).filter(entry=>!object(entry)||entry.command!==expected&&!ownedInvocation(parseObserverCommand(entry.command),{provider:'kiro-cli',events:[event]}));
   if(install)entries.push({command:expected});
   if(entries.length||hooks[event]!==undefined)hooks[event]=entries;
  }
@@ -92,7 +118,7 @@ function mergeKiro(options,before,template,install){
 }
 function mergeCrew(options,before,install){
  const value=json(before);if(value.hooks!==undefined&&!Array.isArray(value.hooks))throw new Error('KiroCrew hook store must contain an array; preserved');
- const owned=entry=>object(entry)&&EVENTS.kirocrew.some(event=>entry.event===event&&entry.command===command(options,'kirocrew',event));
+ const owned=entry=>object(entry)&&EVENTS.kirocrew.some(event=>entry.event===event&&(entry.command===command(options,'kirocrew',event)||ownedInvocation(parseObserverCommand(entry.command),{provider:'kirocrew',events:[event]})));
  const hooks=(value.hooks||[]).filter(entry=>!owned(entry));
  if(install)for(const event of EVENTS.kirocrew)hooks.push({id:`mini-office-${event}`,name:`AI Work Space — ${event}`,event,matcher:'',matcher_mode:'glob',command:command(options,'kirocrew',event),skills:[],timeout:2,enabled:true});
  if(install||value.hooks)value.hooks=hooks;
@@ -116,17 +142,27 @@ function miniOwned(target){
 }
 function inspectSpecial(options){
  try{
-  const targets=rawTargets(options);let installed=targets.length>0;
+  const targets=rawTargets(options);let installed=targets.length>0;const states=[];
   for(const target of targets){
-   if(target.kind==='minimax'){installed=Boolean(miniOwned(target.target))&&installed;continue;}
+   if(target.kind==='minimax'){
+    const owned=miniOwned(target.target);installed=Boolean(owned)&&installed;
+    if(owned){
+     const hooks=json(read(path.join(target.target,'hooks','hooks.json'))).hooks||{};
+     for(const list of Object.values(hooks))for(const group of Array.isArray(list)?list:[])for(const item of group?.hooks||[]){
+      const value=parseObserverArgs(item?.args);if(ownedInvocation(value,{provider:'minimax',events:EVENTS.minimax}))states.push(invocationPathState(value,options));
+     }
+    }
+    continue;
+   }
    const before=read(target.file,true);
-   if(target.kind==='toml'){installed=tomlPrepared(options,target,before,false).installed&&installed;continue;}
+   if(target.kind==='toml'){const prepared=tomlPrepared(options,target,before,false);installed=prepared.installed&&installed;states.push(...prepared.states);continue;}
    const value=json(before);
-   const found=target.kind==='crew'?(Array.isArray(value.hooks)&&value.hooks.some(entry=>EVENTS.kirocrew.some(event=>entry?.command===command(options,'kirocrew',event))))
-    :EVENTS['kiro-cli'].some(event=>Array.isArray(value.hooks?.[event])&&value.hooks[event].some(entry=>entry?.command===command(options,'kiro-cli',event)));
-   installed=Boolean(found)&&installed;
+   const commands=target.kind==='crew'?(Array.isArray(value.hooks)?value.hooks.filter(entry=>EVENTS.kirocrew.includes(entry?.event)).map(entry=>entry.command):[])
+    :EVENTS['kiro-cli'].flatMap(event=>Array.isArray(value.hooks?.[event])?value.hooks[event].map(entry=>entry?.command):[]);
+   const found=pathStates(options,target.kind==='crew'?'kirocrew':'kiro-cli',commands);
+   states.push(...found);installed=found.length>0&&installed;
   }
-  return{available:targets.some(target=>stat(path.dirname(target.file||target.target))),installed,targetPaths:targets.map(target=>target.file||target.target),detail:installed?options.provider==='kiro-cli'?'Passive hooks installed. Built-in Kiro agents require switching to the generated mini-office agent. Real events confirm activation.':'Passive observer installed; start a new client session. Real events confirm activation.':'Connect adds only AI Work Space activity observers; native approvals and foreign hooks stay in place.'};
+  return{available:targets.some(target=>stat(path.dirname(target.file||target.target))),installed,...staleSummary(states),targetPaths:targets.map(target=>target.file||target.target),detail:installed?options.provider==='kiro-cli'?'Passive hooks installed. Built-in Kiro agents require switching to the generated mini-office agent. Real events confirm activation.':'Passive observer installed; start a new client session. Real events confirm activation.':'Connect adds only AI Work Space activity observers; native approvals and foreign hooks stay in place.'};
  }catch(error){return{available:false,installed:false,detail:error.message};}
 }
 function kiroTemplate(options){
@@ -143,7 +179,7 @@ async function mutateSpecial(options,install){
  let lock,fd,identity;
  try{
   directory(options.dataDir,true);lock=path.join(options.dataDir,`.special-${options.provider}.lock`);
-  fd=fs.openSync(lock,fs.constants.O_CREAT|fs.constants.O_EXCL|fs.constants.O_WRONLY|(fs.constants.O_NOFOLLOW||0),0o600);identity=fs.fstatSync(fd);
+  fd=openLock(lock,fs.constants.O_CREAT|fs.constants.O_EXCL|fs.constants.O_WRONLY|(fs.constants.O_NOFOLLOW||0),0o600);identity=fs.fstatSync(fd);fs.writeFileSync(fd,JSON.stringify({owner:OWNER,pid:process.pid}));
   const run=async()=>{
    const targets=rawTargets(options);
    const prepared=targets.map(target=>{

@@ -109,4 +109,4 @@ function createUsageApi({ log, chooseExport, openFolder, now = Date.now } = {}) 
   });
 }
 
-module.exports = { createUsageApi, filters, csvCell };
+module.exports = { createUsageApi, filters, csvCell, safeDestination };

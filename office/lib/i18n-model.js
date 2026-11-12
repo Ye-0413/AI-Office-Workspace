@@ -230,6 +230,14 @@
     ['等待新会话事件', 'Waiting for session events'],
     ['已配置 · 等待工具产生事件', 'Configured · Waiting for tool events'],
     ['已配置', 'Configured'],
+    ['已收到首个事件', 'First event received'],
+    ['观察路径已失效', 'Observer path is missing'],
+    ['观察指向另一份应用', 'Observer points at another app copy'],
+    ['需要修复', 'Repair needed'],
+    ['修复', 'Repair'],
+    ['发送测试事件', 'Send test event'],
+    ['毛线球：点一下，大家会看过来', 'Yarn ball: click it and everyone looks'],
+    ['正在发送测试事件…', 'Sending test event…'],
     ['等待工具产生事件', 'Waiting for tool events'],
     ['尚未接入', 'Not connected'],
     ['同一个工具的多个 session 会分别入驻。', 'Each session from the same tool gets its own character.'],
@@ -363,6 +371,10 @@
     ['无法安全确认网关路径指针','unsafe gateway pointer'],
     ['无法安全确认网关套接字','unsafe gateway socket'],
     ['网关响应超时','gateway timeout'],
+    ['测试事件已送达；观察管道可用','Test event arrived; the observation pipeline works'],
+    ['测试事件未在 5 秒内到达；请修复观察配置后重试','The test event did not arrive within 5 seconds; repair the observer setup and retry'],
+    ['无法启动观察进程；请修复观察配置后重试','Could not start the observer; repair the observer setup and retry'],
+    ['观察尚未启动，请稍后再试','Observation has not started yet; try again shortly'],
     ['网关响应超过读取上限','gateway response too large'],
     ['网关响应格式不受支持','unsupported gateway response'],
     ['网关响应不完整','incomplete gateway response'],
@@ -550,7 +562,8 @@
       [/^(\d+) 小时前收到事件$/, (n) => 'Event ' + n + 'h ago'],
       [/^判断依据 (\d{1,3})%$/, (n) => 'Confidence ' + n + '%'],
       [/^连接 AI 工具，(\d+) 个正在观察$/, (n) => 'Connect AI tools, ' + n + ' being observed'],
-      [/^显示器 (\d+)$/, (n) => 'Display ' + n]
+      [/^显示器 (\d+)$/, (n) => 'Display ' + n],
+      [/^24 小时内漏记 (\d+) 个事件$/, (n) => n + ' event' + (n === '1' ? '' : 's') + ' dropped in 24h']
     ];
     for (const [pattern, render] of counts) {
       match = pattern.exec(value);
