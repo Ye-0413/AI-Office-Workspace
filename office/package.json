@@ -1,6 +1,6 @@
 {
   "name": "ai-mini-office",
-  "version": "0.24.0",
+  "version": "0.25.0",
   "description": "Observe your agent team collaboration in your spare display",
   "main": "main.cjs",
   "type": "commonjs",

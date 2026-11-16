@@ -67,7 +67,7 @@ function recordedSources(manifest){
 }
 test('archived gallery records the original five-species, 550-recipe library',()=>{
  const manifest=require('../../docs/animations/manifest.json');
- assert.equal(manifest.version,require('../package.json').version);
+ assert.equal(manifest.version,'0.24.0'); // Original workshop recording version, not the current distribution.
  assert.deepEqual(manifest.catalog,{species:5,activities:11,variantsPerActivity:10,recipes:550});
  const recipes=Object.values(Repertoire.catalog).flatMap(pack=>Object.values(pack.states).flat());assert.equal(recipes.length,550);assert.equal(new Set(recipes.map(recipe=>recipe.id)).size,550);
  const sections=manifest.assets.filter(item=>item.file!=='overview.gif');assert.equal(sections.length,11);
@@ -176,7 +176,7 @@ test('archived lifecycle previews retain recorded provenance and at least 31 cha
 test('station gallery certifies all twelve archived furniture programs and actual complete looping media',()=>{
  const Station=require('../renderer/station-arrival.js'),Exporter=require('../scripts/render-station-previews.cjs');
  const folder=path.join(dir,'stations'),manifest=JSON.parse(fs.readFileSync(path.join(folder,'manifest.json')));
- assert.equal(manifest.version,require('../package.json').version);
+ assert.equal(manifest.version,'0.24.0'); // Original station recording version, not the current distribution.
  assert.match(manifest.sourceRevision,/^[a-f0-9]{40}$/);
  recordedSources(manifest);assert.equal(manifest.restrictedImageElements,0);assert.equal(manifest.unlistedResourceRequests,0);
  assert.equal(manifest.sampling.continuousRoomPlaybackCertified,false);assert.equal(manifest.sampling.continuousOwnerLifetimeCertified,false);assert.match(manifest.scope,/synthetic/);assert.match(manifest.scope,/no provider connection/);

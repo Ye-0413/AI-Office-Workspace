@@ -7,7 +7,7 @@
 <p align="center"><a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a></p>
 <p align="center">
   <a href="https://github.com/Ye-0413/AI-Office-Workspace/stargazers"><img src="https://img.shields.io/github/stars/Ye-0413/AI-Office-Workspace?style=flat-square&logo=github&label=Stars&labelColor=3C3730&color=8B6E4D" alt="GitHub Star 数量"></a>
-  <a href="https://github.com/Ye-0413/AI-Office-Workspace/releases/tag/v0.24.0"><img src="https://img.shields.io/badge/release-v0.24.0-8B6E4D?style=flat-square&labelColor=3C3730" alt="发布版本 v0.24.0"></a>
+  <a href="https://github.com/Ye-0413/AI-Office-Workspace/releases/tag/v0.25.0"><img src="https://img.shields.io/badge/release-v0.25.0-8B6E4D?style=flat-square&labelColor=3C3730" alt="发布版本 v0.25.0"></a>
   <a href="#quick-start"><img src="https://img.shields.io/badge/macOS-13%2B%20%C2%B7%20arm64-8B6E4D?style=flat-square&labelColor=3C3730" alt="macOS 13 或更新版本，Apple Silicon arm64"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/code-AGPL--3.0--only-8B6E4D?style=flat-square&labelColor=3C3730" alt="源码许可 AGPL-3.0-only"></a>
 </p>
@@ -40,7 +40,7 @@
 ## 功能
 
 - **真实协作：** 独立会话、父子关系、小一号分身，11 类活动各有动作。
-- **固定大小：** 身体与名字同步调整 65%–135%；人数增加不缩小，落位工作不重叠。
+- **清晰大小：** 身体与名字同步调整 65%–135%；主角满员时可暂缩至手动大小的 90%，落位工作不重叠。
 - **⌘K 搜索：** 按名字、任务、工具、项目或 ID 查找，查看详情、定位伙伴。
 - **本地用量：** 7 种工具的 Token 日／周统计与模型明细；活动历史可筛选并导出 CSV。
 - **数据留在本地：** 无需云账号、API Key 或遥测；连接与支持的原生问答由你操作。
@@ -56,15 +56,15 @@
 
 ## 快速开始
 
-| 平台 | 下载 v0.24.0 |
+| 平台 | 下载 v0.25.0 |
 | --- | --- |
-| **macOS 13+ · Apple Silicon / arm64** | [DMG](https://github.com/Ye-0413/AI-Office-Workspace/releases/download/v0.24.0/AI-Mini-Office-0.24.0-arm64.dmg) · [ZIP](https://github.com/Ye-0413/AI-Office-Workspace/releases/download/v0.24.0/AI-Mini-Office-0.24.0-arm64.zip) · [校验值](https://github.com/Ye-0413/AI-Office-Workspace/releases/download/v0.24.0/SHA256SUMS.txt) |
+| **macOS 13+ · Apple Silicon / arm64** | [DMG](https://github.com/Ye-0413/AI-Office-Workspace/releases/download/v0.25.0/AI-Work-Space-0.25.0-arm64.dmg) · [ZIP](https://github.com/Ye-0413/AI-Office-Workspace/releases/download/v0.25.0/AI-Work-Space-0.25.0-arm64.zip) · [校验值](https://github.com/Ye-0413/AI-Office-Workspace/releases/download/v0.25.0/SHA256SUMS.txt) |
 
 1. 下载 DMG 或 ZIP，运行环境已包含在安装包中。
-2. 将 **AI Mini Office.app** 移入「应用程序」并打开。
+2. 将 **AI Work Space.app** 移入「应用程序」并打开。
 3. 连接你的工具，再到原工具中开始工作。
 
-v0.24.0 发布包仍名为 **AI Mini Office.app**；新源码构建名为 **AI Work Space.app**。当前采用 ad-hoc 签名，**未经 Apple 公证**；安装前请核对校验值。
+v0.25.0 发布包名为 **AI Work Space.app**。当前采用 ad-hoc 签名，**未经 Apple 公证**；安装前请核对校验值。
 
 <a id="从源码运行"></a>
 
@@ -192,7 +192,7 @@ npm --prefix office run build:mac
 | 活动、用量与原生问题 | [监测说明](office/docs/monitoring.md) |
 | 角色故事与两种风格的动作图鉴 | [原创角色](docs/companions.md) · [动作图鉴](docs/animations/README.md) |
 | 房间与演示素材 | [房间图鉴](docs/rooms/README.md) · [录制说明](docs/media/README.md) |
-| 版本变化 | [v0.24.0](docs/releases/release-v0.24.0.md) · [发布记录](docs/releases/README.md) |
+| 版本变化 | [v0.25.0](docs/releases/release-v0.25.0.md) · [发布记录](docs/releases/README.md) |
 
 ## 参与贡献
 

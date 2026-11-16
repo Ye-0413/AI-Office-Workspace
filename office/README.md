@@ -8,7 +8,7 @@
 
 A local macOS studio for watching real, independent AI sessions inhabit a little room. Designed for a five-inch 1280×720 secondary display.
 
-[Download v0.24.0](https://github.com/Ye-0413/AI-Office-Workspace/releases/tag/v0.24.0) · [Release notes / 版本说明](../docs/releases/release-v0.24.0.md) · [English project home](../README.md) · [简体中文首页](../README.zh-CN.md) · [Originality / 原创声明](../ORIGINALITY.md)
+[Download v0.25.0](https://github.com/Ye-0413/AI-Office-Workspace/releases/tag/v0.25.0) · [Release notes / 版本说明](../docs/releases/release-v0.25.0.md) · [English project home](../README.md) · [简体中文首页](../README.zh-CN.md) · [Originality / 原创声明](../ORIGINALITY.md)
 
 ## Watch the studio / 观看演示
 
@@ -28,13 +28,13 @@ A local macOS studio for watching real, independent AI sessions inhabit a little
 
 真实 v0.24.0 App 录屏，后期使用 AI Work Space 品牌与中英双语文案；动作图鉴镜头已标注为演示。Recorded in the real v0.24.0 app, with updated AI Work Space titles, bilingual captions and labeled Motion gallery demonstrations. [录制说明与来源 / Recording details & credits](../docs/media/README.md).
 
-Current builds include both Pixel and Painted avatars, with Pixel selected by default. Public v0.24.0 downloads contain the earlier workshop release. The verified platform is **macOS 13+ on Apple Silicon / arm64**. Current packages use local ad-hoc signing and are **not Apple-notarized**. Install the DMG or ZIP from the Release page; installed users do not need Node.js.
+Release v0.25.0 includes both Pixel and Painted avatars, with Pixel selected by default. The verified platform is **macOS 13+ on Apple Silicon / arm64**. Current packages use local ad-hoc signing and are **not Apple-notarized**. Install the DMG or ZIP from the Release page; installed users do not need Node.js.
 
-当前构建包含像素和手绘两种头像风格，默认使用像素风。公开的 v0.24.0 下载对应此前发布的工坊版。可验证平台为 **macOS 13+、Apple Silicon／arm64**；当前安装包采用本地 ad-hoc 签名，**尚未经过 Apple 公证**。从 Release 下载 DMG 或 ZIP，安装后无需另装 Node.js。
+v0.25.0 包含像素和手绘两种头像风格，默认使用像素风。可验证平台为 **macOS 13+、Apple Silicon／arm64**；当前安装包采用本地 ad-hoc 签名，**尚未经过 Apple 公证**。从 Release 下载 DMG 或 ZIP，安装后无需另装 Node.js。
 
-Published v0.24.0 packages still contain **AI Mini Office.app**. New builds from the current source use **AI Work Space.app**; existing release files retain their original names.
+The v0.25.0 packages contain **AI Work Space.app**. Original v0.24.0 downloads retain their earlier name.
 
-已发布的 v0.24.0 安装包仍包含 **AI Mini Office.app**；当前源码的新构建使用 **AI Work Space.app**，已有 Release 文件保留原名。
+v0.25.0 安装包包含 **AI Work Space.app**；v0.24.0 的原始下载保留旧名称。
 
 Current builds use the manually selected Agent size for bodies and nameplates. If the main-agent cast reaches capacity, the room may use exactly 90% of that size; it never compounds this reduction or rewrites the saved preference, and restores the manual size when the cast fits again. Completed observed mains remain visibly on standby, quietly dozing or playing, until new real work needs the floor. Helpers retain a smaller body and label frame, moving characters may cross through each other, and settled positions keep their full body and nameplate envelopes separate. Local session accounting now covers seven AI tools, with Daily Token and Weekly usage on the homepage. Supported OpenCode and MiMo questions can receive an explicit manual answer through their native question API. Chinese nicknames remain 155 complete mythological names from the Shan Hai Jing, and the social library retains twelve pair choreographies. Active session families survive history-capacity pressure, and passive metadata cannot break an existing in-process usage interval.
 
@@ -168,7 +168,7 @@ Token 覆盖 **Codex、Claude Code、Gemini CLI、Pi、OMP、Kimi Code 与 OpenC
 
 ## 本地体验
 
-打开当前源码构建的 **AI Work Space.app**（已发布的 v0.24.0 下载仍为 **AI Mini Office.app**）；使用 DMG 时先将应用拖进「应用程序」，再打开并连接 AI 工具。房间使用「实时观察」：本地只读会话日志与已连接的 hooks／插件提供真实活动，每个独立 session 保持自己的身份，子 Agent 来自真实父子关系。角色以手动大小为基准，主 Agent 满员时最多缩至基准的 90%；移动允许相互穿行，最终工作位置按身体和名牌的完整包络分开安排。空房间不会自动生成模拟任务。
+打开 **AI Work Space.app**；使用 DMG 时先将应用拖进「应用程序」，再打开并连接 AI 工具。房间使用「实时观察」：本地只读会话日志与已连接的 hooks／插件提供真实活动，每个独立 session 保持自己的身份，子 Agent 来自真实父子关系。角色以手动大小为基准，主 Agent 满员时最多缩至基准的 90%；移动允许相互穿行，最终工作位置按身体和名牌的完整包络分开安排。空房间不会自动生成模拟任务。
 
 没有伙伴在场时，初始界面只展示完整的空工作室和右上角控制区。连接与偏好从右上角打开为木框纸色面板；语言切换也在同一区域。历史闲置任务不会触发中央欢迎卡片。真实伙伴全部离场、空闲 8 秒后，会有一位明确标记的装饰访客来串门：在 10 个角落随机停留，翻书、喝咖啡、看看植物，偶尔变个小魔术。500 条独立撰写的中英双语气泡按区域轮换，真实工作出现即让路；逛约两分半后离开，过一会儿再来。可在右上角偏好中关闭「闲时串门」。访客不会加入任务数、伙伴列表或真实事件记录。
 
@@ -217,7 +217,7 @@ npm run verify:packaged-flow
 npm run build:mac
 ```
 
-The `.app` is generated in `../dist-mini-office/mac-arm64/`. The application contains Electron and its Node runtime; a packaged app does not require a separately installed Node or a running development server. `build:mac` also produces DMG and ZIP artifacts. Apple Silicon is the local verification target; an Intel build command is provided separately. Current local and v0.24.0 release builds use ad-hoc signing and are not Apple-notarized. macOS may identify the developer as unknown; check the published source and SHA-256 before deciding whether to open the app. No system-wide security disabling is required.
+The `.app` is generated in `../dist-mini-office/mac-arm64/`. The application contains Electron and its Node runtime; a packaged app does not require a separately installed Node or a running development server. `build:mac` also produces DMG and ZIP artifacts. Apple Silicon is the local verification target; an Intel build command is provided separately. Current local and v0.25.0 release builds use ad-hoc signing and are not Apple-notarized. macOS may identify the developer as unknown; check the published source and SHA-256 before deciding whether to open the app. No system-wide security disabling is required.
 
 Tests and builds first check that authored holiday profiles match the generated room catalog; the check never rewrites it. After intentionally editing a profile, run `npm run sync:rooms`, review the generated change, then run `npm run check:rooms`. Room artwork provenance and the full-catalog native check are described in [the room guide](docs/room-designs.md).
 

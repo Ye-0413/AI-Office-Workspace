@@ -6,13 +6,13 @@
 
 ## Current project release / 本项目当前发布
 
-**[v0.24.0 — The workshop companions / 工坊伙伴](release-v0.24.0.md)**
+**[v0.25.0 — Companions and a more resilient studio / 伙伴与更稳定的工作室](release-v0.25.0.md)**
 
-Five material creatures, 550 performances, real agent families, larger names and fixed manual sizing. This is the first GitHub Release for this project.
+Pixel and Painted companions, visible family relationships, local usage history and more resilient observation.
 
-五只材质伙伴、550 套动作、真实主子关系、更大名字与固定手动尺寸。这是本项目首次 GitHub Release。
+像素与手绘伙伴、真实主子关系、本地使用记录与更稳定的观察。
 
-[Download DMG / ZIP](https://github.com/Ye-0413/AI-Office-Workspace/releases/tag/v0.24.0) · [All project releases](https://github.com/Ye-0413/AI-Office-Workspace/releases) · [Originality & licensing](../../ORIGINALITY.md)
+[Download DMG / ZIP](https://github.com/Ye-0413/AI-Office-Workspace/releases/tag/v0.25.0) · [v0.24.0](release-v0.24.0.md) · [All project releases](https://github.com/Ye-0413/AI-Office-Workspace/releases) · [Originality & licensing](../../ORIGINALITY.md)
 
 The verified target is **macOS 13+ on Apple Silicon / arm64**. Current packages use local ad-hoc signing and are not Apple-notarized; installation details and validation scope are included in the release notes.
 

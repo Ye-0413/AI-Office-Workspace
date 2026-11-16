@@ -1,7 +1,7 @@
 {
   "version": "0.23.0",
   "recordedVersion": "0.23.0",
-  "distributionVersion": "0.24.0",
+  "distributionVersion": "0.25.0",
   "provenance": {
     "status": "carried-forward",
     "recording": "Existing 0.23.0 media retained byte-for-byte; no new native recording was made for this distribution.",
