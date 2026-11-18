@@ -86,7 +86,7 @@ The archived recording samples five synthetic activities from the painted render
 
 ## 独立的家具与互动演示 / Independent prop recordings
 
-这些较早的公开媒体使用项目原创胶囊示意角色或透明端点；它们不是当前五种工坊角色的外观预览。保留它们用于查看真实道具程序，并在各自 manifest 中注明录制版本与范围。没有使用本地恢复的受限角色图片，也不证明真实房间导航、身体接触或 IK。
+这些公开媒体用圆形位置标记或透明端点演示道具动作。录制范围和版本见各自的清单。
 
 ### 家具到站响应 / Twelve furniture responses
 
@@ -98,19 +98,11 @@ The archived recording samples five synthetic activities from the painted render
 
 ### 双人道具互动 / Twelve pair interactions
 
-[录制范围与原生采样清单](social/manifest.json)。这些是原创胶囊示意角色之间的道具编舞，48 fps、168 帧；不是当前角色身体接触的录屏。
+[录制范围与原生采样清单](social/manifest.json)。圆形标记表示道具编舞的两个位置。48 fps，共 168 帧。
 
 ![工坊双人道具](social/workshop.gif)
 ![茶舍双人道具](social/teahouse.gif)
 ![星台双人道具](social/observatory.gif)
-
-### 旧关节接口参考 / Legacy joint interface reference
-
-[录制范围与原生采样清单](lifecycle/manifest.json)。原创胶囊示意角色展示旧关节接口的距离步态，以及分身凝聚、归返道具。四足在固定锚点演示，不代表当前房间路线或真实脚底接触证明。
-
-![旧关节接口的原地距离步态](lifecycle/walking.gif)
-![分身凝聚道具](lifecycle/split.gif)
-![分身归返道具](lifecycle/absorb.gif)
 
 ## 重新导出像素预览 / Reproduce the pixel preview
 

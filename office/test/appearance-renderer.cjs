@@ -34,9 +34,13 @@ app.whenReady().then(async () => {
   for (const [name, action] of Object.entries(handlers)) ipcMain.handle('office:' + name, (_event, ...args) => action(...args));
   for (const name of ['connect', 'disconnect', 'setup-initialize', 'answer-question', 'open-source']) ipcMain.handle('office:' + name, () => { errors.push('Unexpected work IPC: ' + name); return { ok: true }; });
   ipcMain.on('office:renderer-error', (_event, error) => errors.push(error));
-  win = new BrowserWindow({ width: 1280, height: 720, useContentSize: true, show: false, webPreferences: { preload: path.join(__dirname, '../preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false } });
+  win = new BrowserWindow({ width: 1280, height: 720, useContentSize: true, show: false, focusable: false, webPreferences: { preload: path.join(__dirname, '../preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false } });
   win.webContents.session.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*'] }, (detail, callback) => { errors.push('Unexpected network: ' + detail.url); callback({ cancel: true }); });
   await win.loadFile(path.join(__dirname, '../renderer/index.html'));
+  win.showInactive();
+  win.webContents.debugger.attach('1.3');
+  await win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
+  await until('!document.hidden', 'The renderer window must be visible before testing animations');
   await run(`window.familyActors=new Map();document.getElementById('office').addEventListener('office:actor-arrival',event=>familyActors.set(event.detail.actorId,event.detail.actor));window.familyHandles=new Map();window.nativeCreate=OfficeAvatarPerformance.create;window.OfficeAvatarPerformance={...OfficeAvatarPerformance,create(options){const controller=nativeCreate(options);familyHandles.set(options.session.id,{controller,...options});return controller;}};void 0`);
   await publish(); await ready(8);
   let records = await rows(); assertFamilies(records);
@@ -143,6 +147,10 @@ app.whenReady().then(async () => {
   await publish([...observed.filter(session => ancestryIds.has(session.id)), ...orphans, lateChild]); await ready(8);
   const beforeParent = await rows(), orphanKey = beforeParent.find(row => row.id === orphans[0].id).key;
   assert.equal(beforeParent.find(row => row.id === orphans[1].id).key, orphanKey, 'reported siblings share their unseen true parent immediately');
+  for (const orphan of orphans) {
+    assert.equal(beforeParent.find(row => row.id === orphan.id).family, unseenParent.id,
+      'a reported parent anchors the visible family badge before its body arrives');
+  }
   assert.ok(!beforeParent.filter(row => !row.helper && row.id !== lateChild.id).some(row => row.key === orphanKey), 'the unseen family reserves its own appearance');
   await run(`window.orphanBodies=${JSON.stringify(orphans.map(row => row.id))}.map(id=>{const node=document.querySelector('[data-session-id="'+id+'"]');return{node,id,rig:node.querySelector('.ap-rig'),source:node.querySelector('.ap-rig defs image')};});void 0`);
   await publish([...observed, unseenParent]); await ready(9);

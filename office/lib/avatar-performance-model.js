@@ -7,7 +7,6 @@
   else root.OfficeAvatarPerformanceModel = api;
 })(typeof globalThis === 'object' ? globalThis : this, function () {
   'use strict';
-  const ASSET = 'clawd-static-base.svg';
   const KINDS = Object.freeze({ reading: 'folio', searching: 'lens', planning: 'notebook', coding: 'keyboard', designing: 'drafting', testing: 'probe', building: 'assembly', running: 'console', 'waiting-tool': 'listening', 'waiting-user': 'hand', error: 'puzzled' });
   const PROGRAMS = Object.freeze(Object.fromEntries(Object.entries({
     folio: ['read-turn', 'read-annotate', 'read-compare', 'read-scroll', 'read-outline', 'read-footnote', 'read-bookmark', 'read-diagram'],
@@ -81,7 +80,7 @@
   function plan(input, options = {}) {
     const session = input && typeof input === 'object' ? input : {};
     const identity = identityFor(session);
-    const inactive = reason => ({ active: false, animate: false, kind: 'none', program: '', programIndex: 0, programMs: 0, variant: 0, key: identity + '/' + reason, asset: null, reason, phaseOffset: 0 });
+    const inactive = reason => ({ active: false, animate: false, kind: 'none', program: '', programIndex: 0, programMs: 0, variant: 0, key: identity + '/' + reason, reason, phaseOffset: 0 });
     // Lifecycle, safety, and explicit user feedback each keep one owner.
     if (session.closed || session.status === 'closed') return inactive('closed');
     if (session.disconnected || session.status === 'stale' || options.stale) return inactive('stale');
@@ -99,11 +98,11 @@
     const programIndex = (seed % PROGRAMS[kind].length + Math.floor(elapsed / programMs)) % PROGRAMS[kind].length;
     const program = PROGRAMS[kind][programIndex];
     return { active: true, animate, kind, program, programIndex, programMs, variant: seed % 3,
-      key: identity + '/' + kind + '/' + (seed % 3) + '/' + program, asset: ASSET,
+      key: identity + '/' + kind + '/' + (seed % 3) + '/' + program,
       reason: options.reducedMotion ? 'reduced-motion' : options.lowPower ? 'low-power' : 'observed-' + activity,
       // A static phase offset gives every actor its own rhythm without timers,
       // Math.random(), or restarting a performance at each metadata snapshot.
       phaseOffset: -(seed % 9600) };
   }
-  return Object.freeze({ plan, KINDS, PROGRAMS, ASSET, identityFor, createClockRegistry });
+  return Object.freeze({ plan, KINDS, PROGRAMS, identityFor, createClockRegistry });
 });

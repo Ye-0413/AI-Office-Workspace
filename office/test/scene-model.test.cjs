@@ -10,7 +10,7 @@ test('each observed activity has a physical station; quiet and stale never mean 
   for (const [activity, zone] of Object.entries(expected)) {
     const spec = Scene.activitySpec(task('a', activity));
     assert.equal(spec.zone, zone, activity);
-    assert.doesNotMatch(spec.asset, /sleep|collapse|doze/);
+    assert.doesNotMatch(spec.prop, /sleep|collapse|doze/);
   }
   const unknown = Scene.activitySpec(task('a', 'unsupported-future-event', { lastEventAt: 1 }));
   assert.equal(unknown.zone, 'lobby');

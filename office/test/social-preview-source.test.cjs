@@ -22,7 +22,7 @@ function fixture(group=Exporter.groups()[0]){
     querySelector(selector){return this.querySelectorAll(selector)[0]||null;}
     contains(n){return this===n||this.children.some(c=>c.contains(n));}
     get outerHTML(){return JSON.stringify({tag:this.tagName,attrs:this.attrs,dataset:this.dataset,className:this.className,style:this.style,children:this.children.map(n=>n.outerHTML)});}
-    getBoundingClientRect(){if(this.box)return this.box;if(this.className==='preview-capsule'){const x=parseFloat(this.parentNode.style.left),y=parseFloat(this.parentNode.style.top);return{left:x,top:y,x,y,width:154,height:129,right:x+154,bottom:y+129};}return{left:0,top:0,x:0,y:0,width:1280,height:720,right:1280,bottom:720};}
+    getBoundingClientRect(){if(this.box)return this.box;if(this.className==='preview-marker'){const x=parseFloat(this.parentNode.style.left)+42,y=parseFloat(this.parentNode.style.top)+53;return{left:x,top:y,x,y,width:70,height:70,right:x+70,bottom:y+70};}return{left:0,top:0,x:0,y:0,width:1280,height:720,right:1280,bottom:720};}
     animate(frames,options){const a=new Animation(this,frames,options);this.animations.push(a);allMotions.push(a);return a;}
     getAnimations({subtree=false}={}){const own=this.animations.filter(a=>!a.cancelled),result=[...own,...(subtree?this.children.flatMap(n=>n.getAnimations({subtree:true})):[])];if(this.className==='agent-social-vignette'&&foreignMotion)result.push(foreignMotion);return result;}
   }
@@ -63,7 +63,7 @@ function gif(delays){const header=Buffer.from('47494638396101000100800000000000f
 test('encoded GIF timing reads actual centisecond delays instead of rounding the nominal fps',()=>{
   const timing=Exporter.gifTiming(gif([3,4,3]));assert.deepEqual(timing,{width:1,height:1,frames:3,durationMs:100,frameDelaysMs:[30,40,30]});assert.throws(()=>Exporter.gifTiming(gif([0])));assert.throws(()=>Exporter.gifTiming(gif([3]).subarray(0,-2)));assert.throws(()=>Exporter.gifTiming(Buffer.from('not a gif file')));
 });
-test('public page uses only unchanged local modules and original static capsule shapes',()=>{
+test('public page uses only unchanged local modules and static position markers',()=>{
   for(const group of Exporter.groups()){const html=Exporter.markup(group),inline=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];assert.equal(inline.length,1);new vm.Script(inline[0][1]);assert.equal((html.match(/class="card"/g)||[]).length,group.cards.length);assert.ok(html.includes('不代表真实导航、身体接触或 IK'));assert.ok(html.includes('img-src \'none\''));assert.doesNotMatch(html,/<(?:img|image|use)\b|assets\/avatars|room-art|data:image|data:video/i);for(const file of Exporter.SOURCES.filter(f=>f.endsWith('.js')&&!f.includes('/scripts/')))assert.ok(html.includes(file));}
 });
 test('all168 elapsed samples run actual public choreography with fresh finite owners and identical static actors',async()=>{

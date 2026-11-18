@@ -19,7 +19,6 @@
   <link rel="stylesheet" href="progression.css">
   <link rel="stylesheet" href="standby-animation.css">
   <link rel="stylesheet" href="creature-activity.css">
-  <link rel="stylesheet" href="avatar-fallback.css">
   <link rel="stylesheet" href="appearance-picker.css">
   <link rel="stylesheet" href="repertoire-gallery.css">
   <link rel="stylesheet" href="clone-motion.css">
@@ -67,7 +66,6 @@
   <script defer src="progression-view.js"></script>
   <script defer src="avatar-performance.js"></script>
   <script defer src="standby-animation.js"></script>
-  <script defer src="avatar-fallback.js"></script>
   <script defer src="../lib/i18n-model.js"></script>
   <script defer src="../lib/family-model.js"></script>
   <script defer src="family-appearance.js"></script>
@@ -178,6 +176,7 @@
       <div class="dialog-header"><div><span class="dialog-eyebrow">每项任务都有自己的位置</span><h2 id="roster-title">房间里的伙伴</h2></div><button type="button" class="dialog-close" data-close-dialog aria-label="关闭伙伴列表">×</button></div>
       <p class="dialog-intro">同一工具的独立 session 分别入驻。选择任务，可以在房间中找到它。</p>
       <div class="roster-toolbar"><label class="sr-only" for="roster-search">搜索伙伴、任务、工具或项目</label><input id="roster-search" class="provider-search" type="search" placeholder="搜索昵称、任务、工具或项目…" autocomplete="off" spellcheck="false" aria-controls="roster-list" aria-describedby="roster-keyboard-hint"><button id="roster-attention" class="button button-paper" type="button" aria-pressed="false">只看需留意</button></div>
+      <label><input id="show-all-helpers" type="checkbox">在房间展开全部分身</label>
       <div class="roster-result-bar"><span id="roster-count" role="status" aria-live="polite" aria-atomic="true"></span><button id="roster-reset" type="button" hidden>清除筛选</button></div>
       <p id="roster-empty" class="roster-empty" hidden></p>
       <div id="roster-list" class="roster-list"></div>

@@ -4,7 +4,7 @@ const {app,BrowserWindow,ipcMain}=require('electron');
 const assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const profile=fs.mkdtempSync(path.join(os.tmpdir(),'office-visibility-'));
 app.setPath('userData',profile);app.disableHardwareAcceleration();
-let win,failArtwork=false,blockedArtwork=0;
+let win;
 const errors=[],checks=[],pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 let settings={language:'zh',agentScale:1.35,reducedMotion:false,idleVisitor:false};
 let snapshot={mode:'live',sessions:[],connections:[],now:Date.now()};
@@ -16,10 +16,9 @@ const visible=`[...document.querySelectorAll('.actor')].filter(n=>getComputedSty
 const measure=`(()=>{const nodes=${visible};const rects=nodes.map(n=>{const boxes=[...n.querySelectorAll('.character-body,.nameplate,.nameplate *')].filter(e=>getComputedStyle(e).display!=='none').map(e=>e.getBoundingClientRect());return{id:n.dataset.sessionId,left:Math.min(...boxes.map(r=>r.left)),right:Math.max(...boxes.map(r=>r.right)),top:Math.min(...boxes.map(r=>r.top)),bottom:Math.max(...boxes.map(r=>r.bottom))};});return{ids:rects.map(r=>r.id),hits:rects.flatMap((a,i)=>rects.slice(i+1).filter(b=>a.left<b.right-1&&a.right>b.left+1&&a.top<b.bottom-1&&a.bottom>b.top+1).map(b=>[a.id,b.id]))};})()`;
 const guard=setTimeout(()=>{console.error('Visibility fixture timed out');app.exit(1);},90000);
 app.whenReady().then(async()=>{
-  for(const [name,fn]of Object.entries({snapshot:()=>snapshot,settings:()=>settings,'set-settings':patch=>(settings={...settings,...patch}),displays:()=>[]}))ipcMain.handle('office:'+name,(_,...args)=>fn(...args));
+  for(const [name,fn]of Object.entries({snapshot:()=>snapshot,settings:()=>settings,'set-settings':patch=>(settings={...settings,...patch}),displays:()=>[],progression:()=>({ok:true,keepsakes:[],decorations:[],growth:0})}))ipcMain.handle('office:'+name,(_,...args)=>fn(...args));
   ipcMain.on('office:renderer-error',(_,error)=>errors.push(error));
   win=new BrowserWindow({width:1280,height:720,useContentSize:true,show:true,webPreferences:{preload:path.join(__dirname,'../preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,backgroundThrottling:false}});
-  win.webContents.session.webRequest.onBeforeRequest({urls:['<all_urls>']},(details,callback)=>{const cancel=failArtwork&&details.url.includes('/assets/avatars/');if(cancel)blockedArtwork++;callback({cancel});});
   if(!process.argv.includes('--artwork-only')){
   snapshot={...snapshot,sessions:[task('r0','unknown'),task('r1','planning')]};
   await win.loadFile(path.join(__dirname,'../renderer/index.html'));
@@ -45,22 +44,24 @@ app.whenReady().then(async()=>{
   checks.push({name:'maximum-size arrival, entrance completion and repeated snapshots retain all three real bodies',frames,entranceFrames:arrival.frames});
   }
 
-  // Exercise the real resource error and later production pose change, rather
-  // than merely toggling the hidden attribute in the test.
-  settings={...settings,agentScale:1,reducedMotion:true};snapshot={...snapshot,sessions:[]};
-  await win.loadFile(path.join(__dirname,'../renderer/index.html'));
-  await win.webContents.session.clearCache();
-  failArtwork=true;send([task('asset-recovery','coding')]);
-  await until(`(()=>{const image=document.querySelector('.actor .character-body>img');return image?.hidden===true})()`,'failed static fallback must reach its real error handler');
-  assert.ok(blockedArtwork>0,'fixture must really fail a local artwork request');
-  failArtwork=false;
-  await run(`window.recoveredRigLoads=0;const source=document.querySelector('.ap-rig defs image');source.addEventListener('load',()=>recoveredRigLoads++);source.setAttribute('href','../assets/avatars/fixture-missing-source.svg');void 0`);
-  await run(`document.getElementById('setting-reducedMotion').checked=false;document.getElementById('setting-reducedMotion').dispatchEvent(new Event('change',{bubbles:true}))`);
-  await until(`(()=>{const image=document.querySelector('.actor .character-body>img');return image&&!image.hidden&&image.complete&&image.naturalWidth>0})()`,'a later valid pose must unhide the body after fallback failure');
-  await until(`recoveredRigLoads>0&&document.querySelector('.ap-rig defs image').getAttribute('href').includes('clawd-static-base.svg')`,'the animated rig must also reload its actual external body source');
-  await run(`document.getElementById('setting-reducedMotion').checked=true;document.getElementById('setting-reducedMotion').dispatchEvent(new Event('change',{bubbles:true}))`);
-  await until(`(()=>{const image=document.querySelector('.actor .character-body>img');return image&&!image.hidden&&image.complete&&image.naturalWidth>0&&image.dataset.asset==='clawd-static-base.svg'})()`,'reduced motion must keep the recovered static body visible');
-  if(process.env.MINI_OFFICE_PREVIEW_DIR){fs.mkdirSync(process.env.MINI_OFFICE_PREVIEW_DIR,{recursive:true});fs.writeFileSync(path.join(process.env.MINI_OFFICE_PREVIEW_DIR,'artwork-recovered.png'),(await win.webContents.capturePage()).toPNG());}
-  checks.push({name:'real failed bitmap recovers through a valid production pose and reduced-motion return',blockedArtwork});
+  settings = { ...settings, agentScale: 1, reducedMotion: true };
+  for (const avatarStyle of ['pixel', 'painted']) {
+    settings = { ...settings, avatarStyle };
+    snapshot = { ...snapshot, avatarStyle, sessions: [] };
+    await win.loadFile(path.join(__dirname, '../renderer/index.html'));
+    send([task('asset-recovery', 'coding')]);
+    await until("document.querySelector('.actor .creature-performance')?.dataset.artState === 'healthy'", avatarStyle + ' atlas loads');
+    await run(`window.recoveryActor = document.querySelector('.actor');
+      window.recoveryRig = recoveryActor.querySelector('.ap-rig');
+      recoveryRig.querySelector('defs image').setAttribute('href', '../assets/avatars/fixture-missing-atlas.png');
+      void 0`);
+    await until("document.querySelector('.actor .creature-performance')?.dataset.artState === 'failed'", avatarStyle + ' atlas failure reaches the fallback');
+    assert.ok(await run("Number(getComputedStyle(document.querySelector('.actor .cp-neutral')).opacity) > .99"));
+    await pause(3100);
+    send(snapshot.sessions);
+    await until("document.querySelector('.actor .creature-performance')?.dataset.artState === 'healthy'", avatarStyle + ' atlas heals after an ordinary snapshot');
+    assert.equal(await run("recoveryActor.isConnected && recoveryRig === recoveryActor.querySelector('.ap-rig')"), true);
+    checks.push({ name: avatarStyle + ' fallback and recovery preserve the real body' });
+  }
   assert.deepEqual(errors,[]);console.log(JSON.stringify({ok:true,checks,errors}));
 }).catch(error=>{console.error(error);process.exitCode=1;}).finally(()=>{clearTimeout(guard);win?.destroy();fs.rmSync(profile,{recursive:true,force:true});app.exit(process.exitCode||0);});

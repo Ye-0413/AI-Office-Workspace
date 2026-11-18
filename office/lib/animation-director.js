@@ -10,46 +10,6 @@
   const PHASE_MS = 8000;
   const CUE_MS = 3600;
   const WORK_CUE_MS = 4200;
-  const ASSETS = Object.freeze({
-    still: 'clawd-static-base.svg', book: 'clawd-idle-reading.svg', inspect: 'clawd-working-debugger.svg',
-    think: 'clawd-working-thinking.svg', focus: 'clawd-working-ultrathink.svg', type: 'clawd-working-typing.svg',
-    terminal: 'clawd-mini-typing.svg', headphones: 'clawd-headphones-groove.svg', juggle: 'clawd-working-juggling.svg',
-    build: 'clawd-working-building.svg', paint: 'clawd-designing.svg', alert: 'clawd-notification.svg',
-    miniAlert: 'clawd-mini-alert.svg', glance: 'clawd-react-right.svg', look: 'clawd-idle-look.svg',
-    stretch: 'clawd-idle-living.svg', bubble: 'clawd-idle-bubble.svg', coffee: 'clawd-coffee-hand.svg',
-    flip: 'clawd-coffee-head-flip.svg', yawn: 'clawd-idle-yawn.svg', error: 'clawd-error.svg',
-    sigh: 'clawd-react-annoyed.svg', greet: 'clawd-mini-enter.svg', peek: 'clawd-mini-peek.svg',
-    acknowledge: 'clawd-mini-happy.svg', tidy: 'clawd-working-sweeping.svg'
-  });
-
-  // Audited alongside all 50 original SVGs. These remain available to other owners.
-  const EXCLUDED = Object.freeze({
-    'clawd-about-hero.svg': 'About artwork has a different framing, not a work state.',
-    'clawd-aegyo-shy.svg': 'A social reaction needs an explicit interaction.',
-    'clawd-collapse-sleep.svg': 'Quiet is not evidence of sleep.',
-    'clawd-dizzy.svg': 'Dizziness needs an explicit playful interaction.',
-    'clawd-happy.svg': 'Whole-turn celebration belongs to the lifecycle owner.',
-    'clawd-heart-eyes.svg': 'A design completion cue belongs to the lifecycle owner.',
-    'clawd-idle-collapse.svg': 'An idle event does not mean collapse.',
-    'clawd-idle-doze.svg': 'An idle event does not mean dozing.',
-    'clawd-idle-follow.svg': 'Pointer following has a separate interaction owner.',
-    'clawd-idle-low-battery.svg': 'No provider battery evidence is available.',
-    'clawd-mini-crabwalk.svg': 'Locomotion belongs to the route owner.',
-    'clawd-mini-enter-sleep.svg': 'No sleep or wake event is inferred.',
-    'clawd-mini-idle.svg': 'Reserve the mini window pose for its own framing.',
-    'clawd-mini-sleep.svg': 'No provider sleep event is inferred.',
-    'clawd-outlaw-bender.svg': 'Drinking and smoking are not task activity evidence.',
-    'clawd-react-double-jump.svg': 'Double-click feedback belongs to explicit interaction.',
-    'clawd-react-double.svg': 'Double-click feedback belongs to explicit interaction.',
-    'clawd-react-drag.svg': 'Dragging belongs to explicit interaction.',
-    'clawd-react-left.svg': 'Reserve directional user reaction for explicit interaction.',
-    'clawd-sleeping.svg': 'Quiet and waiting must never imply sleep.',
-    'clawd-wake.svg': 'Entrance and wake framing belongs to the lifecycle owner.',
-    'clawd-working-carrying.svg': 'Carrying belongs to navigation and archive handoff.',
-    'clawd-working-typing-boss.svg': 'The cigar and money costume does not describe coding.',
-    'clawd-working-wizard.svg': 'A costume gag does not establish tool progress.'
-  });
-
   const ACTIVE = new Set(['reading', 'searching', 'planning', 'coding', 'designing', 'building', 'testing', 'running']);
   const time = value => typeof value === 'number' && Number.isFinite(value) ? value : typeof value === 'string' ? Date.parse(value) || 0 : 0;
   const text = (value, fallback = '') => typeof value === 'string' ? value : fallback;
@@ -110,8 +70,8 @@
     const phase = Math.floor((now + hash(identity) % PHASE_MS) / PHASE_MS);
     const raw = text(session.evidence && session.evidence.rawEvent);
     const words = (zh, en) => bilingual(language, zh, en);
-    function result(asset, captionZh, captionEn, prop, stage, detailZh, detailEn, cueKey) {
-      const output = { asset: ASSETS[asset], caption: words(captionZh, captionEn), prop, phase: stage, detail: words(detailZh, detailEn) };
+    function result(pose, captionZh, captionEn, prop, stage, detailZh, detailEn, cueKey) {
+      const output = { pose, caption: words(captionZh, captionEn), prop, phase: stage, detail: words(detailZh, detailEn) };
       if (cueKey) output.cueKey = cueKey;
       return output;
     }
@@ -245,5 +205,5 @@
     ], 'running', '只呈现已确认的工具执行，不猜测它是测试、构建或成功。', 'Present only confirmed tool execution without guessing test, build or success.');
   }
 
-  return Object.freeze({ plan, observedWork, ASSETS, EXCLUDED, PHASE_MS, CUE_MS, WORK_CUE_MS });
+  return Object.freeze({ plan, observedWork, PHASE_MS, CUE_MS, WORK_CUE_MS });
 });

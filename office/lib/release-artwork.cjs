@@ -3,8 +3,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
 const Artwork = require('./public-artwork.js');
-const restrictedManifest = require('../assets/avatars.manifest.json');
-const RESTRICTED_HASHES = new Set(restrictedManifest.files.map(file => file.sha256));
+// Content fingerprints prevent relabeled upstream artwork from entering a release.
+const RESTRICTED_HASHES = new Set(require('./restricted-artwork-hashes.json'));
 const pixelAtlases = Artwork.ASSETS.map(name => 'assets/avatars/' + name);
 const paintedAtlases = Artwork.PAINTED_ASSETS.map(name => 'assets/avatars/' + name);
 
@@ -16,7 +16,7 @@ function stripPaths(directory, { strips }) {
 const ASSET_FILES = Object.freeze([
   'assets/studio-icon.png', 'assets/office-room.jpg',
   'assets/ORIGINAL-ARTWORK-LICENSE.txt', 'assets/WORKSHOP-ARTWORK-NOTICE.md',
-  'assets/avatars.manifest.json', 'assets/avatars/workshop-prompts.json',
+  'assets/avatars/workshop-prompts.json',
   ...pixelAtlases, ...paintedAtlases,
   ...Artwork.IDS.map(id => 'assets/avatars/pixel-emotes-' + id + '.png'),
   // Registered keyframe strips, one exact path per species/activity.
@@ -60,9 +60,9 @@ function auditEntries(names, read, { requireOriginal = true, restrictedHashes = 
   if (failures.length) throw new Error(failures.join('\n'));
   return { originalCharacterCount, paintedCharacterCount, originalIconCount: files.includes('assets/studio-icon.png') ? 1 : 0, restrictedAssetCount, artworkFilesScanned: files.length };
 }
-function auditArchive(archive, asar = require('@electron/asar')) {
+function auditArchive(archive, asar = require('@electron/asar'), options) {
   const names = asar.listPackage(archive).map(normalize).filter(name => !asar.statFile(archive, name).files);
-  return auditEntries(names, name => asar.extractFile(archive, name));
+  return auditEntries(names, name => asar.extractFile(archive, name), options);
 }
 function preflight(root = path.join(__dirname, '..')) {
   assertBuildPolicy(JSON.parse(fs.readFileSync(path.join(root, 'package.json'))).build);

@@ -7,7 +7,7 @@
 <p align="center"><a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a></p>
 <p align="center">
   <a href="https://github.com/Ye-0413/AI-Office-Workspace/stargazers"><img src="https://img.shields.io/github/stars/Ye-0413/AI-Office-Workspace?style=flat-square&logo=github&label=Stars&labelColor=3C3730&color=8B6E4D" alt="GitHub Stars"></a>
-  <a href="https://github.com/Ye-0413/AI-Office-Workspace/releases/tag/v0.25.0"><img src="https://img.shields.io/badge/release-v0.25.0-8B6E4D?style=flat-square&labelColor=3C3730" alt="Release v0.25.0"></a>
+  <a href="https://github.com/Ye-0413/AI-Office-Workspace/releases/tag/v0.25.1"><img src="https://img.shields.io/badge/release-v0.25.1-8B6E4D?style=flat-square&labelColor=3C3730" alt="Release v0.25.1"></a>
   <a href="#quick-start"><img src="https://img.shields.io/badge/macOS-13%2B%20%C2%B7%20arm64-8B6E4D?style=flat-square&labelColor=3C3730" alt="macOS 13 or later, Apple Silicon arm64"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/code-AGPL--3.0--only-8B6E4D?style=flat-square&labelColor=3C3730" alt="Code license: AGPL-3.0-only"></a>
 </p>
@@ -56,15 +56,15 @@ A quiet macOS studio for real **Codex, Claude Code, Cursor, OpenCode** sessions 
 
 ## Quick Start
 
-| Platform | Download v0.25.0 |
+| Platform | Download v0.25.1 |
 | --- | --- |
-| **macOS 13+ · Apple Silicon / arm64** | [DMG](https://github.com/Ye-0413/AI-Office-Workspace/releases/download/v0.25.0/AI-Work-Space-0.25.0-arm64.dmg) · [ZIP](https://github.com/Ye-0413/AI-Office-Workspace/releases/download/v0.25.0/AI-Work-Space-0.25.0-arm64.zip) · [Checksums](https://github.com/Ye-0413/AI-Office-Workspace/releases/download/v0.25.0/SHA256SUMS.txt) |
+| **macOS 13+ · Apple Silicon / arm64** | [DMG](https://github.com/Ye-0413/AI-Office-Workspace/releases/download/v0.25.1/AI-Work-Space-0.25.1-arm64.dmg) · [ZIP](https://github.com/Ye-0413/AI-Office-Workspace/releases/download/v0.25.1/AI-Work-Space-0.25.1-arm64.zip) · [Checksums](https://github.com/Ye-0413/AI-Office-Workspace/releases/download/v0.25.1/SHA256SUMS.txt) |
 
 1. Download a DMG or ZIP above; the Electron runtime is included.
 2. Move **AI Work Space.app** to Applications and open it.
 3. Connect your tools, then start working in the original client.
 
-Release v0.25.0 uses **AI Work Space.app**. Ad-hoc signed, **not Apple-notarized**; verify checksums before opening.
+Release v0.25.1 uses **AI Work Space.app**. Ad-hoc signed, **not Apple-notarized**; verify checksums before opening.
 
 <a id="run-from-source"></a>
 
@@ -192,7 +192,7 @@ From the observatory to **33 daily & holiday rooms**: follow the Hong Kong calen
 | Activity, usage & native questions | [Monitoring](office/docs/monitoring.md) |
 | Character stories & both motion galleries | [Companions](docs/companions.md) · [Animation gallery](docs/animations/README.md) |
 | Rooms & recordings | [Room gallery](docs/rooms/README.md) · [Media details](docs/media/README.md) |
-| What's changed | [v0.25.0](docs/releases/release-v0.25.0.md) · [Release index](docs/releases/README.md) |
+| What's changed | [v0.25.1](docs/releases/release-v0.25.1.md) · [Release index](docs/releases/README.md) |
 
 ## Contributing
 

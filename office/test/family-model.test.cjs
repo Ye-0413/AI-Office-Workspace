@@ -58,3 +58,37 @@ test('historical appearance lookups never consume concurrent colour slots',()=>{
   const baseline=Family.createPaletteRegistry();baseline.update(['open-one']);baseline.update(visible);
   assert.deepEqual(visible.map(id=>registry.forRoot(id).bodyColor),visible.map(id=>baseline.forRoot(id).bodyColor));
 });
+
+test('siblings reserve the same family colour and number before their main appears', () => {
+  const registry = Family.createPaletteRegistry();
+  const members = [{id:'alpha', parentId:'main'}, {id:'beta', parentId:'main'}, {id:'nested', parentId:'beta'}];
+  const before = Family.build(members, {registry}).info;
+  const after = Family.build([...members, {id:'main'}], {registry}).info;
+  for (const {id} of members) {
+    assert.equal(before.get(id).rootId, 'main');
+    assert.equal(before.get(id).badge, after.get('main').badge);
+    assert.equal(before.get(id).color, after.get('main').color);
+  }
+});
+
+test('a busy family folds excess helpers under its main across reordered snapshots', () => {
+  const sessions = [{id:'main'}, {id:'other'}, {id:'other-child',parentId:'other'},
+    ...['a','b','c','d','e'].map(id=>({id,parentId:'main'})), {id:'grand',parentId:'d'}];
+  const graph = Family.build(sessions);
+  const residents = new Set(['b','c','d']);
+  const fold = rows => [...Family.foldedHelpers(rows, graph, residents, () => true)].sort();
+  assert.deepEqual(fold(sessions), ['a','e','grand']);
+  assert.deepEqual(fold([...sessions].reverse()), fold(sessions));
+  assert.deepEqual(fold(sessions.filter(row => row.id !== 'main')), []);
+});
+
+test('siblings keep their group when evidence for an intermediate parent drops out of the snapshot', () => {
+  const ledger = require('../lib/clone-lifecycle.js').createLedger();
+  const middle = { id: 'middle', parentId: 'main' };
+  const children = [{ id: 'one', parentId: 'middle' }, { id: 'two', parentId: 'main' }];
+  ledger.update([middle, ...children]);
+  ledger.update(children);
+  const graph = Family.build(children, { ledger });
+  for (const child of children) assert.equal(graph.info.get(child.id).rootId, 'main');
+  assert.equal(graph.info.get('one').parentId, 'middle');
+});

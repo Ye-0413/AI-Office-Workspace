@@ -6,11 +6,10 @@
 const fs = require('node:fs');
 
 const PIDLESS_MAX_AGE_MS = 10 * 60 * 1000;
-const LIVE_MAX_AGE_MS = 60 * 60 * 1000;
 
 function alive(pid) {
   try { process.kill(pid, 0); return true; }
-  catch (error) { return error.code === 'EPERM'; }
+  catch (error) { return error.code !== 'ESRCH'; }
 }
 
 function staleLock(file, { now = Date.now, isAlive = alive } = {}) {
@@ -22,7 +21,7 @@ function staleLock(file, { now = Date.now, isAlive = alive } = {}) {
   const pid = Number.isSafeInteger(record?.pid) && record.pid > 0 ? record.pid : null;
   const age = now() - stat.mtimeMs;
   if (pid === process.pid) return null;
-  if (pid ? !isAlive(pid) || age > LIVE_MAX_AGE_MS : age > PIDLESS_MAX_AGE_MS) return stat;
+  if (pid ? !isAlive(pid) : age > PIDLESS_MAX_AGE_MS) return stat;
   return null;
 }
 
@@ -47,4 +46,4 @@ function openLock(file, flags, mode = 0o600, options) {
   }
 }
 
-module.exports = { staleLock, clearStaleLock, openLock, PIDLESS_MAX_AGE_MS, LIVE_MAX_AGE_MS };
+module.exports = { staleLock, clearStaleLock, openLock, PIDLESS_MAX_AGE_MS };

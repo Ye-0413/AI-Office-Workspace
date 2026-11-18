@@ -40,7 +40,7 @@ test('public build uses exact original artwork paths and retains scoped upstream
 });
 
 test('public resource resolution rejects legacy, traversal, renamed and remote assets without changing real metadata', () => {
-  const record = Object.freeze({ id: 'ink', renderer: 'creature', asset: 'clawd-static-base.svg', variantIndex: 3, appearanceKey: 'ink:3', familyId: 'actual-root' });
+  const record = Object.freeze({ id: 'ink', renderer: 'creature', asset: 'obsolete-avatar.svg', variantIndex: 3, appearanceKey: 'ink:3', familyId: 'actual-root' });
   const clean = Artwork.design(record);
   assert.equal(clean.asset, 'workshop-ink.png'); assert.equal(clean.renderer, 'creature');
   assert.equal(clean.familyId, record.familyId); assert.equal(clean.appearanceKey, record.appearanceKey);
@@ -48,9 +48,9 @@ test('public resource resolution rejects legacy, traversal, renamed and remote a
   assert.equal(painted.asset, 'painted-ink.png'); assert.equal(painted.avatarStyle, 'painted');
   assert.equal(painted.familyId, record.familyId); assert.equal(painted.appearanceKey, record.appearanceKey);
   assert.equal(Artwork.asset(painted.asset), painted.asset);
-  for (const name of ['clawd-static-base.svg','../icon.png','https://example.test/art.png','renamed.svg','painted-extra.png',null]) assert.equal(Artwork.asset(name), 'workshop-folio.png');
+  for (const name of ['obsolete-avatar.svg','../icon.png','https://example.test/art.png','renamed.svg','painted-extra.png',null]) assert.equal(Artwork.asset(name), 'workshop-folio.png');
   assert.equal(Artwork.design(null), Artwork.DEFAULT);
-  assert.equal(Artwork.design({ id: 'clawd', asset: 'clawd-static-base.svg' }), Artwork.DEFAULT);
+  assert.equal(Artwork.design({ id: 'obsolete', asset: 'obsolete-avatar.svg' }), Artwork.DEFAULT);
   const valid = require('../lib/agent-appearance.js').catalog[1];
   assert.equal(Artwork.design(valid), valid, 'trusted live descriptors keep object identity');
 });
@@ -66,17 +66,15 @@ test('archive audit rejects restricted content even after moving and renaming ou
   assert.throws(() => Policy.auditEntries(Policy.ASSET_FILES.slice(1), () => Buffer.from('authored fixture'), { restrictedHashes }), /Missing public asset/);
 });
 
-test('actual ASAR traversal finds an upstream file renamed into documentation', async t => {
+test('actual ASAR traversal detects restricted fingerprints outside the asset directory', async t => {
   const asar = require('@electron/asar'), scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'office-artwork-archive-'));
   t.after(() => fs.rmSync(scratch, { recursive: true, force: true }));
-  const source = path.join(scratch, 'source'); fs.mkdirSync(path.join(source, 'docs'), { recursive: true });
-  // Local pixels are optional. The test uses the published manifest's digest
-  // and only reads an already restored file, never restores or exports it.
-  const item = require('../assets/avatars.manifest.json').files.find(file => fs.existsSync(path.join(__dirname, '../assets', file.destination)));
-  if (!item) return t.skip('No locally authorized upstream reference artwork is present.');
-  fs.copyFileSync(path.join(__dirname, '../assets', item.destination), path.join(source, 'docs', 'innocent-image.dat'));
-  const archive = path.join(scratch, 'fixture.asar'); await asar.createPackage(source, archive);
-  assert.throws(() => Policy.auditArchive(archive, asar), /Restricted artwork content: docs\/innocent-image.dat/);
+  const source = path.join(scratch, 'source'), archive = path.join(scratch, 'fixture.asar');
+  const fixture = Buffer.from('restricted synthetic bytes');
+  fs.mkdirSync(path.join(source, 'docs'), { recursive: true });
+  fs.writeFileSync(path.join(source, 'docs', 'innocent-image.dat'), fixture);
+  await asar.createPackage(source, archive);
+  assert.throws(() => Policy.auditArchive(archive, asar, { restrictedHashes: new Set([hash(fixture)]) }), /Restricted artwork content: docs\/innocent-image.dat/);
 });
 
 test('public performance adapter selects a creature for missing or legacy designs', () => {

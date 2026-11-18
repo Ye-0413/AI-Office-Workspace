@@ -89,7 +89,6 @@
   let rooms = [];
   let currentPage = { page: 0, pages: 1, roots: [], visible: [], hidden: 0, helperOverflow: 0 };
   let frameTimer = 0;
-  let spriteNonce = 0;
   let destroyed = false;
   let snapshotReceived = 0;
   let mutationPending = false;
@@ -299,23 +298,19 @@
   function keepsakeIcon(session) { return ({teacup:'♨',paperboat:'⛵',bookmark:'▤',lantern:'✧',leaf:'❧',pebble:'◇',bell:'♧',pencil:'✎',shell:'⌁',star:'✦',acorn:'♧',ribbon:'⋈'})[persona(session).keepsake] || '✦'; }
   function reduced() { return settings.reducedMotion || mediaReduce.matches; }
   function quietSprites() { return reduced() || settings.lowPower || sceneHidden(); }
-  function assetURL(name, replay) { return '../assets/avatars/' + (window.OfficePublicArtwork ? window.OfficePublicArtwork.asset(name) : name) + (replay ? '?_t=' + (++spriteNonce) : ''); }
-  function setPose(actor, name, replay = false) {
+  function setPose(actor) {
     const performanceSession = actor.visualWorkActivity ? { ...actor.session, activity: actor.visualWorkActivity } : actor.session;
-    const performance = actor.performance && actor.performance.update(performanceSession, { now: Date.now(), reducedMotion: reduced(), lowPower: settings.lowPower, hidden: sceneHidden() || actor.entryPending, walking: Boolean(actor.motion) || actor.node.dataset.walking === 'true', reaction: false, departing: actor.departing, stale: actor.spec.stale, standby: actor.node.dataset.standby === 'true', standbyPhase: actor.node.dataset.standbyMotion });
-    actor.standbyAnimation?.update({ standby: actor.node.dataset.standby === 'true', hidden: sceneHidden() || actor.entryPending, reducedMotion: reduced(), lowPower: settings.lowPower, walking: Boolean(actor.motion) || actor.node.dataset.walking === 'true', departing: actor.departing, attention: Scene.needsAttention(actor.session), stale: actor.spec.stale });
-    actor.fallback?.retry();
+    const walking = Boolean(actor.motion) || actor.node.dataset.walking === 'true';
+    const hidden = sceneHidden() || actor.entryPending;
+    const standby = actor.node.dataset.standby === 'true';
+    const reducedMotion = reduced();
+    actor.performance?.update(performanceSession, { now: Date.now(), reducedMotion, lowPower: settings.lowPower, hidden, walking, departing: actor.departing, stale: actor.spec.stale, standby, standbyPhase: actor.node.dataset.standbyMotion });
+    actor.standbyAnimation?.update({ standby, hidden, reducedMotion, lowPower: settings.lowPower, walking, departing: actor.departing, attention: Scene.needsAttention(actor.session), stale: actor.spec.stale });
     actor.performance?.retry?.();
-    const wantedAsset = actor.design?.asset || (quietSprites() ? 'clawd-static-base.svg' : performance && performance.active ? performance.asset : name);
-    const asset = window.OfficePublicArtwork ? window.OfficePublicArtwork.asset(wantedAsset) : wantedAsset;
-    actor.wantedAsset = name;
-    const recoverBitmap = actor.image.hidden && actor.image.complete;
-    if (actor.currentAsset === asset && !replay && !recoverBitmap) return;
-    actor.currentAsset = asset;
-    actor.image.dataset.asset = asset;
-    // Retry a failed cached resource on a later normal state update. Do not
-    // start another load while that retry is still in flight.
-    actor.image.src = assetURL(asset, recoverBitmap || replay && !quietSprites());
+    if (actor.design.asset !== actor.image.dataset.asset) {
+      actor.image.dataset.asset = actor.design.asset;
+      actor.image.src = '../assets/avatars/' + actor.design.asset;
+    }
   }
   function timeAgo(value) {
     const milliseconds = Math.max(0, Date.now() - Scene.timestamp(value));
@@ -948,7 +943,7 @@
     if (quietSprites() || !actor || actors.get(actor.id) !== actor || !actor.performance?.cue) return false;
     // A staged helper was hidden until this frame; refresh its observation
     // state so the cue sees the body it is about to form.
-    setPose(actor, 'clawd-static-base.svg');
+    setPose(actor);
     return Boolean(actor.performance.cue(kind, {}));
   }
   function relatedClones(actor) {
@@ -957,7 +952,7 @@
   function holdForClones(actor) {
     if (!actor.holdingFamily) cancelAction(actor);
     actor.holdingFamily = true; actor.node.dataset.cloneHold = 'true';
-    setPose(actor, 'clawd-static-base.svg');
+    setPose(actor);
     text(actor.state, '等分身归位');
   }
   function rememberRestedClone(id) {
@@ -1259,7 +1254,7 @@
     actor.node.dataset.walking = 'true';
     actor.carry.dataset.carry = String(carrying);
     text(actor.carry, '≡');
-    setPose(actor, carrying ? 'clawd-working-carrying.svg' : 'clawd-static-base.svg');
+    setPose(actor);
     if (yielding) transitCaption(actor, true);
     else text(actor.state, lifecycleCaption(actor) || Director.plan(actor.session, { now: Date.now(), language }).label || actor.spec.label);
     // Physical motion keeps every reserved vertex. Exact segment time laws
@@ -1305,7 +1300,7 @@
   }
   function finishAtStation(actor) {
     if (cloneBusy(actor) || actor.departing || actor.motion) return;
-    if (actor.holdingFamily) { setPose(actor, 'clawd-static-base.svg'); text(actor.state, '等分身归位'); return; }
+    if (actor.holdingFamily) { setPose(actor); text(actor.state, '等分身归位'); return; }
     actor.spec = Scene.activitySpec(actor.session);
     actor.node.dataset.walking = 'false';
     const plan = Director.plan(actor.session, { now: Date.now(), language });
@@ -1317,7 +1312,7 @@
     // per-activity clocks. Result captions never replace it with a fresh SVG.
     actor.visualWorkActivity = plan.recentWork ? plan.phase.slice('recent-work/'.length) : '';
     const freshCue = plan.cueKey && plan.cueKey !== actor.lastCue;
-    setPose(actor, plan.asset || actor.spec.asset, Boolean(freshCue));
+    setPose(actor);
     actor.node.dataset.phase = plan.phase || '';
     actor.node.dataset.workProp = plan.prop || '';
     if (freshCue && !quietSprites()) {
@@ -1517,7 +1512,7 @@
     actor.stagedEntry = actor.entryPending;
     clonePhase(actor, 'splitting');
     text(actor.state, '分身出现');
-    setPose(actor, 'clawd-static-base.svg');
+    setPose(actor);
     if (!await move(actor, seat, serial)) return;
     if (actor.serial !== serial) return;
     actor.justEntered = false;
@@ -1552,7 +1547,7 @@
     actor.node.dataset.cloneTarget = parent ? parent.id : '';
     actor.node.dataset.cloneReason = reason;
     text(actor.state, completedCloneReturn(reason) ? '结束分身' : '分身暂歇');
-    setPose(actor, 'clawd-static-base.svg');
+    setPose(actor);
     if (parent) {
       // A physical docking target stays still for this finite return; its
       // latest observed functional destination remains queued afterwards.
@@ -1660,7 +1655,7 @@
     actorsLayer.append(node);
     const helper = Boolean(session.parentId);
     node.dataset.bodyRatio = String(window.OfficeSizeStability.bodyRatio(session));
-    const actor = { id: session.id, session, spec: Scene.activitySpec(session), node, button, body, image, title, relation, provider, state, bubble, carry, arrival, position: { ...ENTRY_POINT }, target: seat, helper, serial: 0, delays: new Set(), cloneEffects: new Set(), clonePhase: helper ? 'working' : '', motion: null, lastTurnAt: Scene.timestamp(session.turnCompletedAt), arrivedAt: -10000, lastZone: '', currentAsset: '', wantedAsset: '', bubbleTimer: 0, defer: 0, justEntered: true, completing: false, departing: false, holdingFamily: false, retireRequested: null, entryPending: true, navigation: null, pendingStation: null, resumeNavigation: null };
+    const actor = { id: session.id, session, spec: Scene.activitySpec(session), node, button, body, image, title, relation, provider, state, bubble, carry, arrival, position: { ...ENTRY_POINT }, target: seat, helper, serial: 0, delays: new Set(), cloneEffects: new Set(), clonePhase: helper ? 'working' : '', motion: null, lastTurnAt: Scene.timestamp(session.turnCompletedAt), arrivedAt: -10000, lastZone: '', bubbleTimer: 0, defer: 0, justEntered: true, completing: false, departing: false, holdingFamily: false, retireRequested: null, entryPending: true, navigation: null, pendingStation: null, resumeNavigation: null };
     actor.presentationReentry = presentationReentries.get(session.id) || null;
     presentationReentries.delete(session.id);
     node.style.visibility = 'hidden'; node.style.opacity = '1';
@@ -1671,39 +1666,18 @@
     node.dataset.bodyVariant = String(actor.design?.variantIndex || 0);
     actor.performance = window.OfficeAvatarPerformance.create({ actorNode: node, body, image, session, clockRegistry: performanceClocks, design: actor.design });
     actor.standbyAnimation = window.OfficeStandbyAnimation?.create({ actorNode: node, body,
-      onPhaseChange: () => { if (actors.get(actor.id) === actor && !destroyed) setPose(actor, actor.wantedAsset || 'clawd-static-base.svg'); } });
-    actor.appearance = window.OfficeFamilyAppearance.create({ actorNode: node, body, image });
+      onPhaseChange: () => { if (actors.get(actor.id) === actor && !destroyed) setPose(actor); } });
+    actor.appearance = window.OfficeFamilyAppearance.create({ actorNode: node });
     node.style.transform = actorTransform(actor.position, actor.helper);
     node.style.zIndex = '10';
-    image.addEventListener('error', () => {
-      if (destroyed || actors.get(actor.id) !== actor) return;
-      // Workshop sheets have a local, single-frame fallback owned by their
-      // renderer. Swapping in a legacy sheet would corrupt its 3×2 crop.
-      if (actor.design?.renderer === 'creature') { image.hidden = true; return; }
-      if (actor.currentAsset !== 'clawd-static-base.svg') { actor.currentAsset = 'clawd-static-base.svg'; image.dataset.asset = 'clawd-static-base.svg'; image.src = assetURL('clawd-static-base.svg'); }
-      else { image.hidden = true; showError(language === 'en' ? 'Character artwork is temporarily unavailable. A backup body is shown while observation continues.' : '角色素材暂未加载，已显示备用身体；后续更新会重试，任务仍在观察。'); }
-    });
-    image.addEventListener('load', () => {
-      if (destroyed || actors.get(actor.id) !== actor) return;
-      // A failed fallback hides only the failed bitmap. A later valid pose
-      // must restore it, including walking and reduced-motion appearances.
-      if (image.naturalWidth > 0) {
-        const recovering = image.hidden;
-        image.hidden = false;
-        // The articulated body has its own external image reference. Retry
-        // that reference too, rather than revealing an empty animated rig.
-        if (recovering) body.querySelector('.ap-rig defs image')?.setAttribute('href', assetURL(actor.design?.asset || window.OfficeAvatarPerformanceModel.ASSET, true));
-      }
-    });
     button.addEventListener('click', () => selectSession(actor.id));
     button.addEventListener('dblclick', () => react(actor));
     node.addEventListener('office-reaction', (event) => { if (event.detail?.kind === 'stretch' && actors.get(actor.id) === actor && !destroyed) say(actor, language === 'en' ? persona(actor.session).signoffEn : persona(actor.session).signoffZh, 3000); });
     button.addEventListener('keydown', (event) => { if (event.key === ' ' && event.shiftKey) { event.preventDefault(); react(actor); } });
     updateActorLabel(actor);
-    actor.fallback = actor.design?.renderer === 'creature' ? null : window.OfficeAvatarFallback?.create({ actorNode: node, body, image });
     actors.set(session.id, actor);
     observedIds.add(actor.id);
-    setPose(actor, actor.spec.asset);
+    setPose(actor);
     updateEntranceLane(); queueTraffic();
     return actor;
   }
@@ -1721,6 +1695,9 @@
     return '';
   }
   function companionRoot(session) {
+    const current = familyGraph.info.get(session.id);
+    if (current) return current.rootId;
+    // Departing bodies can outlive their snapshot row.
     const knownRoot = cloneLedger.rootFor(session.id);
     if (knownRoot) return knownRoot;
     // Even before a parent is observed, its reported identity anchors all of
@@ -1728,7 +1705,7 @@
     const chain = cloneLedger.parentChain(session.id), missingAncestor = chain[chain.length - 1];
     if (missingAncestor && !familyGraph.byId.has(missingAncestor)) return missingAncestor;
     return window.OfficeAgentAppearance?.resolveRoot(session, { sessions: familyGraph.byId })
-      || familyGraph.info.get(session.id)?.rootId || session.id;
+      || session.id;
   }
   function companionFor(session) {
     const design = companionRegistry ? companionRegistry.forRoot(companionRoot(session))
@@ -1738,23 +1715,14 @@
   function syncActorDesign(actor) {
     const design = companionFor(actor.session);
     if (actor.design?.appearanceKey === design?.appearanceKey && actor.design?.asset === design?.asset) return;
-    const changedFormat = actor.design?.renderer !== design?.renderer;
-    const changedAsset = actor.design?.asset !== design?.asset;
     // Keep the actual actor, position and accumulated work clocks. A switch
     // between artwork formats changes only its internal presentation rig.
-    actor.fallback?.destroy(); actor.fallback = null;
     actor.design = design;
     actor.node.dataset.bodyDesign = design?.id || 'original';
     actor.node.dataset.bodyAppearance = design?.appearanceKey || design?.id || 'original';
     actor.node.dataset.bodyVariant = String(design?.variantIndex || 0);
     actor.performance?.setDesign(design);
-    if (changedFormat && actor.appearance) {
-      actor.appearance.destroy();
-      actor.appearance = window.OfficeFamilyAppearance.create({ actorNode: actor.node, body: actor.body, image: actor.image });
-    }
-    if (changedFormat || changedAsset) actor.currentAsset = '';
-    setPose(actor, actor.wantedAsset || actor.spec.asset);
-    actor.fallback = design?.renderer === 'creature' ? null : window.OfficeAvatarFallback?.create({ actorNode: actor.node, body: actor.body, image: actor.image });
+    setPose(actor);
   }
   function updateActorLabel(actor) {
     const session = actor.session;
@@ -1811,8 +1779,7 @@
     const serial = cancelAction(actor);
     actor.node.dataset.reaction = 'true';
     const p = persona(actor.session);
-    const pose = ['teacup','bookmark','leaf'].includes(p.keepsake) ? 'clawd-aegyo-shy.svg' : ['paperboat','lantern','bell'].includes(p.keepsake) ? 'clawd-react-double.svg' : 'clawd-react-double-jump.svg';
-    setPose(actor, pose, true);
+    setPose(actor);
     if (!quietSprites()) actor.performance?.cue?.('wave');
     say(actor, language === 'en' ? p.greetingEn : p.greetingZh, 3000);
     if (!await delay(actor, 3000, serial)) return;
@@ -1825,7 +1792,6 @@
     const releasedSlot = currentPage.seats?.has(id);
     cancelAction(actor, { dispose: true });
     clearTimeout(actor.bubbleTimer);
-    actor.fallback?.destroy();
     actor.standbyAnimation?.destroy();
     if (actor.performance) { actor.performance.update(actor.session, { now: Date.now(), hidden: true }); actor.performance.destroy(); }
     if (actor.appearance) actor.appearance.destroy();
@@ -2180,7 +2146,7 @@
     // Snapshot heartbeats must not replace a focused row or reset its scroll.
     const renderKey = JSON.stringify([language, selectedSession, visible.map(session => [session.id, displayName(session), session.title, session.parentId,
       session.provider, session.activity, session.status, session.disconnected, Scene.needsAttention(session), attendance.retired.includes(session.id),
-      restedClones.has(session.id), cloneSummary(session), paletteRegistry.forRoot(cloneLedger.rootFor(session.id) || familyGraph.info.get(session.id)?.rootId || session.id).color,
+      foldedHelperIds.has(session.id), nameplateFamilyBadgeText(session), restedClones.has(session.id), cloneSummary(session), paletteRegistry.forRoot(cloneLedger.rootFor(session.id) || familyGraph.info.get(session.id)?.rootId || session.id).color,
       session.parentId && displayName(familyGraph.byId.get(session.parentId) || session)])]);
     if (rosterRenderKey === renderKey) return;
     rosterRenderKey = renderKey;
@@ -2200,9 +2166,13 @@
       row.dataset.attention = String(Scene.needsAttention(session));
       const family = familyGraph.info.get(session.id);
       row.style.setProperty('--family-color', paletteRegistry.forRoot(cloneLedger.rootFor(session.id) || family?.rootId || session.id).color);
+      const badge = nameplateFamilyBadgeText(session);
+      row.dataset.familyBadge = badge;
       row.style.marginLeft = '0px';
       const copy = element('span', 'roster-copy');
       copy.append(element('strong', '', displayName(session)), element('span', 'roster-task', session.title || tr('未命名任务')));
+      const familyLabel = I18n.t(language, foldedHelperIds.has(session.id) ? 'family.groupedInRoom' : 'family.number', {badge});
+      copy.append(element('span', 'roster-relation', familyLabel));
       const parent = familyGraph.byId.get(session.parentId);
       if (parent) { const relation = element('span','roster-relation'); relation.textContent = '↳ ' + I18n.t(language,'identity.parent',{name:displayName(parent)}); copy.append(relation); }
       else if (!session.parentId) { const relation = element('span','roster-relation'); relation.textContent = cloneSummary(session); relation.title = I18n.t(language, 'family.clonesHint'); copy.append(relation); }
@@ -2266,11 +2236,11 @@
         }
       } finally { clearingActors = wasClearing; }
     }
-    familyGraph = Family.build(snapshot.sessions);
+    familyGraph = Family.build(snapshot.sessions, { ledger: cloneLedger });
     const openFamilies = snapshot.sessions.filter(session => !Scene.isClosed(session))
       .map(session => cloneLedger.rootFor(session.id) || familyGraph.info.get(session.id)?.rootId || session.id);
     paletteRegistry.update(openFamilies);
-    familyGraph = Family.build(snapshot.sessions, { registry: paletteRegistry });
+    familyGraph = Family.build(snapshot.sessions, { registry: paletteRegistry, ledger: cloneLedger });
     // Project names remain in the inspector and roster; every project shares
     // this one floor. Saved filters from older builds cannot hide live bodies.
     rooms = Scene.roomsFor(snapshot.sessions);
@@ -2279,8 +2249,11 @@
     $('project-select').firstElementChild.value = Scene.ALL_ROOMS;
     $('project-select').value = Scene.ALL_ROOMS;
     $('room-switcher').hidden = true;
-    const presentBodies = attendance.present.filter(session => !restedClones.has(session.id) || hasBodyActivity(session));
-    const bodyIds = new Set(presentBodies.map(session => session.id));
+    const allBodies = attendance.present.filter(session => !restedClones.has(session.id) || hasBodyActivity(session));
+    const compactIds = $('show-all-helpers').checked ? new Set()
+      : Family.foldedHelpers(allBodies, familyGraph, actors, hasBodyActivity);
+    const presentBodies = allBodies.filter(session => !compactIds.has(session.id));
+    const bodyIds = new Set(allBodies.map(session => session.id));
     const exitingMains = finiteExitIds(presentBodies);
     // Main departures retain their real bodies until the door crossing, but
     // no longer consume a stationary work dock. Actual descendants and their
@@ -2339,13 +2312,13 @@
       currentPage.routeGeometry = { paths: currentPage.pathsById, scale: currentPage.uniformScale,
         footprints: new Map([...physicalFootprints].map(([id, footprint]) => [id, { ...footprint }])) };
     }
-    const overflowIds = new Set(currentPage.overflowIds || []);
+    const overflowIds = new Set([...(currentPage.overflowIds || []), ...compactIds]);
     const visibleMains = new Set(currentPage.visible.filter(session => !session.parentId).map(session => session.id));
     for (const id of foldedHelperIds) if (!bodyIds.has(id)) presentationReentries.delete(id);
     foldedHelperIds = new Set();
     foldedClonesByRoot = new Map();
     let foldedCount = 0;
-    for (const session of presentBodies) {
+    for (const session of allBodies) {
       if (!session.parentId || !overflowIds.has(session.id) || !hasBodyActivity(session)) continue;
       foldedHelperIds.add(session.id);
       const rootId = cloneLedger.rootFor(session.id) || familyGraph.info.get(session.id)?.rootId;
@@ -2505,7 +2478,7 @@
       settleQuietCloneEffects(actor);
       if (!actors.has(actor.id)) continue;
       if (oldStyle !== settings.avatarStyle) syncActorDesign(actor);
-      setPose(actor, actor.wantedAsset || actor.spec.asset);
+      setPose(actor);
       updateActorLabel(actor);
       if (previousLanguage !== language) { clearTimeout(actor.bubbleTimer); actor.bubble.dataset.show = 'false'; }
     }
@@ -2581,6 +2554,7 @@
   });
   $('day-reset').addEventListener('click', () => { $('setting-sceneTime').focus(); saveSettings({ sceneTime: 'auto' }); });
   $('roster-button').addEventListener('click', () => openDialog('roster-dialog'));
+  $('show-all-helpers').addEventListener('change', render);
   $('roster-search').addEventListener('input', renderRoster);
   $('roster-search').addEventListener('search', renderRoster);
   $('roster-attention').addEventListener('click', () => {
@@ -2660,7 +2634,7 @@
     appearancePicker?.update({ avatarStyle: settings.avatarStyle, language, reducedMotion: reduced(), lowPower: settings.lowPower, hidden: nativeWindowHidden });
     for (const actor of [...actors.values()]) {
       settleQuietCloneEffects(actor);
-      if (actors.has(actor.id)) setPose(actor, actor.wantedAsset || actor.spec.asset);
+      if (actors.has(actor.id)) setPose(actor);
     }
     renderHelperLinks();
     visitor.tick();

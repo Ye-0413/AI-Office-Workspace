@@ -39,16 +39,6 @@ function assertWorkshopHash(name,hash){
  const source=workshopSource(name);
  if(source)assert.equal(sha256(source),hash,name);
 }
-// Archived public recordings retain their actual recording version and
-// hashes. A distribution bump cannot pretend that old frames were captured
-// again. Any source drift needs an exact, reversible provenance certificate.
-function archivedSources(manifest){
- assert.equal(manifest.version,manifest.recordedVersion);
- assert.equal(manifest.distributionVersion,require('../package.json').version);
- assert.equal(manifest.provenance.status,'carried-forward');assert.equal(manifest.provenance.currentWorkshopRenderingCertified,false);
- assert.match(manifest.provenance.recording,/no (?:new native recording|re-recording)/i);
- recordedSources(manifest);
-}
 function recordedSources(manifest){
  const changes=manifest.provenance?.sourceChanges||[];
  assert.equal(new Set(changes.map(change=>change.file)).size,changes.length);
@@ -162,17 +152,6 @@ test('seasonal gallery covers every real theme with at least 31 distinct animate
  for(const [name,hash]of Object.entries(manifest.rooms.sourceHashes))assertWorkshopHash(name,hash);
 });
 
-test('archived lifecycle previews retain recorded provenance and at least 31 changing poses',()=>{
- const folder=path.join(dir,'lifecycle'),manifest=JSON.parse(fs.readFileSync(path.join(folder,'manifest.json')));
- archivedSources(manifest);
- assert.match(manifest.publicBody,/original capsule robot/);assert.equal(manifest.restrictedImageElements,0);assert.equal(manifest.blockedSpriteRequests,0);
- assert.deepEqual(manifest.assets.map(item=>item.file),['walking.gif','split.gif','absorb.gif']);
- assert.equal(Object.keys(manifest.sourceHashes).length,8);assert.ok(manifest.sourceHashes['office/lib/walk-timing.js']);
- for(const item of manifest.assets){const bytes=fs.readFileSync(path.join(folder,item.file)),gif=inspectGif(bytes);assert.equal(bytes.length,item.bytes);assert.equal(createHash('sha256').update(bytes).digest('hex'),item.sha256);assert.ok(bytes.length<5*1024*1024);assert.equal(gif.width,item.width);assert.equal(gif.height,item.height);assert.equal(gif.frames,item.frames);assert.ok(item.fps>=40);assert.ok(item.distinctPngFrames>=31);assert.ok(gif.uniqueImages>=31,item.file+' needs changing encoded image data');assert.equal(gif.loop,0);assert.ok(Math.abs(gif.delay-item.durationMs/10)<=5);}
- const walk=manifest.assets[0].walkingCertificate;assert.ok(walk);assert.equal(walk.inPlace,true);assert.equal(walk.roomNavigationCertified,false);assert.equal(walk.worldDistance,384);assert.equal(walk.plannedDurationMs,1800);assert.equal(walk.samplingDurationMs,2000);assert.equal(walk.stillTailMs,200);assert.ok(walk.encodedStillMs>=180);assert.equal(walk.worldStride,192);assert.equal(walk.completedStrideCycles,2);assert.equal(walk.controller,'OfficeAvatarPerformance.locomotion');assert.equal(walk.sameStrideAnimationObjects,true);assert.equal(walk.first.pathDistance,0);assert.equal(walk.first.worldSpeed,0);assert.equal(walk.last.pathDistance,384);assert.equal(walk.last.worldSpeed,0);assert.ok(Math.abs(walk.last.stridePhaseMs-1200)<.001);
-});
-
-
 test('station gallery certifies all twelve archived furniture programs and actual complete looping media',()=>{
  const Station=require('../renderer/station-arrival.js'),Exporter=require('../scripts/render-station-previews.cjs');
  const folder=path.join(dir,'stations'),manifest=JSON.parse(fs.readFileSync(path.join(folder,'manifest.json')));
@@ -191,10 +170,12 @@ test('station gallery certifies all twelve archived furniture programs and actua
  assert.equal(new Set(manifest.assets.flatMap(a=>a.programs.map(p=>p.program))).size,12);
 });
 
-test('public pair gallery contains all twelve archived programs and complete source-bound 48fps samples',()=>{
+test('public pair gallery contains all twelve programs and complete source-bound 48fps samples',()=>{
  const Social=require('../lib/social-interactions.js'),Export=require('../scripts/render-social-previews.cjs');
  const manifest=require('../../docs/animations/social/manifest.json');
- archivedSources(manifest);
+ assert.equal(manifest.version,'0.25.0'); // Renderer version used to record these samples.
+ assert.deepEqual(Object.keys(manifest.sourceHashes).sort(),[...Export.SOURCES].sort());
+ for(const [file,hash] of Object.entries(manifest.sourceHashes)) assert.equal(sha256(fs.readFileSync(path.join(repo,file))),hash,file);
  assert.equal(manifest.sampling.fps,48);assert.equal(manifest.sampling.frames,168);
  assert.equal(manifest.sampling.continuousOwnerLifetimeCertified,false);
  assert.equal(manifest.sampling.continuousRoomPlaybackCertified,false);

@@ -52,20 +52,20 @@
   }
 
   const SPECS = Object.freeze({
-    reading: { zone: 'library', label: '读代码', verb: '查阅资料', asset: 'clawd-idle-reading.svg', prop: 'book' },
-    searching: { zone: 'library', label: '查找线索', verb: '检索文件与资料', asset: 'clawd-idle-reading.svg', prop: 'search' },
-    planning: { zone: 'board', label: '构思方案', verb: '梳理下一步', asset: 'clawd-working-thinking.svg', prop: 'note' },
-    coding: { zone: 'desk', label: '写代码', verb: '修改项目文件', asset: 'clawd-working-typing.svg', prop: 'code' },
-    designing: { zone: 'board', label: '设计中', verb: '推敲设计', asset: 'clawd-designing.svg', prop: 'paint' },
-    building: { zone: 'bench', label: '构建中', verb: '等待构建结果', asset: 'clawd-working-building.svg', prop: 'build' },
-    testing: { zone: 'bench', label: '测一测', verb: '执行测试', asset: 'clawd-working-debugger.svg', prop: 'test' },
-    running: { zone: 'bench', label: '运行工具', verb: '执行命令', asset: 'clawd-working-building.svg', prop: 'run' },
-    'waiting-user': { zone: 'front', label: '等你回复', verb: '请回到原工具处理', asset: 'clawd-notification.svg', prop: 'attention' },
-    'waiting-tool': { zone: 'bench', label: '工具运行中', verb: '等待工具返回', asset: 'clawd-working-thinking.svg', prop: 'wait' },
-    idle: { zone: 'sofa', label: '这一轮已歇下', verb: '会话仍在，等待下一项工作', asset: 'clawd-coffee-hand.svg', prop: 'coffee' },
-    resting: { zone: 'sofa', label: '暂无信号 · 小憩', verb: '超过 30 秒没有新信号，先在咖啡角休息', asset: 'clawd-coffee-hand.svg', prop: 'coffee', resting: true },
-    error: { zone: 'bench', label: '遇到问题', verb: '请查看原工具的错误', asset: 'clawd-error.svg', prop: 'error' },
-    unknown: { zone: 'lobby', label: '观察中', verb: '尚无可识别的工作事件', asset: 'clawd-static-base.svg', prop: 'none' }
+    reading: { zone: 'library', label: '读代码', verb: '查阅资料', prop: 'book' },
+    searching: { zone: 'library', label: '查找线索', verb: '检索文件与资料', prop: 'search' },
+    planning: { zone: 'board', label: '构思方案', verb: '梳理下一步', prop: 'note' },
+    coding: { zone: 'desk', label: '写代码', verb: '修改项目文件', prop: 'code' },
+    designing: { zone: 'board', label: '设计中', verb: '推敲设计', prop: 'paint' },
+    building: { zone: 'bench', label: '构建中', verb: '等待构建结果', prop: 'build' },
+    testing: { zone: 'bench', label: '测一测', verb: '执行测试', prop: 'test' },
+    running: { zone: 'bench', label: '运行工具', verb: '执行命令', prop: 'run' },
+    'waiting-user': { zone: 'front', label: '等你回复', verb: '请回到原工具处理', prop: 'attention' },
+    'waiting-tool': { zone: 'bench', label: '工具运行中', verb: '等待工具返回', prop: 'wait' },
+    idle: { zone: 'sofa', label: '这一轮已歇下', verb: '会话仍在，等待下一项工作', prop: 'coffee' },
+    resting: { zone: 'sofa', label: '暂无信号 · 小憩', verb: '超过 30 秒没有新信号，先在咖啡角休息', prop: 'coffee', resting: true },
+    error: { zone: 'bench', label: '遇到问题', verb: '请查看原工具的错误', prop: 'error' },
+    unknown: { zone: 'lobby', label: '观察中', verb: '尚无可识别的工作事件', prop: 'none' }
   });
 
   // Furniture footprints, in percent of the world. Feet and routes stay outside.
@@ -220,9 +220,9 @@
 
   function activitySpec(session) {
     if (session.disconnected || session.status === 'stale') {
-      return { zone: 'lobby', label: '信号暂未更新', verb: '保留最后观察位置，不推测工作进度', asset: 'clawd-static-base.svg', prop: 'none', stale: true };
+      return { zone: 'lobby', label: '信号暂未更新', verb: '保留最后观察位置，不推测工作进度', prop: 'none', stale: true };
     }
-    if (isClosed(session)) return { zone: 'archive', label: '会话已结束', verb: '归档并离开房间', asset: 'clawd-working-carrying.svg', prop: 'archive', closed: true };
+    if (isClosed(session)) return { zone: 'archive', label: '会话已结束', verb: '归档并离开房间', prop: 'archive', closed: true };
     // Attention is an explicit upstream signal. Do not turn ordinary quiet into sleep.
     if (session.attention && session.activity !== 'error') return SPECS['waiting-user'];
     // Presentation-only: the renderer marks a quiet open session, never the source.

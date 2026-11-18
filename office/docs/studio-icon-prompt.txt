@@ -1,7 +1,7 @@
 AI Mini Office original application icon
 Generated with the built-in image_gen tool on 2026-10-23.
 Asset: assets/studio-icon.png
-This image is independent of the upstream icon in avatars.manifest.json.
+This image is independent of the upstream icon.
 The generated alpha channel and original square image are preserved; the macOS
 build converts the image into the standard ICNS size set.
 

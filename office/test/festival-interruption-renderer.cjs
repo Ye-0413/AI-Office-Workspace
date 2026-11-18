@@ -15,7 +15,7 @@ async function until(source,message,ms=4000){const end=Date.now()+ms;while(Date.
 async function check(name,fn){try{await fn();checks.push(name);}catch(error){error.message=name+': '+error.message;throw error;}}
 async function festival(patch){await run(`festivalState={...festivalState,...${JSON.stringify(patch)}};festival.update(festivalState);void 0`);}
 async function venue(id){await run(`venueState={...venueState,venue:${JSON.stringify(id)}};venue.update(venueState);void 0`);await until(`document.getElementById('room-art').dataset.venue===${JSON.stringify(id)}&&document.querySelectorAll('.venue-art-buffer').length===0`,'background must settle before the next test');}
-async function reentry(selector,trigger){return run(`(async()=>{const target=document.querySelector(${JSON.stringify(selector)}),frames=[];function sample(){const s=getComputedStyle(target),m=new DOMMatrixReadOnly(s.transform);frames.push({at:performance.now(),a:m.a,b:m.b,c:m.c,d:m.d,x:m.e,y:m.f,opacity:Number(s.opacity)})}sample();${trigger};sample();await new Promise(resolve=>{let count=0;function tick(){sample();if(++count===12)resolve();else requestAnimationFrame(tick)}requestAnimationFrame(tick)});return frames})()`);}
+async function reentry(selector,trigger,minDuration=0){return run(`(async()=>{const target=document.querySelector(${JSON.stringify(selector)}),frames=[];function sample(){const s=getComputedStyle(target),m=new DOMMatrixReadOnly(s.transform);frames.push({at:performance.now(),a:m.a,b:m.b,c:m.c,d:m.d,x:m.e,y:m.f,opacity:Number(s.opacity)})}sample();${trigger};sample();await new Promise(resolve=>{let count=0;function tick(){sample();if(++count>=12&&performance.now()-frames[1].at>=${minDuration})resolve();else requestAnimationFrame(tick)}requestAnimationFrame(tick)});return frames})()`);}
 function continuousMatrix(frames,label){assert.ok(frames.length>=8);for(let i=1;i<frames.length;i++){const previous=frames[i-1],next=frames[i];assert.ok(Math.max(...['a','b','c','d'].map(key=>Math.abs(next[key]-previous[key])))<.08,label+': '+JSON.stringify(frames));assert.ok(Math.hypot(next.x-previous.x,next.y-previous.y)<4,label+': '+JSON.stringify(frames));}}
 app.whenReady().then(async()=>{
   win=new BrowserWindow({width:1280,height:720,useContentSize:true,show:true,webPreferences:{contextIsolation:true,nodeIntegration:false,sandbox:true,backgroundThrottling:false}});
@@ -60,11 +60,9 @@ app.whenReady().then(async()=>{
     await run(`document.querySelector('.festival-control').click();void 0`);assert.equal(await run(`document.querySelector('.festival-widget').dataset.state`),'blossom');assert.equal(await run(`Number(getComputedStyle(document.querySelector('[data-part="flower"]')).opacity)`),1);
     for(const [theme,selector]of [['midsummer','[data-part="ribbon-a"]'],['hanami','[data-part="blossom-4"]']]){
       await festival({theme,reducedMotion:true});await run(`document.querySelector('.festival-control').click();void 0`);await festival({reducedMotion:false});
-      const frames=await reentry(selector,`document.querySelector('.festival-control').dispatchEvent(new MouseEvent('click',{bubbles:true,detail:1}))`);
+      // Sample at least two 96 ms opacity steps, including on 144 Hz screens.
+      const frames=await reentry(selector,`document.querySelector('.festival-control').dispatchEvent(new MouseEvent('click',{bubbles:true,detail:1}))`,250);
       assert.ok(Math.abs(frames[1].opacity-frames[0].opacity)<.02,JSON.stringify(frames));
-      // A CSS transition may acquire its compositor start after several real
-      // frames. Require a painted intermediate opacity within this bounded
-      // twelve-frame observation, without assuming it starts on RAF number two.
       assert.ok(frames.slice(2).some(frame=>frame.opacity>0&&frame.opacity<1),JSON.stringify(frames));evidence.push({case:theme+'-inner-fade',frames});
     }
   });

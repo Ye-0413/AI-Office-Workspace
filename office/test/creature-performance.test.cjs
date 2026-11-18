@@ -5,11 +5,11 @@ const design=id=>({id,renderer:'creature',asset:'workshop-'+id+'.png',poseColumn
 const observed=(activity='coding',extra={})=>({id:'codex:real-creature',provider:'codex',status:'active',activity,...extra});
 test('creature texture selection accepts only the canonical original sheet for its validated species',()=>{
   const f=fixture('ink');
-  for(const asset of ['clawd-static-base.svg','../icon.png','https://example.test/other.png']){
+  for(const asset of ['obsolete-avatar.svg','../icon.png','https://example.test/other.png']){
     f.controller.setDesign({...design('ink'),asset});
     assert.equal(f.source.getAttribute('href'),'../assets/avatars/workshop-ink.png');
   }
-  f.controller.setDesign({...design('missing'),asset:'clawd-static-base.svg'});
+  f.controller.setDesign({...design('missing'),asset:'obsolete-avatar.svg'});
   assert.equal(f.source.getAttribute('href'),'../assets/avatars/workshop-folio.png');
   f.controller.destroy();
 });

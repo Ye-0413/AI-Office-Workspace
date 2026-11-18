@@ -5,9 +5,7 @@ const assert = require('node:assert/strict'), fs = require('node:fs'), os = requ
 const { installAudit } = require('./support/walking-native-audit.cjs');
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'office-natural-walk-'));
 app.setPath('userData', profile); app.disableHardwareAcceleration();
-// This fixture isolates the internal articulated foot Animation objects;
-// the public picker always offers painted creatures, covered separately.
-let win, settings = { language: 'zh', agentAppearance: 'mixed', agentScale: 1, reducedMotion: false, lowPower: false, idleVisitor: false, sceneTheme: 'spring', sceneWeather: 'off' };
+let win, settings = { language: 'zh', avatarStyle: 'pixel', agentScale: 1, reducedMotion: false, lowPower: false, idleVisitor: false, sceneTheme: 'spring', sceneWeather: 'off' };
 let snapshot = { mode: 'live', now: Date.now(), connections: [], sessions: [] };
 const checks = [], errors = [], traces = [], wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 const task = (id, activity, parentId) => ({ id: 'codex:natural-' + id, provider: 'codex', sessionId: 'natural-' + id, parentId, status: 'active', activity, activeTools: 1, lastEventAt: Date.now(), events: [], projectPath: '/fixture/natural-walk' });
@@ -22,15 +20,15 @@ function captureWalk(id) {
   if (!motion) throw Error('Expected an actual finite body walk');
   const keys = motion.effect.getKeyframes().map(k => { const m = new DOMMatrixReadOnly(k.transform); return { x: m.m41, y: m.m42, offset: k.computedOffset, easing: k.easing }; });
   const duration = motion.effect.getTiming().duration, image = node.querySelector('.character-body>img'), rig = node.querySelector('.ap-rig');
-  const foot = node.querySelector('.ap-foot'), loops = node.getAnimations({ subtree: true }).filter(a => a.constructor.name === 'Animation' && a.effect?.target === foot && a.effect.getTiming().iterations === Infinity);
-  const loop = loops[0], rows = []; let identity = true;
+  const loop = node.getAnimations({ subtree: true }).find(animation => animation.animationName === 'cp-walk-cels');
+  const rows = []; let identity = true;
   return new Promise((resolve, reject) => {
     const started = performance.now();
     function tick(now) {
       if (!node.isConnected) return reject(Error('The admitted body disappeared'));
       const walking = node.dataset.walking === 'true', m = new DOMMatrixReadOnly(getComputedStyle(node).transform);
       const t = Number.isFinite(motion.currentTime) ? motion.currentTime : duration;
-      rows.push({ now, t, x: m.m41, y: m.m42, gaitTime: Number.isFinite(loop?.currentTime) ? loop.currentTime : null, foot: foot ? getComputedStyle(foot).transform : null });
+      rows.push({ now, t, x: m.m41, y: m.m42, gaitTime: Number.isFinite(loop?.currentTime) ? loop.currentTime : null });
       identity &&= node.querySelector('.ap-rig') === rig && node.querySelector('.character-body>img') === image;
       if (walking) identity &&= node.getAnimations().includes(motion) && (!loop || node.getAnimations({ subtree: true }).includes(loop));
       if (!walking && (motion.playState === 'idle' || motion.playState === 'finished')) return resolve({ keys, duration, rows, identity, loopObserved: Boolean(loop) });
@@ -92,7 +90,7 @@ function assess(trace, label, distanceGait) {
     turns.push({ t, window, medianSpeed: median(nearby), incomingSpeed: incoming, outgoingSpeed: outgoing });
   }
   if (distanceGait) {
-    assert.equal(trace.loopObserved, true, 'actual entity walking uses the original four-foot rig');
+    assert.equal(trace.loopObserved, true, 'the live pixel creature has a distance-driven walk cycle');
     let distance = 0; const ratios = [];
     for (let i = 1; i < trace.rows.length; i++) {
       const a = trace.rows[i - 1], b = trace.rows[i], d = Math.hypot(b.x - a.x, b.y - a.y); distance += d;
@@ -105,17 +103,12 @@ function assess(trace, label, distanceGait) {
 }
 const guard = setTimeout(() => { console.error('Natural walk fixture timed out'); app.exit(1); }, 180000);
 app.whenReady().then(async () => {
-  for (const [name, handler] of Object.entries({ snapshot: () => snapshot, settings: () => settings, 'set-settings': patch => (settings = { ...settings, ...patch }), displays: () => [] })) ipcMain.handle('office:' + name, (_, ...args) => handler(...args));
+  for (const [name, handler] of Object.entries({ snapshot: () => snapshot, settings: () => settings, 'set-settings': patch => (settings = { ...settings, ...patch }), displays: () => [], progression: () => ({ ok: true, keepsakes: [], decorations: [], growth: 0 }) })) ipcMain.handle('office:' + name, (_, ...args) => handler(...args));
   ipcMain.on('office:renderer-error', (_, error) => errors.push(error));
   win = new BrowserWindow({ width: 1280, height: 720, useContentSize: true, enableLargerThanScreen: true, show: true, focusable: false, webPreferences: { preload: path.join(__dirname, '../preload.cjs'), sandbox: true, contextIsolation: true, nodeIntegration: false, backgroundThrottling: false } });
   win.webContents.on('console-message', details => { if (details.level === 'error') errors.push(details.message); });
   win.webContents.on('render-process-gone', (_, details) => errors.push('renderer gone: ' + details.reason));
-  // Intercept only the model export in this isolated fixture, before app.js
-  // constructs its registry. Public code exposes no legacy-body preference.
-  await bounded(win.loadURL('about:blank'), 'initial renderer target');
   win.webContents.debugger.attach('1.3');
-  await bounded(win.webContents.debugger.sendCommand('Page.enable'), 'internal rig page target');
-  await bounded(win.webContents.debugger.sendCommand('Page.addScriptToEvaluateOnNewDocument', { source: `(()=>{Object.defineProperty(window,'OfficePublicArtwork',{configurable:true,get:()=>undefined,set:()=>{}});let model;Object.defineProperty(window,'OfficeAgentAppearance',{configurable:true,get:()=>model,set:value=>{model={...value,createAllocator:()=>null,forSession:()=>null};}});})()` }), 'internal rig fixture hook');
   await bounded(win.loadFile(path.join(__dirname, '../renderer/index.html')), 'production page');
   await bounded(win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] }), 'ordinary motion');
   await run('(' + installAudit.toString() + ')()');

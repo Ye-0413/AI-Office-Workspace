@@ -7,7 +7,7 @@
 <p align="center"><a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a></p>
 <p align="center">
   <a href="https://github.com/Ye-0413/AI-Office-Workspace/stargazers"><img src="https://img.shields.io/github/stars/Ye-0413/AI-Office-Workspace?style=flat-square&logo=github&label=Stars&labelColor=3C3730&color=8B6E4D" alt="GitHub Star 数量"></a>
-  <a href="https://github.com/Ye-0413/AI-Office-Workspace/releases/tag/v0.25.0"><img src="https://img.shields.io/badge/release-v0.25.0-8B6E4D?style=flat-square&labelColor=3C3730" alt="发布版本 v0.25.0"></a>
+  <a href="https://github.com/Ye-0413/AI-Office-Workspace/releases/tag/v0.25.1"><img src="https://img.shields.io/badge/release-v0.25.1-8B6E4D?style=flat-square&labelColor=3C3730" alt="发布版本 v0.25.1"></a>
   <a href="#quick-start"><img src="https://img.shields.io/badge/macOS-13%2B%20%C2%B7%20arm64-8B6E4D?style=flat-square&labelColor=3C3730" alt="macOS 13 或更新版本，Apple Silicon arm64"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/code-AGPL--3.0--only-8B6E4D?style=flat-square&labelColor=3C3730" alt="源码许可 AGPL-3.0-only"></a>
 </p>
@@ -56,15 +56,15 @@
 
 ## 快速开始
 
-| 平台 | 下载 v0.25.0 |
+| 平台 | 下载 v0.25.1 |
 | --- | --- |
-| **macOS 13+ · Apple Silicon / arm64** | [DMG](https://github.com/Ye-0413/AI-Office-Workspace/releases/download/v0.25.0/AI-Work-Space-0.25.0-arm64.dmg) · [ZIP](https://github.com/Ye-0413/AI-Office-Workspace/releases/download/v0.25.0/AI-Work-Space-0.25.0-arm64.zip) · [校验值](https://github.com/Ye-0413/AI-Office-Workspace/releases/download/v0.25.0/SHA256SUMS.txt) |
+| **macOS 13+ · Apple Silicon / arm64** | [DMG](https://github.com/Ye-0413/AI-Office-Workspace/releases/download/v0.25.1/AI-Work-Space-0.25.1-arm64.dmg) · [ZIP](https://github.com/Ye-0413/AI-Office-Workspace/releases/download/v0.25.1/AI-Work-Space-0.25.1-arm64.zip) · [校验值](https://github.com/Ye-0413/AI-Office-Workspace/releases/download/v0.25.1/SHA256SUMS.txt) |
 
 1. 下载 DMG 或 ZIP，运行环境已包含在安装包中。
 2. 将 **AI Work Space.app** 移入「应用程序」并打开。
 3. 连接你的工具，再到原工具中开始工作。
 
-v0.25.0 发布包名为 **AI Work Space.app**。当前采用 ad-hoc 签名，**未经 Apple 公证**；安装前请核对校验值。
+v0.25.1 发布包名为 **AI Work Space.app**。当前采用 ad-hoc 签名，**未经 Apple 公证**；安装前请核对校验值。
 
 <a id="从源码运行"></a>
 
@@ -192,7 +192,7 @@ npm --prefix office run build:mac
 | 活动、用量与原生问题 | [监测说明](office/docs/monitoring.md) |
 | 角色故事与两种风格的动作图鉴 | [原创角色](docs/companions.md) · [动作图鉴](docs/animations/README.md) |
 | 房间与演示素材 | [房间图鉴](docs/rooms/README.md) · [录制说明](docs/media/README.md) |
-| 版本变化 | [v0.25.0](docs/releases/release-v0.25.0.md) · [发布记录](docs/releases/README.md) |
+| 版本变化 | [v0.25.1](docs/releases/release-v0.25.1.md) · [发布记录](docs/releases/README.md) |
 
 ## 参与贡献
 

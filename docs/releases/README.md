@@ -6,13 +6,13 @@
 
 ## Current project release / 本项目当前发布
 
-**[v0.25.0 — Companions and a more resilient studio / 伙伴与更稳定的工作室](release-v0.25.0.md)**
+**[v0.25.1 — Readable agent families / 更清晰的 Agent 家族](release-v0.25.1.md)**
 
-Pixel and Painted companions, visible family relationships, local usage history and more resilient observation.
+Compact helper groups, consistent family appearance, and fixes for lingering locks and retired artwork.
 
-像素与手绘伙伴、真实主子关系、本地使用记录与更稳定的观察。
+活跃分身默认折叠，同组角色外观一致。本版修复长时间持锁问题并清理旧头像。
 
-[Download DMG / ZIP](https://github.com/Ye-0413/AI-Office-Workspace/releases/tag/v0.25.0) · [v0.24.0](release-v0.24.0.md) · [All project releases](https://github.com/Ye-0413/AI-Office-Workspace/releases) · [Originality & licensing](../../ORIGINALITY.md)
+[Download DMG / ZIP](https://github.com/Ye-0413/AI-Office-Workspace/releases/tag/v0.25.1) · [v0.25.0](release-v0.25.0.md) · [v0.24.0](release-v0.24.0.md) · [Originality & licensing](../../ORIGINALITY.md)
 
 The verified target is **macOS 13+ on Apple Silicon / arm64**. Current packages use local ad-hoc signing and are not Apple-notarized; installation details and validation scope are included in the release notes.
 

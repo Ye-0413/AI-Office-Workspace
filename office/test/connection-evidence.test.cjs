@@ -26,6 +26,8 @@ test('a lock whose PID is dead is recovered; a live or own lock is kept', t => {
   fs.writeFileSync(file, JSON.stringify({ pid: 999999 }), { mode: 0o600 });
   assert.ok(staleLock(file, { isAlive: () => false }));
   assert.equal(staleLock(file, { isAlive: () => true }), null, 'a live holder keeps its lock');
+  assert.equal(clearStaleLock(file, { now: () => Date.now() + 2 * 60 * 60 * 1000, isAlive: () => true }), false);
+  assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')), { pid: 999999 }, 'a long-running owner keeps its lock');
   const fd = openLock(file, flags, 0o600, { isAlive: () => false }); fs.closeSync(fd);
   fs.writeFileSync(file, JSON.stringify({ pid: process.pid }));
   assert.equal(clearStaleLock(file, { isAlive: () => false }), false, 'this process never steals its own lock');

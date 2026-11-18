@@ -63,7 +63,6 @@
 .actor[data-error="true"] .nameplate{background:#f1ddcff5;border-color:#c08c72}
 .actor[data-stale="true"] .nameplate{background:#e4ded2ed;border-color:#b6ab96}
 .actor[data-selected="true"] .nameplate{border-color:#a18a5d;box-shadow:0 0 0 2px #fff0cb55,0 3px 7px #23160f24}
-.character-body img[data-asset="clawd-static-base.svg"]{width:48.3871%;height:61.5385%;left:25.8064%;top:30.7692%}
 .inspect-nickname{font-weight:650;color:#645334;font-size:13px}
 .animation-evidence{font-size:10px;line-height:1.65;color:#907952;margin:5px 0 9px}
 .state-explanation{font-size:10px;line-height:1.6;color:#7a5f3a;margin:0 0 9px;padding-left:14px}
@@ -281,7 +280,6 @@
    The existing paper width already reserves every enlarged work object. */
 .actor .character-body{--avatar-presentation-scale:1.8;overflow:visible}
 .character-body>img{transform:scale(var(--avatar-presentation-scale,1));transform-origin:calc(77.5px + 154px * .22580646) calc(115px + 129px * .65384616)}
-.character-body>img[data-asset="clawd-static-base.svg"]{width:75px;height:80px;left:40px;top:40px;transform-origin:37.5px 75px}
 /* Scale the held note about the same floor point as its walking wrist. */
 .actor[data-locomotion="true"] .actor-prop[data-carry="true"]{left:78.25px;top:-45.25px;transform:translate3d(-28.5px,0,0) scale(1.8) rotate(8deg)}
 

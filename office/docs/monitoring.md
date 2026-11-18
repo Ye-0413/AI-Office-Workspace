@@ -131,7 +131,7 @@ reason codes to `events/collector-drops.log` only when the spool folder exists;
 main logs new counts as `collector-drops` in `diagnostics.log`, and the panel
 shows a 24-hour total. [`stale-lock.cjs`](../lib/stale-lock.cjs) removes a
 lock only when it is a small regular file owned by this user and its PID has
-exited, its PID is older than an hour, or it has no PID and is older than ten
+exited, or it has no PID and is older than ten
 minutes.
 
 ### Result reactions

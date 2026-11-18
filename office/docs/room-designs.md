@@ -85,7 +85,7 @@ office/node_modules/.bin/electron office/test/room-designs-renderer.cjs
 
 Portable room tests check original artwork hashes, distinct furniture maps, each work area's entrance connection, settings persistence and complete casts through 100 identities. The production-page native fixture checks room/art geometry agreement, full actor envelopes, identities, retained body and work-animation owners, and reduced motion. Synthetic fixtures do not certify a live provider session or establish that names remain readable in an arbitrarily crowded room.
 
-The [public room gallery](../../docs/rooms/README.md) references the same original paintings and offers furniture, activity-area and entrance-route overlays. Its two original capsule markers use synthetic identities and production geometry, without loading restored avatar files. Export it with `node office/scripts/render-room-gallery.cjs` from the repository root; `--check` verifies exact HTML/manifest bytes against source and artwork hashes without rewriting them. The exporter requires all 33 interiors and does not duplicate the PNGs as screenshots.
+The [public room gallery](../../docs/rooms/README.md) references the same original paintings and offers furniture, activity-area and entrance-route overlays. Its two original position markers use synthetic identities and production geometry, without loading restored avatar files. Export it with `node office/scripts/render-room-gallery.cjs` from the repository root; `--check` verifies exact HTML/manifest bytes against source and artwork hashes without rewriting them. The exporter requires all 33 interiors and does not duplicate the PNGs as screenshots.
 
 ## Original venues and seasonal studies
 

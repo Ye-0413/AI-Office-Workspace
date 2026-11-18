@@ -1,6 +1,6 @@
 {
   "name": "ai-mini-office",
-  "version": "0.25.0",
+  "version": "0.25.1",
   "description": "Observe your agent team collaboration in your spare display",
   "main": "main.cjs",
   "type": "commonjs",
@@ -47,7 +47,6 @@
       "renderer/**/*",
       "assets/ORIGINAL-ARTWORK-LICENSE.txt",
       "assets/WORKSHOP-ARTWORK-NOTICE.md",
-      "assets/avatars.manifest.json",
       "assets/decorations/bunting.svg",
       "assets/decorations/clock.svg",
       "assets/decorations/fern.svg",

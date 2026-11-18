@@ -8,7 +8,7 @@
 
 A local macOS studio for watching real, independent AI sessions inhabit a little room. Designed for a five-inch 1280×720 secondary display.
 
-[Download v0.25.0](https://github.com/Ye-0413/AI-Office-Workspace/releases/tag/v0.25.0) · [Release notes / 版本说明](../docs/releases/release-v0.25.0.md) · [English project home](../README.md) · [简体中文首页](../README.zh-CN.md) · [Originality / 原创声明](../ORIGINALITY.md)
+[Download v0.25.1](https://github.com/Ye-0413/AI-Office-Workspace/releases/tag/v0.25.1) · [Release notes / 版本说明](../docs/releases/release-v0.25.1.md) · [English project home](../README.md) · [简体中文首页](../README.zh-CN.md) · [Originality / 原创声明](../ORIGINALITY.md)
 
 ## Watch the studio / 观看演示
 
@@ -28,13 +28,13 @@ A local macOS studio for watching real, independent AI sessions inhabit a little
 
 真实 v0.24.0 App 录屏，后期使用 AI Work Space 品牌与中英双语文案；动作图鉴镜头已标注为演示。Recorded in the real v0.24.0 app, with updated AI Work Space titles, bilingual captions and labeled Motion gallery demonstrations. [录制说明与来源 / Recording details & credits](../docs/media/README.md).
 
-Release v0.25.0 includes both Pixel and Painted avatars, with Pixel selected by default. The verified platform is **macOS 13+ on Apple Silicon / arm64**. Current packages use local ad-hoc signing and are **not Apple-notarized**. Install the DMG or ZIP from the Release page; installed users do not need Node.js.
+Release v0.25.1 includes both Pixel and Painted avatars, with Pixel selected by default. The verified platform is **macOS 13+ on Apple Silicon / arm64**. Current packages use local ad-hoc signing and are **not Apple-notarized**. Install the DMG or ZIP from the Release page; installed users do not need Node.js.
 
-v0.25.0 包含像素和手绘两种头像风格，默认使用像素风。可验证平台为 **macOS 13+、Apple Silicon／arm64**；当前安装包采用本地 ad-hoc 签名，**尚未经过 Apple 公证**。从 Release 下载 DMG 或 ZIP，安装后无需另装 Node.js。
+v0.25.1 包含像素和手绘两种头像风格，默认使用像素风。可验证平台为 **macOS 13+、Apple Silicon／arm64**；当前安装包采用本地 ad-hoc 签名，**尚未经过 Apple 公证**。从 Release 下载 DMG 或 ZIP，安装后无需另装 Node.js。
 
-The v0.25.0 packages contain **AI Work Space.app**. Original v0.24.0 downloads retain their earlier name.
+The v0.25.1 packages contain **AI Work Space.app**. Original v0.24.0 downloads retain their earlier name.
 
-v0.25.0 安装包包含 **AI Work Space.app**；v0.24.0 的原始下载保留旧名称。
+v0.25.1 安装包包含 **AI Work Space.app**；v0.24.0 的原始下载保留旧名称。
 
 Current builds use the manually selected Agent size for bodies and nameplates. If the main-agent cast reaches capacity, the room may use exactly 90% of that size; it never compounds this reduction or rewrites the saved preference, and restores the manual size when the cast fits again. Completed observed mains remain visibly on standby, quietly dozing or playing, until new real work needs the floor. Helpers retain a smaller body and label frame, moving characters may cross through each other, and settled positions keep their full body and nameplate envelopes separate. Local session accounting now covers seven AI tools, with Daily Token and Weekly usage on the homepage. Supported OpenCode and MiMo questions can receive an explicit manual answer through their native question API. Chinese nicknames remain 155 complete mythological names from the Shan Hai Jing, and the social library retains twelve pair choreographies. Active session families survive history-capacity pressure, and passive metadata cannot break an existing in-process usage interval.
 
@@ -78,7 +78,7 @@ Daily room uses a stable Hong Kong date schedule: six different everyday interio
 
 公开演示采用生产渲染模块的离线原生采样，以合成会话展示。[两种风格的活动预览与录制说明](../docs/animations/README.md) · [像素风静态预览](../docs/animations/pixel-overview.png) · [手绘风静态预览](../docs/animations/painted-overview.png)。
 
-保留的旧关节渲染器另有 88 套参考动作，其步态／分身和双人道具图使用原创示意外观，不代表当前工坊伙伴的材质动作。公开图鉴中的离线采样帧率不代表真实房间运行帧率。
+公开图鉴中的离线采样帧率与实际房间运行帧率分别测量。
 
 ## 一键初始化观察配置
 
@@ -89,6 +89,10 @@ Daily room uses a stable Hong Kong date schedule: six different everyday interio
 每个工具的状态只依据证据：「已配置」表示观察入口已安装但从未收到事件；「已收到首个事件」表示以前收到过真实事件（时间跨重启保留），本次运行尚未收到；「正在观察」表示本次运行已收到真实事件。应用被移动或换成另一份副本后，旧路径的观察入口会显示「需要修复」；点击「修复」只替换本应用拥有的条目（含旧路径遗留条目），被外部改过的条目仍保留并报错。「发送测试事件」用本应用的观察脚本送出一条带标记的记录，验证管道可用；它不会生成角色、会话或使用记录。观察脚本丢弃事件时只记录原因代码（无内容），面板显示 24 小时内的漏记数；遗留的锁文件仅在其进程已退出时自动回收。
 
 ## Agent 外观与快捷操作
+
+主角色在场时，房间默认每组最多展示 3 位活跃分身，其余计入主角色名牌。打开伙伴名单可按家族编号识别成员，查看折叠分身的任务，或勾选「在房间展开全部分身」。展开仅影响当前窗口，实际出场数量仍取决于可用工位。[5A 验收标准与复评](docs/5a-quality.md)
+
+With the main agent present, the room shows up to three active helpers per family by default. The main agent’s nameplate counts the rest. Open the roster to see each member’s family number, inspect a grouped helper, or select **Show all helpers in the room** for the current window. Expansion uses the available work docks.
 
 [认识五位伙伴：外形、性格与动作故事](../docs/companions.md#五位伙伴五种性格) · [Meet the five companions](../docs/companions.md#meet-the-workshop) · [支持的 AI 工具与功能](../README.zh-CN.md#支持哪些-ai-工具)
 
@@ -138,7 +142,7 @@ The resource-health controller observes only its image, source and presence owne
 
 本次观察中已完成的主 Agent 会留在台前待机，安静地打瞌睡或闲玩；没有新会话活动时持续保留。新的真实主 Agent 或分身开始活动时，待机角色退场让位，其真实祖先仍保留到分身归位。待机不增加工作时长或今日活跃计数，历史闲置记录不会因此重新入场。隐藏时暂停待机动画，减少动作和节能时保留静态姿态。
 
-主 Agent 重新活跃会撤销旧的等分身离场请求；分身归位期间的新工作会保留原关节、道具和动画进度。切换语言造成的名牌增长只取消过时路线，不截断仍在进行的回收。分身凝聚、返回或吸收期间调整尺寸，会先保存设置并显示等待提示，保持原安全尺寸，等该过程完成后再按新尺寸验证入场；仅因尺寸调整重新入场不会重复触发工作区反馈。外部角色图片加载失败时，原创备用身体在相同关节与坐标下继续显示；后续真实状态刷新会有限重试，图片恢复通过短透明度过渡衔接。备用身体不依赖失效图片，也不改变观察到的任务状态。
+主 Agent 重新活跃会撤销旧的等分身离场请求；分身归位期间的新工作会保留原关节、道具和动画进度。切换语言造成的名牌增长只取消过时路线，不截断仍在进行的回收。分身凝聚、返回或吸收期间调整尺寸，会先保存设置并显示等待提示，保持原安全尺寸，等该过程完成后再按新尺寸验证入场；仅因尺寸调整重新入场不会重复触发工作区反馈。工坊伙伴图集加载失败时，当前渲染器会显示中性备用造型，后续状态刷新会有限重试。
 
 多人确认退场时，布局先验证当前身体的实际离场路线；按当前手动尺寸核验路线，等身体真正走到门口后才释放位置。新工作、新分身与语言变化保留原身体并重验剩余路线；手动尺寸变化重新核验身体与名牌几何。分身出现、归返、吸收、等分身和主 Agent 离场文案随界面语言同步更新。
 
@@ -164,7 +168,7 @@ Token 覆盖 **Codex、Claude Code、Gemini CLI、Pi、OMP、Kimi Code 与 OpenC
 
 公开仓库包含五只工坊伙伴、场景与本项目图标，可直接在 `office/` 中运行 `npm ci`、`npm test`、`npm start`，或构建本地应用；不需要还原上游角色素材。开发需要 Node.js 24+，构建原生辅助程序需要 macOS 与 Xcode Command Line Tools。
 
-只有需要旧角色兼容、且拥有相应权限时，才可选运行 `node scripts/prepare-local-artwork.cjs --from /absolute/path/to/original-project`，从明确授权的本地检出目录核验并导入素材。脚本不联网，受限角色与上游图标不在公开应用源码中；还原不会授予再分发许可。构建使用本项目的 `assets/studio-icon.png`；其 AI 辅助生成记录见 [图标提示](docs/studio-icon-prompt.txt)。
+构建使用本项目的 `assets/studio-icon.png`。AI 辅助生成记录见 [图标提示](docs/studio-icon-prompt.txt)。
 
 ## 本地体验
 
@@ -198,7 +202,7 @@ Codex 的线程 UUID 与每轮 ID 分开识别，子 Agent 日志中复制的父
 
 观察日志轮换时会先按文件身份排空保留文件的未读尾部，再读取新文件；每轮仍最多读取 64 KiB。损坏行和不同文件的 JSON 碎片会被隔离。GitHub 的 Office quality 工作流在 main 推送和 PR 上安装锁定依赖、重建原生锁并运行回归测试；公开源码检查无需还原角色素材。
 
-保留的旧关节渲染器覆盖十一种真实活动，**每类八套，共 88 套参考关节动作**（当前像素角色使用上文的 55 套逐帧动作）：思考与规划、阅读、搜索、写代码、设计、测试、构建、命令执行、等待工具、等待用户及错误。托腮、转笔、分解方案、推演分支；打字、调试、重构、核对补丁；展开卷轴、翻目录卡、检查测试边界、绕线装配等场景使用不同的道具及眼手脚编排。同一活动按约 18–24 秒可见工作时间自然轮换，普通事件刷新不会重启动作。每个完整身份分别累计各类活动时间，切换场景后会继续轮换，不重复从首个动作开始；离屏时间不算作工作时间。姿态与道具切换保留可中断的短暂衔接，工具结果和生命周期反应继续优先。动作只引用本地静态角色素材，不将受限 SVG 内容写入源码；减少动作、节能、隐藏、走路或离场时会暂停轮换。
+两种工坊头像风格各有 55 个活动循环，覆盖五种造型与十一类活动。真实会话的活动决定角色动作，同一身份的可见工作时间按活动累积，窗口隐藏期间暂停。
 
 ## Run and build
 
@@ -217,7 +221,7 @@ npm run verify:packaged-flow
 npm run build:mac
 ```
 
-The `.app` is generated in `../dist-mini-office/mac-arm64/`. The application contains Electron and its Node runtime; a packaged app does not require a separately installed Node or a running development server. `build:mac` also produces DMG and ZIP artifacts. Apple Silicon is the local verification target; an Intel build command is provided separately. Current local and v0.25.0 release builds use ad-hoc signing and are not Apple-notarized. macOS may identify the developer as unknown; check the published source and SHA-256 before deciding whether to open the app. No system-wide security disabling is required.
+The `.app` is generated in `../dist-mini-office/mac-arm64/`. The application contains Electron and its Node runtime; a packaged app does not require a separately installed Node or a running development server. `build:mac` also produces DMG and ZIP artifacts. Apple Silicon is the local verification target; an Intel build command is provided separately. Current local and v0.25.1 release builds use ad-hoc signing and are not Apple-notarized. macOS may identify the developer as unknown; check the published source and SHA-256 before deciding whether to open the app. No system-wide security disabling is required.
 
 Tests and builds first check that authored holiday profiles match the generated room catalog; the check never rewrites it. After intentionally editing a profile, run `npm run sync:rooms`, review the generated change, then run `npm run check:rooms`. Room artwork provenance and the full-catalog native check are described in [the room guide](docs/room-designs.md).
 
@@ -225,7 +229,7 @@ Tests and builds first check that authored holiday profiles match the generated 
 
 The default mode is **实时观察**. Existing hooks/plugins and the bounded Codex rollout observer supply real activity; native Gemini CLI, Pi and OMP session logs provide additional fresh read-only observations. Each session and reliably identified child agent has its own identity. Historical token imports never create a room actor or credit offline work time. There is no demonstration store, synthetic task timer, mode switch or demo IPC in the application. Synthetic events exist only in isolated regression fixtures.
 
-The retained legacy joint renderer has eight reference choreographies for each of eleven activities, for 88 total; the current workshop companions have 55 activity loops per avatar style. In the reference renderer, props and joint motion distinguish reading, search, planning, coding, design, testing, builds, execution, tool waits, user waits and error inspection. A bounded per-identity clock keeps each activity's accumulated visible work across page and room navigation. Offscreen and quiet intervals do not advance the cycle; metadata does not replay it.
+The workshop companions have 55 activity loops per avatar style. Props and body motion distinguish reading, search, planning, coding, design, testing, builds, execution, tool waits, user waits and error inspection. A bounded per-identity clock keeps each activity's accumulated visible work across page and room navigation. Offscreen and quiet intervals do not advance the cycle; metadata does not replay it.
 
 The connection panel installs or updates owned integrations only when explicitly selected. It preserves existing hooks and native approval behavior. Supported OpenCode/MiMo plugins also carry the request-scoped manual question channel; update an existing installation with an explicit reconnect or one-click Initialize, then follow the host's normal plugin reload/new-session path. Codex hook trust must still be reviewed in Codex; this app does not write trust hashes or approve tools. Unknown Cursor host versions use a conservative observation subset. A host must be available and run a real session before its end-to-end connection can be considered verified.
 
@@ -247,7 +251,7 @@ Source code remains **AGPL-3.0-only**. This repository retains and adapts upstre
 
 The five workshop characters are based on **user-supplied concepts**. The original painted edition uses AI-assisted artwork, and the pixel edition uses integer-grid sprites drawn by the project. Their self-contained [Workshop artwork notice](assets/WORKSHOP-ARTWORK-NOTICE.md) ships with the app. Artwork retains **All Rights Reserved**; the source-code license grants no open artwork license. Existing [upstream artwork restrictions](assets/ORIGINAL-ARTWORK-LICENSE.txt) remain separate. See the [bilingual project originality statement](../ORIGINALITY.md) for the full scope and sources.
 
-The office background was generated with the built-in image tool; its prompt and source are preserved in `docs/office-art-prompt.txt` and `assets/office-room-source.png`. The 33 independent room paintings and exact prompts, source basenames and hashes are in `assets/scenes/rooms/generation.json`; the reference-based base interiors and 43 seasonal paintings have separate generation records. The public app source omits restricted upstream character artwork and the upstream icon. The optional authorized local restoration process does not grant redistribution rights.
+The office background was generated with the built-in image tool; its prompt and source are preserved in `docs/office-art-prompt.txt` and `assets/office-room-source.png`. The 33 independent room paintings and exact prompts, source basenames and hashes are in `assets/scenes/rooms/generation.json`; the reference-based base interiors and 43 seasonal paintings have separate generation records. The public app source omits restricted upstream character artwork and the upstream icon.
 
 Protocol sources, fixtures and verification boundaries are recorded in `docs/provider-events.md`. Completion evidence is tracked against the full requested scope in `docs/goal-evidence.md`.
 

@@ -53,7 +53,7 @@
     return api;
   }
 
-  function build(input,{registry}={}){
+  function build(input,{registry,ledger}={}){
     const sessions=(Array.isArray(input)?input:[]).filter(s=>s&&validId(s.id));
     const byId=new Map(sessions.map(s=>[s.id,s]));
     const info=new Map();
@@ -61,7 +61,12 @@
       const chain=[s.id],seen=new Set(chain);let cursor=s;
       while(cursor.parentId&&byId.has(cursor.parentId)&&!seen.has(cursor.parentId)){cursor=byId.get(cursor.parentId);chain.push(cursor.id);seen.add(cursor.id);}
       const cycle=Boolean(cursor.parentId&&seen.has(cursor.parentId));
-      const rootId=cycle?chain.slice(chain.indexOf(cursor.parentId)).sort()[0]:cursor.id;
+      // A missing parent still has an observed identity. Siblings that
+      // arrive first must reserve the same badge, palette and body design.
+      let rootId = cycle ? chain.slice(chain.indexOf(cursor.parentId)).sort()[0] : cursor.parentId || cursor.id;
+      if (ledger && !cycle && cursor.parentId) {
+        rootId = ledger.rootFor(s.id) || ledger.parentChain(s.id).at(-1) || rootId;
+      }
       info.set(s.id,{id:s.id,parentId:s.parentId||'',rootId,depth:chain.length-1,ancestors:chain.slice(1),color:color(rootId),children:0,descendants:0,cycle});
     }
     // The caller may have updated with a fuller clone ledger already. Do not
@@ -74,5 +79,26 @@
     for(const s of sessions)visit(s);
     return {info,byId,ordered};
   }
-  return Object.freeze({build,color,COLORS,lighten,createPaletteRegistry});
+  // Only fold live helpers under a main that is present to carry their count.
+  // Prefer shallow relatives so a promoted helper has its ancestor on screen.
+  function foldedHelpers(sessions, graph, residents, isActive) {
+    const mains = new Set(sessions.filter(session => !session.parentId).map(session => session.id));
+    const groups = new Map();
+    for (const session of sessions) {
+      const family = graph.info.get(session.id);
+      if (!session.parentId || !family || !mains.has(family.rootId) || !isActive(session)) continue;
+      if (!groups.has(family.rootId)) groups.set(family.rootId, []);
+      groups.get(family.rootId).push(family);
+    }
+    const folded = new Set();
+    for (const members of groups.values()) {
+      if (members.length <= 3) continue;
+      members.sort((a, b) => a.depth - b.depth ||
+        Number(residents.has(b.id)) - Number(residents.has(a.id)) || a.id.localeCompare(b.id));
+      for (const member of members.slice(3)) folded.add(member.id);
+    }
+    return folded;
+  }
+
+  return Object.freeze({build,color,COLORS,lighten,createPaletteRegistry,foldedHelpers});
 });
