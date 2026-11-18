@@ -12,6 +12,24 @@ app.commandLine.appendSwitch('force-color-profile', 'srgb');
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 let win; const errors = [];
 const run = source => win.webContents.executeJavaScript(source, true);
+// capturePage can return a previous compositor frame even after two RAFs.
+// A large, contrasting swatch outside the sampled bodies identifies each capture.
+async function captureCommitted(crop, bright) {
+  await run(`window.paintMarker ??= document.body.appendChild(document.createElement('span'));
+    paintMarker.style.cssText = 'position:fixed;left:0;top:0;width:16px;height:16px;z-index:2147483647;background:' +
+      (${bright} ? '#fff' : '#000');
+    paint()`);
+  const end = Date.now() + 5000;
+  while (Date.now() < end) {
+    const frame = await win.webContents.capturePage(crop);
+    const { width, height } = frame.getSize();
+    const x = Math.round(8 * width / crop.width), y = Math.round(8 * height / crop.height);
+    const pixel = frame.toBitmap().subarray((y * width + x) * 4, (y * width + x) * 4 + 4);
+    if (pixel[3] === 255 && [...pixel.subarray(0, 3)].every(channel => bright ? channel > 240 : channel < 15)) return frame;
+    await run('paint()');
+  }
+  throw new Error('The compositor did not return the requested capture');
+}
 async function until(source, label) { const end = Date.now() + 15000; while (Date.now() < end) { if (await run(source)) return; await wait(30); } throw Error(label); }
 const guard = setTimeout(() => app.exit(2), 90000);
 
@@ -39,7 +57,7 @@ app.whenReady().then(async () => {
   window.settle=async()=>{for(const item of items)for(const a of item.body.getAnimations({subtree:true})){if(a.effect.getTiming().iterations!==Infinity)a.finish();else a.pause();}await paint();};
   </script></body></html>`;
   const file = path.join(scratch, 'frames.html'); fs.writeFileSync(file, html);
-  win = new BrowserWindow({ width: 1100, height: 900, show: false, webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false } });
+  win = new BrowserWindow({ width: 1100, height: 900, useContentSize: true, enableLargerThanScreen: true, show: false, webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false } });
   win.webContents.on('console-message', detail => { if (detail.level === 'error') errors.push(detail.message); });
   await win.loadFile(file);
   win.webContents.debugger.attach('1.3');
@@ -207,8 +225,7 @@ app.whenReady().then(async () => {
   await until(`idleClocks.flat().every(a=>a.playState==='running')`, 'Showing resumes the same idle expression clocks');
   const crop = { x: 0, y: 0, width: 1100, height: 360 };
   const bodyBounds = await run(`expressions.map(item=>item.body.getBoundingClientRect().toJSON())`);
-  await run('paint()');
-  const beforeRare = await win.webContents.capturePage(crop);
+  const beforeRare = await captureCommitted(crop, false);
   const cues = [
     {kind:'glance',direction:-1,clip:'glance-left'}, {kind:'glance',direction:1,clip:'glance-right'},
     {kind:'wave',clip:'greet'}, {kind:'startle',clip:'startle'},
@@ -227,10 +244,13 @@ app.whenReady().then(async () => {
     const clip = CLIPS[cue.clip], expected = clip.first + Math.floor(clip.frames * cue.phase + 1e-7);
     for (const state of states) assert.deepEqual(state, { sprite:1, normal:0, cel:expected }, cue.kind+' '+cue.phase);
   }
-  const afterRare = await win.webContents.capturePage(crop);
-  const { width } = afterRare.getSize(), density = width / crop.width;
+  const afterRare = await captureCommitted(crop, true);
+  await run('paintMarker.remove(); void 0');
+  const { width, height } = afterRare.getSize(), density = width / crop.width;
+  assert.deepEqual(beforeRare.getSize(), afterRare.getSize());
+  assert.equal(height, Math.round(crop.height * density));
   const normalBytes = beforeRare.toBitmap(), rareBytes = afterRare.toBitmap();
-  for (const { left, right, top } of bodyBounds) {
+  for (const [index, { left, right, top }] of bodyBounds.entries()) {
     let visibleChanges = 0;
     for (let y = Math.ceil((top - 35) * density); y < Math.floor(top * density); y++) {
       for (let x = Math.ceil(left * density); x < Math.floor(right * density); x++) {
@@ -238,7 +258,7 @@ app.whenReady().then(async () => {
         if (rareBytes[pixel] !== normalBytes[pixel] || rareBytes[pixel + 1] !== normalBytes[pixel + 1] || rareBytes[pixel + 2] !== normalBytes[pixel + 2]) visibleChanges++;
       }
     }
-    assert.ok(visibleChanges >= 4, 'The rare decoration paints above the original body crop');
+    assert.ok(visibleChanges >= 4, Appearance.catalog[index].id + ' paints above its body crop (' + visibleChanges + ' changed pixels)');
   }
   if (process.env.MINI_OFFICE_PREVIEW_DIR) {
     await run(`document.querySelector('h1').textContent='访客彩蛋 / Rare visitor expressions';paint()`);

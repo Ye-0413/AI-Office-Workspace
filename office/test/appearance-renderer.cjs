@@ -34,7 +34,7 @@ app.whenReady().then(async () => {
   for (const [name, action] of Object.entries(handlers)) ipcMain.handle('office:' + name, (_event, ...args) => action(...args));
   for (const name of ['connect', 'disconnect', 'setup-initialize', 'answer-question', 'open-source']) ipcMain.handle('office:' + name, () => { errors.push('Unexpected work IPC: ' + name); return { ok: true }; });
   ipcMain.on('office:renderer-error', (_event, error) => errors.push(error));
-  win = new BrowserWindow({ width: 1280, height: 720, useContentSize: true, show: false, focusable: false, webPreferences: { preload: path.join(__dirname, '../preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false } });
+  win = new BrowserWindow({ width: 1280, height: 720, useContentSize: true, enableLargerThanScreen: true, show: false, focusable: false, webPreferences: { preload: path.join(__dirname, '../preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false } });
   win.webContents.session.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*'] }, (detail, callback) => { errors.push('Unexpected network: ' + detail.url); callback({ cancel: true }); });
   await win.loadFile(path.join(__dirname, '../renderer/index.html'));
   win.showInactive();
@@ -188,4 +188,4 @@ app.whenReady().then(async () => {
   checks.push('native foreground pixels prove the low-chroma Folio overflow variant is visibly different');
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({ ok: true, roots: 6, nestedHelpers: 3, checks, pixelDifference, expectedFailures, errors, previewDirectory: process.env.MINI_OFFICE_PREVIEW_DIR || null }));
-}).catch(error => { console.error(error); process.exitCode = 1; }).finally(() => { clearTimeout(watchdog); win?.destroy(); fs.rmSync(scratch, { recursive: true, force: true }); app.exit(process.exitCode || 0); });
+}).catch(error => { console.error(error); process.exitCode = 1; }).finally(() => { clearTimeout(watchdog); win?.destroy(); fs.rmSync(scratch, { recursive: true, force: true, maxRetries: 4, retryDelay: 100 }); app.exit(process.exitCode || 0); });
