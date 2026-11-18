@@ -17,6 +17,8 @@ app.whenReady().then(async()=>{
   ipcMain.on('office:renderer-error',(_,error)=>errors.push(error));
   win=new BrowserWindow({width:1280,height:720,show:true,focusable:false,webPreferences:{preload:path.join(__dirname,'../preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,backgroundThrottling:false}});
   await win.loadFile(path.join(__dirname,'../renderer/index.html'));
+  win.webContents.debugger.attach('1.3');
+  await win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
   const run=source=>win.webContents.executeJavaScript(source,true);
   const state=()=>run(`JSON.stringify([...document.querySelectorAll('.actor[data-session-id]')].map(node=>({id:node.dataset.sessionId,transform:node.style.transform,walking:node.dataset.walking||'',reaction:node.dataset.reaction||'',selected:node.dataset.selected||''})).sort((a,b)=>a.id.localeCompare(b.id)))`);
   await until(async()=>(await run(`document.querySelectorAll('.actor[data-session-id]').length`))===2,'both observed sessions are drawn');

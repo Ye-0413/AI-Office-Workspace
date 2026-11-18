@@ -28,6 +28,8 @@ app.whenReady().then(async()=>{
  for(const event of ['hide','show','minimize','restore'])win.on(event,()=>{if(nativeLatency&&win&&!win.isDestroyed())nativeLatency.events.push({event,afterRequestMs:Date.now()-nativeLatency.requestedAt,visible:win.isVisible(),minimized:win.isMinimized()});});
  win.webContents.on('console-message',detail=>{if(detail.level==='error')errors.push(detail.message);});
  await win.loadFile(path.join(__dirname,'../renderer/index.html'));
+ win.webContents.debugger.attach('1.3');
+ await win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
  heartbeat=setInterval(broadcast,2000);
  await run(`(()=>{window.nativeCue=null;window.nativeCount=0;const layer=document.getElementById('station-arrivals');new MutationObserver(records=>{for(const record of records)for(const node of record.addedNodes)if(node.nodeType===1&&node.matches('.station-arrival')){nativeCount++;nativeCue={node,start:performance.now(),rows:0};const sample=()=>{if(!nativeCue.node.isConnected)return;nativeCue.rows++;requestAnimationFrame(sample)};requestAnimationFrame(sample);}}).observe(layer,{childList:true});})()`);
  sessions=[{id:'codex:visibility-main',provider:'codex',sessionId:'visibility-main',status:'active',activity:'reading',activeTools:1,lastEventAt:Date.now(),events:[],projectPath:'/fixture/native-visibility'}];broadcast();

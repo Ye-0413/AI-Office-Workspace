@@ -20,6 +20,8 @@ app.whenReady().then(async () => {
   win = new BrowserWindow({ width: 1100, height: 360, useContentSize: true, show: true, focusable: false, webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, backgroundThrottling: false } });
   win.webContents.on('console-message', detail => { if (detail.level === 'error') errors.push(detail.message); });
   await win.loadFile(file);
+  win.webContents.debugger.attach('1.3');
+  await win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
   const end = Date.now() + 10000;
   while (!await run(`entries.every(e=>e.body.querySelector('.creature-performance').dataset.artState==='healthy')`)) { if (Date.now() > end) throw Error('Pixel standby bodies did not load'); await pause(30); }
   assert.equal(await run(`entries.every(e=>e.body.querySelector('.creature-performance').dataset.pose===(e.standby.state.phase==='play'?'idle':'resting')&&e.standby.state.animations===3)`), true);
