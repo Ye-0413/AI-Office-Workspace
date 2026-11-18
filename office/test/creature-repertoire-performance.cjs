@@ -72,13 +72,16 @@ app.whenReady().then(async () => {
       const controller=OfficeCreaturePerformance.create({actorNode:actor,body,image,session:spec.session,design:spec.design});controller.update(spec.session,{now:0});specimens.push({...spec,actor,body,image,controller});
     }</script></body></html>`;
   const file = path.join(scratch, 'benchmark.html'); fs.writeFileSync(file, html);
-  win = new BrowserWindow({ width: 1080, height: 860, show: false, focusable: false, useContentSize: true, webPreferences: { nodeIntegration: false, contextIsolation: true, backgroundThrottling: false } });
+  win = new BrowserWindow({ width: 1080, height: 860, show: false, focusable: false, useContentSize: true, enableLargerThanScreen: true, webPreferences: { nodeIntegration: false, contextIsolation: true, backgroundThrottling: false } });
   win.webContents.on('console-message', detail => { if (detail.level === 'error') errors.push(detail.message); });
   await win.loadFile(file);
+  win.showInactive();
+  win.webContents.debugger.attach('1.3');
+  await win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
+  await until(`document.visibilityState==='visible' && !matchMedia('(prefers-reduced-motion: reduce)').matches`, 'Benchmark window becomes visible with normal motion');
   await until(`specimens.length===100&&specimens.every(item=>item.body.querySelector('.creature-performance')?.dataset.artState==='healthy'&&item.body.querySelector('.cp-frames')?.dataset.ready==='true')`, 'All one hundred real renderers must decode their local atlases and activity cels');
-  await wait(400);
   await run(`specimens.forEach(item=>item.controller.update(item.session,{now:1000}));void 0`);
-  await run(`Promise.all(specimens.flatMap(item=>item.body.getAnimations({subtree:true})).map(animation=>animation.ready))`);
+  await until(`specimens.every(item=>item.body.querySelector('.cp-frame')?.getAnimations().some(animation=>animation.playState==='running'))`, 'All one hundred bodies own a running native activity reel');
   const metrics = await run(`(()=>{
     const grid=document.querySelector('.bench-grid'),observer=new MutationObserver(()=>{});observer.observe(grid,{subtree:true,attributes:true,childList:true,characterData:true});
     window.clockOwners=specimens.flatMap(item=>item.body.getAnimations({subtree:true}));const starts=clockOwners.map(animation=>animation.startTime),durations=[];
@@ -95,8 +98,6 @@ app.whenReady().then(async () => {
   assert.ok(metrics.animations >= 100); assert.equal(metrics.retained, true); assert.equal(metrics.allRunning, true);
   assert.equal(await run(`specimens.every(item=>item.body.querySelectorAll('.cp-frame').length===1&&item.body.querySelector('.cp-frame').getAnimations().length===1)`), true, 'every cast member has one activity image and one clock');
   checks.push('2,500 unchanged metadata updates cause zero DOM mutations and retain every original clock and start time');
-  win.showInactive();
-  await until(`document.visibilityState==='visible'`, 'Benchmark window becomes visible for native presentation sampling');
   const { rectangles, viewport, visibleActors } = await run(`(()=>{
     const rectangles=specimens.slice(0,5).map(item=>({
       id:item.design.id, ...item.body.getBoundingClientRect().toJSON()
