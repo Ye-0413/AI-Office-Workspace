@@ -19,12 +19,24 @@ app.whenReady().then(async () => {
   const file = path.join(scratch, 'preview.html'); fs.writeFileSync(file, html);
   win = new BrowserWindow({ width: 1100, height: 360, useContentSize: true, show: true, focusable: false, webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, backgroundThrottling: false } });
   win.webContents.on('console-message', detail => { if (detail.level === 'error') errors.push(detail.message); });
-  await win.loadFile(file);
+  await win.loadURL('about:blank');
   win.webContents.debugger.attach('1.3');
   await win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
+  await win.loadFile(file);
+  const readStandby = `entries.map(e=>({
+    health:e.body.querySelector('.creature-performance').dataset.artState,
+    pose:e.body.querySelector('.creature-performance').dataset.pose,
+    phase:e.standby.state.phase,
+    animations:e.standby.state.animations
+  }))`;
   const end = Date.now() + 10000;
-  while (!await run(`entries.every(e=>e.body.querySelector('.creature-performance').dataset.artState==='healthy')`)) { if (Date.now() > end) throw Error('Pixel standby bodies did not load'); await pause(30); }
-  assert.equal(await run(`entries.every(e=>e.body.querySelector('.creature-performance').dataset.pose===(e.standby.state.phase==='play'?'idle':'resting')&&e.standby.state.animations===3)`), true);
+  let started;
+  do {
+    started = await run(readStandby);
+    if (started.every(e => e.health === 'healthy' && e.animations === 3 && e.pose === (e.phase === 'play' ? 'idle' : 'resting'))) break;
+    if (Date.now() > end) throw Error('Pixel standby did not settle into its authored pose and clocks: ' + JSON.stringify(started));
+    await pause(30);
+  } while (true);
   const fixed = await run(`entries.map(e=>({box:e.node.getBoundingClientRect().toJSON(),label:e.node.querySelector('.label').getBoundingClientRect().toJSON(),session:JSON.stringify(e.session)}))`);
   await run(`window.owners=entries.map(e=>e.body.getAnimations({subtree:true}).filter(a=>a.effect?.target?.matches('.cp-shell,.standby-sleep,.standby-toy')));for(const e of entries)e.standby.update({standby:true,hidden:true});void 0`);
   const before = await run('owners.map(row=>row.map(a=>a.currentTime))'); await pause(160);
