@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="token-usage.css">
   <link rel="stylesheet" href="home-token-usage.css">
+  <link rel="stylesheet" href="home-codex-quota.css">
   <link rel="stylesheet" href="usage-recap.css">
   <link rel="stylesheet" href="number-flip.css">
   <link rel="stylesheet" href="manual-questions.css">
@@ -81,6 +82,7 @@
   <script defer src="usage-recap.js"></script>
   <script defer src="number-flip.js"></script>
   <script defer src="home-token-usage.js"></script>
+  <script defer src="home-codex-quota.js"></script>
   <script defer src="manual-questions.js"></script>
   <script defer src="setup-assistant.js"></script>
   <script defer src="../lib/venue-model.js"></script>
@@ -119,7 +121,28 @@
         <div class="room-prop prop-desk" data-zone-prop="desk" aria-hidden="true"><span>&lt;/&gt;</span></div>
         <div class="room-prop prop-sofa" data-zone-prop="sofa" aria-hidden="true"><i></i><i></i><i></i></div>
         <button id="day-clock" class="day-clock" type="button"><span class="clock-label"><span>香港时间</span><span class="clock-status"><span id="day-phase"></span><span class="day-clock-icon" aria-hidden="true">☀</span></span></span><time id="hk-clock">00:00</time><time id="hk-date"></time><span class="clock-feet" aria-hidden="true"></span></button>
-        <div id="activity-stats" class="activity-stats" title="按香港日期统计实际观察到的 Agent，同一会话多轮只计一次；主 Agent 与分身分别去重，重启后保留。"><div class="activity-agent-stats"><span class="stats-label">今日活跃 Agent</span><strong id="today-total">—</strong><span class="stats-detail"><span id="today-roots">—</span><span id="today-helpers">—</span></span></div><dl id="home-token-usage" class="home-token-usage" tabindex="0" aria-label="Token 用量" aria-describedby="home-token-state"><div><dt id="home-token-daily-label">今日 Token</dt><dd id="home-token-daily">—</dd></div><div><dt id="home-token-weekly-label">本周用量</dt><dd id="home-token-weekly">—</dd></div></dl><span id="home-token-state" class="sr-only">来源：受支持工具的本机会话日志；按香港自然日及周一至周日统计全部项目，不推算费用或额度。</span></div>
+        <div id="activity-stats" class="activity-stats" title="按香港日期统计实际观察到的 Agent，同一会话多轮只计一次；主 Agent 与分身分别去重，重启后保留。">
+          <div class="activity-agent-stats"><span class="stats-label">今日活跃 Agent</span><strong id="today-total">—</strong><span class="stats-detail"><span id="today-roots">—</span><span id="today-helpers">—</span></span></div>
+          <dl id="home-token-usage" class="home-token-usage" tabindex="0" aria-label="Token 用量" aria-describedby="home-token-state"><div><dt id="home-token-daily-label">今日 Token</dt><dd id="home-token-daily">—</dd></div><div><dt id="home-token-weekly-label">本周用量</dt><dd id="home-token-weekly">—</dd></div></dl><span id="home-token-state" class="sr-only">来源：受支持工具的本机会话日志；按香港自然日及周一至周日统计全部项目，不推算费用或额度。</span>
+          <div id="home-codex-quota" class="home-codex-quota" data-state="unavailable">
+            <button id="home-codex-quota-toggle" class="home-codex-quota-toggle" type="button" aria-label="Codex 额度" aria-expanded="false" aria-controls="home-codex-quota-details" aria-describedby="home-codex-quota-accessible">
+              <span class="codex-quota-heading"><span id="home-codex-quota-label">Codex 额度</span><span class="codex-quota-chevron" aria-hidden="true">▾</span></span>
+              <span class="codex-quota-window" id="home-codex-quota-primary" aria-hidden="true"><span class="codex-quota-line"><span id="home-codex-quota-primary-label">1</span><b id="home-codex-quota-primary-value">—</b></span><span class="codex-quota-track"><span id="home-codex-quota-primary-fill"></span></span></span>
+              <span class="codex-quota-window" id="home-codex-quota-secondary" aria-hidden="true"><span class="codex-quota-line"><span id="home-codex-quota-secondary-label">2</span><b id="home-codex-quota-secondary-value">—</b></span><span class="codex-quota-track"><span id="home-codex-quota-secondary-fill"></span></span></span>
+              <span id="home-codex-quota-status" class="codex-quota-status">等待记录</span>
+            </button>
+            <span id="home-codex-quota-accessible" class="sr-only"></span>
+            <div id="home-codex-quota-details" class="home-codex-quota-details" role="group" aria-labelledby="home-codex-quota-details-title" hidden>
+              <strong id="home-codex-quota-details-title">Codex 额度</strong>
+              <p id="home-codex-quota-details-status" class="codex-quota-details-status"></p>
+              <dl class="codex-quota-details-windows">
+                <div id="home-codex-quota-primary-detail"><dt id="home-codex-quota-primary-detail-label"></dt><dd id="home-codex-quota-primary-detail-value"></dd></div>
+                <div id="home-codex-quota-secondary-detail"><dt id="home-codex-quota-secondary-detail-label"></dt><dd id="home-codex-quota-secondary-detail-value"></dd></div>
+              </dl>
+              <p id="home-codex-quota-observed"></p><p id="home-codex-quota-source" class="codex-quota-source"></p>
+            </div>
+          </div>
+        </div>
         <div class="wall-clock" aria-hidden="true"><i class="wall-hour"></i><i class="wall-minute"></i><i class="wall-pin"></i></div>
         <div id="archive-stack" class="archive-stack" aria-hidden="true"><i></i><i></i><i></i></div>
         <div class="floor-sign sign-library" data-zone-label="library">资料书架</div>

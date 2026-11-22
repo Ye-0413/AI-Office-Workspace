@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { createCodexMonitor, LIMITS } = require('../lib/codex-monitor.cjs');
+const { createCodexQuota } = require('../lib/codex-quota.cjs');
 const { createSessionStore } = require('../lib/session-store.cjs');
 const Director = require('../lib/animation-director.js');
 const { normalizeEvent } = require('../lib/provider-events.cjs');
@@ -42,6 +43,123 @@ function historicalFile(f, daysAgo, name, rows, modifiedAt = f.now()) {
   fs.utimesSync(file, modifiedAt / 1000, modifiedAt / 1000);
   return file;
 }
+test('quota observations from startup and live writes never create sessions or mix Spark limits', t => {
+  const f = fixture(t), quota = createCodexQuota({ now: f.now });
+  const count = (used, at = f.now(), extra = {}) => f.row('event_msg', { type: 'token_count', rate_limits: {
+    limit_id: 'codex', primary: { used_percent: used, window_minutes: 300 }, ...extra,
+  } }, at);
+  const p = f.file('quota', [f.meta('quota'), f.row('turn_context', { model: 'gpt-6.1-sol' }), count(12)]);
+  const m = f.monitor({ onQuota: input => quota.observe(input) });
+  m.start();
+  assert.equal(f.events.length, 0, 'quota-only startup does not create activity');
+  assert.equal(quota.snapshot().windows[0].usedPercent, 12);
+  f.tick(100);
+  fs.appendFileSync(p, count(14) + '\n'); m.poll();
+  assert.equal(quota.snapshot().windows[0].usedPercent, 14, 'quota-only live records are observed');
+  assert.equal(f.events.length, 0);
+  f.tick(100);
+  fs.appendFileSync(p, [f.row('turn_context', { model: 'gpt-5.3-codex-spark' }), count(95)].join('\n') + '\n'); m.poll();
+  assert.equal(quota.snapshot().windows[0].usedPercent, 14, 'a generic ID can still belong to Spark');
+  f.tick(100);
+  fs.appendFileSync(p, f.row('event_msg', { type: 'token_count', model: 'gpt-6.1-sol',
+    rate_limits: { limit_id: 'codex', primary: { used_percent: 97 } } }) + '\n'); m.poll();
+  assert.equal(quota.snapshot().windows[0].usedPercent, 14, 'conflicting same-turn model evidence is ambiguous');
+  f.tick(100);
+  fs.appendFileSync(p, [f.row('turn_context', { model: 'gpt-6.1-sol' }), count(99, f.now(), { limit_id: 'codex_future_model' })].join('\n') + '\n'); m.poll();
+  assert.equal(quota.snapshot().windows[0].usedPercent, 14, 'unknown model-specific IDs are not generic quota');
+  assert.equal(f.events.length, 0);
+});
+
+test('a bounded tail without turn context cannot misclassify a generic Spark limit', t => {
+  const f = fixture(t), quota = createCodexQuota({ now: f.now });
+  const filler = JSON.stringify({ type: 'padding', payload: { text: 'x'.repeat(900) } });
+  f.file('truncated-model', [f.meta('truncated-model'), f.row('turn_context', { model: 'gpt-5.3-codex-spark' }),
+    ...Array.from({ length: Math.ceil(LIMITS.tail / 800) }, () => filler),
+    f.row('event_msg', { type: 'token_count', rate_limits: { limit_id: 'codex', primary: { used_percent: 50 } } })]);
+  const m = f.monitor({ onQuota: input => quota.observe(input) }); m.start();
+  assert.equal(quota.snapshot().available, false);
+  assert.equal(f.events.length, 0);
+});
+
+test('new turns clear the prior model hint before accepting quota', t => {
+  const f = fixture(t), quota = createCodexQuota({ now: f.now });
+  const count = () => f.row('event_msg', { type: 'token_count', rate_limits: { limit_id: 'codex', primary: { used_percent: 80 } } });
+  const p = f.file('new-turn', [f.meta('new-turn'), f.row('turn_context', { model: 'gpt-6.1-sol' })]);
+  const m = f.monitor({ onQuota: input => quota.observe(input) }); m.start();
+  f.tick(100);
+  fs.appendFileSync(p, [f.start('next'), count()].join('\n') + '\n'); m.poll();
+  assert.equal(quota.snapshot().available, false, 'the preceding turn does not identify this turn');
+  f.tick(100);
+  fs.appendFileSync(p, [f.row('turn_context', { model: 'gpt-6.1-sol' }), count()].join('\n') + '\n'); m.poll();
+  assert.equal(quota.snapshot().windows[0].usedPercent, 80);
+});
+test('late, undated, future or wrong-turn context cannot relabel a Spark quota as generic', t => {
+  const f = fixture(t), quota = createCodexQuota({ now: f.now });
+  const p = f.file('context-order', [f.meta('context-order'), f.start('spark-turn'),
+    f.row('turn_context', { model: 'gpt-5.3-codex-spark', turn_id: 'spark-turn' })]);
+  const m = f.monitor({ onQuota: input => quota.observe(input) }); m.start();
+  f.tick(100);
+  const quotaRow = () => f.row('event_msg', { type: 'token_count', turn_id: 'spark-turn',
+    rate_limits: { limit_id: 'codex', primary: { used_percent: 75 } } });
+  fs.appendFileSync(p, [
+    f.row('turn_context', { model: 'gpt-6.1-sol', turn_id: 'spark-turn' }, f.now() - 60000),
+    f.row('event_msg', { type: 'task_started', turn_id: 'old-turn' }, f.now() - 60000),
+    JSON.stringify({ type: 'turn_context', payload: { model: 'gpt-6.1-sol' } }),
+    f.row('turn_context', { model: 'gpt-6.1-sol' }, f.now() + 180000),
+    f.row('turn_context', { model: 'gpt-6.1-sol', turn_id: 'another-turn' }),
+    quotaRow(),
+  ].join('\n') + '\n'); m.poll();
+  assert.equal(quota.snapshot().available, false);
+  f.tick(100);
+  fs.appendFileSync(p, [f.row('turn_context', { model: 'gpt-6.1-sol', turn_id: 'spark-turn' }), quotaRow()].join('\n') + '\n'); m.poll();
+  assert.equal(quota.snapshot().windows[0].usedPercent, 75, 'a later valid context can identify its own turn');
+});
+for (const kind of ['main', 'spark', 'wrong-turn', 'intervening-message', 'out-of-order', 'settings-same', 'settings-switch']) test(`bounded context recovery handles ${kind} evidence`, t => {
+  const f = fixture(t), quota = createCodexQuota({ now: f.now });
+  const at = f.now(), filler = JSON.stringify({ type: 'padding', payload: { text: 'x'.repeat(900) } });
+  const contextAt = kind === 'out-of-order' ? at - 2000 : at - 1000;
+  const rows = [f.meta(`lookback-${kind}`),
+    f.row('event_msg', { type: 'task_started', turn_id: 'turn-a' }, at - 1500),
+    f.row('turn_context', { turn_id: 'turn-a', model: kind === 'spark' ? 'gpt-5.3-codex-spark' : 'gpt-6.1-sol' }, contextAt)];
+  if (kind === 'intervening-message') rows.push(f.row('event_msg', { type: 'user_message' }, at - 500));
+  if (kind.startsWith('settings-')) rows.push(f.row('event_msg', { type: 'thread_settings_applied',
+    thread_settings: { model: kind === 'settings-same' ? 'gpt-6.1-sol' : 'gpt-5.3-codex-spark' } }, at - 500));
+  rows.push(...Array.from({ length: 340 }, () => filler), f.row('event_msg', {
+    type: 'token_count', turn_id: kind === 'wrong-turn' ? 'turn-b' : 'turn-a',
+    rate_limits: { limit_id: 'codex', primary: { used_percent: 33, window_minutes: 300 } },
+  }, at));
+  f.file(`lookback-${kind}`, rows);
+  const m = f.monitor({ onQuota: input => quota.observe(input) }); m.start();
+  for (let i = 0; i < 5; i++) m.poll();
+  assert.equal(quota.snapshot().available, kind === 'main' || kind === 'settings-same');
+  if (quota.snapshot().available) assert.equal(quota.snapshot().windows[0].usedPercent, 33);
+  assert.equal(f.events.length, 0, 'context recovery never replays task activity');
+});
+
+for (const [contextModel, settingsModel] of [['gpt-6.1-sol', 'gpt-5.3-codex-spark'], ['gpt-5.3-codex-spark', 'gpt-6.1-sol']]) {
+  test(`conflicting thread model settings invalidate the current turn hint (${contextModel})`, t => {
+    const f = fixture(t), quota = createCodexQuota({ now: f.now });
+    const p = f.file('changed-settings', [f.meta('changed-settings'), f.start('turn-a'),
+      f.row('turn_context', { model: contextModel, turn_id: 'turn-a' })]);
+    const m = f.monitor({ onQuota: input => quota.observe(input) }); m.start();
+    f.tick(100);
+    fs.appendFileSync(p, [f.row('event_msg', { type: 'thread_settings_applied', thread_settings: { model: settingsModel } }),
+      f.row('event_msg', { type: 'token_count', rate_limits: { limit_id: 'codex', primary: { used_percent: 33 } } })].join('\n') + '\n');
+    m.poll(); assert.equal(quota.snapshot().available, false);
+  });
+}
+
+test('context recovery stops at the bounded lookback rather than guessing an older model', t => {
+  const f = fixture(t), quota = createCodexQuota({ now: f.now });
+  const filler = JSON.stringify({ type: 'padding', payload: { text: 'x'.repeat(1000) } });
+  f.file('lookback-limit', [f.meta('lookback-limit'), f.start('turn-a'),
+    f.row('turn_context', { model: 'gpt-6.1-sol', turn_id: 'turn-a' }),
+    ...Array.from({ length: Math.ceil((LIMITS.quotaContext + LIMITS.tail) / 1000) + 500 }, () => filler),
+    f.row('event_msg', { type: 'token_count', rate_limits: { limit_id: 'codex', primary: { used_percent: 33 } } })]);
+  const m = f.monitor({ onQuota: input => quota.observe(input) }); m.start();
+  for (let i = 0; i < 25; i++) m.poll();
+  assert.equal(quota.snapshot().available, false);
+});
 test('same-inode rewrites at the same or greater size restore the newer turn without replaying history', t => {
   const f = fixture(t);
   const padded = rows => rows.join('\n') + '\n' + ' '.repeat(Math.max(0, 4096 - rows.join('\n').length - 2)) + '\n';

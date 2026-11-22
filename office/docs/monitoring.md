@@ -217,6 +217,38 @@ million use meaningful fractional M values. The keyboard-focusable source
 description contains exact counts, day/week bounds, supported providers, last
 scan time and incomplete/error status.
 
+**Codex quota** is a separate, passive view of allowance reported in Codex
+rollout `event_msg:token_count` records' `rate_limits`. Its remaining percentage
+comes from a reported limit, not from the Token totals. The indicator
+distinguishes an unavailable report from zero remaining. An observation is
+stale after five minutes or once a reported reset time passes; it remains
+visible as stale until a newer report arrives. A click or keyboard opens the
+details card, including the observation time and any reported windows and reset
+times in Hong Kong time. The segmented meters are static in both avatar themes.
+
+The live observer selects the newest generic Codex report it has observed by
+the record's timestamp, without combining windows from separate reports.
+Windows use the durations in the source. Spark and unknown named limit IDs
+are excluded. Because Spark can also use the generic Codex limit ID, the
+observer requires evidence of a non-Spark model in the current turn; an
+ambiguous report is not presented as the generic allowance.
+
+On startup, a valid report no more than ten minutes old may be recovered from
+a recently modified native file. If its model context is before the normal
+256 KiB tail, the observer can look back up to 4 MiB in 256 KiB slices using
+spare read budget. It requires a matching, timestamp-ordered task start and
+model context, and stops without guessing across user or terminal boundaries,
+conflicting turn IDs, out-of-order evidence, or copied/forked history. The
+search retains only minimal quota and turn metadata and a fixed model hint in
+memory. The report's original timestamp is retained, and quota is not persisted
+separately.
+
+The local records have no reliable account identifier, so a report cannot be
+bound to the currently signed-in account and may reflect another account
+used on this machine. The observer does not read credentials or make network
+requests, and the value does not represent a monetary API balance. Quota
+observations do not create sessions or change activity state.
+
 The usage-history token section uses the same date, tool and root/helper
 filters as the observed activity section, while keeping their meanings
 separate. The existing CSV export remains an export of observed Agent

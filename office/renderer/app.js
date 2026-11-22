@@ -96,6 +96,7 @@
   const mediaReduce = window.matchMedia('(prefers-reduced-motion: reduce)');
   const numberFlip = window.OfficeNumberFlip?.create({ getContext: () => ({ reducedMotion: reduced(), lowPower: settings.lowPower, hidden: sceneHidden() }) });
   const homeTokenUsage = window.OfficeHomeTokenUsage?.create({ language, numberFlip });
+  const homeCodexQuota = window.OfficeHomeCodexQuota?.create({ language });
   const providerIds = window.OfficeProviders.getAllProviders().map(provider => provider.id === 'cursor-agent' ? 'cursor' : provider.id);
   const observedIds = new Set();
   let familyGraph = Family.build([]);
@@ -225,8 +226,10 @@
     updateRoomSigns();
     $('language-button').textContent = language === 'en' ? '中文' : 'EN';
     $('language-button').setAttribute('aria-label', language === 'en' ? 'Switch to Chinese' : '切换到 English');
+    $('day-clock').querySelector('.clock-label > span:first-child').textContent = language === 'en' ? 'HK time' : '香港时间';
     usageHistory?.updateLanguage(); usageRecap?.updateLanguage();
     homeTokenUsage?.updateLanguage(language);
+    homeCodexQuota?.updateLanguage(language);
     manualQuestions?.updateLanguage(language);
     setupAssistant?.updateLanguage(); play?.relabel(); progression?.updateLanguage();
   }
@@ -2409,6 +2412,7 @@
     }
     usageHistory?.updateStatus(snapshot.usageLog);
     homeTokenUsage?.update(snapshot);
+    homeCodexQuota?.update(snapshot);
     manualQuestions?.update(snapshot);
     setupAssistant?.update(snapshot.setup);
     // Reconcile fresh work before quiet lifecycle cleanup: this packet may
@@ -2679,6 +2683,7 @@
     appearancePicker?.destroy();
     usageHistory?.dispose(); usageRecap?.dispose();
     numberFlip?.destroy();
+    homeCodexQuota?.destroy();
     manualQuestions?.dispose();
     setupAssistant?.dispose();
     visitor.destroy(); play?.destroy(); progression?.destroy();

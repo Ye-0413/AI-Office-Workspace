@@ -70,6 +70,8 @@
   });
 
   const phrases = [
+    ['Codex 额度', 'Codex quota'],
+    ['等待记录', 'Waiting'],
     ['查找伙伴 · ⌘K / Ctrl+K', 'Find an agent · ⌘K / Ctrl+K'],
     ['搜索伙伴、任务、工具或项目', 'Search agents, tasks, tools or projects'],
     ['搜索昵称、任务、工具或项目…', 'Search names, tasks, tools or projects…'],

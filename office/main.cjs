@@ -15,6 +15,7 @@ const {createManualQuestions}=require('./lib/manual-questions.cjs');
 const {createAdditionalSessionMonitor}=require('./lib/additional-session-monitor.cjs');
 const {createSetupManager}=require('./lib/setup-manager.cjs');
 const {createCodexMonitor}=require('./lib/codex-monitor.cjs');
+const {createCodexQuota}=require('./lib/codex-quota.cjs');
 const {mergeObservationHealth}=require('./lib/observation-health.cjs');
 const {createObserverBridge}=require('./lib/observer-bridge.cjs');
 const {getProvider}=require('./lib/provider-catalog.cjs');
@@ -33,7 +34,7 @@ fs.mkdirSync(dataDir,{recursive:true,mode:0o700});
 app.setPath('userData',dataDir);
 if(!app.requestSingleInstanceLock()){app.quit();}
 else {
-let win=null,windowVisibility=null,recovery=null,settings,liveStore,activityStats,usageLog,usageApi,usageRecap,unlockLedger,tokenStore,tokenMonitor,additionalMonitor,manualQuestions,setupManager,monitor,bridge,pruneTimer=null,refreshTimer=null,ready=false,providerMutation=false;
+let win=null,windowVisibility=null,recovery=null,settings,liveStore,activityStats,usageLog,usageApi,usageRecap,unlockLedger,tokenStore,tokenMonitor,additionalMonitor,manualQuestions,setupManager,monitor,codexQuota,bridge,pruneTimer=null,refreshTimer=null,ready=false,providerMutation=false,quotaBroadcastScheduled=false;
 const rendererErrors=[];
 const diagnostics=createDiagnosticLog({dir:path.join(dataDir,'usage-history')});
 process.on('uncaughtException',error=>{console.error('[AI Work Space]',error);diagnostics.write('main-exception',{error});});
@@ -42,10 +43,11 @@ function current(){
   const liveSessions=liveStore.snapshot();
   const monitorStatus=monitor.status(),extraStatus=additionalMonitor.status(),connections=bridge.getConnections().map(c=>mergeObservationHealth(c,c.provider==='codex'?monitorStatus:extraStatus,liveSessions));
   const tokenStatus=combinedTokenStatus(),tokenUsage={...tokenStore.summary(),importing:tokenStatus.importing,lastScanAt:tokenStatus.lastScanAt,providers:tokenStatus.providers,...(tokenStatus.error?{error:tokenStatus.error}:{})};
-  return{mode:'live',now:Date.now(),avatarStyle:settings.get().avatarStyle,windowVisibility:windowVisibility?.snapshot()||{available:false,hidden:null},sessions:liveSessions,activityStats:activityStats.snapshot(),usageLog:usageLog.status(),tokenUsage,questions:manualQuestions.snapshot(),questionStatus:manualQuestions.status(),setup:setupManager.snapshot(),connections,monitor:{running:monitorStatus.running,error:monitorStatus.error||null},version:app.getVersion(),packaged:app.isPackaged};
+  return{mode:'live',now:Date.now(),avatarStyle:settings.get().avatarStyle,windowVisibility:windowVisibility?.snapshot()||{available:false,hidden:null},sessions:liveSessions,activityStats:activityStats.snapshot(),usageLog:usageLog.status(),tokenUsage,codexQuota:codexQuota.snapshot(),questions:manualQuestions.snapshot(),questionStatus:manualQuestions.status(),setup:setupManager.snapshot(),connections,monitor:{running:monitorStatus.running,error:monitorStatus.error||null},version:app.getVersion(),packaged:app.isPackaged};
 }
 function combinedTokenStatus(){const basic=tokenMonitor.status(),extra=additionalMonitor.status(),error=[basic.error,extra.error].filter(Boolean).join('; ');return{...basic,providers:[...new Set([...basic.providers,...extra.providers])],sources:extra.sources,bytesRead:basic.bytesRead+extra.bytesRead,lastScanAt:Math.max(basic.lastScanAt||0,extra.lastScanAt||0)||null,importing:basic.completedScans===0||extra.completedScans===0||basic.pendingFiles>0||extra.pendingFiles>0,...(error?{error}:{})};}
 function broadcast(){if(win&&!win.isDestroyed()&&ready)win.webContents.send('office:snapshot',current());}
+function scheduleQuotaBroadcast(){if(quotaBroadcastScheduled)return;quotaBroadcastScheduled=true;queueMicrotask(()=>{quotaBroadcastScheduled=false;broadcast();});}
 function observe(event){return liveStore.ingest(event);}
 function applySettings(){if(win&&!win.isDestroyed()){win.setAlwaysOnTop(settings.get().alwaysOnTop);win.setTitle('AI Work Space');refreshMenu();}}
 function updateSettings(patch){
@@ -105,7 +107,8 @@ app.whenReady().then(async()=>{
   liveStore=createSessionStore({staleMs:180000});
   additionalMonitor=createAdditionalSessionMonitor({store:tokenStore,onEvent:observe});
   liveStore.onAccepted(event=>{activityStats.record(event);usageLog.record(event,liveStore.snapshot());});
-  monitor=createCodexMonitor({onEvent:observe});
+  codexQuota=createCodexQuota({onChange:scheduleQuotaBroadcast});
+  monitor=createCodexMonitor({onEvent:observe,onQuota:input=>codexQuota.observe(input)});
   const dropReader=createDropReader({eventsDir:path.join(app.getPath('userData'),'events')});dropReader.poll();
   bridge=createObserverBridge({dataDir:app.getPath('userData'),appRoot:__dirname,electronPath:process.execPath,withNativeLock,onEvent:observe,dropReader,ledger:createConnectionLedger({file:path.join(app.getPath('userData'),'connection-evidence.json')})});
   setupManager=createSetupManager({getConnections:()=>bridge.getConnections(),connect:provider=>bridge.connect(provider),onChange:broadcast});

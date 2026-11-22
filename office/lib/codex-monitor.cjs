@@ -6,10 +6,12 @@ const os = require('node:os');
 const { createHash } = require('node:crypto');
 const { classifyShell, actorKey } = require('./provider-events.cjs');
 const { classifyCodexTool } = require('./codex-tool-activity.cjs');
+const { modelHint, normalizeObservation, MAX_FUTURE_SKEW_MS } = require('./codex-quota.cjs');
 
 const LIMITS = Object.freeze({ files: 64, candidates: 128, head: 256 * 1024, tail: 256 * 1024,
   perRead: 256 * 1024, perPoll: 3 * 1024 * 1024, fresh: 5 * 60 * 1000, days: 7,
-  historyOperations: 256, historyRescanMs: 5000 });
+  historyOperations: 256, historyRescanMs: 5000, quotaContext: 4 * 1024 * 1024,
+  quotaContextReads: 4, quotaContextRecords: 128 });
 const PROGRESS = new Set(['event_msg:agent_message', 'event_msg:agent_reasoning', 'event_msg:agent_reasoning_raw_content', 'response_item:reasoning', 'response_item:agent_message']);
 function text(value, max = 100) { return typeof value === 'string' ? value.replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, max) : ''; }
 function ident(value) { return typeof value === 'string' && value.length <= 256 && value && !/[\s\u0000-\u001f]/.test(value) ? value : null; }
@@ -43,7 +45,7 @@ function outcomeOf(output) {
 }
 
 /** Read-only bounded observer. It never installs hooks or launches an AI process. */
-function createCodexMonitor({ homeDir = os.homedir(), codexHome, onEvent, now = Date.now,
+function createCodexMonitor({ homeDir = os.homedir(), codexHome, onEvent, onQuota, now = Date.now,
   intervalMs = 1000, fs = nodeFs } = {}) {
   if (typeof onEvent !== 'function') throw new TypeError('onEvent is required');
   const effectiveHome = codexHome || (process.env.CODEX_HOME && path.isAbsolute(process.env.CODEX_HOME) ? process.env.CODEX_HOME : path.join(homeDir, '.codex'));
@@ -121,7 +123,25 @@ function createCodexMonitor({ homeDir = os.homedir(), codexHome, onEvent, now = 
     t.historyBoundary = isChild && Number.isSafeInteger(boundary) && boundary > 0 ? boundary : null;
     t.ownsHistory = t.historyBoundary === null;
     t.createdAt = timestamp(payload.timestamp);
+    // Forked/copied histories do not provide a safe independent backscan
+    // boundary. Their live quota can still use an explicit current hint.
+    t.quotaBackscanSafe = !isChild && !parent && !object(payload.source)?.subagent && payload.thread_source !== 'subagent'
+      && !payload.forked_from_id && !payload.history_base
+      && !(Number.isSafeInteger(boundary) && boundary > 0);
     t.hasMetadata = true;
+  }
+  function deferredQuota(rateLimits, capturedAt, turnId) {
+    const observation = normalizeObservation({ rateLimits, capturedAt, hint: 'main' }, now());
+    if (!observation) return null;
+    // Keep only allowlisted quota values while looking for the model context.
+    // Raw rollout lines, titles, paths and unrelated telemetry are never kept.
+    const limits = { limit_id: 'codex' };
+    for (const window of observation.windows) {
+      limits[window.slot] = { used_percent: window.usedPercent,
+        ...(window.windowMinutes === null ? {} : { window_minutes: window.windowMinutes }),
+        ...(window.resetAt === null ? {} : { resets_at: window.resetAt / 1000 }) };
+    }
+    return { rateLimits: limits, capturedAt, turnId };
   }
   function processLine(t, line, pos, silent) {
     const ordinal = t.ordinal;
@@ -142,6 +162,64 @@ function createCodexMonitor({ homeDir = os.homedir(), codexHome, onEvent, now = 
         && startTimestamp(p.started_at) !== null && startTimestamp(p.started_at) >= t.createdAt;
       if (ordinal !== null && ordinal >= t.historyBoundary || ident(p.thread_id) === t.nativeId || ownStart) t.ownsHistory = true;
       else return;
+    }
+    // Subscription limits are account observations, not activity events. A
+    // separate source-time watermark protects the model hint from late copied
+    // records, including while attaching old history. Unreliable timestamps
+    // cannot identify a turn or poison future observations.
+    if (typeof onQuota === 'function') {
+      const quotaAt = timestamp(row.timestamp), quotaTurn = ident(p.turn_id);
+      const quotaTimed = quotaAt !== null && quotaAt >= t.quotaWatermark && quotaAt <= now() + MAX_FUTURE_SKEW_MS;
+      const quotaStart = key === 'event_msg:task_started' || key === 'event_msg:user_message' && (t.ended || !t.open);
+      const quotaSettings = key === 'event_msg:thread_settings_applied';
+      const untrustedTime = quotaAt === null || quotaAt > now() + MAX_FUTURE_SKEW_MS;
+      if (untrustedTime && (quotaStart || row.type === 'turn_context' || quotaSettings)) {
+        // An undated or far-future context could be a model change. Do not
+        // keep an earlier hint across it, and do not search past it to guess.
+        t.quotaHint = null; t.quotaBackscanBlocked = true; t.pendingQuota = null;
+      } else if (quotaTimed && quotaStart) {
+        t.quotaHint = null; t.quotaTurnId = quotaTurn; t.quotaWatermark = quotaAt;
+        t.quotaBackscanBlocked = true; t.pendingQuota = null;
+      } else if (quotaTimed && (!quotaTurn || !t.quotaTurnId || quotaTurn === t.quotaTurnId)) {
+        if (row.type === 'turn_context') {
+          if (!t.quotaTurnId && quotaTurn) t.quotaTurnId = quotaTurn;
+          t.quotaHint = modelHint(p.model || object(p.info)?.model); t.quotaWatermark = quotaAt;
+          t.quotaBackscanBlocked = true; t.pendingQuota = null;
+        } else if (quotaSettings) {
+          const settingsHint = modelHint(object(p.thread_settings)?.model);
+          if (!settingsHint || t.quotaHint && settingsHint !== t.quotaHint) {
+            t.quotaHint = null; t.quotaBackscanBlocked = true; t.pendingQuota = null;
+          } else if (!t.quotaHint) {
+            // Retain only this fixed hint and timestamp, so a bounded
+            // backscan can compare it with the actual turn context.
+            if (!t.quotaBackscanBlocked && t.quotaBackscanSafe && t.quotaContextCursor > 0
+              && t.quotaContextRows.length < LIMITS.quotaContextRecords) {
+              t.quotaContextRows.unshift({ kind: 'settings', at: quotaAt, turnId: quotaTurn, hint: settingsHint });
+            } else { t.quotaBackscanBlocked = true; t.pendingQuota = null; }
+          }
+        } else if (key === 'event_msg:token_count') {
+          t.quotaWatermark = quotaAt;
+          try {
+            const reportedHint = modelHint(p.model || object(p.info)?.model || object(p.info)?.model_name);
+            if (reportedHint && !t.quotaHint) {
+              t.quotaHint = reportedHint; t.quotaBackscanBlocked = true; t.pendingQuota = null;
+            }
+            if (!reportedHint && !t.quotaHint && !t.quotaBackscanBlocked && t.quotaBackscanSafe && t.quotaContextCursor > 0) {
+              const pending = deferredQuota(p.rate_limits, quotaAt, quotaTurn);
+              if (pending) t.pendingQuota = pending;
+            }
+            onQuota({ rateLimits: p.rate_limits, capturedAt: quotaAt,
+              hint: reportedHint && t.quotaHint && reportedHint !== t.quotaHint ? null : reportedHint || t.quotaHint });
+          } catch (error) { stats.error = `Quota receiver: ${text(error.message, 160)}`; }
+        }
+      } else if (quotaTimed && (row.type === 'turn_context' || quotaSettings)) {
+        // A context for a different turn with no matching start makes the
+        // current model ambiguous until the source identifies it again.
+        t.quotaHint = null; t.quotaBackscanBlocked = true; t.pendingQuota = null;
+      }
+      // Ordinary records also establish that a source has advanced; a copied
+      // older start or model context cannot then be treated as a newer turn.
+      if (quotaTimed) t.quotaWatermark = quotaAt;
     }
     if (!silent && at !== null && at < startedAt - 1500) return;
     const ownTurn = ident(p.turn_id);
@@ -252,7 +330,10 @@ function createCodexMonitor({ homeDir = os.homedir(), codexHome, onEvent, now = 
       sessionId: null, subagentId: null, parentId: null, title: '', projectPath: '',
       turnId: null, turnAt: 0, open: false, ended: false, endedAt: 0, tools: new Map(), activity: null,
       lastAt: 0, lastEvent: null, discarding: false, internal: false,
-      nativeId: null, ordinal: 0, historyBoundary: null, ownsHistory: true, createdAt: null };
+      nativeId: null, ordinal: 0, historyBoundary: null, ownsHistory: true, createdAt: null,
+      quotaHint: null, quotaTurnId: null, quotaWatermark: 0, quotaBackscanSafe: false,
+      quotaBackscanBlocked: false, quotaContextCursor: 0, quotaContextRemaining: LIMITS.quotaContext,
+      quotaContextRows: [], pendingQuota: null };
     const head = read(file, 0, Math.min(stat.size, LIMITS.head));
     const lineEnd = head.indexOf(10);
     if (lineEnd >= 0) {
@@ -268,8 +349,91 @@ function createCodexMonitor({ homeDir = os.homedir(), codexHome, onEvent, now = 
     const tailStart = Math.max(0, stat.size - LIMITS.tail);
     // Reuse the head for small files; every physical read is budgeted.
     const tail = tailStart === 0 && head.length === stat.size ? head : read(file, tailStart, stat.size - tailStart);
+    // End the backward scan at a line boundary, including the partial line
+    // skipped by the normal bounded tail reader. No transcript fragment has to
+    // be retained across reads.
+    const tailFirstEnd = tailStart > 0 ? tail.indexOf(10) : -1;
+    t.quotaContextCursor = tailFirstEnd >= 0 ? tailStart + tailFirstEnd + 1 : 0;
     processBuffer(t, tail, tailStart, tailStart > 0, true);
     return t;
+  }
+  function abandonQuotaContext(t) {
+    t.quotaBackscanBlocked = true; t.pendingQuota = null; t.quotaContextRows = [];
+  }
+  function finishQuotaContext(t) {
+    const rows = t.quotaContextRows.reverse(), pending = t.pendingQuota;
+    const start = rows[0];
+    let previous = start?.at, hint = null;
+    if (!pending || start?.kind !== 'start' || !start.turnId || start.at > pending.capturedAt
+      || t.quotaTurnId && t.quotaTurnId !== start.turnId
+      || pending.turnId && pending.turnId !== start.turnId) { abandonQuotaContext(t); return; }
+    for (const row of rows.slice(1)) {
+      if (row.at < previous || row.at > pending.capturedAt
+        || row.kind === 'context' && row.turnId !== start.turnId
+        || row.kind === 'settings' && row.turnId && row.turnId !== start.turnId) { abandonQuotaContext(t); return; }
+      previous = row.at;
+      if (row.kind === 'context') hint = row.hint;
+      else if (row.kind === 'settings' && (!row.hint || row.hint !== hint)) hint = null;
+      else if (row.kind !== 'settings') { abandonQuotaContext(t); return; }
+    }
+    if (!hint) { abandonQuotaContext(t); return; }
+    t.quotaHint = hint; t.quotaTurnId = start.turnId;
+    abandonQuotaContext(t);
+    try { onQuota({ rateLimits: pending.rateLimits, capturedAt: pending.capturedAt, hint }); }
+    catch (error) { stats.error = `Quota receiver: ${text(error.message, 160)}`; }
+  }
+  function scanQuotaContext(t) {
+    if (!t.pendingQuota || t.quotaBackscanBlocked || !t.quotaBackscanSafe) return false;
+    const end = t.quotaContextCursor;
+    const length = Math.min(end, LIMITS.perRead, t.quotaContextRemaining);
+    if (length <= 0) { abandonQuotaContext(t); return false; }
+    if (budget < length) return false;
+    const start = end - length, buf = read(t.file, start, length);
+    if (buf.length !== length || buf.at(-1) !== 10) { abandonQuotaContext(t); return true; }
+    // Each slice ends on a newline. Leave a possible partial first line for
+    // the next slice, so even a boundary-crossing model change is not missed.
+    const firstNewline = start > 0 ? buf.indexOf(10) : -1;
+    if (start > 0 && (firstNewline < 0 || firstNewline === buf.length - 1)) { abandonQuotaContext(t); return true; }
+    const first = start > 0 ? firstNewline + 1 : 0;
+    let lineEnd = buf.length - 1;
+    while (lineEnd >= first) {
+      const previousNewline = lineEnd > 0 ? buf.lastIndexOf(10, lineEnd - 1) : -1;
+      const lineStart = Math.max(first, previousNewline + 1);
+      const line = buf.subarray(lineStart, lineEnd);
+      // A native message or terminal may mark a turn boundary even when no
+      // task_started was recorded. Never scan across one to guess the model.
+      if (line.includes('"user_message"') || line.includes('"task_complete"') || line.includes('"turn_aborted"')) {
+        abandonQuotaContext(t); return true;
+      }
+      // Parse only matching model/turn metadata candidates. Other record
+      // bodies are skipped, and no raw lines are retained across reads.
+      if (line.includes('"turn_context"') || line.includes('"task_started"') || line.includes('"thread_settings_applied"')) {
+        if (line.length > 65536) { abandonQuotaContext(t); return true; }
+        let row;
+        try { row = JSON.parse(line.toString('utf8')); } catch { abandonQuotaContext(t); return true; }
+        if (!object(row)) { abandonQuotaContext(t); return true; }
+        const p = object(row.payload) || {};
+        const kind = row.type === 'turn_context' ? 'context'
+          : row.type === 'event_msg' && p.type === 'task_started' ? 'start'
+          : row.type === 'event_msg' && p.type === 'thread_settings_applied' ? 'settings' : null;
+        if (kind) {
+          const at = timestamp(row.timestamp);
+          if (at === null || at > now() + MAX_FUTURE_SKEW_MS || t.quotaContextRows.length >= LIMITS.quotaContextRecords) {
+            abandonQuotaContext(t); return true;
+          }
+          t.quotaContextRows.push({ kind, at, turnId: ident(p.turn_id),
+            ...(kind === 'context' ? { hint: modelHint(p.model || object(p.info)?.model) } : {}),
+            ...(kind === 'settings' ? { hint: modelHint(object(p.thread_settings)?.model) } : {}) });
+          if (kind === 'start') { finishQuotaContext(t); return true; }
+        }
+      }
+      if (previousNewline < first) break;
+      lineEnd = previousNewline;
+    }
+    t.quotaContextRemaining -= length;
+    t.quotaContextCursor = start > 0 ? start + first : 0;
+    if (t.quotaContextRemaining <= 0 || t.quotaContextCursor <= 0) abandonQuotaContext(t);
+    return true;
   }
   function snapshotEvents(t) {
     if (!t.hasMetadata || t.internal || !t.lastEvent || t.lastAt < now() - LIMITS.fresh || t.ended || !t.open) return [];
@@ -396,6 +560,16 @@ function createCodexMonitor({ homeDir = os.homedir(), codexHome, onEvent, now = 
           const buf = read(file, start, stat.size - start);
           processBuffer(t, buf, start, t.discarding, false);
         }
+      }
+      // Use only spare observer budget and cap extra I/O per poll. Recovery
+      // carries just bounded turn metadata and an allowlisted quota sample.
+      let quotaReads = 0;
+      for (const t of tracked.values()) {
+        while (t.pendingQuota && quotaReads < LIMITS.quotaContextReads) {
+          if (!scanQuotaContext(t)) break;
+          quotaReads += 1;
+        }
+        if (quotaReads >= LIMITS.quotaContextReads) break;
       }
       // Merge same-thread Desktop turn rollouts before emitting any startup
       // state. A newer completed file suppresses an older still-open file.
