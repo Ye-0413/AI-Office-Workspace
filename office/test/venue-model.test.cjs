@@ -63,11 +63,11 @@ test('presentation lookups safely fall back and the shared catalogue cannot be m
   assert.equal(Venues.getVenue('workshop'), original);
 });
 
-test('the centred decorative controls leave the real clock and daily count region clear', () => {
-  // The renderer reserves at most 90 x 65 world pixels for each wall control.
+test('the legacy venue controls leave the wall ledger and clock clear', () => {
+  // Legacy venue widgets are centred 100 × 96 world-pixel buttons.
   for (const item of Venues.CATALOG.flatMap(venue => venue.interactions)) {
-    const bounds = { left: item.x * 12.8 - 45, right: item.x * 12.8 + 45, top: item.y * 7.2 - 32.5, bottom: item.y * 7.2 + 32.5 };
-    for (const reserved of Scene.CLOCK_RESERVED) assert.equal(bounds.left < reserved.right && bounds.right > reserved.left && bounds.top < reserved.bottom && bounds.bottom > reserved.top, false, item.id + ' must not cover the clock');
+    const bounds = { left: item.x * 12.8 - 50, right: item.x * 12.8 + 50, top: item.y * 7.2 - 48, bottom: item.y * 7.2 + 48 };
+    for (const reserved of Scene.CLOCK_RESERVED) assert.equal(Scene.boundsOverlap(bounds, reserved, 0), false, item.id);
   }
 });
 

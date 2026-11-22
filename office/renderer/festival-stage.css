@@ -1,6 +1,6 @@
 /* A single authored hanging object; actors remain above all decoration. */
 .festival-stage{position:absolute;inset:0;z-index:5;pointer-events:none}
-.festival-widget{position:absolute;left:20%;top:17%;width:120px;height:128px;transform:translate(-50%,-50%);pointer-events:none}
+.festival-widget{position:absolute;width:120px;height:128px;transform:translate(-50%,-50%);pointer-events:none}
 .festival-control{display:flex;align-items:center;flex-direction:column;gap:1px;width:120px;height:128px;padding:0;border:0;background:transparent;pointer-events:auto;color:#614b33;outline-offset:2px;-webkit-tap-highlight-color:transparent}
 .festival-art{display:block;flex:none;width:120px;height:110px;overflow:visible;shape-rendering:crispEdges;filter:drop-shadow(0 2px 0 #4e392d3b);pointer-events:none}
 .festival-primary{transform-box:fill-box;transform-origin:center}

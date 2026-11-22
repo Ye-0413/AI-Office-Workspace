@@ -79,7 +79,7 @@
       const propScale=Math.max(.35,Math.min(1.15,Math.min(a.anchor.width,b.anchor.width)/154));
       const left={x:a.anchor.x+a.anchor.width*.72,y:a.point.y},right={x:b.anchor.x+b.anchor.width*.28,y:b.point.y},dx=right.x-left.x,dy=right.y-left.y;
       const mid={x:(left.x+right.x)/2,y:(left.y+right.y)/2},captionY=Math.max(88,Math.min(570,Math.min(left.y,right.y)-108*propScale));
-      const reserved=root.OfficeScene?.CLOCK_RESERVED||[{left:470,top:65,right:830,bottom:175}];
+      const reserved=root.OfficeScene?.CLOCK_RESERVED||[{left:277,top:65,right:830,bottom:175}];
       const clearClock=(x,y,radius=20*propScale)=>{for(const rect of reserved)if(x+radius>rect.left&&x-radius<rect.right&&y-radius<rect.bottom&&y+radius>rect.top)y=rect.bottom+radius+8;return y;};
       const captionAnchor=at(Math.max(155,Math.min(wa-155,mid.x)),captionY,'social-caption-anchor'),caption=svg('g',{class:'social-caption'},captionAnchor),captionWidth=ctx.language==='en'?282:246;
       svg('rect',{x:-captionWidth/2,y:-13,width:captionWidth,height:25,rx:0},caption);

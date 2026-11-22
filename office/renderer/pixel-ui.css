@@ -224,13 +224,18 @@ html[data-avatar-style="pixel"] .day-clock::before {
 
 html[data-avatar-style="pixel"] .clock-feet { border-color: var(--pixel-ui-ink); }
 html[data-avatar-style="pixel"] :is(.clock-label, #day-phase) { color: var(--pixel-ui-paper); }
-html[data-avatar-style="pixel"] :is(.activity-stats strong, .home-token-usage dd) {
+html[data-avatar-style="pixel"] .activity-agent-stats strong {
   color: var(--pixel-ui-mint);
   font-family: var(--pixel-ui-mono);
 }
 html[data-avatar-style="pixel"] :is(.stats-detail, .home-token-usage dt) { color: var(--pixel-ui-muted); }
-html[data-avatar-style="pixel"] .home-token-usage { border-left-color: #716483; }
-html[data-avatar-style="pixel"] .home-token-usage[data-importing="true"] dt::after { color: var(--pixel-ui-gold); }
+html[data-avatar-style="pixel"] .home-token-usage {
+  --today-fill: var(--pixel-ui-mint);
+  --earlier-fill: #8299b6;
+  border-left-color: #716483;
+  color: var(--pixel-ui-paper);
+}
+html[data-avatar-style="pixel"] .home-token-share-caption { color: var(--pixel-ui-muted); }
 html[data-avatar-style="pixel"] :is(.activity-stats[data-error="true"] strong, .home-token-usage[data-error="true"] dd) { color: #ffb59e; }
 
 html[data-avatar-style="pixel"] .error-message {

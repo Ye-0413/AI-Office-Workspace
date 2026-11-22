@@ -138,6 +138,8 @@
     const layer=el('div','festival-stage');layer.setAttribute('role','group');
     const weatherLayer=el('div','festival-weather');weatherLayer.setAttribute('aria-hidden','true');world.append(weatherLayer,layer);
     const widget=el('div','festival-widget'),button=el('button','festival-control'),caption=el('span','festival-caption');button.type='button';widget.append(button);layer.append(widget);
+    const mount=Object.freeze({x:7,y:17});
+    widget.style.left=mount.x+'%';widget.style.top=mount.y+'%';
     const feedback=el('div','festival-feedback');feedback.setAttribute('role','status');feedback.setAttribute('aria-live','polite');feedback.setAttribute('aria-atomic','true');office.append(feedback);
     const chooser=el('details','festival-chooser'),summary=el('summary','festival-summary'),summaryText=el('span','festival-summary-text'),panel=el('div','festival-panel');
     const leaf=svgNode('svg',{viewBox:'0 0 20 20','aria-hidden':'true',focusable:'false'});leaf.append(svgNode('path',{d:'M15 3Q3 2 4 12q5 7 11-9ZM4 16l8-9',fill:'none',stroke:'currentColor','stroke-width':1.7}));summary.append(leaf,summaryText);chooser.append(summary,panel);
@@ -164,7 +166,7 @@
       try{result=!model.CORE_THEMES.some(item=>item.id===currentId)&&studies?.activate?studies.activate(currentId,{...previous}):coreActivate(previous);}catch(_){result=coreActivate(previous);}
       records.set(currentId,result);apply(result,source==='keyboard');say(result);
       const theme=model.getTheme(currentId);
-      if(typeof onInteraction==='function')try{const answer=onInteraction({venue:state.venue||'workshop',theme:currentId,id:'festival-'+currentId,type:theme.action,state:result.phase,point:{x:20,y:17},source});if(answer?.catch)answer.catch(()=>{});}catch(_){}
+      if(typeof onInteraction==='function')try{const answer=onInteraction({venue:state.venue||'workshop',theme:currentId,id:'festival-'+currentId,type:theme.action,state:result.phase,point:mount,source});if(answer?.catch)answer.catch(()=>{});}catch(_){}
       let frames=model.interactionFrames(currentId,result).map(frame=>({...frame}));
       const final=frames.at(-1);lastFrame=final;
       if(quiet()||source==='keyboard'||!art.primary.animate){art.primary.style.transform=final.transform;art.primary.style.opacity=String(final.opacity);return;}

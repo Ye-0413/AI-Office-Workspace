@@ -78,7 +78,7 @@
     ['只看需留意', 'Needs attention'],
     ['清除筛选', 'Clear filters'],
     ['↑ ↓ 选择 · Enter 查看 · Esc 清空搜索或关闭', '↑ ↓ Navigate · Enter Open · Esc Clear search or close'],
-    ['今日活跃 Agent', 'Agents active today'],
+    ['今日活跃 Agent', 'Agents active today'], ['今日活跃', 'Active today'],
     ['按香港日期统计实际观察到的 Agent，同一会话多轮只计一次；主 Agent 与分身分别去重，重启后保留。', 'Unique agents observed active per Hong Kong day. Repeated turns count once; main agents and clones are counted separately and retained after restart.'],
     ['Agent 大小', 'Agent size'],
     ['角色与名字同步调整；人数变化不改变大小，分身保持较小比例。', 'Scale characters and names together. Agent count never changes their size; helpers keep their smaller proportions.'],
@@ -506,7 +506,7 @@
   const usagePhrases = [
     ['使用记录', 'Usage history'], ['关闭使用记录', 'Close usage history'],
     ['使用概览', 'Usage overview'], ['历史记录分页', 'Agent history pages'], ['事件时间线分页', 'Event timeline pages'],
-    ['Token 用量', 'Token usage'], ['今日 Token', 'Daily Token'], ['本周用量', 'Weekly usage'],
+    ['Token 用量', 'Token usage'], ['今日 Token', 'Daily Token'], ['本周用量', 'Weekly usage'], ['本周 Token', 'Weekly usage'],
     ['来源：受支持工具的本机会话日志；按香港自然日及周一至周日统计全部项目，不推算费用或额度。', 'Source: supported local session logs, across all projects. Hong Kong calendar days; weeks run Monday–Sunday. Cost and quota are not estimated.'],
     ['Token 来自本机会话日志，可独立导入历史；活动时长仅统计应用运行期间的观察。历史记录不会重新进入房间。', 'Tokens come from local session logs, including independently imported history. Activity time counts only observations while the app runs. History never re-enters the room.'],
     ['会话 Token', 'Session tokens'], ['会话 Token 概览', 'Session token overview'], ['已观测活动', 'Observed activity'],

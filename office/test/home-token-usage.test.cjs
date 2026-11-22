@@ -16,8 +16,9 @@ test('homepage token totals use M, B and T with meaningful fractions below one m
 });
 
 function fixture() {
-  const nodes = new Map(['home-token-usage', 'home-token-daily-label', 'home-token-weekly-label', 'home-token-daily', 'home-token-weekly', 'home-token-state'].map(id => [id, {
-    textContent: '', dataset: {}, title: '', attributes: {}, setAttribute(name, value) { this.attributes[name] = value; }
+  const nodes = new Map(['home-token-usage', 'home-token-daily-label', 'home-token-weekly-label', 'home-token-daily', 'home-token-weekly',
+    'home-token-state', 'home-token-share-track', 'home-token-share-day', 'home-token-share-caption'].map(id => [id, {
+    textContent: '', dataset: {}, style: {}, title: '', attributes: {}, setAttribute(name, value) { this.attributes[name] = value; }
   }]));
   return { nodes, document: { getElementById: id => nodes.get(id) } };
 }
@@ -39,6 +40,47 @@ test('homepage tokens preserve exact counts and natural calendar bounds in bilin
   assert.equal(nodes.get('home-token-usage').title, nodes.get('home-token-state').textContent);
   assert.equal(nodes.get('home-token-usage').dataset.available, 'true');
   controller.updateLanguage('zh'); assert.equal(nodes.get('home-token-daily-label').textContent, '今日 Token');
+});
+
+test('weekly breakdown uses exact daily contributions, with distinct partial and full endpoints', () => {
+  const { nodes, document } = fixture();
+  const controller = HomeTokens.create({ document });
+  const track = nodes.get('home-token-share-track'), fill = nodes.get('home-token-share-day'), caption = nodes.get('home-token-share-caption');
+  assert.equal(track.hidden, true);
+  controller.update({ ...usage, dailyTokens: 12400000, weeklyTokens: 86200000 });
+  assert.equal(track.hidden, false);
+  assert.ok(Math.abs(parseFloat(fill.style.width) - 14.38515) < 0.00001);
+  assert.equal(caption.textContent, '今日占本周 14%');
+  controller.updateLanguage('en');
+  assert.equal(caption.textContent, 'Today · 14% of week');
+  assert.match(nodes.get('home-token-state').textContent, /73,800,000 tokens used earlier this week/);
+
+  for (const [dailyTokens, expected] of [[0, '0%'], [1, '<1%'], [9999999, '>99%'], [10000000, '100%']]) {
+    controller.update({ ...usage, dailyTokens, weeklyTokens: 10000000 });
+    assert.equal(track.hidden, false);
+    assert.equal(caption.textContent, 'Today · ' + expected + ' of week');
+  }
+});
+
+test('weekly breakdown hides its bar when the comparison is empty, incomplete or inconsistent', () => {
+  const { nodes, document } = fixture();
+  const controller = HomeTokens.create({ document, language: 'en' });
+  const cases = [
+    [{ dailyTokens: 0, weeklyTokens: 0 }, 'No tokens this week'],
+    [{ importing: true }, 'Incomplete totals'],
+    [{ error: 'parser error' }, 'Incomplete totals'],
+    [{ available: false }, 'Share unavailable'],
+    [{ dailyTokens: 11, weeklyTokens: 10 }, 'Share unavailable'],
+    [{ dailyTokens: undefined }, 'Share unavailable'],
+    [{ weeklyTokens: -1 }, 'Share unavailable']
+  ];
+  for (const [patch, label] of cases) {
+    controller.update(usage);
+    controller.update({ ...usage, ...patch });
+    assert.equal(nodes.get('home-token-share-track').hidden, true);
+    assert.equal(nodes.get('home-token-share-caption').textContent, label);
+    assert.doesNotMatch(nodes.get('home-token-state').textContent, /tokens used earlier this week/);
+  }
 });
 
 test('homepage import status reports partial counts and unavailable values without inventing zero usage', () => {

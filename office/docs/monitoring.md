@@ -215,16 +215,22 @@ Hong Kong Monday–Sunday week, across all supported local projects and tools.
 M, B and T mean one million, one billion and one trillion. Values below one
 million use meaningful fractional M values. The keyboard-focusable source
 description contains exact counts, day/week bounds, supported providers, last
-scan time and incomplete/error status.
+scan time and incomplete/error status. Beneath the two totals, the green segment
+of the bar shows today’s share of this week’s tokens. The blue-grey segment
+covers earlier days of the same week. The bar appears when the counts are
+complete and consistent and the weekly total is positive.
 
 **Codex quota** is a separate, passive view of allowance reported in Codex
-rollout `event_msg:token_count` records' `rate_limits`. Its remaining percentage
-comes from a reported limit, not from the Token totals. The indicator
+rollout `event_msg:token_count` records' `rate_limits`. Each static ring shows
+the remaining percentage for one reported window. A single window uses only
+the outer ring. When both durations are known, the
+shorter window sits outside the longer one. The percentage at the center
+belongs to the outer ring. The indicator
 distinguishes an unavailable report from zero remaining. An observation is
 stale after five minutes or once a reported reset time passes; it remains
 visible as stale until a newer report arrives. A click or keyboard opens the
 details card, including the observation time and any reported windows and reset
-times in Hong Kong time. The segmented meters are static in both avatar themes.
+times in Hong Kong time.
 
 The live observer selects the newest generic Codex report it has observed by
 the record's timestamp, without combining windows from separate reports.

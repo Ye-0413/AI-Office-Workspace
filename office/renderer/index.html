@@ -122,14 +122,41 @@
         <div class="room-prop prop-sofa" data-zone-prop="sofa" aria-hidden="true"><i></i><i></i><i></i></div>
         <button id="day-clock" class="day-clock" type="button"><span class="clock-label"><span>香港时间</span><span class="clock-status"><span id="day-phase"></span><span class="day-clock-icon" aria-hidden="true">☀</span></span></span><time id="hk-clock">00:00</time><time id="hk-date"></time><span class="clock-feet" aria-hidden="true"></span></button>
         <div id="activity-stats" class="activity-stats" title="按香港日期统计实际观察到的 Agent，同一会话多轮只计一次；主 Agent 与分身分别去重，重启后保留。">
-          <div class="activity-agent-stats"><span class="stats-label">今日活跃 Agent</span><strong id="today-total">—</strong><span class="stats-detail"><span id="today-roots">—</span><span id="today-helpers">—</span></span></div>
-          <dl id="home-token-usage" class="home-token-usage" tabindex="0" aria-label="Token 用量" aria-describedby="home-token-state"><div><dt id="home-token-daily-label">今日 Token</dt><dd id="home-token-daily">—</dd></div><div><dt id="home-token-weekly-label">本周用量</dt><dd id="home-token-weekly">—</dd></div></dl><span id="home-token-state" class="sr-only">来源：受支持工具的本机会话日志；按香港自然日及周一至周日统计全部项目，不推算费用或额度。</span>
-          <div id="home-codex-quota" class="home-codex-quota" data-state="unavailable">
+          <div class="activity-agent-stats"><span class="stats-label">今日活跃</span><strong id="today-total">—</strong><span class="stats-detail"><span id="today-roots">—</span><span id="today-helpers">—</span></span></div>
+          <div id="home-token-usage" class="home-token-usage" role="group" tabindex="0" aria-label="Token 用量" aria-describedby="home-token-state">
+            <dl class="home-token-totals">
+              <div><dt id="home-token-daily-label">今日 Token</dt><dd id="home-token-daily">—</dd></div>
+              <div><dt id="home-token-weekly-label">本周 Token</dt><dd id="home-token-weekly">—</dd></div>
+            </dl>
+            <div id="home-token-share-track" class="home-token-share-track" aria-hidden="true" hidden>
+              <span id="home-token-share-day" class="home-token-share-day"></span>
+            </div>
+            <span id="home-token-share-caption" class="home-token-share-caption"></span>
+          </div>
+          <span id="home-token-state" class="sr-only">来源：受支持工具的本机会话日志；按香港自然日及周一至周日统计全部项目，不推算费用或额度。</span>
+          <div id="home-codex-quota" class="home-codex-quota" data-state="unavailable" data-rings="0">
             <button id="home-codex-quota-toggle" class="home-codex-quota-toggle" type="button" aria-label="Codex 额度" aria-expanded="false" aria-controls="home-codex-quota-details" aria-describedby="home-codex-quota-accessible">
-              <span class="codex-quota-heading"><span id="home-codex-quota-label">Codex 额度</span><span class="codex-quota-chevron" aria-hidden="true">▾</span></span>
-              <span class="codex-quota-window" id="home-codex-quota-primary" aria-hidden="true"><span class="codex-quota-line"><span id="home-codex-quota-primary-label">1</span><b id="home-codex-quota-primary-value">—</b></span><span class="codex-quota-track"><span id="home-codex-quota-primary-fill"></span></span></span>
-              <span class="codex-quota-window" id="home-codex-quota-secondary" aria-hidden="true"><span class="codex-quota-line"><span id="home-codex-quota-secondary-label">2</span><b id="home-codex-quota-secondary-value">—</b></span><span class="codex-quota-track"><span id="home-codex-quota-secondary-fill"></span></span></span>
-              <span id="home-codex-quota-status" class="codex-quota-status">等待记录</span>
+              <span class="codex-quota-heading" aria-hidden="true">
+                <span>Codex</span><span id="home-codex-quota-status" class="codex-quota-status" hidden></span>
+              </span>
+              <span class="codex-quota-gauge" aria-hidden="true">
+                <svg class="codex-quota-dial" viewBox="0 0 80 80" fill="none" focusable="false">
+                  <g transform="rotate(-90 40 40)">
+                    <g id="home-codex-quota-outer" class="quota-ring quota-ring-outer" stroke-width="7.5">
+                      <circle class="quota-ring-track" cx="40" cy="40" r="35.5" pathLength="100"/>
+                      <circle id="home-codex-quota-outer-fill" class="quota-ring-fill" cx="40" cy="40" r="35.5" pathLength="100" visibility="hidden"/>
+                    </g>
+                    <g id="home-codex-quota-inner" class="quota-ring quota-ring-inner" stroke-width="5">
+                      <circle class="quota-ring-track" cx="40" cy="40" r="27" pathLength="100"/>
+                      <circle id="home-codex-quota-inner-fill" class="quota-ring-fill" cx="40" cy="40" r="27" pathLength="100" visibility="hidden"/>
+                    </g>
+                  </g>
+                </svg>
+                <span class="codex-quota-readout">
+                  <b id="home-codex-quota-value">—</b>
+                  <span class="codex-quota-periods"><span id="home-codex-quota-outer-label">等待记录</span><span id="home-codex-quota-inner-label"></span></span>
+                </span>
+              </span>
             </button>
             <span id="home-codex-quota-accessible" class="sr-only"></span>
             <div id="home-codex-quota-details" class="home-codex-quota-details" role="group" aria-labelledby="home-codex-quota-details-title" hidden>

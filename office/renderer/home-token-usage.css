@@ -1,15 +1,65 @@
-/* One paper ledger: observed agents at left, reported session tokens at right. */
-.activity-stats{left:calc(47.65% - 250px);width:280px;padding:4px 6px;display:grid;grid-template-columns:92px 88px minmax(0,1fr);gap:6px}
-.activity-agent-stats{min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.activity-agent-stats .stats-label{font-size:10px;line-height:12px;letter-spacing:0;white-space:normal;text-align:center}
-.activity-agent-stats strong{font-size:34px;line-height:36px}
-.activity-agent-stats .stats-detail{font-size:9px;gap:3px}
-.home-token-usage{margin:0;min-width:0;padding-left:6px;border-left:1px solid #bba373;display:flex;flex-direction:column;gap:4px;color:#3e503e}
-.home-token-usage>div{min-width:0}
-.home-token-usage dt{font-size:11px;line-height:14px;white-space:nowrap;color:#5b624a}
-.home-token-usage dd{margin:0;font-size:19px;line-height:26px;font-weight:650;font-variant-numeric:tabular-nums;letter-spacing:-.025em;white-space:nowrap}
-.home-token-usage dd[data-long="true"]{font-size:14.5px;letter-spacing:-.035em}
-.home-token-usage[data-error="true"] dd{color:#8c503c}
-.home-token-usage[data-importing="true"] dt::after{content:' ·';color:#8b6d43}
-.home-token-usage:focus-visible{outline:2px solid #745936;outline-offset:4px;border-radius:1px}
-@media(prefers-contrast:more){.home-token-usage dt{color:#364330}.home-token-usage{border-left-color:#745936}}
+/* Keep the right edge of the wall ledger beside the clock as the totals widen. */
+.activity-stats {
+  left: calc(47.65% - 332px);
+  width: 362px;
+  z-index: 6;
+  padding: 4px 6px;
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr) 80px;
+  gap: 4px;
+}
+.activity-agent-stats {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.activity-agent-stats .stats-label { font-size: 14px; line-height: 16px; letter-spacing: -.02em; text-align: center; white-space: normal; }
+.activity-agent-stats strong { font-size: 38px; line-height: 40px; }
+.activity-agent-stats .stats-detail { max-width: 100%; flex-wrap: wrap; font-size: 11px; line-height: 13px; gap: 0 3px; }
+
+.home-token-usage {
+  --today-fill: #397b67;
+  --earlier-fill: #a5afbc;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  padding-left: 3px;
+  border-left: 1px solid #bba373;
+  color: #3e503e;
+}
+.home-token-totals {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px;
+  margin: 0;
+}
+.home-token-totals dt { color: #535a43; font-size: 13px; line-height: 18px; letter-spacing: -.025em; white-space: nowrap; }
+.home-token-totals dd {
+  margin: 0;
+  font: 700 26px/31px -apple-system, BlinkMacSystemFont, sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.045em;
+  white-space: nowrap;
+}
+.home-token-totals dd[data-width="compact"] { font-size: 20px; }
+.home-token-totals dd[data-width="long"] { font-size: 15px; }
+.home-token-share-track {
+  display: block;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--earlier-fill);
+}
+.home-token-share-track[hidden] { display: none; }
+.home-token-share-day { display: block; height: 100%; background: var(--today-fill); }
+.home-token-share-caption { font-size: 12px; font-weight: 600; line-height: 16px; }
+.home-token-usage[data-error="true"] dd { color: #8c503c; }
+.home-token-usage:focus-visible { outline: 2px solid #745936; outline-offset: 2px; }
+@media (forced-colors: active) {
+  .home-token-share-track { forced-color-adjust: none; background: GrayText; }
+  .home-token-share-day { background: Highlight; }
+}

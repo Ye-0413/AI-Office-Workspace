@@ -180,7 +180,8 @@
     }
     function notify(record,source){
       if(typeof onInteraction==='function'){
-        try{const result=onInteraction({venue:record.venue,id:record.item.id,type:record.item.type,state:record.phase,point:{x:record.item.x,y:record.item.y},source});if(result?.catch)result.catch(()=>{});}catch(_){/* Decoration must never block observation. */}
+        const point={x:parseFloat(record.widget.style.left),y:parseFloat(record.widget.style.top)};
+        try{const result=onInteraction({venue:record.venue,id:record.item.id,type:record.item.type,state:record.phase,point,source});if(result?.catch)result.catch(()=>{});}catch(_){/* Decoration must never block observation. */}
       }
     }
     async function activate(record,source='pointer'){

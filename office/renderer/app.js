@@ -2372,12 +2372,12 @@
     const stats = snapshot.activityStats;
     const count = key => stats && !stats.error && Number.isInteger(stats[key]) && stats[key] >= 0 ? stats[key] : '—';
     text($('today-total'), count('total'));
-    text($('today-roots'), (language === 'en' ? 'Main ' : '主 Agent ') + count('roots'));
+    text($('today-roots'), (language === 'en' ? 'Main ' : '主 ') + count('roots'));
     text($('today-helpers'), (language === 'en' ? 'clones ' : '分身 ') + count('helpers'));
     $('activity-stats').dataset.available = String(Boolean(stats && !stats.error));
     $('activity-stats').dataset.error = String(Boolean(stats?.error));
     $('activity-stats').querySelector('.stats-label').textContent = stats?.error ? (language === 'en' ? 'Today · incomplete' : '今日活跃 · 不完整')
-      : language === 'en' ? 'Today’s active agents' : '今日活跃 Agent';
+      : language === 'en' ? 'Active today' : '今日活跃';
     $('activity-stats').title = stats?.error ? (language === 'en' ? 'Saving or restoring today’s observed count failed; the count may be incomplete.' : '今日观察统计保存或恢复失败，数据可能不完整。')
       : language === 'en' ? 'Unique agents observed working today in Hong Kong time, across all projects. The count may omit activity before observation began.'
         : '按香港时间统计今天实际观察到工作的独立 Agent，涵盖所有项目；开始观察前的活动可能未计入。';

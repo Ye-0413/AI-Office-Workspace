@@ -8,12 +8,14 @@
   'use strict';
   const COPY = {
     zh: {
-      daily: '今日 Token', weekly: '本周用量', title: 'Token 用量',
+      daily: '今日 Token', weekly: '本周 Token', title: 'Token 用量',
       source: '来源：受支持工具的本机会话日志；按香港自然日及周一至周日统计全部项目，不推算费用或额度。', coverage: '日志覆盖：{providers}。',
       units: 'M = 百万，B = 十亿，T = 万亿；面板数字为约数。',
       unavailable: '本机会话 Token 暂不可用。', importing: '正在导入，当前数值尚不完整。',
       failed: '导入或读取失败，当前数值可能不完整。', dailyCount: '{date}：{count} tokens',
-      weeklyCount: '本周 {from} 至 {to}：{count} tokens', lastScan: '末次扫描：{time}（香港）'
+      weeklyCount: '本周 {from} 至 {to}：{count} tokens', lastScan: '末次扫描：{time}（香港）',
+      share: '今日占本周 {percent}', shareDetail: '今日占本周用量的 {percent}，本周此前使用了 {earlier} tokens。',
+      emptyWeek: '本周 0 Token', partialShare: '数据尚不完整', unavailableShare: '占比暂无数据'
     },
     en: {
       daily: 'Daily Token', weekly: 'Weekly usage', title: 'Token usage',
@@ -21,10 +23,26 @@
       units: 'M = million, B = billion, T = trillion; displayed totals are rounded.',
       unavailable: 'Local session tokens are unavailable.', importing: 'Import in progress; current values are incomplete.',
       failed: 'Import or read failed; current values may be incomplete.', dailyCount: '{date}: {count} tokens',
-      weeklyCount: 'This week, {from} to {to}: {count} tokens', lastScan: 'Last scan: {time} (Hong Kong)'
+      weeklyCount: 'This week, {from} to {to}: {count} tokens', lastScan: 'Last scan: {time} (Hong Kong)',
+      share: 'Today · {percent} of week', shareDetail: 'Today accounts for {percent} of this week’s tokens, with {earlier} tokens used earlier this week.',
+      emptyWeek: 'No tokens this week', partialShare: 'Incomplete totals', unavailableShare: 'Share unavailable'
     }
   };
   function validCount(value) { return typeof value === 'number' && Number.isFinite(value) && value >= 0; }
+  function weeklyBreakdown(usage) {
+    if (usage?.available !== true) return { label: 'unavailableShare' };
+    if (usage.importing || usage.error) return { label: 'partialShare' };
+    const { dailyTokens, weeklyTokens } = usage;
+    if (!Number.isSafeInteger(dailyTokens) || !Number.isSafeInteger(weeklyTokens) ||
+        dailyTokens < 0 || weeklyTokens < dailyTokens) return { label: 'unavailableShare' };
+    if (weeklyTokens === 0) return { label: 'emptyWeek' };
+    const percent = dailyTokens / weeklyTokens * 100;
+    const rounded = Math.round(percent);
+    let display = rounded + '%';
+    if (rounded === 0 && dailyTokens > 0) display = '<1%';
+    if (rounded === 100 && dailyTokens < weeklyTokens) display = '>99%';
+    return { label: 'share', percent, display, earlier: weeklyTokens - dailyTokens };
+  }
   function formatTokens(value) {
     if (!validCount(value)) return '—';
     const tokens = Math.floor(value);
@@ -49,10 +67,15 @@
         const node = get(id), next = available ? formatTokens(value) : '—';
         if (config.numberFlip) config.numberFlip.update(node, next);
         else node.textContent = next;
+        node.dataset.width = next.length > 7 ? 'long' : next.length > 5 ? 'compact' : 'normal';
       }
-      for (const id of ['home-token-daily', 'home-token-weekly']) get(id).dataset.long = String(get(id).textContent.length > 7);
       panel.dataset.available = String(available); panel.dataset.error = String(error); panel.dataset.importing = String(importing);
       const details = [tr('source'), tr('units')];
+      const share = weeklyBreakdown(usage);
+      const hasShare = share.percent !== undefined;
+      get('home-token-share-track').hidden = !hasShare;
+      get('home-token-share-day').style.width = hasShare ? share.percent + '%' : '0%';
+      get('home-token-share-caption').textContent = tr(share.label, { percent: share.display });
       const catalog = typeof globalThis === 'object' ? globalThis.OfficeProviders : null;
       const providers = Array.isArray(usage?.providers) ? usage.providers.filter(provider => typeof provider === 'string') : [];
       if (providers.length) details.push(tr('coverage', { providers: providers.map(provider => catalog?.getProvider(provider)?.name || provider).join(' / ') }));
@@ -60,6 +83,7 @@
       else {
         if (validCount(usage.dailyTokens)) details.push(tr('dailyCount', { date: usage.date, count: exact(usage.dailyTokens) }));
         if (validCount(usage.weeklyTokens)) details.push(tr('weeklyCount', { from: usage.weekFrom, to: usage.weekTo, count: exact(usage.weeklyTokens) }));
+        if (hasShare) details.push(tr('shareDetail', { percent: share.display, earlier: exact(share.earlier) }));
       }
       if (importing) details.push(tr('importing'));
       if (error) details.push(tr('failed'));

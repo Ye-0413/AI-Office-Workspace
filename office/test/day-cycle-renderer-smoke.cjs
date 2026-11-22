@@ -10,6 +10,26 @@ app.setPath('userData',dir);app.disableHardwareAcceleration();
 let settings={sceneTime:'auto',idleVisitor:false,language:'zh'};
 const errors=[];let win;
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
+
+function wallControlBounds() {
+  const elements = document.querySelectorAll('#activity-stats, #day-clock, .venue-widget:not([hidden]) .venue-control, .festival-control');
+  const boxes = [...elements].map(element => {
+    return {
+      name: element.id || element.closest('.venue-widget')?.dataset.interaction || 'festival',
+      parts: [element, ...element.querySelectorAll('.venue-control-label, .festival-caption')]
+        .map(part => part.getBoundingClientRect()).filter(rect => rect.width && rect.height)
+    };
+  }).filter(box => box.parts.length);
+  const hits = [];
+  const overlap = (a,b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+  boxes.forEach((box, index) => {
+    for (const peer of boxes.slice(index + 1)) {
+      if (box.parts.some(a => peer.parts.some(b => overlap(a,b)))) hits.push([box.name, peer.name]);
+    }
+  });
+  return { visible: boxes.length, hits };
+}
+
 app.whenReady().then(async()=>{
   const handlers={snapshot:()=>({mode:'live',sessions:[],connections:[],demo:{running:false}}),settings:()=>settings,'set-settings':patch=>(settings={...settings,...patch}),displays:()=>[]};
   for(const [name,fn] of Object.entries(handlers))ipcMain.handle('office:'+name,(_,...args)=>fn(...args));
@@ -57,6 +77,16 @@ app.whenReady().then(async()=>{
       }
     }
   }
+  win.setContentSize(800,450);await wait(100);
+  for (const venue of ['workshop','teahouse','observatory']) {
+    await run(`(()=>{const select=document.getElementById('venue-select');select.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter'}));select.value=${JSON.stringify(venue)};select.dispatchEvent(new Event('change',{bubbles:true}));})()`);
+    await wait(100);
+    for (const language of ['en','zh']) {
+      if(settings.language!==language){await run(`document.getElementById('language-button').click()`);await wait(80);}
+      const bounds=await run(`(${wallControlBounds})()`);
+      assert.deepEqual(bounds,{visible:6,hits:[]},JSON.stringify({venue,language,bounds}));
+    }
+  }
   await run(`void(Date.now=window.dayFixtureRealNow)`);
-  assert.deepEqual(errors,[]);console.log(JSON.stringify({ok:true,phases:5,checks:['real clock and full date during preview','Hong Kong midnight updates date and weekday through the one-second timer','semantic local date independent of UTC','time select persistence','one active crossfade surface','no synthetic actors','keyboard focus','reset to now','bilingual date and labels','reduced motion','all preview labels and full dates fit both window sizes','clock and statistics fit the shared collision reservation'],errors}));
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({ok:true,phases:5,checks:['real clock and full date during preview','Hong Kong midnight updates date and weekday through the one-second timer','semantic local date independent of UTC','time select persistence','one active crossfade surface','no synthetic actors','keyboard focus','reset to now','bilingual date and labels','reduced motion','all preview labels and full dates fit both window sizes','clock and statistics fit the shared collision reservation','all three legacy venues leave the ledger and bilingual controls clear at 800 by 450'],errors}));
 }).catch(error=>{console.error(error);process.exitCode=1;}).finally(()=>{win?.destroy();fs.rmSync(dir,{recursive:true,force:true});app.exit(process.exitCode||0);});
