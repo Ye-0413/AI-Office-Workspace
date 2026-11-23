@@ -232,11 +232,14 @@ html[data-avatar-style="pixel"] :is(.stats-detail, .home-token-usage dt) { color
 html[data-avatar-style="pixel"] .home-token-usage {
   --today-fill: var(--pixel-ui-mint);
   --earlier-fill: #8299b6;
+  --today-ink: var(--today-fill);
+  --week-ink: #b3c9ed;
   border-left-color: #716483;
   color: var(--pixel-ui-paper);
 }
 html[data-avatar-style="pixel"] .home-token-share-caption { color: var(--pixel-ui-muted); }
-html[data-avatar-style="pixel"] :is(.activity-stats[data-error="true"] strong, .home-token-usage[data-error="true"] dd) { color: #ffb59e; }
+html[data-avatar-style="pixel"] .activity-stats[data-error="true"] strong { color: #ffb59e; }
+html[data-avatar-style="pixel"] .home-token-usage[data-error="true"] { --today-ink: #ffb59e; --week-ink: #ffb59e; }
 
 html[data-avatar-style="pixel"] .error-message {
   background: #542d41;

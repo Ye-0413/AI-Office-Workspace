@@ -14,7 +14,7 @@
       unavailable: '本机会话 Token 暂不可用。', importing: '正在导入，当前数值尚不完整。',
       failed: '导入或读取失败，当前数值可能不完整。', dailyCount: '{date}：{count} tokens',
       weeklyCount: '本周 {from} 至 {to}：{count} tokens', lastScan: '末次扫描：{time}（香港）',
-      share: '今日占本周 {percent}', shareDetail: '今日占本周用量的 {percent}，本周此前使用了 {earlier} tokens。',
+      share: '今日占本周 {percent}', compactShare: '占本周 {percent}', shareDetail: '今日占本周用量的 {percent}，本周此前使用了 {earlier} tokens。',
       emptyWeek: '本周 0 Token', partialShare: '数据尚不完整', unavailableShare: '占比暂无数据'
     },
     en: {
@@ -24,7 +24,7 @@
       unavailable: 'Local session tokens are unavailable.', importing: 'Import in progress; current values are incomplete.',
       failed: 'Import or read failed; current values may be incomplete.', dailyCount: '{date}: {count} tokens',
       weeklyCount: 'This week, {from} to {to}: {count} tokens', lastScan: 'Last scan: {time} (Hong Kong)',
-      share: 'Today · {percent} of week', shareDetail: 'Today accounts for {percent} of this week’s tokens, with {earlier} tokens used earlier this week.',
+      share: 'Today · {percent} of week', compactShare: '{percent} of week', shareDetail: 'Today accounts for {percent} of this week’s tokens, with {earlier} tokens used earlier this week.',
       emptyWeek: 'No tokens this week', partialShare: 'Incomplete totals', unavailableShare: 'Share unavailable'
     }
   };
@@ -76,6 +76,7 @@
       get('home-token-share-track').hidden = !hasShare;
       get('home-token-share-day').style.width = hasShare ? share.percent + '%' : '0%';
       get('home-token-share-caption').textContent = tr(share.label, { percent: share.display });
+      get('home-token-share-compact').textContent = hasShare ? tr('compactShare', { percent: share.display }) : '';
       const catalog = typeof globalThis === 'object' ? globalThis.OfficeProviders : null;
       const providers = Array.isArray(usage?.providers) ? usage.providers.filter(provider => typeof provider === 'string') : [];
       if (providers.length) details.push(tr('coverage', { providers: providers.map(provider => catalog?.getProvider(provider)?.name || provider).join(' / ') }));

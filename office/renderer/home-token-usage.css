@@ -22,6 +22,8 @@
 .home-token-usage {
   --today-fill: #397b67;
   --earlier-fill: #a5afbc;
+  --today-ink: #285d50;
+  --week-ink: #3e5472;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -47,6 +49,8 @@
 }
 .home-token-totals dd[data-width="compact"] { font-size: 20px; }
 .home-token-totals dd[data-width="long"] { font-size: 15px; }
+#home-token-daily { color: var(--today-ink); }
+#home-token-weekly { color: var(--week-ink); }
 .home-token-share-track {
   display: block;
   height: 8px;
@@ -57,7 +61,75 @@
 .home-token-share-track[hidden] { display: none; }
 .home-token-share-day { display: block; height: 100%; background: var(--today-fill); }
 .home-token-share-caption { font-size: 12px; font-weight: 600; line-height: 16px; }
-.home-token-usage[data-error="true"] dd { color: #8c503c; }
+.home-token-share-compact { display: none; }
+
+/* Fixed world positions are set alongside the actor reservation in app.js. */
+:is([data-wall-display="large"], [data-wall-display="weekly"]) :is(.activity-stats, .day-clock) {
+  top: var(--wall-top);
+  transform: scale(var(--wall-scale));
+  transform-origin: top left;
+}
+:is([data-wall-display="large"], [data-wall-display="weekly"]) .day-clock { left: var(--wall-clock-left); }
+[data-wall-display="large"] .venue-widget:is([data-type="bell"], [data-type="meteor-note"]) { left: 76.5% !important; }
+[data-wall-display="weekly"] .venue-widget:is([data-type="bell"], [data-type="meteor-note"]) { left: 85.2% !important; }
+[data-wall-display="weekly"] .venue-widget:is([data-type="circuit"], [data-type="telescope"]) { left: 93.8% !important; }
+
+[data-wall-display="weekly"] .home-token-usage {
+  display: grid;
+  grid-template: 53px 25px / minmax(0, 1fr) auto;
+  align-content: center;
+  align-items: center;
+  gap: 2px 4px;
+  padding-left: 5px;
+}
+[data-wall-display="weekly"] .home-token-totals { display: contents; }
+[data-wall-display="weekly"] .home-token-weekly {
+  grid-area: 1 / 1 / 2 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3px;
+  height: 100%;
+  padding: 0 5px;
+  border: 2px solid #9eb9df;
+  background: #e0ebfc;
+  box-shadow: inset 1px 1px #f5f9ff, 2px 2px #161d3055;
+}
+[data-wall-display="weekly"] #home-token-weekly-label {
+  flex: 0 0 40px;
+  min-width: 0;
+  color: #354b67;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 13px;
+  white-space: normal;
+}
+[data-wall-display="weekly"] #home-token-weekly { color: #1c273e; font-size: 32px; }
+[data-wall-display="weekly"] #home-token-weekly[data-width="compact"] { font-size: 24px; }
+[data-wall-display="weekly"] #home-token-weekly[data-width="long"] { font-size: 16px; }
+[data-wall-display="weekly"] .home-token-usage[data-error="true"] #home-token-weekly { color: #873c2b; }
+[data-wall-display="weekly"] .home-token-daily {
+  grid-area: 2 / 1;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+[data-wall-display="weekly"] #home-token-daily-label { font-size: 10px; }
+[data-wall-display="weekly"] #home-token-daily { font-size: 16px; line-height: 20px; }
+[data-wall-display="weekly"] #home-token-daily[data-width="compact"] { font-size: 13px; }
+[data-wall-display="weekly"] #home-token-daily[data-width="long"] { font-size: 11px; }
+[data-wall-display="weekly"] .home-token-share-track { display: none; }
+[data-wall-display="weekly"] .home-token-share-caption,
+[data-wall-display="weekly"] .home-token-share-compact { grid-area: 2 / 2; font-size: 10px; text-align: right; }
+[data-wall-display="weekly"] .home-token-usage:has(.home-token-share-compact:not(:empty)) .home-token-share-caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+[data-wall-display="weekly"] .home-token-share-compact:not(:empty) { display: block; }
+.home-token-usage[data-error="true"] { --today-ink: #8c503c; --week-ink: #8c503c; }
 .home-token-usage:focus-visible { outline: 2px solid #745936; outline-offset: 2px; }
 @media (forced-colors: active) {
   .home-token-share-track { forced-color-adjust: none; background: GrayText; }

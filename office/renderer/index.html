@@ -125,13 +125,14 @@
           <div class="activity-agent-stats"><span class="stats-label">今日活跃</span><strong id="today-total">—</strong><span class="stats-detail"><span id="today-roots">—</span><span id="today-helpers">—</span></span></div>
           <div id="home-token-usage" class="home-token-usage" role="group" tabindex="0" aria-label="Token 用量" aria-describedby="home-token-state">
             <dl class="home-token-totals">
-              <div><dt id="home-token-daily-label">今日 Token</dt><dd id="home-token-daily">—</dd></div>
-              <div><dt id="home-token-weekly-label">本周 Token</dt><dd id="home-token-weekly">—</dd></div>
+              <div class="home-token-daily"><dt id="home-token-daily-label">今日 Token</dt><dd id="home-token-daily">—</dd></div>
+              <div class="home-token-weekly"><dt id="home-token-weekly-label">本周 Token</dt><dd id="home-token-weekly">—</dd></div>
             </dl>
             <div id="home-token-share-track" class="home-token-share-track" aria-hidden="true" hidden>
               <span id="home-token-share-day" class="home-token-share-day"></span>
             </div>
             <span id="home-token-share-caption" class="home-token-share-caption"></span>
+            <span id="home-token-share-compact" class="home-token-share-compact" aria-hidden="true"></span>
           </div>
           <span id="home-token-state" class="sr-only">来源：受支持工具的本机会话日志；按香港自然日及周一至周日统计全部项目，不推算费用或额度。</span>
           <div id="home-codex-quota" class="home-codex-quota" data-state="unavailable" data-rings="0">
@@ -265,6 +266,7 @@
       <div class="dialog-header"><div><span class="dialog-eyebrow">把小房间放到喜欢的地方</span><h2 id="settings-title">房间偏好</h2></div><button type="button" class="dialog-close" data-close-dialog aria-label="关闭房间偏好">×</button></div>
       <div class="setting-row scene-time-setting"><div><label for="setting-sceneTime">香港的一天</label><span>依照香港时间变换天色，也可以预览喜欢的时段。</span></div><select id="setting-sceneTime"><option value="auto">跟随香港时间</option><option value="dawn">晨曦</option><option value="morning">上午</option><option value="afternoon">午后</option><option value="sunset">日落</option><option value="night">夜晚</option></select></div>
       <button id="day-reset" class="day-reset" type="button" hidden>回到此刻</button>
+      <div class="setting-row"><div><label for="setting-wallDisplay">墙面显示</label><span>调整时钟、活跃 Agent、Token 和 Codex 额度的显示。</span></div><select id="setting-wallDisplay"><option value="original">原版</option><option value="large">大字版 · +20%</option><option value="weekly">本周焦点 · +35%</option></select></div>
       <div class="setting-row agent-size-setting"><div><label for="setting-agentScale">Agent 大小</label><span>角色与名字同步调整；人数变化不改变大小，分身保持较小比例。</span></div><div class="agent-size-control"><output id="agent-scale-value" for="setting-agentScale">100%</output><input id="setting-agentScale" type="range" min="65" max="135" step="5" value="100"><button id="agent-size-refit" type="button" class="button button-paper">重新排列</button></div></div>
       <div class="setting-row"><div><label for="setting-rain">窗外细雨</label><span>只改变环境，不代表任务状态。</span></div><input id="setting-rain" type="checkbox"></div>
       <div class="setting-row"><div><label for="setting-idleVisitor">闲时串门</label><span>安静时有访客来逛逛；真实任务入驻就让路。</span></div><input id="setting-idleVisitor" type="checkbox"></div>

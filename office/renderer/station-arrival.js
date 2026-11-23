@@ -71,7 +71,7 @@
     function blockedRects(cast=actors()) {
       const room=world.getBoundingClientRect(),fx=1280/room.width,fy=720/room.height;
       if (!(room.width>0 && room.height>0)) return null;
-      const rectangles=[...(Scene.CLOCK_RESERVED || [{left:277,top:65,right:830,bottom:175}])];
+      const rectangles=[...(getContext()?.wallReserved || Scene.CLOCK_RESERVED || [{left:277,top:65,right:830,bottom:175}])];
       for (const actor of cast) {
         if(!actor.node?.isConnected || actor.entryPending)continue;
         const style=view.getComputedStyle(actor.node); if(style.display==='none' || style.visibility==='hidden' || Number(style.opacity)<.01)continue;

@@ -235,6 +235,34 @@ app.whenReady().then(async () => {
     }
   }
 
+  // The wall preference scales the existing data, with a separate weekly sign.
+  const baseline = await inspect(() => document.getElementById('day-clock').getBoundingClientRect().width);
+  for (const [preset, factor] of [['large', 1.2], ['weekly', 1.35], ['original', 1]]) {
+    await run(`(() => { const wall = document.getElementById('setting-wallDisplay'); wall.value = '${preset}'; wall.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+    await wait(60);
+    assert.equal(settings.wallDisplay, preset);
+    for (const language of ['zh', 'en']) {
+      await setLanguage(language);
+      const box = await inspect(() => {
+        const get = id => document.getElementById(id);
+        const clock = get('day-clock').getBoundingClientRect(), ledger = get('activity-stats').getBoundingClientRect();
+        const daily = get('home-token-daily').getBoundingClientRect(), weekly = get('home-token-weekly').getBoundingClientRect();
+        const panel = get('home-token-usage').getBoundingClientRect();
+        const bar = document.querySelector('.top-actions').getBoundingClientRect();
+        return { width: clock.width, aligned: Math.abs(clock.top - ledger.top) < 1 && clock.left > ledger.right,
+          clear: clock.top >= bar.bottom && clock.right <= innerWidth,
+          sign: weekly.bottom <= daily.top,
+          totalsFit: [daily, weekly].every(r => r.left >= panel.left && r.right <= panel.right),
+          compact: get('home-token-share-compact').textContent, debug: [daily, weekly, panel].map(r => [r.left,r.right,r.width]) };
+      });
+      assert.ok(Math.abs(box.width - baseline * factor) < 0.1, JSON.stringify({ preset, language, box }));
+      assert.ok(box.aligned && box.totalsFit, JSON.stringify({ preset, language, box }));
+      if (preset !== 'original') assert.ok(box.clear, JSON.stringify({ preset, language, box }));
+      assert.equal(box.sign, preset === 'weekly');
+      assert.match(box.compact, /14%/);
+    }
+  }
+
   await update({ tokenUsage: { ...usage, dailyTokens: 12345678, weeklyTokens: 2345000000 } });
   assert.equal(await textOf('home-token-daily'), '12.35M');
   assert.equal(await textOf('home-token-weekly'), '2.35B');

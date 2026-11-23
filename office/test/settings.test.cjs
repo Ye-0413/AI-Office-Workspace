@@ -196,3 +196,20 @@ test('seasonal scenes and weather migrate read-only, persist, and reject invalid
     assert.throws(()=>settings.set({sceneWeather:invalid,sceneTheme:'christmas'}),/scene weather/);assert.equal(fs.readFileSync(file,'utf8'),before);
   }
 });
+
+test('wall display presets survive restart and old settings retain the original view', t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'office-wall-display-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  fs.writeFileSync(path.join(dir, 'settings.json'), JSON.stringify({ language: 'en', lowPower: true }));
+  const settings = createSettings(dir);
+  assert.equal(settings.get().wallDisplay, 'original');
+  for (const wallDisplay of ['large', 'weekly', 'original']) {
+    settings.set({ wallDisplay });
+    const restored = createSettings(dir).get();
+    assert.equal(restored.wallDisplay, wallDisplay);
+    assert.equal(restored.language, 'en');
+    assert.equal(restored.lowPower, true);
+  }
+  assert.throws(() => settings.set({ wallDisplay: 'invalid' }), /wall display/);
+  assert.equal(settings.get().wallDisplay, 'original');
+});

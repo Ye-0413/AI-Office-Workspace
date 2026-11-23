@@ -25,7 +25,7 @@
   const archivedTurns = new Map();
   // Older observation bridges without roomDesign retain their legacy room.
   // Current native settings explicitly supply daily rotation by default.
-  const settingsDefaults = { rain: false, night: false, sceneTime: 'auto', sceneVenue: 'workshop', sceneTheme: 'auto', sceneWeather: 'auto', roomDesign: 'legacy', agentAppearance: 'mixed', avatarStyle: 'pixel', agentScale: 1, reducedMotion: false, lowPower: false, idleVisitor: true, sound: false, selectedProject: '', language: 'zh' };
+  const settingsDefaults = { rain: false, night: false, sceneTime: 'auto', sceneVenue: 'workshop', sceneTheme: 'auto', sceneWeather: 'auto', roomDesign: 'legacy', agentAppearance: 'mixed', avatarStyle: 'pixel', agentScale: 1, wallDisplay: 'original', reducedMotion: false, lowPower: false, idleVisitor: true, sound: false, selectedProject: '', language: 'zh' };
   let settings = { ...settingsDefaults };
   let deferredPhysicalScale = null;
   const sizeStability = window.OfficeSizeStability.create({ requestedScale: settings.agentScale });
@@ -42,12 +42,14 @@
   const restedClones = new Set();
   const paletteRegistry = Family.createPaletteRegistry();
   const companionRegistry = window.OfficeAgentAppearance?.createAllocator();
-  const CLOCK_RESERVED = Scene.CLOCK_RESERVED;
+  const WALL_SCALES = Object.freeze({ original: 1, large: 1.2, weekly: 1.35 });
+  let wallReserved = Scene.CLOCK_RESERVED;
+  let activeWallDisplay = 'original';
   let ENTRY_POINT = { x: 87, y: 78, zone: 'exit' };
-  const makeTraffic = () => Traffic.createCoordinator({ reservedRects: CLOCK_RESERVED, obstacles: WalkingLayout.OBSTACLES, gap: scale => currentPage.gap ?? WalkingLayout.gapForScale(scale), limit: 256, maxConcurrent: 8, passThrough: true, yieldBatchSize: 1,
+  const makeTraffic = () => Traffic.createCoordinator({ reservedRects: wallReserved, obstacles: WalkingLayout.OBSTACLES, gap: scale => currentPage.gap ?? WalkingLayout.gapForScale(scale), limit: 256, maxConcurrent: 8, passThrough: true, yieldBatchSize: 1,
     route: (from, to, actor) => walkingRoute(from, to, actor),
     holdingPoints: () => currentPage.holdingPoints,
-    legalPoint: (point, actor) => WalkingLayout.legalPoint(point, { ...actor, reservedRects: CLOCK_RESERVED }) });
+    legalPoint: (point, actor) => WalkingLayout.legalPoint(point, { ...actor, reservedRects: wallReserved }) });
   let traffic = makeTraffic();
   const trafficWaiters = new Map();
   let trafficTimer = 0;
@@ -103,7 +105,7 @@
   const visitor = window.OfficeIdleVisitor.create({ layer: $('visitors'), world, openDoor, getScene: () => Scene, getLayout: () => WalkingLayout, context: () => ({ enabled: settings.idleVisitor, ready: snapshotReceived > 0, mode: snapshot.mode, busy: attendance.present.length > 0 || actors.size > 0, hidden: sceneHidden(), reducedMotion: reduced(), lowPower: settings.lowPower, language, avatarStyle: settings.avatarStyle, roomKey:activeRoom?.id||'legacy' }) });
   const sceneContext = () => ({ venue: settings.roomDesign==='legacy'?settings.sceneVenue:activeRoom?.effectVenue || settings.sceneVenue,
     scene: settings.roomDesign==='legacy'?settings.sceneVenue:activeRoom?.effectVenue || settings.sceneVenue, theme: settings.sceneTheme, weather: settings.sceneWeather,
-    roomDesign: settings.roomDesign, room: activeRoom, layout: WalkingLayout,
+    roomDesign: settings.roomDesign, room: activeRoom, layout: WalkingLayout, wallReserved,
     language, reducedMotion: reduced(), lowPower: settings.lowPower, hidden: sceneHidden(), fitting, scale: uniformScale, mode: snapshot.mode,
     artworkKey: $('room-art').dataset.artworkKey || '', dayPhase: office.dataset.dayPhase, now: Date.now() });
   const social = window.OfficeAgentSocial?.create({ layer: $('social-effects'), world, getActors: () => actors, getContext: sceneContext });
@@ -439,7 +441,7 @@
   function transferSemanticKey(incoming) {
     const present = new Set(attendance.present.map(session => session.id));
     const observed = new Map(snapshot.sessions.map(session => [session.id, session]));
-    return JSON.stringify([settings.agentScale, settings.sceneVenue, settings.sceneTheme, language,
+    return JSON.stringify([settings.agentScale, settings.sceneVenue, settings.sceneTheme, language, activeWallDisplay,
       incoming.slice().sort((a,b) => a.id.localeCompare(b.id)).map(session => {
         session = observed.get(session.id) || session;
         const actor = actors.get(session.id), footprint = physicalFootprints.get(session.id);
@@ -574,7 +576,7 @@
     const closingPairs = closingDockPairs();
     const observedById = new Map(snapshot.sessions.map(session => [session.id, session]));
     for (const [child, parent] of closingPairs) { pinned.add(child); pinned.add(parent); }
-    return { passThrough: true, allowTransfers: transferAvailable(incoming), transferEligibleIds: transferEligible(incoming), requestedScale: deferredPhysicalScale ?? settings.agentScale, maximumScale: deferredPhysicalScale ?? currentPage.scaleCeiling, residentIds: new Set(actors.keys()), venue: settings.sceneVenue, footprints: actorFootprints, reservedRects: CLOCK_RESERVED, previousSeats: seats, previousScale: uniformScale, previousRequestedScale: currentPage.requestedScale,
+    return { passThrough: true, allowTransfers: transferAvailable(incoming), transferEligibleIds: transferEligible(incoming), requestedScale: deferredPhysicalScale ?? settings.agentScale, maximumScale: deferredPhysicalScale ?? currentPage.scaleCeiling, residentIds: new Set(actors.keys()), venue: settings.sceneVenue, footprints: actorFootprints, reservedRects: wallReserved, previousSeats: seats, previousScale: uniformScale, previousRequestedScale: currentPage.requestedScale,
       closingDockPairs: closingPairs, openingDockPairs: openingDockPairs(incoming), finiteExitIds: new Set(exiting),
       // A settled absent ancestor has no ordinary station route. A first late
       // descendant, its real holding walk, and fresh work keep their own owners.
@@ -620,7 +622,7 @@
       if (Array.isArray(path) && path.length > 1 && samePoint(path[0], from) && samePoint(path.at(-1), to)
         && path.every(p => Number.isFinite(p.x) && Number.isFinite(p.y))) return path.map(p => ({ x: p.x, y: p.y }));
     }
-    return WalkingLayout.route(from, to, actor);
+    return WalkingLayout.route(from, to, { ...actor, reservedRects: wallReserved });
   }
   function measureActorFootprints(sessions) {
     const frameScale = world.getBoundingClientRect().width / Scene.WORLD.width;
@@ -1611,7 +1613,7 @@
     // moving. Walking bodies may cross, while the static route still checks
     // furniture, the clock and the complete body/nameplate viewport bounds.
     const retirement = currentPage.fullSize === true
-      ? WalkingLayout.retiringRoute(currentPosition(actor), { ...actorGeometry(actor), reservedRects: CLOCK_RESERVED, entryPoint: ENTRY_POINT })
+      ? WalkingLayout.retiringRoute(currentPosition(actor), { ...actorGeometry(actor), reservedRects: wallReserved, entryPoint: ENTRY_POINT })
       : null;
     if (currentPage.fullSize === true && !retirement) return;
     const proof = currentPage.exitProof;
@@ -2202,14 +2204,32 @@
   }
   let deferredResizeQueued = false;
   function queueDeferredResize() {
-    if (deferredResizeQueued || deferredPhysicalScale === null || destroyed || clearingActors) return;
+    if (deferredResizeQueued || (deferredPhysicalScale === null && activeWallDisplay === settings.wallDisplay) || destroyed || clearingActors) return;
     deferredResizeQueued = true;
     queueMicrotask(() => {
       deferredResizeQueued = false;
-      if (!destroyed && !clearingActors && deferredPhysicalScale !== null && !hasFiniteClone()) render();
+      if (!destroyed && !clearingActors && (deferredPhysicalScale !== null || activeWallDisplay !== settings.wallDisplay) && !hasFiniteClone()) render();
     });
   }
+  function syncWallDisplay() {
+    if (activeWallDisplay === settings.wallDisplay || hasFiniteClone() || cloneAwaitingReturn()) return;
+    cancelPhysicalRoutes();
+    clearActors({ readmission: true });
+    activeWallDisplay = settings.wallDisplay;
+    const scale = WALL_SCALES[activeWallDisplay];
+    const left = $('activity-stats').offsetLeft;
+    const top = 92;
+    const clockLeft = left + Math.round(372 * scale);
+    world.dataset.wallDisplay = activeWallDisplay;
+    world.style.setProperty('--wall-scale', String(scale));
+    world.style.setProperty('--wall-top', `${top}px`);
+    world.style.setProperty('--wall-clock-left', `${clockLeft}px`);
+    wallReserved = scale === 1 ? Scene.CLOCK_RESERVED : [{ left: left - 2, top, right: Math.ceil(clockLeft + 185 * scale), bottom: Math.ceil(top + 110 * scale) }];
+    traffic = makeTraffic();
+    reflowPending = true;
+  }
   function render() {
+    syncWallDisplay();
     if (deferredPhysicalScale !== null && !hasFiniteClone() && !cloneAwaitingReturn()) {
       deferredPhysicalScale = null;
       cancelPhysicalRoutes();
@@ -2461,7 +2481,7 @@
       }
     }
     if (transferOwner && (next?.reducedMotion || next?.lowPower || mediaReduce.matches || sceneHidden())) revokeTransfer('quiet', null, false);
-    settings = { ...settingsDefaults, ...next, agentScale: nextScale, avatarStyle: window.OfficePublicArtwork?.normalizeStyle(next?.avatarStyle) || 'pixel' };
+    settings = { ...settingsDefaults, ...next, agentScale: nextScale, wallDisplay: Object.hasOwn(WALL_SCALES, next?.wallDisplay) ? next.wallDisplay : 'original', avatarStyle: window.OfficePublicArtwork?.normalizeStyle(next?.avatarStyle) || 'pixel' };
     document.documentElement.dataset.avatarStyle = settings.avatarStyle;
     numberFlip?.sync();
     const previousLanguage = language;
@@ -2475,6 +2495,7 @@
     for (const key of ['rain', 'reducedMotion', 'lowPower', 'idleVisitor']) $('setting-' + key).checked = Boolean(settings[key]);
     if (window.OfficeFestivals) $('setting-rain').checked = window.OfficeFestivals.resolve({ theme: settings.sceneTheme, weather: settings.sceneWeather }).weather === 'rain';
     $('setting-sceneTime').value = settings.sceneTime;
+    $('setting-wallDisplay').value = settings.wallDisplay;
     $('setting-agentScale').value = String(Math.round(settings.agentScale * 100));
     text($('agent-scale-value'), Math.round(settings.agentScale * 100) + '%');
     if (reduced() && [...actors.values()].some(actor => actor.motion)) cancelPhysicalRoutes();
@@ -2550,6 +2571,7 @@
   $('settings-button').addEventListener('click', () => openDialog('settings-dialog'));
   $('day-clock').addEventListener('click', () => { openDialog('settings-dialog'); $('setting-sceneTime').focus(); });
   $('setting-sceneTime').addEventListener('change', event => saveSettings({ sceneTime: event.target.value }));
+  $('setting-wallDisplay').addEventListener('change', event => saveSettings({ wallDisplay: event.target.value }));
   $('setting-agentScale').addEventListener('change', event => saveSettings({ agentScale: Number(event.target.value) / 100 }));
   $('agent-size-refit').addEventListener('click', () => {
     sizeStability.request(settings.agentScale);
